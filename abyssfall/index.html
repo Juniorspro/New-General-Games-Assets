@@ -829,30 +829,70 @@ function capsulaSpr(letra) {
 
 // ── las baldosas (16×16) ──
 const T = 16;
-/** La roca: tinta con motas de fondo; los bordes que dan al vacío se muerden (se ve rugosa, de cueva). */
+/** La roca, medida en las capturas del Play Store: la masa es NEGRA y sólo la cara que da al vacío
+ *  es un empedrado apretado de adoquines blancos (3–7 × 2–3 px) con juntas negras de 1 px, lleno en
+ *  el filo y que se desgrana hacia adentro. Con motas sueltas quedaba como estática de tele, y con la
+ *  baldosa blanca entera el pozo encandilaba. Bits: 1 arriba, 2 derecha, 4 abajo, 8 izquierda, y las
+ *  esquinas de adentro (16 ↖, 32 ↗, 64 ↘, 128 ↙) para que el empedrado no se corte en los rincones. */
+const FILAS_ADOQ = [0, 4, 8, 12, 16];     // hiladas de 4 px (adoquín de 3 + junta): cierran justo en 16
 function rocaSpr(bordes, v) {
-  return hornear(`roca|${bordes}|${v}`, () => {
+  return hornear(`roca4|${bordes}|${v}`, () => {
     const c = lienzoNuevo(T, T), q = c.getContext("2d"), r = mulberry(100 + v * 31 + bordes * 7);
-    q.fillStyle = C_TINTA; q.fillRect(0, 0, T, T);
+    q.fillStyle = C_FONDO; q.fillRect(0, 0, T, T);
+    q.fillStyle = C_TINTA;
+    if (!bordes) { if (r() < 0.5) q.fillRect(Math.floor(r() * T), Math.floor(r() * T), 1, 1); return c; }
+    const dist = (x, y) => Math.min(
+      bordes & 1 ? y : 99, bordes & 4 ? T - 1 - y : 99, bordes & 8 ? x : 99, bordes & 2 ? T - 1 - x : 99,
+      bordes & 16 ? Math.hypot(x, y) : 99, bordes & 32 ? Math.hypot(T - 1 - x, y) : 99,
+      bordes & 64 ? Math.hypot(T - 1 - x, T - 1 - y) : 99, bordes & 128 ? Math.hypot(x, T - 1 - y) : 99);
+    // adoquines de 5 × 3 (a veces uno largo de 11) con las puntas comidas: a 3 × 2 se leía como tejido
+    for (let fi = 0; fi < 4; fi++) {
+      const y0 = FILAS_ADOQ[fi], alto = 3, corr = (fi + v) % 2 ? 3 : 0;
+      for (let x0 = -corr; x0 < T; x0 += 6) {
+        const largo = r() < 0.2 ? 11 : 5, d = dist(lim(x0 + largo / 2, 0, T - 1), y0 + 1);
+        if (d > 11 || (d > 5 && r() < (d - 5) / 6 + 0.2)) { continue; }
+        for (let y = 0; y < alto; y++) for (let x = 0; x < largo; x++) {
+          const X = x0 + x, Y = y0 + y;
+          if (X < 0 || X >= T) continue;
+          const punta = (x === 0 || x === largo - 1) && (y === 0 || y === alto - 1);
+          if (punta && r() < 0.6) continue;   // puntas comidas al azar: con las cuatro siempre salían pastillas
+          q.fillRect(X, Y, 1, 1);
+        }
+        // una grieta o un poro adentro (el original tiene la piedra moteada)
+        if (r() < 0.25) { q.fillStyle = C_FONDO; q.fillRect(x0 + 1 + Math.floor(r() * (largo - 2)), y0 + (r() < 0.5 ? 0 : alto - 1), 1, 1); q.fillStyle = C_TINTA; }
+        if (largo === 11) x0 += 6;
+      }
+    }
+    // migas sueltas donde se desgrana, para que el borde de adentro no quede recto
+    for (let i = 0; i < 6; i++) { const x = Math.floor(r() * T), y = Math.floor(r() * T), d = dist(x, y); if (d > 5 && d < 11) q.fillRect(x, y, 1, 1); }
+    // el filo que da al vacío, mordido (de cueva, no de ladrillo)
     q.fillStyle = C_FONDO;
-    // motas: huequitos de 1 y 2 px (la textura de piedra de las capturas)
-    // pocas motas y agrupadas (con muchas sueltas parecía estática de televisor)
-    for (let i = 0; i < 4; i++) { const x = 1 + Math.floor(r() * (T - 3)), y = 1 + Math.floor(r() * (T - 3)); q.fillRect(x, y, 2, 1); if (r() < 0.5) q.fillRect(x + 1, y + 1, 1, 1); }
-    if (r() < 0.5) { const x = 3 + Math.floor(r() * 9), y = 3 + Math.floor(r() * 9); q.fillRect(x, y, 3, 2); q.fillRect(x + 1, y + 2, 1, 1); }
-    // mordidas en los lados abiertos: bit 1 arriba, 2 derecha, 4 abajo, 8 izquierda
-    const morder = (lado) => { for (let i = 0; i < T; i++) { const d = r() < 0.45 ? 1 : r() < 0.2 ? 2 : 0; for (let k = 0; k < d; k++) { if (lado === 1) q.fillRect(i, k, 1, 1); if (lado === 4) q.fillRect(i, T - 1 - k, 1, 1); if (lado === 2) q.fillRect(T - 1 - k, i, 1, 1); if (lado === 8) q.fillRect(k, i, 1, 1); } } };
-    for (const b of [1, 2, 4, 8]) if (bordes & b) morder(b);
+    for (let i = 0; i < T; i++) if (r() < 0.22) { if (bordes & 1) q.fillRect(i, 0, 1, 1); if (bordes & 4) q.fillRect(i, T - 1, 1, 1); if (bordes & 8) q.fillRect(0, i, 1, 1); if (bordes & 2) q.fillRect(T - 1, i, 1, 1); }
     return c;
   });
 }
-/** El bloque que se rompe: cuadrado con reja; el rojo trae gemas adentro. */
+/** El bloque que se rompe: un cuadrado de empedrado entero, con 1 px negro alrededor que lo separa del
+ *  vecino (la pared, en cambio, es negra con empedrado sólo en la cara). Con un contorno de tinta
+ *  parecía un cajón. El rojo trae gemas: se ve la gema. */
 function bloqueSpr(tipo) {
-  return hornear(`blq|${tipo}`, () => {
-    const c = lienzoNuevo(T, T), q = c.getContext("2d"), col = tipo === "gema" ? C_ACENTO : C_TINTA;
-    q.fillStyle = col; q.fillRect(0, 0, T, T); q.fillStyle = C_FONDO; q.fillRect(1, 1, T - 2, T - 2);
-    q.fillStyle = col; q.fillRect(2, 2, T - 4, T - 4); q.fillStyle = C_FONDO;
-    for (let y = 3; y < T - 3; y++) for (let x = 3; x < T - 3; x++) if ((x + y) % 4 === 0 || (x - y + 16) % 4 === 0) q.fillRect(x, y, 1, 1);
-    if (tipo === "gema") { q.fillStyle = C_TINTA; q.fillRect(7, 5, 2, 1); q.fillRect(6, 6, 4, 1); q.fillRect(5, 7, 6, 2); q.fillRect(6, 9, 4, 1); q.fillRect(7, 10, 2, 1); }
+  return hornear(`blq5|${tipo}`, () => {
+    const c = lienzoNuevo(T, T), q = c.getContext("2d"), col = tipo === "gema" ? C_ACENTO : C_TINTA, r = mulberry(tipo === "gema" ? 9 : 3);
+    q.fillStyle = C_FONDO; q.fillRect(0, 0, T, T);
+    // una masa de piedra entera (14 × 14, puntas comidas) partida por juntas que zigzaguean, como el
+    // empedrado suelto del original; con piedritas sueltas quedaba una grilla de lunares
+    q.fillStyle = col; q.fillRect(1, 1, T - 2, T - 2);
+    q.fillStyle = C_FONDO;
+    q.fillRect(1, 1, 1, 1); q.fillRect(T - 2, 1, 1, 1); q.fillRect(1, T - 2, 1, 1); q.fillRect(T - 2, T - 2, 1, 1);
+    for (const y0 of [5, 10]) {
+      let y = y0;
+      for (let x = 1; x < T - 1; x++) { q.fillRect(x, y, 1, 1); if (r() < 0.25) y = lim(y + (r() < 0.5 ? -1 : 1), y0 - 1, y0 + 1); }
+    }
+    for (let fi = 0; fi < 3; fi++) {   // juntas verticales corridas por hilada
+      const ya = fi === 0 ? 1 : fi * 5 + 1, yb = fi === 2 ? T - 2 : fi * 5 + 5;
+      for (let x = (fi % 2 ? 3 : 6) + Math.floor(r() * 2); x < T - 2; x += 6 + Math.floor(r() * 2)) q.fillRect(x, ya, 1, yb - ya);
+    }
+    for (let i = 0; i < 6; i++) q.fillRect(2 + Math.floor(r() * (T - 4)), 2 + Math.floor(r() * (T - 4)), 1, 1);
+    if (tipo === "gema") { q.fillStyle = C_FONDO; q.fillRect(4, 4, 8, 8); q.fillStyle = C_TINTA; q.fillRect(7, 5, 2, 1); q.fillRect(6, 6, 4, 1); q.fillRect(5, 7, 6, 2); q.fillRect(6, 9, 4, 1); q.fillRect(7, 10, 2, 1); }
     return c;
   });
 }
@@ -889,6 +929,29 @@ const ICONOS = {
 };
 function iconoSpr(k) { return selloSpr("ico" + k, ICONOS[k] || ICONOS.pan); }
 
+// ── los botones en pantalla, como el original en celular: dos flechas blancas en relieve y el botón
+//    cuadrado de salto. Blancos con la cara de abajo tramada (el relieve) y acento al apretarlos. ──
+function botonSpr(tipo, apretado) {
+  return hornear(`btn|${tipo}|${apretado}`, () => {
+    const w = tipo === "salto" ? 42 : 40, h = 28, c = lienzoNuevo(w, h + 4), q = c.getContext("2d");
+    const cara = apretado ? C_ACENTO : C_TINTA;
+    const forma = (x, y) => {
+      if (tipo === "salto") return x >= 1 && x < w - 1 && y >= 1 && y < h - 1;
+      const punta = 12, yy = Math.abs(y - h / 2 + 0.5);
+      if (tipo === "izq") return x >= punta - (h / 2 - yy) * punta / (h / 2) && x < w - 1 && y >= 1 && y < h - 1;
+      return x < w - punta + (h / 2 - yy) * punta / (h / 2) && x >= 1 && y >= 1 && y < h - 1;
+    };
+    const dy = apretado ? 2 : 0;
+    // el relieve: la misma forma corrida 3 px abajo, tramada
+    if (!apretado) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (forma(x, y)) for (let k = 1; k <= 3; k++) if ((x + y + k) % 2 === 0) { q.fillStyle = C_TINTA; q.fillRect(x, y + k, 1, 1); }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (forma(x, y)) { q.fillStyle = cara; q.fillRect(x, y + dy, 1, 1); }
+    // el borde de fondo para que se despegue del pozo
+    q.fillStyle = C_FONDO;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (forma(x, y) && (!forma(x - 1, y) || !forma(x + 1, y) || !forma(x, y - 1))) q.fillRect(x, y + dy, 1, 1);
+    return c;
+  });
+}
+
 // ══════════ 07-nivel.js ══════════
 // ─────────────────────────────────────────────────────────────────────────────
 // EL POZO. Una grilla de 12 columnas × N filas de 16 px. Paredes rugosas que se angostan y se
@@ -910,23 +973,28 @@ function generarNivel(zona, nivel, semilla, opciones = {}) {
   const en = (x, y) => (x < 0 || x >= COLS ? ROCA : y < 0 || y >= filas ? VACIO : t[y * COLS + x]);
   N.en = en; N.pon = pon;
   // 1) las paredes: grosor de 1 a 3 por lado, que cambia de a poco
+  // el primer nivel arranca a cielo abierto (estrellas y el título arriba del pozo, como el original):
+  // el piso de salida queda a un 62% de la pantalla y todo lo demás se corre para abajo
+  const a0 = zona === 0 && nivel === 0 ? Math.max(6, Math.round(H * 0.62 / T)) : 6;
+  N.arranque = a0;
   const izq = new Uint8Array(filas), der = new Uint8Array(filas);
   let l = 1, r = 1;
   for (let y = 0; y < filas; y++) {
-    if (y > 8 && A.si(0.22)) { if (A.si(0.5)) l = lim(l + (A.si(0.5) ? 1 : -1), 1, 3); else r = lim(r + (A.si(0.5) ? 1 : -1), 1, 3); }
+    if (y > a0 + 2 && A.si(0.22)) { if (A.si(0.5)) l = lim(l + (A.si(0.5) ? 1 : -1), 1, 3); else r = lim(r + (A.si(0.5) ? 1 : -1), 1, 3); }
     while (COLS - l - r < 6) { if (l > r) l--; else r--; }
     izq[y] = l; der[y] = r;
+    if (y < a0 && a0 > 6) continue;
     for (let x = 0; x < l; x++) pon(x, y, ROCA);
     for (let x = COLS - r; x < COLS; x++) pon(x, y, ROCA);
   }
   N.izq = izq; N.der = der;
   // 2) el arranque: un piso arriba con un agujero (se empieza parado y se cae por ahí)
-  const hueco = A.si(0.5) ? izq[6] + 1 : COLS - der[6] - 4;
-  for (let x = izq[6]; x < COLS - der[6]; x++) if (x < hueco || x > hueco + 2) pon(x, 6, ROCA);
-  N.inicio = { x: (hueco > COLS / 2 ? izq[6] + 1.5 : COLS - der[6] - 1.5) * T, y: 6 * T - 1 };
+  const hueco = A.si(0.5) ? izq[a0] + 1 : COLS - der[a0] - 4;
+  for (let x = 0; x < COLS; x++) if (x < hueco || x > hueco + 2) pon(x, a0, ROCA);
+  N.inicio = { x: (hueco > COLS / 2 ? izq[a0] + 1.5 : COLS - der[a0] - 1.5) * T, y: a0 * T - 1 };
   // 3) lo de adentro, fila por fila (dejando siempre un paso de 3 en la roca)
   const libres = (y) => { let n = 0, mejor = 0; for (let x = 0; x < COLS; x++) { if (en(x, y) === VACIO || rompible(en(x, y)) || en(x, y) === PLAT) { n++; mejor = Math.max(mejor, n); } else n = 0; } return mejor; };
-  let y = 12;
+  let y = a0 + 6;
   while (y < filas - 10) {
     const a = izq[y], b = COLS - der[y], ancho = b - a, tirada = A.f();
     if (tirada < 0.34) {                                   // saliente desde una pared
@@ -953,7 +1021,7 @@ function generarNivel(zona, nivel, semilla, opciones = {}) {
   const tipos = opciones.soloArmas ? ["modulo", "modulo", "modulo"] : A.mezclar(["tienda", "veta", "modulo", A.uno(["veta", "modulo", "tienda"])]);
   if (opciones.tienda && !tipos.slice(0, nSalas).includes("tienda")) tipos[0] = "tienda";
   for (let i = 0; i < nSalas; i++) {
-    const fy = Math.floor(22 + (filas - 40) * (i + 0.5 + (A.f() - 0.5) * 0.4) / nSalas), lado = A.si(0.5) ? -1 : 1;
+    const fy = Math.floor(a0 + 16 + (filas - a0 - 34) * (i + 0.5 + (A.f() - 0.5) * 0.4) / nSalas), lado = A.si(0.5) ? -1 : 1;
     const grosor = lado < 0 ? izq[fy] : der[fy];
     for (let k = 0; k < grosor + 1; k++) { const x = lado < 0 ? k : COLS - 1 - k; pon(x, fy, VACIO); pon(x, fy - 1, VACIO); pon(x, fy + 1, ROCA); pon(x, fy - 2, ROCA); }
     // un escalón de piso delante de la entrada, para poder pararse
@@ -964,7 +1032,7 @@ function generarNivel(zona, nivel, semilla, opciones = {}) {
   const densidad = 0.95 + nivel * 0.3 + zona * 0.15;
   const sobrePiso = (x, y2) => en(x, y2) === VACIO && en(x, y2 - 1) === VACIO && (solida(en(x, y2 + 1)) || en(x, y2 + 1) === PLAT);
   const bajoTecho = (x, y2) => en(x, y2) === VACIO && solida(en(x, y2 - 1));
-  for (let banda = 14; banda < filas - 8; banda += 6) {
+  for (let banda = a0 + 8; banda < filas - 8; banda += 6) {
     let n = Math.floor(densidad + A.f());
     for (let k = 0; k < n; k++) {
       const tipo = A.uno(Z.bichos), d = BICHOS_D[tipo];
@@ -979,7 +1047,7 @@ function generarNivel(zona, nivel, semilla, opciones = {}) {
     }
   }
   // 6) los adornos que se pisan (recargan sin cortar el combo)
-  for (let yy = 16; yy < filas - 8; yy += A.ent(9, 16)) {
+  for (let yy = a0 + 10; yy < filas - 8; yy += A.ent(9, 16)) {
     for (let intento = 0; intento < 10; intento++) {
       const x = A.ent(1, COLS - 2);
       if (Z.adorno === "farol" ? en(x, yy) === VACIO : sobrePiso(x, yy)) { N.adornos.push({ tipo: Z.adorno, x: x * T + T / 2, y: Z.adorno === "farol" ? yy * T + 8 : (yy + 1) * T }); break; }
@@ -1664,10 +1732,10 @@ function dibujarJefe(cy) {
     const j = J.jug, a = Math.atan2(j.y - (B.y - 30), j.x - x);
     g.fillStyle = C_FONDO; g.beginPath(); g.arc(x + Math.cos(a) * 5, y - 30 + Math.sin(a) * 3, 4.5, 0, TAU); g.fill();
   } else { g.fillStyle = C_FONDO; g.fillRect(x - 13, y - 31, 26, 2); for (let k = -2; k <= 2; k++) g.fillRect(x + k * 5, y - 29, 1, 3); }
-  // la barra de vida del jefe, abajo de todo
-  const bw = W - 40, k = lim(B.vida / B.max, 0, 1);
-  g.fillStyle = C_FONDO; g.fillRect(19, H - 17, bw + 2, 8); g.fillStyle = C_TINTA; g.fillRect(20, H - 16, bw, 6); g.fillStyle = C_FONDO; g.fillRect(21, H - 15, bw - 2, 4); g.fillStyle = C_ACENTO; g.fillRect(21, H - 15, Math.round((bw - 2) * k), 4);
-  texto(L(TX.jefe), W / 2, H - 29);
+  // la barra de vida del jefe, arriba debajo del HUD (abajo la tapaban los botones de los pulgares)
+  const bw = W - 40, k = lim(B.vida / B.max, 0, 1), yb = 50;
+  texto(L(TX.jefe), W / 2, yb - 11);
+  g.fillStyle = C_FONDO; g.fillRect(19, yb - 1, bw + 2, 8); g.fillStyle = C_TINTA; g.fillRect(20, yb, bw, 6); g.fillStyle = C_FONDO; g.fillRect(21, yb + 1, bw - 2, 4); g.fillStyle = C_ACENTO; g.fillRect(21, yb + 1, Math.round((bw - 2) * k), 4);
 }
 
 // ══════════ 12-juego.js ══════════
@@ -1694,8 +1762,12 @@ function empezarNivel() {
   const j = J.jug;
   j.x = N.inicio.x; j.y = N.inicio.y; j.vx = 0; j.vy = 0; j.carga = j.cargaMax; j.globo = !!J.mejoras.globo; j.combo = 0;
   J.camY = j.y - H * 0.35;
+  // en el arranque la cámara queda quieta mostrando el cielo, y el título hace de nombre del nivel
+  N.camInicio = N.arranque > 6 ? N.arranque * T - H * 0.62 : null;
+  if (N.camInicio != null) J.camY = N.camInicio;
   if (J.zona >= 4) crearJefe(N);
-  cartel(nombreNivel(), 2.4);
+  // el nombre del nivel va chico, como el "CAVERN-1" del original (a 2x tapaba medio pozo)
+  if (N.camInicio == null) { cartel(nombreNivel(), 2.4); J.cartel.chico = true; }
   tocarTema(J.zona < 4 ? ZONAS[J.zona].tema : "jefe");
   if (J.zona >= 4) sfx("jefe", 0.7);
 }
@@ -1734,7 +1806,7 @@ function pasoJuego(dt) {
   if (J.ayudaT > 0) J.ayudaT -= dt;
   // la cámara: el que cae arriba de la mitad (se ve lo que viene), sin pasarse de los bordes
   if (J.sala) { J.camY = 0; return; }
-  const obj = j.y - H * (j.vy > 60 ? 0.3 : 0.4), maxY = J.N.filas * T - H + (J.N.abismo || J.sala ? 0 : 40);
+  const obj = J.N.camInicio != null && j.y < J.N.inicio.y + T ? J.N.camInicio : j.y - H * (j.vy > 60 ? 0.3 : 0.4), maxY = J.N.filas * T - H + (J.N.abismo || J.sala ? 0 : 40);
   J.camY = lerp(J.camY, lim(obj, -20, Math.max(-20, maxY)), 0.14);
 }
 function terminarNivel() {
@@ -1781,6 +1853,17 @@ function dibujarJuego() {
   g.fillStyle = C_FONDO; g.fillRect(0, 0, W, H);
   const sx = J.temblor ? Math.round((V.f() - 0.5) * J.temblor) : 0, sy = J.temblor ? Math.round((V.f() - 0.5) * J.temblor) : 0;
   const cx = Math.round((COLS * T - W) / 2) - sx, cy = Math.round(J.camY) - sy;
+  // el cielo del primer nivel: estrellas y el título flotando arriba del pozo
+  if (N.camInicio != null && !J.sala && cy < N.arranque * T) {
+    const y0 = N.camInicio;
+    g.fillStyle = C_TINTA;
+    for (let i = 0; i < 16; i++) {
+      const x = (i * 71 + 13) % (W - 16) + 8, y = Math.round(y0 + 30 + (i * 37 + 9) % Math.round(H * 0.24) - cy);
+      if ((J.cuadro >> 4) % 7 === i % 7) continue;   // titilan de a una
+      g.fillRect(x, y, 1, 1); if (i % 4 === 0) { g.fillRect(x - 1, y, 3, 1); g.fillRect(x, y - 1, 1, 3); }
+    }
+    const lg = logoSpr(); g.drawImage(lg, Math.round(W / 2 - lg.width / 2), Math.round(y0 + H * 0.4 - lg.height / 2 - cy));
+  }
   // motas del fondo lejano (se mueven a la mitad: dan profundidad sin ensuciar)
   g.fillStyle = C_TINTA; g.globalAlpha = 0.18;
   for (let i = 0; i < 26; i++) { const y = ((i * 97 - cy * 0.5) % (H + 20) + H + 20) % (H + 20) - 10, x = (i * 53) % W; g.fillRect(x, Math.round(y), 1, 1); }
@@ -1792,7 +1875,10 @@ function dibujarJuego() {
     const X = fx * T - cx, Y = fy * T - cy;
     if (c === ROCA) {
       const vacio = (a, b) => { const k = N.en(fx + a, fy + b); return !(k === ROCA || rompible(k) || k === PINCHE); };
-      const bordes = (vacio(0, -1) ? 1 : 0) | (vacio(1, 0) ? 2 : 0) | (vacio(0, 1) ? 4 : 0) | (vacio(-1, 0) ? 8 : 0);
+      const ar = vacio(0, -1), de = vacio(1, 0), ab = vacio(0, 1), iz = vacio(-1, 0);
+      // las esquinas de adentro sólo cuentan si ninguno de sus dos lados ya está abierto
+      const bordes = (ar ? 1 : 0) | (de ? 2 : 0) | (ab ? 4 : 0) | (iz ? 8 : 0)
+        | (!ar && !iz && vacio(-1, -1) ? 16 : 0) | (!ar && !de && vacio(1, -1) ? 32 : 0) | (!ab && !de && vacio(1, 1) ? 64 : 0) | (!ab && !iz && vacio(-1, 1) ? 128 : 0);
       g.drawImage(rocaSpr(bordes, (fx * 7 + fy * 13) & 3), X, Y);
     } else if (c === BLOQUE) g.drawImage(bloqueSpr("n"), X, Y);
     else if (c === BGEMA) g.drawImage(bloqueSpr("gema"), X, Y);
@@ -1872,25 +1958,30 @@ function dibujarHUD() {
     const y = 36, parpadeo = J.bannerGH > 0 && J.cuadro % 8 < 4;
     if (!parpadeo) { g.fillStyle = C_TINTA; g.fillRect(8, y + 3, W - 16, 3); g.fillStyle = C_ACENTO; g.fillRect(8, y + 6, W - 16, 1); g.fillRect(6, y + 3, 2, 3); g.fillRect(W - 8, y + 3, 2, 3); g.fillStyle = C_FONDO; g.fillRect(W / 2 - 34, y, 68, 10); texto(L(J.mejoras.fiebre ? TX.gemFiebre : TX.gemHigh), W / 2, y + 1); }
   }
-  // las mejoras que tenés, en fila abajo
+  // los botones de los pulgares (siempre, como el original en celular) y las mejoras en fila abajo
+  if (mostrarBotones()) {
+    const yb = H - 46;   // las mejoras van en fila debajo (H-11), como el original
+    g.drawImage(botonSpr("izq", IN.izq), 3, yb); g.drawImage(botonSpr("der", IN.der), 46, yb); g.drawImage(botonSpr("salto", IN.salto), W - 45, yb);
+  }
   let ix = 3;
-  for (const k of Object.keys(J.mejoras)) if (J.mejoras[k]) { g.drawImage(iconoSpr(MEJORAS[k].ico), ix, H - 12); ix += 11; }
+  for (const k of Object.keys(J.mejoras)) if (J.mejoras[k]) { g.drawImage(iconoSpr(MEJORAS[k].ico), ix, H - 11); ix += 11; }
   // el nombre del nivel y los carteles
   if (J.cartel) {
     const k = J.cartel.t / J.cartel.t0, a = Math.min(1, J.cartel.t * 3);
-    texto(J.cartel.txt, W / 2, Math.round(H * 0.28), { escala: J.cartel.sub ? 1 : 2, alfa: a });
+    texto(J.cartel.txt, W / 2, Math.round(H * 0.28), { escala: J.cartel.sub || J.cartel.chico ? 1 : 2, alfa: a });
     if (J.cartel.sub) parrafo(J.cartel.sub, W / 2, Math.round(H * 0.28) + 13, W - 20, { alfa: a });
   }
   // la ayuda de los controles (los primeros segundos)
   if (J.ayudaT > 0 && J.zona === 0 && J.nivel === 0 && !J.sala) {
     const a = Math.min(1, J.ayudaT);
-    if (IN.tactil) {
-      g.globalAlpha = 0.25 * a; g.fillStyle = C_TINTA; g.fillRect(0, H - 70, W / 4 - 1, 70); g.fillRect(W / 4 + 1, H - 70, W / 4 - 2, 70); g.fillRect(W / 2 + 1, H - 70, W / 2 - 1, 70); g.globalAlpha = 1;
-      texto("<", W / 8, H - 40, { escala: 2, alfa: a }); texto(">", W * 3 / 8, H - 40, { escala: 2, alfa: a }); texto(IDIOMA === "es" ? "SALTO" : "JUMP", W * 3 / 4, H - 44, { alfa: a }); texto(IDIOMA === "es" ? "DISPARO" : "SHOOT", W * 3 / 4, H - 32, { alfa: a });
-    } else parrafo(TX.ayudaPC, W / 2, H - 46, W - 16, { alfa: a });
-    parrafo(TX.stompa, W / 2, H - 92, W - 16, { alfa: a, color: "acento" });
+    if (!mostrarBotones()) parrafo(TX.ayudaPC, W / 2, H - 46, W - 16, { alfa: a });
+    else { texto(IDIOMA === "es" ? "SALTO" : "JUMP", W - 24, H - 64, { alfa: a }); texto(IDIOMA === "es" ? "DISPARO" : "SHOOT", W - 24, H - 54, { alfa: a }); }
+    parrafo(TX.stompa, W / 2, J.N.camInicio != null ? Math.round(H * 0.4 + logoSpr().height / 2 + 10) : H - 92, W - 16, { alfa: a, color: "acento" });
   }
 }
+
+/** Los botones se ven en el teléfono (o si alguna vez se tocó la pantalla). */
+function mostrarBotones() { return IN.tactil || matchMedia("(pointer: coarse)").matches; }
 
 // ══════════ 13-menus.js ══════════
 // ─────────────────────────────────────────────────────────────────────────────

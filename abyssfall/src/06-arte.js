@@ -83,30 +83,70 @@ function capsulaSpr(letra) {
 
 // ── las baldosas (16×16) ──
 const T = 16;
-/** La roca: tinta con motas de fondo; los bordes que dan al vacío se muerden (se ve rugosa, de cueva). */
+/** La roca, medida en las capturas del Play Store: la masa es NEGRA y sólo la cara que da al vacío
+ *  es un empedrado apretado de adoquines blancos (3–7 × 2–3 px) con juntas negras de 1 px, lleno en
+ *  el filo y que se desgrana hacia adentro. Con motas sueltas quedaba como estática de tele, y con la
+ *  baldosa blanca entera el pozo encandilaba. Bits: 1 arriba, 2 derecha, 4 abajo, 8 izquierda, y las
+ *  esquinas de adentro (16 ↖, 32 ↗, 64 ↘, 128 ↙) para que el empedrado no se corte en los rincones. */
+const FILAS_ADOQ = [0, 4, 8, 12, 16];     // hiladas de 4 px (adoquín de 3 + junta): cierran justo en 16
 function rocaSpr(bordes, v) {
-  return hornear(`roca|${bordes}|${v}`, () => {
+  return hornear(`roca4|${bordes}|${v}`, () => {
     const c = lienzoNuevo(T, T), q = c.getContext("2d"), r = mulberry(100 + v * 31 + bordes * 7);
-    q.fillStyle = C_TINTA; q.fillRect(0, 0, T, T);
+    q.fillStyle = C_FONDO; q.fillRect(0, 0, T, T);
+    q.fillStyle = C_TINTA;
+    if (!bordes) { if (r() < 0.5) q.fillRect(Math.floor(r() * T), Math.floor(r() * T), 1, 1); return c; }
+    const dist = (x, y) => Math.min(
+      bordes & 1 ? y : 99, bordes & 4 ? T - 1 - y : 99, bordes & 8 ? x : 99, bordes & 2 ? T - 1 - x : 99,
+      bordes & 16 ? Math.hypot(x, y) : 99, bordes & 32 ? Math.hypot(T - 1 - x, y) : 99,
+      bordes & 64 ? Math.hypot(T - 1 - x, T - 1 - y) : 99, bordes & 128 ? Math.hypot(x, T - 1 - y) : 99);
+    // adoquines de 5 × 3 (a veces uno largo de 11) con las puntas comidas: a 3 × 2 se leía como tejido
+    for (let fi = 0; fi < 4; fi++) {
+      const y0 = FILAS_ADOQ[fi], alto = 3, corr = (fi + v) % 2 ? 3 : 0;
+      for (let x0 = -corr; x0 < T; x0 += 6) {
+        const largo = r() < 0.2 ? 11 : 5, d = dist(lim(x0 + largo / 2, 0, T - 1), y0 + 1);
+        if (d > 11 || (d > 5 && r() < (d - 5) / 6 + 0.2)) { continue; }
+        for (let y = 0; y < alto; y++) for (let x = 0; x < largo; x++) {
+          const X = x0 + x, Y = y0 + y;
+          if (X < 0 || X >= T) continue;
+          const punta = (x === 0 || x === largo - 1) && (y === 0 || y === alto - 1);
+          if (punta && r() < 0.6) continue;   // puntas comidas al azar: con las cuatro siempre salían pastillas
+          q.fillRect(X, Y, 1, 1);
+        }
+        // una grieta o un poro adentro (el original tiene la piedra moteada)
+        if (r() < 0.25) { q.fillStyle = C_FONDO; q.fillRect(x0 + 1 + Math.floor(r() * (largo - 2)), y0 + (r() < 0.5 ? 0 : alto - 1), 1, 1); q.fillStyle = C_TINTA; }
+        if (largo === 11) x0 += 6;
+      }
+    }
+    // migas sueltas donde se desgrana, para que el borde de adentro no quede recto
+    for (let i = 0; i < 6; i++) { const x = Math.floor(r() * T), y = Math.floor(r() * T), d = dist(x, y); if (d > 5 && d < 11) q.fillRect(x, y, 1, 1); }
+    // el filo que da al vacío, mordido (de cueva, no de ladrillo)
     q.fillStyle = C_FONDO;
-    // motas: huequitos de 1 y 2 px (la textura de piedra de las capturas)
-    // pocas motas y agrupadas (con muchas sueltas parecía estática de televisor)
-    for (let i = 0; i < 4; i++) { const x = 1 + Math.floor(r() * (T - 3)), y = 1 + Math.floor(r() * (T - 3)); q.fillRect(x, y, 2, 1); if (r() < 0.5) q.fillRect(x + 1, y + 1, 1, 1); }
-    if (r() < 0.5) { const x = 3 + Math.floor(r() * 9), y = 3 + Math.floor(r() * 9); q.fillRect(x, y, 3, 2); q.fillRect(x + 1, y + 2, 1, 1); }
-    // mordidas en los lados abiertos: bit 1 arriba, 2 derecha, 4 abajo, 8 izquierda
-    const morder = (lado) => { for (let i = 0; i < T; i++) { const d = r() < 0.45 ? 1 : r() < 0.2 ? 2 : 0; for (let k = 0; k < d; k++) { if (lado === 1) q.fillRect(i, k, 1, 1); if (lado === 4) q.fillRect(i, T - 1 - k, 1, 1); if (lado === 2) q.fillRect(T - 1 - k, i, 1, 1); if (lado === 8) q.fillRect(k, i, 1, 1); } } };
-    for (const b of [1, 2, 4, 8]) if (bordes & b) morder(b);
+    for (let i = 0; i < T; i++) if (r() < 0.22) { if (bordes & 1) q.fillRect(i, 0, 1, 1); if (bordes & 4) q.fillRect(i, T - 1, 1, 1); if (bordes & 8) q.fillRect(0, i, 1, 1); if (bordes & 2) q.fillRect(T - 1, i, 1, 1); }
     return c;
   });
 }
-/** El bloque que se rompe: cuadrado con reja; el rojo trae gemas adentro. */
+/** El bloque que se rompe: un cuadrado de empedrado entero, con 1 px negro alrededor que lo separa del
+ *  vecino (la pared, en cambio, es negra con empedrado sólo en la cara). Con un contorno de tinta
+ *  parecía un cajón. El rojo trae gemas: se ve la gema. */
 function bloqueSpr(tipo) {
-  return hornear(`blq|${tipo}`, () => {
-    const c = lienzoNuevo(T, T), q = c.getContext("2d"), col = tipo === "gema" ? C_ACENTO : C_TINTA;
-    q.fillStyle = col; q.fillRect(0, 0, T, T); q.fillStyle = C_FONDO; q.fillRect(1, 1, T - 2, T - 2);
-    q.fillStyle = col; q.fillRect(2, 2, T - 4, T - 4); q.fillStyle = C_FONDO;
-    for (let y = 3; y < T - 3; y++) for (let x = 3; x < T - 3; x++) if ((x + y) % 4 === 0 || (x - y + 16) % 4 === 0) q.fillRect(x, y, 1, 1);
-    if (tipo === "gema") { q.fillStyle = C_TINTA; q.fillRect(7, 5, 2, 1); q.fillRect(6, 6, 4, 1); q.fillRect(5, 7, 6, 2); q.fillRect(6, 9, 4, 1); q.fillRect(7, 10, 2, 1); }
+  return hornear(`blq5|${tipo}`, () => {
+    const c = lienzoNuevo(T, T), q = c.getContext("2d"), col = tipo === "gema" ? C_ACENTO : C_TINTA, r = mulberry(tipo === "gema" ? 9 : 3);
+    q.fillStyle = C_FONDO; q.fillRect(0, 0, T, T);
+    // una masa de piedra entera (14 × 14, puntas comidas) partida por juntas que zigzaguean, como el
+    // empedrado suelto del original; con piedritas sueltas quedaba una grilla de lunares
+    q.fillStyle = col; q.fillRect(1, 1, T - 2, T - 2);
+    q.fillStyle = C_FONDO;
+    q.fillRect(1, 1, 1, 1); q.fillRect(T - 2, 1, 1, 1); q.fillRect(1, T - 2, 1, 1); q.fillRect(T - 2, T - 2, 1, 1);
+    for (const y0 of [5, 10]) {
+      let y = y0;
+      for (let x = 1; x < T - 1; x++) { q.fillRect(x, y, 1, 1); if (r() < 0.25) y = lim(y + (r() < 0.5 ? -1 : 1), y0 - 1, y0 + 1); }
+    }
+    for (let fi = 0; fi < 3; fi++) {   // juntas verticales corridas por hilada
+      const ya = fi === 0 ? 1 : fi * 5 + 1, yb = fi === 2 ? T - 2 : fi * 5 + 5;
+      for (let x = (fi % 2 ? 3 : 6) + Math.floor(r() * 2); x < T - 2; x += 6 + Math.floor(r() * 2)) q.fillRect(x, ya, 1, yb - ya);
+    }
+    for (let i = 0; i < 6; i++) q.fillRect(2 + Math.floor(r() * (T - 4)), 2 + Math.floor(r() * (T - 4)), 1, 1);
+    if (tipo === "gema") { q.fillStyle = C_FONDO; q.fillRect(4, 4, 8, 8); q.fillStyle = C_TINTA; q.fillRect(7, 5, 2, 1); q.fillRect(6, 6, 4, 1); q.fillRect(5, 7, 6, 2); q.fillRect(6, 9, 4, 1); q.fillRect(7, 10, 2, 1); }
     return c;
   });
 }
@@ -142,3 +182,26 @@ const ICONOS = {
   aji: [".....##..", "....#....", "...rrr...", "..rrrr...", "..rr#r...", ".rrrrr...", ".rrrr....", "rrrr.....", "rr......."],
 };
 function iconoSpr(k) { return selloSpr("ico" + k, ICONOS[k] || ICONOS.pan); }
+
+// ── los botones en pantalla, como el original en celular: dos flechas blancas en relieve y el botón
+//    cuadrado de salto. Blancos con la cara de abajo tramada (el relieve) y acento al apretarlos. ──
+function botonSpr(tipo, apretado) {
+  return hornear(`btn|${tipo}|${apretado}`, () => {
+    const w = tipo === "salto" ? 42 : 40, h = 28, c = lienzoNuevo(w, h + 4), q = c.getContext("2d");
+    const cara = apretado ? C_ACENTO : C_TINTA;
+    const forma = (x, y) => {
+      if (tipo === "salto") return x >= 1 && x < w - 1 && y >= 1 && y < h - 1;
+      const punta = 12, yy = Math.abs(y - h / 2 + 0.5);
+      if (tipo === "izq") return x >= punta - (h / 2 - yy) * punta / (h / 2) && x < w - 1 && y >= 1 && y < h - 1;
+      return x < w - punta + (h / 2 - yy) * punta / (h / 2) && x >= 1 && y >= 1 && y < h - 1;
+    };
+    const dy = apretado ? 2 : 0;
+    // el relieve: la misma forma corrida 3 px abajo, tramada
+    if (!apretado) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (forma(x, y)) for (let k = 1; k <= 3; k++) if ((x + y + k) % 2 === 0) { q.fillStyle = C_TINTA; q.fillRect(x, y + k, 1, 1); }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (forma(x, y)) { q.fillStyle = cara; q.fillRect(x, y + dy, 1, 1); }
+    // el borde de fondo para que se despegue del pozo
+    q.fillStyle = C_FONDO;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (forma(x, y) && (!forma(x - 1, y) || !forma(x + 1, y) || !forma(x, y - 1))) q.fillRect(x, y + dy, 1, 1);
+    return c;
+  });
+}

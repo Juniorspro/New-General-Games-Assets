@@ -136,8 +136,8 @@ function dibujarJefe(cy) {
     const j = J.jug, a = Math.atan2(j.y - (B.y - 30), j.x - x);
     g.fillStyle = C_FONDO; g.beginPath(); g.arc(x + Math.cos(a) * 5, y - 30 + Math.sin(a) * 3, 4.5, 0, TAU); g.fill();
   } else { g.fillStyle = C_FONDO; g.fillRect(x - 13, y - 31, 26, 2); for (let k = -2; k <= 2; k++) g.fillRect(x + k * 5, y - 29, 1, 3); }
-  // la barra de vida del jefe, abajo de todo
-  const bw = W - 40, k = lim(B.vida / B.max, 0, 1);
-  g.fillStyle = C_FONDO; g.fillRect(19, H - 17, bw + 2, 8); g.fillStyle = C_TINTA; g.fillRect(20, H - 16, bw, 6); g.fillStyle = C_FONDO; g.fillRect(21, H - 15, bw - 2, 4); g.fillStyle = C_ACENTO; g.fillRect(21, H - 15, Math.round((bw - 2) * k), 4);
-  texto(L(TX.jefe), W / 2, H - 29);
+  // la barra de vida del jefe, arriba debajo del HUD (abajo la tapaban los botones de los pulgares)
+  const bw = W - 40, k = lim(B.vida / B.max, 0, 1), yb = 50;
+  texto(L(TX.jefe), W / 2, yb - 11);
+  g.fillStyle = C_FONDO; g.fillRect(19, yb - 1, bw + 2, 8); g.fillStyle = C_TINTA; g.fillRect(20, yb, bw, 6); g.fillStyle = C_FONDO; g.fillRect(21, yb + 1, bw - 2, 4); g.fillStyle = C_ACENTO; g.fillRect(21, yb + 1, Math.round((bw - 2) * k), 4);
 }

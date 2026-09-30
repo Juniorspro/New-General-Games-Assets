@@ -21,8 +21,12 @@ function empezarNivel() {
   const j = J.jug;
   j.x = N.inicio.x; j.y = N.inicio.y; j.vx = 0; j.vy = 0; j.carga = j.cargaMax; j.globo = !!J.mejoras.globo; j.combo = 0;
   J.camY = j.y - H * 0.35;
+  // en el arranque la cámara queda quieta mostrando el cielo, y el título hace de nombre del nivel
+  N.camInicio = N.arranque > 6 ? N.arranque * T - H * 0.62 : null;
+  if (N.camInicio != null) J.camY = N.camInicio;
   if (J.zona >= 4) crearJefe(N);
-  cartel(nombreNivel(), 2.4);
+  // el nombre del nivel va chico, como el "CAVERN-1" del original (a 2x tapaba medio pozo)
+  if (N.camInicio == null) { cartel(nombreNivel(), 2.4); J.cartel.chico = true; }
   tocarTema(J.zona < 4 ? ZONAS[J.zona].tema : "jefe");
   if (J.zona >= 4) sfx("jefe", 0.7);
 }
@@ -61,7 +65,7 @@ function pasoJuego(dt) {
   if (J.ayudaT > 0) J.ayudaT -= dt;
   // la cámara: el que cae arriba de la mitad (se ve lo que viene), sin pasarse de los bordes
   if (J.sala) { J.camY = 0; return; }
-  const obj = j.y - H * (j.vy > 60 ? 0.3 : 0.4), maxY = J.N.filas * T - H + (J.N.abismo || J.sala ? 0 : 40);
+  const obj = J.N.camInicio != null && j.y < J.N.inicio.y + T ? J.N.camInicio : j.y - H * (j.vy > 60 ? 0.3 : 0.4), maxY = J.N.filas * T - H + (J.N.abismo || J.sala ? 0 : 40);
   J.camY = lerp(J.camY, lim(obj, -20, Math.max(-20, maxY)), 0.14);
 }
 function terminarNivel() {
@@ -108,6 +112,17 @@ function dibujarJuego() {
   g.fillStyle = C_FONDO; g.fillRect(0, 0, W, H);
   const sx = J.temblor ? Math.round((V.f() - 0.5) * J.temblor) : 0, sy = J.temblor ? Math.round((V.f() - 0.5) * J.temblor) : 0;
   const cx = Math.round((COLS * T - W) / 2) - sx, cy = Math.round(J.camY) - sy;
+  // el cielo del primer nivel: estrellas y el título flotando arriba del pozo
+  if (N.camInicio != null && !J.sala && cy < N.arranque * T) {
+    const y0 = N.camInicio;
+    g.fillStyle = C_TINTA;
+    for (let i = 0; i < 16; i++) {
+      const x = (i * 71 + 13) % (W - 16) + 8, y = Math.round(y0 + 30 + (i * 37 + 9) % Math.round(H * 0.24) - cy);
+      if ((J.cuadro >> 4) % 7 === i % 7) continue;   // titilan de a una
+      g.fillRect(x, y, 1, 1); if (i % 4 === 0) { g.fillRect(x - 1, y, 3, 1); g.fillRect(x, y - 1, 1, 3); }
+    }
+    const lg = logoSpr(); g.drawImage(lg, Math.round(W / 2 - lg.width / 2), Math.round(y0 + H * 0.4 - lg.height / 2 - cy));
+  }
   // motas del fondo lejano (se mueven a la mitad: dan profundidad sin ensuciar)
   g.fillStyle = C_TINTA; g.globalAlpha = 0.18;
   for (let i = 0; i < 26; i++) { const y = ((i * 97 - cy * 0.5) % (H + 20) + H + 20) % (H + 20) - 10, x = (i * 53) % W; g.fillRect(x, Math.round(y), 1, 1); }
@@ -119,7 +134,10 @@ function dibujarJuego() {
     const X = fx * T - cx, Y = fy * T - cy;
     if (c === ROCA) {
       const vacio = (a, b) => { const k = N.en(fx + a, fy + b); return !(k === ROCA || rompible(k) || k === PINCHE); };
-      const bordes = (vacio(0, -1) ? 1 : 0) | (vacio(1, 0) ? 2 : 0) | (vacio(0, 1) ? 4 : 0) | (vacio(-1, 0) ? 8 : 0);
+      const ar = vacio(0, -1), de = vacio(1, 0), ab = vacio(0, 1), iz = vacio(-1, 0);
+      // las esquinas de adentro sólo cuentan si ninguno de sus dos lados ya está abierto
+      const bordes = (ar ? 1 : 0) | (de ? 2 : 0) | (ab ? 4 : 0) | (iz ? 8 : 0)
+        | (!ar && !iz && vacio(-1, -1) ? 16 : 0) | (!ar && !de && vacio(1, -1) ? 32 : 0) | (!ab && !de && vacio(1, 1) ? 64 : 0) | (!ab && !iz && vacio(-1, 1) ? 128 : 0);
       g.drawImage(rocaSpr(bordes, (fx * 7 + fy * 13) & 3), X, Y);
     } else if (c === BLOQUE) g.drawImage(bloqueSpr("n"), X, Y);
     else if (c === BGEMA) g.drawImage(bloqueSpr("gema"), X, Y);
@@ -199,22 +217,27 @@ function dibujarHUD() {
     const y = 36, parpadeo = J.bannerGH > 0 && J.cuadro % 8 < 4;
     if (!parpadeo) { g.fillStyle = C_TINTA; g.fillRect(8, y + 3, W - 16, 3); g.fillStyle = C_ACENTO; g.fillRect(8, y + 6, W - 16, 1); g.fillRect(6, y + 3, 2, 3); g.fillRect(W - 8, y + 3, 2, 3); g.fillStyle = C_FONDO; g.fillRect(W / 2 - 34, y, 68, 10); texto(L(J.mejoras.fiebre ? TX.gemFiebre : TX.gemHigh), W / 2, y + 1); }
   }
-  // las mejoras que tenés, en fila abajo
+  // los botones de los pulgares (siempre, como el original en celular) y las mejoras en fila abajo
+  if (mostrarBotones()) {
+    const yb = H - 46;   // las mejoras van en fila debajo (H-11), como el original
+    g.drawImage(botonSpr("izq", IN.izq), 3, yb); g.drawImage(botonSpr("der", IN.der), 46, yb); g.drawImage(botonSpr("salto", IN.salto), W - 45, yb);
+  }
   let ix = 3;
-  for (const k of Object.keys(J.mejoras)) if (J.mejoras[k]) { g.drawImage(iconoSpr(MEJORAS[k].ico), ix, H - 12); ix += 11; }
+  for (const k of Object.keys(J.mejoras)) if (J.mejoras[k]) { g.drawImage(iconoSpr(MEJORAS[k].ico), ix, H - 11); ix += 11; }
   // el nombre del nivel y los carteles
   if (J.cartel) {
     const k = J.cartel.t / J.cartel.t0, a = Math.min(1, J.cartel.t * 3);
-    texto(J.cartel.txt, W / 2, Math.round(H * 0.28), { escala: J.cartel.sub ? 1 : 2, alfa: a });
+    texto(J.cartel.txt, W / 2, Math.round(H * 0.28), { escala: J.cartel.sub || J.cartel.chico ? 1 : 2, alfa: a });
     if (J.cartel.sub) parrafo(J.cartel.sub, W / 2, Math.round(H * 0.28) + 13, W - 20, { alfa: a });
   }
   // la ayuda de los controles (los primeros segundos)
   if (J.ayudaT > 0 && J.zona === 0 && J.nivel === 0 && !J.sala) {
     const a = Math.min(1, J.ayudaT);
-    if (IN.tactil) {
-      g.globalAlpha = 0.25 * a; g.fillStyle = C_TINTA; g.fillRect(0, H - 70, W / 4 - 1, 70); g.fillRect(W / 4 + 1, H - 70, W / 4 - 2, 70); g.fillRect(W / 2 + 1, H - 70, W / 2 - 1, 70); g.globalAlpha = 1;
-      texto("<", W / 8, H - 40, { escala: 2, alfa: a }); texto(">", W * 3 / 8, H - 40, { escala: 2, alfa: a }); texto(IDIOMA === "es" ? "SALTO" : "JUMP", W * 3 / 4, H - 44, { alfa: a }); texto(IDIOMA === "es" ? "DISPARO" : "SHOOT", W * 3 / 4, H - 32, { alfa: a });
-    } else parrafo(TX.ayudaPC, W / 2, H - 46, W - 16, { alfa: a });
-    parrafo(TX.stompa, W / 2, H - 92, W - 16, { alfa: a, color: "acento" });
+    if (!mostrarBotones()) parrafo(TX.ayudaPC, W / 2, H - 46, W - 16, { alfa: a });
+    else { texto(IDIOMA === "es" ? "SALTO" : "JUMP", W - 24, H - 64, { alfa: a }); texto(IDIOMA === "es" ? "DISPARO" : "SHOOT", W - 24, H - 54, { alfa: a }); }
+    parrafo(TX.stompa, W / 2, J.N.camInicio != null ? Math.round(H * 0.4 + logoSpr().height / 2 + 10) : H - 92, W - 16, { alfa: a, color: "acento" });
   }
 }
+
+/** Los botones se ven en el teléfono (o si alguna vez se tocó la pantalla). */
+function mostrarBotones() { return IN.tactil || matchMedia("(pointer: coarse)").matches; }
