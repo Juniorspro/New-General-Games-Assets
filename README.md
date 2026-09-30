@@ -21,6 +21,7 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 | `mando-360/` | Control remoto de la Xbox 360 por infrarrojo (RC6): app nativa de Android que maneja menús y multimedia con el emisor IR del teléfono | se arma con `mando-360/construir.sh` |
 | `mundo-ar/xrslam/` | XRSLAM (SLAM visual-inercial de código abierto, Apache-2.0) compilado a WebAssembly, con arreglos propios y calibración automática: 6DoF en metros dentro de una página o un WebView | `mundo-ar/xrslam/construir.sh web` |
 | `tajo/` | juego de ritmo 3D: cortás bloques al ritmo dibujando el tajo con el dedo (dragón de neón, 3 canciones propias, "tu canción") | se arma con `python3 tajo/empaquetar.py` |
+| `noche/` | **Noche Carmesí**: un "survivors" en vertical (homenaje a Vampire Survivors): 11 cazadores, 11 armas con sus 11 evoluciones, 16 pasivos, tienda de mejoras, 2 escenarios con oleadas minuto a minuto, cofres, braseros y la Parca a los 30:00. Español/inglés. Un solo HTML | `noche/index.html` (se arma con `node noche/construir.mjs`) |
 | `edificio/` | una torre de oficinas armada por script en Blender + visor three.js | — |
 | `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables | — |
 | `iblo-eventos/` | material de IBLO: imágenes, publicaciones, investigación | — |

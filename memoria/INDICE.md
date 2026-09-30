@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 29/09/2026. Método: `MEMORIA.md`.
+Última puesta al día: 30/09/2026. Método: `MEMORIA.md`.
 
 ## Reglas que no se discuten
 - Ningún secreto al repo: después de cada commit, `git grep -nI "cfat_\|-----BEGIN"` vacío. → `README.md § Las reglas`
@@ -14,6 +14,7 @@
 - Usa un visor VR Box con el teléfono; tiene ARCore.
 - Se queja corto ("va para el culo"): pedirle una captura de un diagnóstico dentro de la app.
 - 29/09/2026: el juego nuevo es **Shumio's Depths** (`shumio/`): réplica de Isaac Repentance con arte propio, para celular (TCL 20 SE) y PC. Quiere fidelidad verificada con capturas, no de memoria. → [juegos](juegos.md)
+- 30/09/2026: **Noche Carmesí** (`noche/`): un Vampire Survivors en vertical, de un solo pedido, con los números de la wiki. → [juegos](juegos.md)
 
 ## Las notas
 | nota | abrila cuando… |
