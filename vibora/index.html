@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0c1019">
+<meta name="description" content="Víbora.io, de JXSTUDIOS: comé, crecé y no choques la cabeza.">
+<title>Víbora.io</title>
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+<canvas id="juego" aria-label="Víbora.io"></canvas>
+<div id="ui">
+  <section id="puerta" class="pantalla">
+    <button id="bEntrar" class="entrar"><span class="jx">JXSTUDIOS</span><span id="tEntrar" class="pulsa"></span></button>
+  </section>
+
+  <section id="menu" class="pantalla oculto">
+    <canvas id="logo" aria-hidden="true"></canvas>
+    <input id="apodo" maxlength="16" autocomplete="off" spellcheck="false" enterkeyhint="go">
+    <button id="bJugar" class="boton principal"></button>
+    <div class="fila">
+      <button id="bPiel" class="boton chico"></button>
+      <button id="bFondo" class="boton chico"></button>
+      <button id="bAjustes" class="boton chico"></button>
+    </div>
+    <div class="nivel" role="group">
+      <span id="tBots"></span>
+      <button class="opcion" data-nivel="0"></button>
+      <button class="opcion" data-nivel="1"></button>
+      <button class="opcion" data-nivel="2"></button>
+    </div>
+    <p id="tMejor" class="dato"></p>
+    <p id="tConsejo" class="consejo"></p>
+    <p id="tFirma" class="firma"></p>
+  </section>
+
+  <section id="elegir" class="pantalla oculto">
+    <h2 id="tElegir"></h2>
+    <div class="flechas">
+      <button id="bAnterior" class="flecha" aria-label="anterior">‹</button>
+      <div class="hueco"></div>
+      <button id="bSiguiente" class="flecha" aria-label="siguiente">›</button>
+    </div>
+    <p id="tNombre" class="nombre"></p>
+    <p id="tCandado" class="candado"></p>
+    <button id="bListo" class="boton principal"></button>
+  </section>
+
+  <section id="ajustes" class="pantalla oculto">
+    <h2 id="tAjustes"></h2>
+    <div id="listaAjustes" class="lista"></div>
+    <button id="bCerrarAjustes" class="boton principal"></button>
+  </section>
+
+  <section id="pausa" class="pantalla oculto velo">
+    <h2 id="tPausa"></h2>
+    <button id="bSeguir" class="boton principal"></button>
+    <button id="bSalirPausa" class="boton chico"></button>
+  </section>
+
+  <section id="muerte" class="pantalla oculto velo">
+    <p id="tCausa" class="causa"></p>
+    <p id="tFinalRotulo" class="rotulo"></p>
+    <p id="tFinal" class="final"></p>
+    <p id="tRecord" class="record"></p>
+    <p id="tBajas" class="dato"></p>
+    <button id="bOtraVez" class="boton principal"></button>
+    <button id="bMenu" class="boton chico"></button>
+  </section>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

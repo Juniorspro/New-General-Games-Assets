@@ -12,6 +12,8 @@ Juegos y herramientas. Ahora mismo lo principal es **Bomb Runner Simulator**
 | carpeta | qué es |
 |---|---|
 | `bomba/` | Bomb Runner Simulator: correr con una bomba, explotar, mascotas y renacer (a medio hacer) |
+| `cripta/` | CRIPTA NEÓN, de JXSTUDIOS: laberinto que se desliza en pixel art; se juega con `cripta-en-un-archivo.html` |
+| `vibora/` | VÍBORA.IO, de JXSTUDIOS: víboras que comen y crecen contra bots, sin red; se juega con `vibora-en-un-archivo.html` |
 | `guias/` | cómo hacer juegos que se vean bien: 3D con Rezona, 2D pixel art y la receta de AEROPLAZA |
 | `memoria/` | lo que ya se sabe, en notas cortas para que cada sesión no relea el repo |
 | `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, audio |

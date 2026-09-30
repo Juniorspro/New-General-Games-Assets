@@ -39,3 +39,10 @@
 - Medido: 3963 comprobaciones sin navegador, 17/17 en Chromium, archivo único de 245 KB que abre sin red.
 - Falta: probarlo en un teléfono de verdad (lo de Chromium no dice nada de los cuadros por segundo del teléfono).
 
+
+## 30/09/2026 (más tarde) · rama `ccr-6f24de5d-v3vxtu`
+- Pedido (con tres capturas de slither.io en Google Play y dos imágenes del logo de JXStudios): "portear todo este juego propio hecho por JXSTUDIOS" y una intro con JXSTUDIOS en cada juego HTML: en 3D para el de la playa, en 2D "súper rápida" para el de Tomb of the Mask, con música y efectos.
+- Cripta Neón: intro en pixel art con su música (commit 101f6ae). → [cripta](cripta.md)
+- Quedó `vibora/`: VÍBORA.IO, original del género (no se copian nombre, logo ni dibujos; sin red, contra bots), con su intro 2D de JXSTUDIOS. → [vibora](vibora.md)
+- Medido: 152 comprobaciones sin navegador, 15/15 en Chromium, archivo único de 113 KB que abre sin red.
+- Sigue: la intro 3D de la isla (hay que traerla de `fbffdfb`); probar todo en un teléfono de verdad.

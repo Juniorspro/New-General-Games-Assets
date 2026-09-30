@@ -1,0 +1,114 @@
+/* El juego se dibuja en el lienzo; los menús son HTML encima (el apodo
+   necesita un campo de verdad para que salga el teclado del teléfono).
+   Botones redondos y brillantes, como caramelos; paneles oscuros de vidrio. */
+:root {
+  --fondo: #0c1019;
+  --tinta: #f4f7ff;
+  --tenue: rgba(244, 247, 255, 0.68);
+  --lima: #8cff3a;
+  --lima-osc: #3f9e0d;
+  --violeta: #a36bff;
+  --violeta-osc: #5a2bb8;
+  --panel: rgba(8, 10, 18, 0.72);
+  --oro: #ffd35c;
+  --rojo: #ff5e7a;
+  color-scheme: dark;
+}
+html, body { margin: 0; height: 100%; background: var(--fondo); overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; inset: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--tinta); }
+#juego { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+#ui { position: absolute; inset: 0; pointer-events: none; }
+.pantalla {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 1.8vh, 16px);
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); box-sizing: border-box;
+  pointer-events: auto; text-align: center;
+}
+.pantalla.oculto { display: none; }
+.velo { background: rgba(5, 6, 12, 0.55); backdrop-filter: blur(2px); }
+h2 { margin: 0; font-size: clamp(22px, 4.2vh, 34px); font-weight: 900; letter-spacing: 0.02em; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
+
+.entrar { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 40px; }
+.entrar .jx { font-weight: 700; letter-spacing: 0.32em; font-size: clamp(16px, 3vh, 22px); color: #c9ccd4; }
+.pulsa { font-size: clamp(14px, 2.4vh, 18px); color: var(--tenue); animation: late 1.2s ease-in-out infinite; }
+@keyframes late { 50% { opacity: 0.25; } }
+
+#logo { width: min(92vw, 560px); height: auto; aspect-ratio: 5 / 1.35; }
+#apodo {
+  width: min(78vw, 330px); box-sizing: border-box; padding: 12px 18px; border-radius: 999px; border: 2px solid rgba(140, 255, 58, 0.55);
+  background: rgba(10, 20, 14, 0.75); color: var(--tinta); font: 700 18px system-ui, sans-serif; text-align: center; outline: none;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+#apodo:focus { border-color: var(--lima); box-shadow: 0 0 0 3px rgba(140, 255, 58, 0.25), inset 0 2px 6px rgba(0, 0, 0, 0.5); }
+#apodo::placeholder { color: rgba(244, 247, 255, 0.45); }
+
+.boton {
+  all: unset; cursor: pointer; box-sizing: border-box; border-radius: 999px; font-weight: 900; letter-spacing: 0.03em; text-align: center;
+  color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); transition: transform 0.08s ease, filter 0.15s ease; -webkit-tap-highlight-color: transparent;
+}
+.boton:active { transform: translateY(3px) scale(0.98); }
+.boton:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.boton.principal {
+  min-width: min(70vw, 280px); padding: 16px 30px; font-size: clamp(20px, 3.6vh, 28px);
+  background: linear-gradient(180deg, #b8ff6e 0%, var(--lima) 45%, var(--lima-osc) 100%);
+  box-shadow: 0 6px 0 #2b6e08, 0 10px 22px rgba(0, 0, 0, 0.45), inset 0 3px 0 rgba(255, 255, 255, 0.45);
+}
+.boton.principal:active { box-shadow: 0 3px 0 #2b6e08, 0 6px 14px rgba(0, 0, 0, 0.45), inset 0 3px 0 rgba(255, 255, 255, 0.45); }
+.boton.chico {
+  padding: 10px 18px; font-size: clamp(14px, 2.2vh, 17px);
+  background: linear-gradient(180deg, #c49bff 0%, var(--violeta) 45%, var(--violeta-osc) 100%);
+  box-shadow: 0 4px 0 #3b1b85, 0 8px 16px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+}
+.fila { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.nivel { display: flex; align-items: center; gap: 6px; background: var(--panel); padding: 6px 8px; border-radius: 999px; flex-wrap: wrap; justify-content: center; }
+.nivel span { font-weight: 800; font-size: 13px; color: var(--tenue); padding: 0 6px; letter-spacing: 0.08em; }
+.opcion { all: unset; cursor: pointer; padding: 6px 12px; border-radius: 999px; font-weight: 800; font-size: 13px; color: var(--tenue); }
+.opcion.elegida { background: rgba(255, 255, 255, 0.16); color: #fff; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4); }
+.dato { margin: 0; font-weight: 800; color: var(--oro); font-size: clamp(14px, 2.2vh, 17px); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
+.consejo { margin: 0; max-width: 34ch; font-size: 13px; color: var(--tenue); }
+.firma { position: absolute; bottom: max(10px, env(safe-area-inset-bottom)); margin: 0; font-size: 12px; letter-spacing: 0.24em; color: rgba(201, 204, 212, 0.7); font-weight: 700; }
+
+#elegir { justify-content: space-between; padding-top: max(28px, env(safe-area-inset-top)); padding-bottom: max(28px, env(safe-area-inset-bottom)); background: linear-gradient(180deg, rgba(5, 6, 12, 0.6), rgba(5, 6, 12, 0) 25%, rgba(5, 6, 12, 0) 70%, rgba(5, 6, 12, 0.6)); }
+.flechas { display: flex; align-items: center; justify-content: space-between; width: min(96vw, 720px); flex: 1; }
+.flechas .hueco { flex: 1; }
+.flecha {
+  all: unset; cursor: pointer; width: 64px; height: 64px; border-radius: 50%; font-size: 42px; line-height: 60px; text-align: center; font-weight: 900; color: #fff;
+  background: radial-gradient(circle at 35% 30%, #b8ff6e, var(--lima) 45%, var(--lima-osc)); box-shadow: 0 5px 0 #2b6e08, 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+.flecha:active { transform: translateY(3px); }
+.nombre { margin: 0; font-size: clamp(20px, 3.4vh, 26px); font-weight: 900; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.5); }
+.candado { margin: 0; min-height: 1.2em; font-weight: 800; color: var(--rojo); }
+
+.lista { display: grid; gap: 8px; width: min(92vw, 420px); background: var(--panel); padding: 12px; border-radius: 18px; box-sizing: border-box; }
+.lista .item { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 700; }
+.lista .item span { color: var(--tenue); }
+.lista .ops { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+
+.causa { margin: 0; font-size: clamp(16px, 2.6vh, 20px); font-weight: 800; color: var(--rojo); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
+.rotulo { margin: 0; font-size: 14px; letter-spacing: 0.12em; color: var(--tenue); font-weight: 800; text-transform: uppercase; }
+.final { margin: 0; font-size: clamp(52px, 11vh, 84px); font-weight: 900; line-height: 1; text-shadow: 0 5px 0 rgba(0, 0, 0, 0.45); font-variant-numeric: tabular-nums; }
+.record { margin: 0; min-height: 1.2em; font-weight: 900; color: var(--oro); animation: late 0.8s ease-in-out infinite; }
+
+/* En un teléfono angosto (360) los niveles de bots no entraban en una línea. */
+@media (max-width: 380px) {
+  .nivel { gap: 2px; }
+  .nivel span { padding: 0 4px; }
+  .opcion { padding: 6px 9px; }
+}
+
+/* Con el teléfono acostado no entra la columna: el menú pasa a dos columnas
+   debajo del logo (:not(.oculto) para no pisar el display:none de .oculto). */
+@media (orientation: landscape) and (max-height: 540px) {
+  #menu:not(.oculto) {
+    display: grid; grid-template-columns: repeat(2, max-content); justify-content: center; align-content: center;
+    grid-template-areas: "logo logo" "apodo fila" "jugar nivel" "mejor consejo"; gap: 10px 28px; justify-items: center;
+  }
+  #logo { grid-area: logo; width: min(80vw, 560px, 80vh); }
+  #apodo { grid-area: apodo; }
+  #bJugar { grid-area: jugar; }
+  #menu .fila { grid-area: fila; }
+  #menu .nivel { grid-area: nivel; }
+  #tMejor { grid-area: mejor; }
+  #tConsejo { grid-area: consejo; }
+}
+
+@media (prefers-reduced-motion: reduce) { .pulsa, .record { animation: none; } .boton { transition: none; } }

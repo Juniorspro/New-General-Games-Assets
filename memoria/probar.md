@@ -22,6 +22,7 @@ Fuente: `guias/GUIA_JUEGOS_2D_PIXEL.md § 12`, `guias/GUIA-JUEGOS.md § 9`, y lo
 
 ## Tocar como un dedo
 - Toques reales por CDP (`Input.dispatchTouchEvent` con varios `touchPoints`); los eventos sintéticos no traen `changedTouches`. → 2D § 12
+- Soltar un solo dedo: `touchEnd` con ESE punto (mismo `id`) suelta solo ese; `touchEnd` vacío suelta todos; un `touchMove` sin el dedo no lo suelta (30/09/2026). → `vibora/pruebas/juego.mjs`
 - Para "tocá la pantalla para seguir": `page.touchscreen.tap(x, y)` con `hasTouch: true`.
 - Teléfono parado 412×892 y acostado 892×412 (`isMobile: true`, `deviceScaleFactor: 1` para que no tarde).
 - El bot que aprieta teclas tiene que soltarlas: sin flanco, el salto nunca sale. → 2D § 12
@@ -35,6 +36,7 @@ Fuente: `guias/GUIA_JUEGOS_2D_PIXEL.md § 12`, `guias/GUIA-JUEGOS.md § 9`, y lo
 - Lo que se pone "adelante" del jugador en una prueba puede caer en el agua o detrás de una loma: buscar el lugar en una grilla fija (repetible), no al azar. → `git show fbffdfb:isla/pruebas/juego.mjs` (`despejado`)
 - Una prueba que un día falla y otro no se corre tres veces antes de dar por bueno el arreglo (la isla, 60/60 tres veces, 29/09/2026).
 - Rendimiento: 200 cuadros de calentamiento + 300 de medición, contra el commit anterior en el mismo banco (`git show HEAD:archivo`). → 2D § 11
+- Lienzo 2D: cronometrar `dibujar()` mide solo anotar las órdenes (se pintan después). Leer un píxel obliga a pintar, pero en SwiftShader la copia cuesta 40–110 ms: para un número honesto, Chromium con `--disable-gpu --disable-accelerated-2d-canvas` y `getImageData(0,0,1,1)` por cuadro (Víbora: 3,6 ms, 30/09/2026).
 - Que nada se muera ni cambie de escena mientras se mide: una muerte con `getImageData` en el medio convirtió 0,012 ms por paso en 15,8 (cripta, 30/09/2026).
 - El AudioContext arranca solo con un evento de verdad (`page.mouse.click`); con las sondas (eventos inventados) el sonido nunca se prueba. Contar los errores del sonido en vez de tragarlos. → `cripta/pruebas/juego.mjs`
 - Para probar niveles de reflejos: el camino del resolvedor con Lu invulnerable prueba que motor y resolvedor coinciden; los peligros se prueban aparte poniendo a Lu encima de cada uno. → `cripta/pruebas/juego.mjs`
