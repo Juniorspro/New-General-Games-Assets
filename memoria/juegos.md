@@ -41,6 +41,10 @@ Lo que junta las tres guías de `guias/` y lo que se ve en los juegos de este re
 - `python3 herramientas/pagina.py <juego> <carpeta>` pasa el archivo único a página publicable: sin doctype/html/head/body, con el `<title>` arriba (la publicación pone el esqueleto).
 - Trampa: después de que la conversación se resume, publicar el mismo archivo crea OTRA página. Para actualizar la vieja hay que pasar su `url` y leerla antes (leerla entera trae toda la página a la conversación). Cripta quedó repetida así.
 
+## Física y dificultad (Globo Libre, 30/09/2026)
+- Física 2D propia en vez de una librería (el repo es público y el juego va en un archivo): el método de Box2D-lite anda, pero hay que probar pilas quietas y que MÁS vueltas asienten mejor. → [globo](globo.md)
+- La dificultad se mide con tres jugadores de prueba: nadie tocando (tiene que perder), el control estacionado y un piloto automático (tiene que poder). → `globo/pruebas/piloto.mjs`
+
 ## Música: lo que se sabe
 - Mejor grabada (Rezona `kind: music`, "seamless loop") que compuesta nota por nota. → [juegos-3d](juegos-3d.md)
 - Si va en código: desde tablas de acordes/escalas y progresiones fijas, con voicing plegado y scheduler con lookahead. → `guias/GUIA-AEROPLAZA.md § 11.2`

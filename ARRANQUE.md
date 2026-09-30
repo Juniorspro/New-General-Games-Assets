@@ -45,6 +45,7 @@ y aborta lo que venga detrás con `&&`: corrélo solo.
 | `isla/` | **La Isla** (HTML, three.js) — ver `isla/README.md` |
 | `cripta/` | **Cripta Neón** (HTML, pixel art) — ver `cripta/README.md` |
 | `vibora/` | **Víbora.io** (HTML, contra bots) — ver `vibora/README.md` |
+| `globo/` | **Globo Libre** (HTML, con física propia) — ver `globo/README.md` |
 | `guias/` | cómo hacer juegos que se vean bien (3D, 2D pixel art, aeroplaza) |
 | `memoria/` | lo que ya se sabe, en notas cortas: se entra por `memoria/INDICE.md` |
 | `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, audio |

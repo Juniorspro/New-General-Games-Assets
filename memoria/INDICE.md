@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 30/09/2026 (Víbora.io y las intros de JXSTUDIOS).
+Última puesta al día: 30/09/2026 (Globo Libre, con su física y su intro de colores).
 Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 
 ## Reglas que no se discuten
@@ -15,7 +15,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 - Está haciendo un juego en **Roblox Studio** en su laptop (30/09/2026): lo de Roblox se queda en el repo. Roblox Studio no corre en esta máquina.
 - Sus juegos HTML se entregaban en UN archivo que abre sin red, pensados para el celular, en tres idiomas (es, en, pt).
 - Pidió limpiar el repo porque "come tokens" (30/09/2026): no volver a llenarlo de builds, binarios ni proyectos que no use.
-- Sus juegos son de **JXSTUDIOS** y arrancan con su intro (30/09/2026): sola, sin tocar nada; **en el estilo de cada juego** (la de pixel art en el juego pixel le gustó; no siempre negro y cromo); y después del logo, **elegir el idioma** (la primera vez). → [cripta](cripta.md), [vibora](vibora.md), [isla](isla.md)
+- Sus juegos son de **JXSTUDIOS** y arrancan con su intro (30/09/2026): sola, sin tocar nada; **en el estilo de cada juego** (la de pixel art en el juego pixel le gustó; no siempre negro y cromo); y después del logo, **elegir el idioma** (la primera vez). → [cripta](cripta.md), [vibora](vibora.md), [isla](isla.md), [globo](globo.md)
 - Cuando pasa capturas de un juego ajeno, se hace uno original del mismo género, de JXSTUDIOS, y se le dice (30/09/2026).
 
 ## Las notas
@@ -29,6 +29,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | [isla](isla.md) | el menú que se mece (el que quiere para los juegos nuevos), la intro 3D de JXSTUDIOS (logo en tubos de cromo) y otras lecciones de La Isla |
 | [cripta](cripta.md) | laberinto que se desliza: resolvedor, generar por construcción sin trampas, paredes de neón, el menú que se mece en 2D |
 | [vibora](vibora.md) | juego .io de víboras: cuerpo en anillo, comida en grilla, bots, teléfono acostado, trampas de pausa y de dedos |
+| [globo](globo.md) | física propia 2D (Box2D-lite: pilas, dormir por islas, molinete, péndulo), medir la dificultad con un piloto, la intro de colores |
 | [diario](diario.md) | querés saber qué se hizo en cada sesión y qué quedó pendiente |
 
 ## Los documentos largos (no se leen enteros: la nota dice qué sección)
@@ -45,6 +46,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | `cripta/` | CRIPTA NEÓN: laberinto que se desliza en pixel art (30 niveles, torre infinita, tienda, 3 idiomas); se juega con `cripta-en-un-archivo.html` | `cripta/README.md`, [cripta](cripta.md) |
 | `isla/` | LA ISLA: supervivencia en una isla pixelada en 3D (three.js), con la intro 3D de JXSTUDIOS; se juega con `isla-en-un-archivo.html` | `isla/README.md`, [isla](isla.md) |
 | `vibora/` | VÍBORA.IO: víboras que comen y crecen contra bots, sin red (27 pieles, 5 fondos, 3 idiomas); se juega con `vibora-en-un-archivo.html` | `vibora/README.md`, [vibora](vibora.md) |
+| `globo/` | GLOBO LIBRE: el globo sube y el escudo aparta todo (30 niveles, infinito, tienda, 3 idiomas, física propia); se juega con `globo-en-un-archivo.html` | `globo/README.md`, [globo](globo.md) |
 | `bomba/` | BOMB RUNNER SIMULATOR (el de Roblox, a medio hacer): correr con una bomba, explotar, mascotas y renacer | `bomba/README.md` |
 | `herramientas/` | Blender sin GPU, Neko, Mint, Rezona (`rz.py`, `estado.json`), audio | `ARRANQUE.md § 4` |
 | `edificio/` | torre de oficinas armada por script en Blender + visor three.js | — |

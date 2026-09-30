@@ -49,3 +49,11 @@
 - Falta: probar las tres intros y los juegos en un teléfono de verdad (Chromium sin placa no dice nada de los cuadros por segundo).
 - Después pidió: "que inicien la cinemática sin tener que tocarla", "dame los HTML directos pa descargar" y "el de serpiente se laguea".
 - Quedó: las tres intros desde el primer cuadro, sin puerta (el sonido suena solo si el navegador deja; si no, va muda). La isla muestra la intro antes de armarse. Víbora avanza cada cuadro su tiempo real (a 90/120 Hz iba a tirones) y pinta un 32 % menos en el teléfono. Los tres HTML se mandaron como archivos. → [vibora](vibora.md), [isla](isla.md)
+
+## 30/09/2026 (cierre) · rama `ccr-6f24de5d-v3vxtu`
+- Pedido (con una captura de Rise Up en Google Play): "después del logo, elegir los idiomas", "recreá este juego también" y "una intro adaptada al juego, no siempre negro y blanco; al menos para los siguientes juegos".
+- Cripta y Víbora: después del logo, la primera vez, se elige el idioma (commit 823a00c). La isla ya lo tenía.
+- Quedó `globo/`: GLOBO LIBRE, original del género (se le dijo), con motor de física propio, 30 niveles en tres cielos, infinito, tienda de 13 globos y 8 escudos, y la intro de JXSTUDIOS plana y de colores. → [globo](globo.md)
+- Medido: 31 comprobaciones sin navegador, 17/17 en Chromium, archivo único de 163 KB que abre sin red. Sin tocar no se gana ningún nivel; el piloto automático gana 9 de 30.
+- Falta: jugarlo en un teléfono de verdad (la dificultad de los últimos niveles está medida con un piloto, no con una persona), y si quiere, las intros de Víbora y la isla en el estilo de cada juego.
+

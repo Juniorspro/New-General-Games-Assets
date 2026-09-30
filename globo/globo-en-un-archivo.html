@@ -1,0 +1,3088 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#5fb8ff">
+<meta name="description" content="Globo Libre, de JXSTUDIOS: llevá el globo hasta arriba y que no lo toque nada.">
+<title>Globo Libre</title>
+<style>
+/* El juego se dibuja en el lienzo; los menús son HTML encima. Plano y de
+   colores, como el juego: botones gordos con un borde oscuro y la sombra
+   dura abajo (un "escalón"), sin brillos de vidrio. */
+:root {
+  --tinta: #1d2440;
+  --blanco: #ffffff;
+  --crema: #fff6e2;
+  --verde: #2ecc71; --verde-osc: #1f9d55;
+  --azul: #3d8bff; --azul-osc: #2a62c4;
+  --violeta: #9b5cff; --violeta-osc: #6c3cc4;
+  --naranja: #ff9f43; --naranja-osc: #d0772a;
+  --gris: #8b93b8; --gris-osc: #5f6789;
+  --rojo: #ff4d5e; --oro: #ffc93c;
+  color-scheme: light;
+}
+html, body { margin: 0; height: 100%; background: #5fb8ff; overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; inset: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--tinta); }
+#juego { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+#ui { position: absolute; inset: 0; pointer-events: none; }
+.pantalla {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 1.6vh, 14px);
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); box-sizing: border-box;
+  pointer-events: auto; text-align: center;
+}
+.pantalla.oculto, .oculto { display: none !important; }
+.velo { background: rgba(29, 36, 64, 0.45); }
+h2 { margin: 0; font-size: clamp(24px, 4.4vh, 36px); font-weight: 900; color: var(--blanco); letter-spacing: 0.02em; text-shadow: 0 3px 0 var(--tinta); }
+h2.grande { font-size: clamp(40px, 8vh, 64px); }
+h2.rojo { color: var(--rojo); -webkit-text-stroke: 2px var(--tinta); paint-order: stroke fill; }
+
+.boton {
+  all: unset; cursor: pointer; box-sizing: border-box; border-radius: 18px; font-weight: 900; letter-spacing: 0.03em; text-align: center;
+  color: #fff; border: 3px solid var(--tinta); text-shadow: 0 2px 0 rgba(29, 36, 64, 0.45);
+  transition: transform 0.06s ease; -webkit-tap-highlight-color: transparent; display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.boton:active { transform: translateY(4px); }
+.boton:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.boton.principal {
+  min-width: min(72vw, 290px); padding: 12px 28px; font-size: clamp(22px, 3.8vh, 30px);
+  background: var(--verde); box-shadow: 0 6px 0 var(--tinta), inset 0 -6px 0 var(--verde-osc);
+}
+.boton.principal:active { box-shadow: 0 2px 0 var(--tinta), inset 0 -6px 0 var(--verde-osc); }
+.boton.principal small { font-size: 0.5em; font-weight: 800; opacity: 0.95; letter-spacing: 0.06em; }
+.boton.chico { min-width: min(34vw, 138px); padding: 10px 14px; font-size: clamp(14px, 2.3vh, 18px); box-shadow: 0 5px 0 var(--tinta), inset 0 -5px 0 var(--gris-osc); background: var(--gris); }
+.boton.chico:active { box-shadow: 0 1px 0 var(--tinta), inset 0 -5px 0 var(--gris-osc); }
+.boton.azul { background: var(--azul); box-shadow: 0 5px 0 var(--tinta), inset 0 -5px 0 var(--azul-osc); }
+.boton.violeta { background: var(--violeta); box-shadow: 0 5px 0 var(--tinta), inset 0 -5px 0 var(--violeta-osc); }
+.boton.naranja { background: var(--naranja); box-shadow: 0 5px 0 var(--tinta), inset 0 -5px 0 var(--naranja-osc); }
+.boton.apagado { filter: grayscale(0.7) brightness(0.9); }
+.fila { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+.titulo-idioma { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; }
+.titulo-idioma small { font-size: clamp(13px, 2vh, 16px); font-weight: 800; color: var(--blanco); opacity: 0.9; text-shadow: 0 2px 0 var(--tinta); letter-spacing: 0.01em; }
+
+/* el menú y la elección de idioma: el cartel lo dibuja el lienzo arriba; los botones van abajo */
+#menu, #idiomas { justify-content: flex-end; padding-bottom: max(42px, env(safe-area-inset-bottom)); }
+.botonera { display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.5vh, 14px); }
+.bolsa {
+  position: absolute; top: max(12px, env(safe-area-inset-top)); right: 14px; display: flex; align-items: center; gap: 6px;
+  background: var(--crema); border: 3px solid var(--tinta); border-radius: 999px; padding: 4px 12px 4px 6px; font-weight: 900; font-size: 18px; box-shadow: 0 4px 0 var(--tinta);
+}
+.moneda { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 50% 50%, #ffe98a 0 42%, #ffd23f 44% 100%); box-shadow: inset 0 -3px 0 #e0a800; display: inline-block; }
+.dato { margin: 0; font-weight: 900; color: var(--blanco); font-size: clamp(15px, 2.4vh, 19px); text-shadow: 0 2px 0 var(--tinta); }
+.dato.oro { color: var(--oro); }
+.record { margin: 0; min-height: 1.2em; font-weight: 900; color: var(--oro); text-shadow: 0 2px 0 var(--tinta); animation: late 0.8s ease-in-out infinite; }
+@keyframes late { 50% { opacity: 0.35; } }
+.firma { position: absolute; bottom: max(12px, env(safe-area-inset-bottom)); margin: 0; font-size: 12px; letter-spacing: 0.2em; color: var(--blanco); font-weight: 900; text-shadow: 0 2px 0 rgba(29, 36, 64, 0.5); }
+
+/* los niveles: diez por cielo */
+.grilla { display: grid; gap: 10px; width: min(94vw, 460px); max-height: 70vh; overflow-y: auto; padding: 4px; box-sizing: border-box; }
+.grilla h3 { grid-column: 1 / -1; margin: 6px 0 0; font-size: 15px; font-weight: 900; color: var(--blanco); text-shadow: 0 2px 0 var(--tinta); letter-spacing: 0.08em; text-transform: uppercase; }
+.grilla .cielo { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.nivelB {
+  all: unset; cursor: pointer; aspect-ratio: 1; border-radius: 14px; border: 3px solid var(--tinta); font-weight: 900; font-size: clamp(16px, 2.6vh, 20px);
+  display: flex; align-items: center; justify-content: center; color: #fff; text-shadow: 0 2px 0 rgba(29, 36, 64, 0.5); box-shadow: 0 4px 0 var(--tinta);
+}
+.nivelB:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+.nivelB.cerrado { background: #b9bfd8 !important; color: #6f7699; text-shadow: none; cursor: default; }
+.nivelB.hecho::after { content: "★"; position: absolute; transform: translate(18px, -18px); color: var(--oro); font-size: 14px; text-shadow: 0 1px 0 var(--tinta); }
+.nivelB:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* la tienda */
+#tienda { justify-content: space-between; padding-top: max(64px, env(safe-area-inset-top)); }
+.pestanas { display: flex; gap: 6px; background: var(--crema); border: 3px solid var(--tinta); border-radius: 16px; padding: 4px; box-shadow: 0 4px 0 var(--tinta); }
+.pestana { all: unset; cursor: pointer; padding: 8px 16px; border-radius: 11px; font-weight: 900; font-size: clamp(14px, 2.2vh, 17px); color: var(--tinta); }
+.pestana.elegida { background: var(--azul); color: #fff; text-shadow: 0 2px 0 rgba(29, 36, 64, 0.4); }
+.flechas { display: flex; align-items: center; justify-content: space-between; width: min(96vw, 520px); flex: 1; }
+.flechas .hueco { flex: 1; }
+.flecha {
+  all: unset; cursor: pointer; width: 58px; height: 58px; border-radius: 50%; font-size: 40px; line-height: 52px; text-align: center; font-weight: 900; color: #fff;
+  background: var(--azul); border: 3px solid var(--tinta); box-shadow: 0 5px 0 var(--tinta); box-sizing: border-box;
+}
+.flecha:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--tinta); }
+.nombre { margin: 0; font-size: clamp(22px, 3.6vh, 28px); font-weight: 900; color: var(--blanco); text-shadow: 0 3px 0 var(--tinta); }
+.aviso { margin: 0; min-height: 1.2em; font-weight: 800; color: var(--blanco); text-shadow: 0 2px 0 var(--tinta); }
+
+.lista { display: grid; gap: 8px; width: min(92vw, 440px); background: var(--crema); border: 3px solid var(--tinta); box-shadow: 0 5px 0 var(--tinta); padding: 12px; border-radius: 18px; box-sizing: border-box; }
+.lista .item { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
+.lista .ops { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.opcion { all: unset; cursor: pointer; padding: 6px 11px; border-radius: 10px; font-weight: 900; font-size: 13px; color: var(--tinta); border: 2px solid transparent; }
+.opcion.elegida { background: var(--azul); color: #fff; border-color: var(--tinta); }
+.opcion.peligro { color: var(--rojo); }
+
+/* la pausa, arriba a la izquierda mientras se juega */
+.pausa {
+  all: unset; position: absolute; top: max(10px, env(safe-area-inset-top)); left: 12px; width: 42px; height: 42px; border-radius: 12px; pointer-events: auto; cursor: pointer;
+  background: rgba(255, 255, 255, 0.85); border: 3px solid var(--tinta); box-shadow: 0 4px 0 var(--tinta); display: flex; align-items: center; justify-content: center; gap: 5px; box-sizing: border-box;
+}
+.pausa span { width: 6px; height: 16px; background: var(--tinta); border-radius: 2px; }
+.pausa:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+
+/* con el teléfono acostado: los botones a la derecha, el cartel a la izquierda (lo dibuja el lienzo) */
+@media (orientation: landscape) and (max-height: 560px) {
+  #menu, #idiomas { align-items: flex-end; justify-content: center; padding-right: max(24px, env(safe-area-inset-right)); padding-bottom: 16px; }
+  .botonera, #idiomas > * { width: 48vw; }
+  #idiomas .boton.principal { min-width: 0; }
+  .boton.principal { min-width: min(40vw, 280px); padding: 8px 20px; }
+  .grilla { max-height: 62vh; width: min(70vw, 560px); }
+  .grilla .cielo { grid-template-columns: repeat(10, 1fr); }
+  .nivelB { aspect-ratio: auto; height: clamp(30px, 9vh, 42px); }
+  .grilla h3 { margin: 2px 0 0; font-size: 13px; }
+  #tienda { padding-top: max(12px, env(safe-area-inset-top)); gap: 6px; }
+  .flechas { width: min(70vw, 520px); }
+  .boton.chico { padding: 6px 12px; }
+}
+@media (max-width: 360px) { .boton.chico { min-width: 42vw; padding: 9px 8px; } }
+@media (prefers-reduced-motion: reduce) { .record { animation: none; } .boton { transition: none; } }
+
+</style>
+</head>
+<body>
+<canvas id="juego" aria-label="Globo Libre"></canvas>
+<div id="ui">
+  <!-- la primera vez, después del logo: el idioma (el título va en los tres) -->
+  <section id="idiomas" class="pantalla oculto">
+    <h2 class="titulo-idioma">Elegí tu idioma<small lang="en">Choose your language</small><small lang="pt">Escolha seu idioma</small></h2>
+    <button id="bIdioma_es" class="boton principal" lang="es">Español</button>
+    <button id="bIdioma_en" class="boton principal" lang="en">English</button>
+    <button id="bIdioma_pt" class="boton principal" lang="pt">Português</button>
+  </section>
+
+  <section id="menu" class="pantalla oculto">
+    <div class="bolsa"><span class="moneda" aria-hidden="true"></span><span id="tMonedas">0</span></div>
+    <div class="botonera">
+      <button id="bJugar" class="boton principal"><span id="tJugar"></span><small id="tNivelJugar"></small></button>
+      <div class="fila">
+        <button id="bNiveles" class="boton chico azul"></button>
+        <button id="bInfinito" class="boton chico violeta"></button>
+      </div>
+      <div class="fila">
+        <button id="bTienda" class="boton chico naranja"></button>
+        <button id="bAjustes" class="boton chico gris"></button>
+      </div>
+      <p id="tRecordMenu" class="dato"></p>
+    </div>
+    <p id="tFirma" class="firma"></p>
+  </section>
+
+  <section id="niveles" class="pantalla oculto">
+    <h2 id="tNiveles"></h2>
+    <div id="grillaNiveles" class="grilla"></div>
+    <button id="bVolverNiveles" class="boton chico gris"></button>
+  </section>
+
+  <section id="tienda" class="pantalla oculto">
+    <div class="bolsa"><span class="moneda" aria-hidden="true"></span><span id="tMonedasTienda">0</span></div>
+    <div class="pestanas" role="tablist">
+      <button id="bPestGlobos" class="pestana" role="tab"></button>
+      <button id="bPestEscudos" class="pestana" role="tab"></button>
+    </div>
+    <div class="flechas">
+      <button id="bAnterior" class="flecha" aria-label="anterior">‹</button>
+      <div class="hueco"></div>
+      <button id="bSiguiente" class="flecha" aria-label="siguiente">›</button>
+    </div>
+    <p id="tNombre" class="nombre"></p>
+    <p id="tAviso" class="aviso"></p>
+    <button id="bComprar" class="boton principal"></button>
+    <button id="bVolverTienda" class="boton chico gris"></button>
+  </section>
+
+  <section id="ajustes" class="pantalla oculto velo">
+    <h2 id="tAjustes"></h2>
+    <div id="listaAjustes" class="lista"></div>
+    <button id="bCerrarAjustes" class="boton principal"></button>
+  </section>
+
+  <button id="bPausa" class="pausa oculto" aria-label="pausa"><span></span><span></span></button>
+
+  <section id="pausa" class="pantalla oculto velo">
+    <h2 id="tPausa"></h2>
+    <button id="bSeguir" class="boton principal"></button>
+    <button id="bSalirPausa" class="boton chico gris"></button>
+  </section>
+
+  <section id="pum" class="pantalla oculto velo">
+    <h2 id="tPum" class="grande rojo"></h2>
+    <p id="tPumCausa" class="dato"></p>
+    <p id="tPumDato" class="dato oro"></p>
+    <p id="tPumRecord" class="record"></p>
+    <button id="bOtraVez" class="boton principal"></button>
+    <button id="bMenuPum" class="boton chico gris"></button>
+  </section>
+
+  <section id="gano" class="pantalla oculto velo">
+    <h2 id="tGano" class="grande"></h2>
+    <p id="tGanoMonedas" class="dato oro"></p>
+    <button id="bSiguienteNivel" class="boton principal"></button>
+    <button id="bMenuGano" class="boton chico gris"></button>
+  </section>
+</div>
+<script>
+/* ── util ── */
+const M_util = (() => {
+// Lo chico: azar con semilla, límites, curvas y el paso del cuadro.
+
+// mulberry32: el azar de los niveles va con semilla, así el nivel 7 es
+// siempre el mismo nivel 7 (y una prueba se puede repetir igual).
+function azar(semilla) {
+  let a = semilla >>> 0;
+  const r = () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  r.entre = (a, b) => a + (b - a) * r();
+  r.entero = (a, b) => Math.floor(a + (b - a + 1) * r());
+  r.uno = (lista) => lista[Math.floor(r() * lista.length)];
+  return r;
+}
+const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
+const lerp = (a, b, t) => a + (b - a) * t;
+const tramo = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+const salida = (t) => 1 - (1 - t) ** 3;
+const suave = (t) => t * t * (3 - 2 * t);
+const salidaAtras = (t) => 1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2;
+// un rebote elástico que se pasa y vuelve (para lo que "salta" a la vista)
+const elastico = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : 2 ** (-10 * t) * Math.sin((t * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1);
+const acercar = (x, obj, vel, dt) => x + (obj - x) * (1 - Math.exp(-vel * dt));
+
+// El tiempo real de un cuadro partido en pasos de a lo sumo `max`: [cuántos,
+// de cuánto]. Con pasos fijos y una pantalla de 90 o 120 Hz, algunos cuadros
+// quedan sin moverse y se ve a tirones (pasó en Víbora).
+function trozos(dtReal, max) {
+  const n = Math.max(1, Math.ceil(dtReal / max - 1e-9));
+  return [n, dtReal / n];
+}
+
+// Un color más claro o más oscuro (f entre -1 y 1), para las sombras planas.
+function tono(hex, f) {
+  const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255];
+  const m = c.map((v) => Math.round(f >= 0 ? v + (255 - v) * f : v * (1 + f)));
+  return '#' + m.map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+return { azar, clamp, lerp, tramo, salida, suave, salidaAtras, elastico, acercar, trozos, tono };
+})();
+
+/* ── niveles ── */
+const M_niveles = (() => {
+// Los niveles de Globo Libre: 30 (diez por cielo) y el infinito.
+//
+// Un nivel es una fila de "formaciones" (una pared de cajas, un péndulo, un
+// embudo…) separadas por respiros, del suelo a la meta. Todo sale de una
+// semilla: el nivel 7 es siempre el mismo nivel 7. Cada formación es una
+// función (azar, dificultad 0 a 1) → piezas en coordenadas locales: x de 0 a
+// 360 (el ancho del mundo), y = 0 abajo y negativa hacia arriba (como en el
+// mundo, donde subir es ir hacia y negativa).
+//
+// La regla de oro: nada FIJO pasa por la columna del globo (x 142 a 218: el
+// globo mide 44 y se hamaca 12 de cada lado, más unos pocos de aire): lo fijo
+// que la invadiera sería una muerte segura. Lo que sí cruza la columna se
+// puede empujar.
+//
+// Tipos de pieza:
+//   suelta   quieta en el aire hasta que algo la toca (entonces cae)
+//   cae      quieta hasta que la formación entra en pantalla: llueve
+//   fijo     pared o repisa que no se mueve nunca
+//   aspa     barra que gira sola, a un costado
+//   molinete barra clavada por el centro que gira si se la empuja
+//   pendulo  bola colgada de un clavo que arranca a hamacarse al llegar
+const { azar, clamp } = M_util;
+const ANCHO = 360;
+const COLUMNA = [142, 218];
+const NIVELES = 30;
+
+// ── las formaciones ────────────────────────────────────────────────────────
+const F = {
+  // una caja grande justo en el camino: la primera lección (empujala a un lado)
+  caja(r, d) {
+    const l = 60 + d * 40, x = 180 + r.entre(-20, 20);
+    return { alto: l, piezas: [{ forma: 'caja', x, y: -l / 2, w: l, h: l, densidad: 1.2 }], monedas: arco(180, -l - 50, 3, 40) };
+  },
+
+  // una o varias filas de ladrillos de lado a lado (desde el nivel 8, más o
+  // menos, al tocar una se viene abajo la fila entera)
+  fila(r, d) {
+    const filas = 1 + (d > 0.35 ? 1 : 0) + (d > 0.75 ? 1 : 0), w = r.uno([40, 45, 51.4]), h = 22;
+    const piezas = [];
+    for (let f = 0; f < filas; f++) {
+      const corre = f % 2 ? w / 2 : 0;
+      for (let x = w / 2 - corre; x < ANCHO + w / 2; x += w) {
+        const xx = clamp(x, w / 2 - 6, ANCHO - w / 2 + 6);
+        piezas.push({ forma: 'caja', x: xx, y: -h / 2 - f * (h + 1), w: w - 2, h, grupo: d > 0.3 ? 1 : 0 });
+      }
+    }
+    const alto = filas * (h + 1);
+    return { alto, piezas, monedas: r() < 0.5 ? arco(180, -alto - 45, 3, 36) : [] };
+  },
+
+  // un racimo de bolas apretadas (panal) arriba del camino; en los niveles
+  // difíciles se desarma entero al tocarlo
+  bolas(r, d, cae = false) {
+    // el racimo que cae es más chico: treinta bolas lloviendo de a una no se atajan
+    const rb = r.uno([11, 13, 15]), R = cae ? 32 + d * 18 : 48 + d * 42, cx = 180 + r.entre(-30, 30), piezas = [];
+    const dx = 2 * rb + 0.6, dy = dx * 0.866;
+    for (let j = 0, y = -R; y <= R; j++, y += dy) for (let x = -R + (j % 2 ? dx / 2 : 0); x <= R; x += dx) {
+      if (x * x + y * y <= R * R) piezas.push({ forma: 'bola', x: cx + x, y: y - R - rb, r: rb, grupo: d > 0.3 ? 1 : 0 });
+    }
+    return { alto: 2 * R + 2 * rb, piezas, monedas: [[cx, -R - rb]] };
+  },
+
+  // palos largos cruzados
+  palos(r, d) {
+    const n = 2 + Math.round(d * 2), piezas = [];
+    for (let k = 0; k < n; k++) {
+      const l = r.entre(130, 190);
+      piezas.push({ forma: 'caja', x: 180 + r.entre(-50, 50), y: -30 - k * 55, w: l, h: 12, a: r.entre(-0.6, 0.6) });
+    }
+    return { alto: 30 + n * 55, piezas, monedas: arco(180 + r.uno([-110, 110]), -n * 30, 3, 34, true) };
+  },
+
+  // una escalera de cajas que cruza el camino en diagonal
+  escalera(r, d) {
+    const n = 5 + Math.round(d * 3), l = 34, lado = r() < 0.5 ? 1 : -1, piezas = [];
+    for (let k = 0; k < n; k++) piezas.push({ forma: 'caja', x: 180 + lado * (k - (n - 1) / 2) * 38, y: -l / 2 - k * 26, w: l, h: l, grupo: 1 });
+    return { alto: l + (n - 1) * 26, piezas, monedas: arco(180 - lado * 100, -n * 14, 3, 30, true) };
+  },
+
+  // una pirámide que flota: al tocarla se despierta entera y se viene abajo
+  piramide(r, d) {
+    const base = 3 + Math.round(d * 2), l = 30, cx = 180 + r.entre(-25, 25), piezas = [];
+    for (let f = 0; f < base; f++) for (let k = 0; k < base - f; k++) {
+      piezas.push({ forma: 'caja', x: cx + (k - (base - f - 1) / 2) * (l + 1), y: -l / 2 - f * (l + 0.5), w: l, h: l, grupo: 1 });
+    }
+    return { alto: base * (l + 0.5), piezas, monedas: [[cx, -base * l - 30]] };
+  },
+
+  // una torre sobre una repisa al costado: si se toca, se desploma hacia el medio
+  torre(r, d) {
+    const lado = r() < 0.5 ? -1 : 1, piso = 16, l = 32, pisos = 3 + Math.round(d * 3);
+    const xr = lado < 0 ? 60 : 300, piezas = [{ forma: 'caja', tipo: 'fijo', x: xr, y: -piso / 2, w: 120, h: piso }];
+    for (let k = 0; k < pisos; k++) piezas.push({ forma: 'caja', x: xr + lado * 20 + r.entre(-2, 2), y: -piso - l / 2 - k * l + 0.3, w: l, h: l, grupo: 1 });
+    // y una caja suelta en el camino, para que haya que meterse cerca
+    piezas.push({ forma: 'caja', x: 180 - lado * 12, y: -piso - pisos * l * 0.6, w: 40, h: 40 });
+    return { alto: piso + pisos * l, piezas, monedas: arco(xr, -piso - pisos * l - 30, 3, 30) };
+  },
+
+  // cosas que llueven apenas la formación entra en pantalla
+  lluvia(r, d) {
+    const n = 4 + Math.round(d * 6), piezas = [];
+    for (let k = 0; k < n; k++) {
+      const bola = r() < 0.6, x = 180 + r.entre(-95, 95), y = -20 - k * 38;
+      piezas.push(bola ? { forma: 'bola', tipo: 'cae', x, y, r: r.entre(10, 17) } : { forma: 'caja', tipo: 'cae', x, y, w: r.entre(22, 34), h: r.entre(22, 34), a: r.entre(0, 1.5) });
+    }
+    return { alto: 20 + n * 38, piezas, monedas: [] };
+  },
+
+  // un péndulo: un clavo al costado del camino y una bola pesada que se hamaca
+  pendulo(r, d) {
+    // la bola espera alzada del lado de afuera y se suelta cuando el globo se
+    // acerca (partida.js calcula cuándo): baja, pasa por abajo del clavo y
+    // cruza la columna justo cuando llega el globo. Si nadie la ataja, pega.
+    const lado = r() < 0.5 ? -1 : 1, sep = r.entre(58, 84), x0 = 180 + lado * sep, largo = r.entre(125, 165), rb = 18 + d * 4;
+    const alzada = 1.05 + d * 0.3, ay = -30 - largo;
+    const piezas = [{ forma: 'bola', tipo: 'pendulo', ax: x0, ay, largo, alzada, x: x0 + lado * Math.sin(alzada) * largo, y: ay + Math.cos(alzada) * largo, r: rb, densidad: 2.5 }];
+    // la altura a la que la bola cruza el medio de la columna
+    return { alto: largo + 60, piezas, monedas: arco(180, -largo - 70, 3, 34), cruce: ay + Math.sqrt(largo * largo - sep * sep) };
+  },
+
+  // una barra clavada al costado del camino, que tapa el paso hasta que se la gira
+  molinete(r, d) {
+    // abre como una tranquera: la punta que tapa el paso sube hasta quedar
+    // parada y ahí frena (tiene tope). Sin tope daba la vuelta entera y la
+    // otra punta bajaba sobre el globo.
+    const n = d > 0.6 ? 2 : 1, piezas = [];
+    for (let k = 0; k < n; k++) {
+      const lado = (k % 2 ? -1 : 1) * (r() < 0.5 ? -1 : 1), a = r.entre(-0.2, 0.2);
+      // clavada a 88 de la columna: la punta que tapa se empuja con palanca larga (gira despacio)
+      // (lado 1: el clavo a la derecha y la punta que tapa a la izquierda; sube si el ángulo crece)
+      piezas.push({ forma: 'caja', tipo: 'molinete', x: 180 + lado * 88, y: -60 - k * 150, w: 196 + d * 30, h: 14, a, tope: lado > 0 ? [a - 0.25, Math.PI / 2] : [-Math.PI / 2, a + 0.25] });
+    }
+    return { alto: 120 + (n - 1) * 150, piezas, monedas: arco(180, -60, 2, 40) };
+  },
+
+  // aspas que giran solas a los costados y revolean lo que se les acerca
+  aspas(r, d) {
+    const piezas = [], vel = 1.6 + d * 1.4;
+    for (const lado of [-1, 1]) piezas.push({ forma: 'caja', tipo: 'aspa', x: 180 + lado * 150, y: -80, w: 150, h: 14, giro: lado * vel });
+    for (let k = 0; k < 3 + Math.round(d * 3); k++) piezas.push({ forma: 'bola', x: 180 + r.entre(-70, 70), y: -40 - k * 28, r: r.entre(11, 15) });
+    return { alto: 160, piezas, monedas: arco(180, -150, 3, 36) };
+  },
+
+  // una pared fija de lado a lado con un hueco en el medio, tapado con cajas
+  muro(r, d) {
+    const h = 24, hueco = 104, piezas = [
+      { forma: 'caja', tipo: 'fijo', x: (ANCHO / 2 - hueco / 2) / 2, y: -h / 2, w: ANCHO / 2 - hueco / 2, h },
+      { forma: 'caja', tipo: 'fijo', x: ANCHO - (ANCHO / 2 - hueco / 2) / 2, y: -h / 2, w: ANCHO / 2 - hueco / 2, h },
+    ];
+    const l = 24, filas = 1 + Math.round(d * 2);
+    for (let f = 0; f < filas; f++) for (let k = 0; k < 4; k++) piezas.push({ forma: 'caja', x: 180 + (k - 1.5) * (l + 1.5), y: -l / 2 - f * (l + 1) + 4, w: l, h: l });
+    return { alto: Math.max(h, filas * l), piezas, monedas: [[40, -h - 26], [ANCHO - 40, -h - 26]] };
+  },
+
+  // un techo fijo a dos aguas con un hueco en la punta (por ahí pasa el
+  // globo) y bolas quietas sobre las tejas: empujadas hacia afuera ruedan
+  // lejos; las que se caen por el hueco, caen sobre el globo
+  embudo(r, d) {
+    const piezas = [], abajo = -20, arriba = -110, adentro = 60, afuera = 176;
+    const ang = Math.atan2(abajo - arriba, afuera - adentro), l = Math.hypot(afuera - adentro, abajo - arriba);
+    for (const lado of [-1, 1]) {
+      piezas.push({ forma: 'caja', tipo: 'fijo', x: 180 + lado * (adentro + afuera) / 2, y: (abajo + arriba) / 2, w: l, h: 14, a: lado * ang });
+      // las bolas, apoyadas (casi) sobre la cara de arriba de cada teja
+      const n = 2 + Math.round(d * 2);
+      for (let k = 0; k < n; k++) {
+        const u = 0.12 + k * 0.2 + r.entre(-0.03, 0.03), rb = 12, px = adentro + (afuera - adentro) * u, py = arriba + (abajo - arriba) * u;
+        piezas.push({ forma: 'bola', x: 180 + lado * (px + Math.sin(ang) * (7 + rb + 0.5)), y: py - Math.cos(ang) * (7 + rb + 0.5), r: rb });
+      }
+    }
+    // una bola justo arriba del hueco: la primera que hay que sacar
+    piezas.push({ forma: 'bola', x: 180 + r.entre(-10, 10), y: arriba - 30, r: 14 });
+    return { alto: 150, piezas, monedas: arco(180, -165, 3, 40) };
+  },
+
+  // una jaula: dos columnas y una tapa; se despierta entera si se la toca
+  jaula(r, d) {
+    const l = 30, alto = 3 + Math.round(d), piezas = [];
+    // las columnas a 74 del medio: el globo (que se hamaca) entra con aire de los dos lados
+    for (const x of [180 - 74, 180 + 74]) for (let k = 0; k < alto; k++) piezas.push({ forma: 'caja', x, y: -l / 2 - k * (l + 0.5), w: l, h: l, grupo: 1 });
+    piezas.push({ forma: 'caja', x: 180, y: -alto * (l + 0.5) - 10, w: 190, h: 20, grupo: 1 });
+    return { alto: alto * l + 20, piezas, monedas: [[180, -alto * l / 2]] };
+  },
+};
+
+// monedas en arco (o en línea vertical)
+function arco(cx, cy, n, sep, vertical = false) {
+  const out = [];
+  for (let k = 0; k < n; k++) {
+    const u = k - (n - 1) / 2;
+    out.push(vertical ? [cx, cy + u * sep] : [cx + u * sep, cy - Math.cos((u / Math.max(1, n - 1)) * Math.PI) * 10]);
+  }
+  return out;
+}
+
+const FORMACIONES = Object.keys(F);
+
+// Qué formaciones aparecen desde qué nivel (se van sumando de a poco).
+const DESDE = { caja: 0, fila: 0, bolas: 0, lluvia: 1, palos: 1, escalera: 3, piramide: 4, torre: 5, molinete: 7, pendulo: 9, muro: 11, jaula: 13, embudo: 15, aspas: 17 };
+// Las que pueden venir cayendo en vez de esperar quietas: con el escudo
+// quieto arriba del globo, lo quieto se aparta solo (el escudo es redondo y
+// lo desvía), pero lo que cae de a muchos no.
+const CAEN = ['caja', 'bolas', 'palos', 'piramide', 'escalera'];
+// en el nivel 1 solo cae una caja (la tercera formación): lo demás espera quieto
+
+function formacion(tipo, r, d, { cae = false } = {}) {
+  const f = F[tipo](r, clamp(d, 0, 1), cae && CAEN.includes(tipo));
+  f.tipo = tipo;
+  if (cae && CAEN.includes(tipo)) {
+    // cada pieza cae sola (sin grupo: si no, la primera que asoma larga a todas)
+    for (const p of f.piezas) if (!p.tipo) { p.tipo = 'cae'; delete p.grupo; }
+    f.cae = true;
+  }
+  return f;
+}
+
+// Un nivel (n de 0 a 29): la velocidad del globo, el largo y las formaciones
+// con su y en el mundo (el globo arranca en y = 0 y la meta está en -largo).
+function armarNivel(n) {
+  const r = azar(0x9e3779b1 ^ ((n + 1) * 2654435761));
+  const pool = FORMACIONES.filter((t) => DESDE[t] <= n);
+  const cuantas = 7 + Math.floor(n * 0.5);
+  const lista = [], veces = {}, tope = n < 10 ? 2 : 3;
+  let y = -520;
+  for (let k = 0; k < cuantas; k++) {
+    // ni repetida con las dos de antes ni más de `tope` veces en el nivel (tres
+    // torres al costado dejaban ganar sin tocar nada)
+    const recientes = lista.slice(-2).map((f) => f.tipo);
+    const libres = pool.filter((t) => !recientes.includes(t) && (veces[t] || 0) < tope);
+    let tipo = r.uno(libres.length ? libres : pool);
+    // el nivel 1 enseña: primero una caja sola, después una fila, después una caja que cae
+    if (n === 0 && k < 3) tipo = ['caja', 'fila', 'caja'][k];
+    // lo nuevo del nivel aparece seguro una vez
+    const nueva = pool.find((t) => DESDE[t] === n);
+    if (nueva && k === 2) tipo = nueva;
+    veces[tipo] = (veces[tipo] || 0) + 1;
+    const d = clamp(0.08 + (n / (NIVELES - 1)) * 0.8 + r.entre(-0.12, 0.12) + (k / cuantas) * 0.1, 0, 1);
+    // en el nivel 1, la tercera (otra caja) ya viene cayendo: hay que atajarla y correrla
+    const cae = n === 0 ? k === 2 : r() < Math.min(0.6, 0.2 + n * 0.03);
+    const f = formacion(tipo, r, d, { cae });
+    f.y0 = y; f.d = d;
+    lista.push(f);
+    y -= f.alto + r.entre(230, 330) - n * 2.5;
+  }
+  return { n, semilla: n, vel: 92 + n * 1.6, largo: -y + 120, formaciones: lista, tema: Math.min(2, Math.floor(n / 10)) };
+}
+
+// El infinito: formaciones a pedido, cada vez más difíciles (y el cielo va
+// cambiando cada 4000 de altura).
+function crearInfinito(semilla = 1) {
+  const r = azar(semilla * 7919 + 13);
+  let y = -520, antes = null;
+  return {
+    infinito: true, vel: 100, largo: Infinity,
+    tema: (alt) => Math.floor(alt / 4000) % 3,
+    velEn: (alt) => Math.min(150, 100 + alt / 400),
+    siguiente() {
+      const alt = -y, d = clamp(0.15 + alt / 18000 + r.entre(-0.1, 0.1), 0, 1);
+      const pool = FORMACIONES.filter((t) => DESDE[t] <= 4 + alt / 700 && t !== antes);
+      const f = formacion(r.uno(pool), r, d, { cae: r() < Math.min(0.6, 0.25 + alt / 30000) });
+      f.y0 = y; f.d = d;
+      y -= f.alto + r.entre(220, 320) - Math.min(90, alt / 200);
+      antes = f.tipo;
+      return f;
+    },
+  };
+}
+
+// ¿Alguna pieza fija se mete en la columna del globo? (la prueba lo mira en
+// todos los niveles: si pasara, el nivel sería imposible)
+function fijoEnColumna(f) {
+  for (const p of f.piezas) {
+    // el clavo del péndulo también es fijo
+    if (p.tipo === 'pendulo' && p.ax > COLUMNA[0] - 8 && p.ax < COLUMNA[1] + 8) return p;
+    if (p.tipo !== 'fijo' && p.tipo !== 'aspa') continue;
+    // la caja girada: el punto más cercano a la columna, muestreando el borde
+    const c = Math.cos(p.a || 0), s = Math.sin(p.a || 0), hx = p.tipo === 'aspa' ? p.w / 2 : p.w / 2, hy = p.tipo === 'aspa' ? p.w / 2 : p.h / 2;
+    for (let k = 0; k <= 40; k++) {
+      const u = (k / 40) * 2 - 1;
+      for (const [lx, ly] of [[u * hx, -hy], [u * hx, hy], [-hx, u * hy], [hx, u * hy]]) {
+        const x = p.x + c * lx - s * ly;
+        if (x > COLUMNA[0] - 1 && x < COLUMNA[1] + 1) return p;
+      }
+    }
+  }
+  return null;
+}
+return { ANCHO, COLUMNA, NIVELES, FORMACIONES, formacion, armarNivel, crearInfinito, fijoEnColumna };
+})();
+
+/* ── fisica ── */
+const M_fisica = (() => {
+// La física de Globo Libre: cuerpos rígidos en 2D (bolas y cajas que giran)
+// con choques, fricción, rebote, cuerdas y cuerpos que se duermen.
+//
+// Es el método de Box2D-lite (Erin Catto): cada paso se buscan los contactos,
+// las velocidades se corrigen con impulsos en varias vueltas (acumulados y
+// recortados, así una pila no se hunde ni salta) y recién al final se mueven
+// las posiciones. Cajas contra cajas dan hasta dos puntos de contacto
+// (recortando la arista que choca contra la cara de referencia): sin eso una
+// caja apoyada se balancea sobre una esquina. Sin librerías: el repo es
+// público y el juego va en un solo archivo.
+//
+// Coordenadas de pantalla: x a la derecha e y hacia ABAJO (la gravedad es +y).
+
+// de a uno por línea: el empaquetador lee un solo nombre por `export const`
+const ESTATICO = 0;
+const CINEMATICO = 1;
+const DINAMICO = 2;
+
+const BETA = 0.2;            // cuánto de la penetración se corrige por paso
+const HOLGURA = 0.6;         // penetración que se tolera sin empujar (si no, tiembla)
+const UMBRAL_REBOTE = 60;    // más lento que esto, no rebota (si no, nunca se queda quieto)
+const CORRECCION_MAX = 240;  // a qué velocidad, como mucho, se separa lo que quedó metido (si no, sale disparado)
+const AIRE_GIRO = 0.9;
+const VEL_MAX = 2200, GIRO_MAX = 40;
+const DORMIR_V2 = 9, DORMIR_W = 0.2, DORMIR_T = 0.6;
+const CELDA = 64;
+
+let siguiente = 1;
+
+class Cuerpo {
+  // `pivote`: clavado por el centro, gira pero no se va (un molinete que se
+  // empuja): masa infinita para correrse y la inercia de siempre para girar.
+  constructor({ tipo = DINAMICO, forma = 'caja', x = 0, y = 0, a = 0, w = 20, h = 20, r = 10, densidad = 1, friccion = 0.45, rebote = 0.08, color = null, dormido = false, gravedad = 1, pivote = false, datos = null } = {}) {
+    this.id = siguiente++;
+    this.tipo = tipo; this.forma = forma;
+    this.x = x; this.y = y; this.a = a;
+    this.vx = 0; this.vy = 0; this.w = 0;
+    this.hx = forma === 'bola' ? r : w / 2; this.hy = forma === 'bola' ? r : h / 2;
+    this.r = forma === 'bola' ? r : Math.hypot(w, h) / 2;       // el radio que la envuelve
+    this.friccion = friccion; this.rebote = rebote; this.gravedad = pivote ? 0 : gravedad;
+    this.color = color; this.datos = datos; this.pivote = pivote;
+    this.dormido = dormido && tipo === DINAMICO; this.quieto = 0;
+    this.vivo = true; this.marca = 0; this.isla = null;
+    if (tipo === DINAMICO) {
+      const area = forma === 'bola' ? Math.PI * r * r : w * h;
+      this.masa = area * densidad * 0.001;
+      this.inercia = forma === 'bola' ? 0.5 * this.masa * r * r : (this.masa * (w * w + h * h)) / 12;
+      this.im = pivote ? 0 : 1 / this.masa; this.ii = 1 / this.inercia;
+    } else { this.masa = Infinity; this.inercia = Infinity; this.im = 0; this.ii = 0; }
+    this.c = Math.cos(a); this.s = Math.sin(a);
+  }
+  girar(a) { this.a = a; this.c = Math.cos(a); this.s = Math.sin(a); }
+  despertar() { if (this.dormido) { this.dormido = false; this.quieto = 0; } }
+  // de local a mundo (para dibujar esquinas y puntos de la caja)
+  aMundo(lx, ly) { return [this.x + this.c * lx - this.s * ly, this.y + this.s * lx + this.c * ly]; }
+}
+
+// ── los choques: normal de A hacia B y puntos con su separación (<0: se meten) ──
+function bolaBola(A, B) {
+  const dx = B.x - A.x, dy = B.y - A.y, rr = A.r + B.r, d2 = dx * dx + dy * dy;
+  if (d2 >= rr * rr) return null;
+  const d = Math.sqrt(d2), nx = d > 1e-9 ? dx / d : 1, ny = d > 1e-9 ? dy / d : 0;
+  const sep = d - rr;
+  return { nx, ny, puntos: [{ x: A.x + nx * (A.r + sep / 2), y: A.y + ny * (A.r + sep / 2), sep }] };
+}
+
+// A es la bola, B la caja.
+function bolaCaja(A, B) {
+  const dx = A.x - B.x, dy = A.y - B.y;
+  const lx = B.c * dx + B.s * dy, ly = -B.s * dx + B.c * dy;
+  const cx = lx < -B.hx ? -B.hx : lx > B.hx ? B.hx : lx, cy = ly < -B.hy ? -B.hy : ly > B.hy ? B.hy : ly;
+  let nxL, nyL, sep, px, py;
+  if (lx !== cx || ly !== cy) {
+    const ex = lx - cx, ey = ly - cy, d = Math.hypot(ex, ey);
+    if (d >= A.r) return null;
+    nxL = ex / d; nyL = ey / d; sep = d - A.r; px = cx; py = cy;
+  } else {
+    // el centro quedó adentro: sale por la cara más cercana
+    const fx = B.hx - Math.abs(lx), fy = B.hy - Math.abs(ly);
+    if (fx < fy) { nxL = lx < 0 ? -1 : 1; nyL = 0; sep = -fx - A.r; px = nxL * B.hx; py = ly; }
+    else { nxL = 0; nyL = ly < 0 ? -1 : 1; sep = -fy - A.r; px = lx; py = nyL * B.hy; }
+  }
+  const nwx = B.c * nxL - B.s * nyL, nwy = B.s * nxL + B.c * nyL;     // de la caja hacia la bola
+  const [wx, wy] = B.aMundo(px, py);
+  return { nx: -nwx, ny: -nwy, puntos: [{ x: wx, y: wy, sep }] };
+}
+
+// La arista de la caja b que mira más en contra de la normal n (Box2D-lite › ComputeIncidentEdge).
+function aristaIncidente(b, nx, ny) {
+  const lx = -(b.c * nx + b.s * ny), ly = -(-b.s * nx + b.c * ny);
+  let p1x, p1y, p2x, p2y;
+  if (Math.abs(lx) > Math.abs(ly)) {
+    if (lx > 0) { p1x = b.hx; p1y = -b.hy; p2x = b.hx; p2y = b.hy; } else { p1x = -b.hx; p1y = b.hy; p2x = -b.hx; p2y = -b.hy; }
+  } else if (ly > 0) { p1x = b.hx; p1y = b.hy; p2x = -b.hx; p2y = b.hy; } else { p1x = -b.hx; p1y = -b.hy; p2x = b.hx; p2y = -b.hy; }
+  return [b.aMundo(p1x, p1y), b.aMundo(p2x, p2y)];
+}
+function recortar(v, nx, ny, desde) {
+  const [a, b] = v, out = [];
+  const d0 = nx * a[0] + ny * a[1] - desde, d1 = nx * b[0] + ny * b[1] - desde;
+  if (d0 <= 0) out.push(a);
+  if (d1 <= 0) out.push(b);
+  if (d0 * d1 < 0) { const t = d0 / (d0 - d1); out.push([a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])]); }
+  return out;
+}
+
+// Caja contra caja (Box2D-lite › Collide): el eje de menor penetración entre
+// las cuatro caras, la arista incidente recortada por los costados de la cara
+// de referencia, y hasta dos puntos.
+function cajaCaja(A, B) {
+  const hAx = A.hx, hAy = A.hy, hBx = B.hx, hBy = B.hy, cA = A.c, sA = A.s, cB = B.c, sB = B.s;
+  const dpx = B.x - A.x, dpy = B.y - A.y;
+  const dAx = cA * dpx + sA * dpy, dAy = -sA * dpx + cA * dpy;
+  const dBx = cB * dpx + sB * dpy, dBy = -sB * dpx + cB * dpy;
+  const c11 = cA * cB + sA * sB, c12 = -cA * sB + sA * cB, c21 = -sA * cB + cA * sB, c22 = sA * sB + cA * cB;
+  const a11 = Math.abs(c11), a12 = Math.abs(c12), a21 = Math.abs(c21), a22 = Math.abs(c22);
+  const fAx = Math.abs(dAx) - hAx - (a11 * hBx + a12 * hBy);
+  const fAy = Math.abs(dAy) - hAy - (a21 * hBx + a22 * hBy);
+  if (fAx > 0 || fAy > 0) return null;
+  const fBx = Math.abs(dBx) - (a11 * hAx + a21 * hAy) - hBx;
+  const fBy = Math.abs(dBy) - (a12 * hAx + a22 * hAy) - hBy;
+  if (fBx > 0 || fBy > 0) return null;
+  let eje = 0, sep = fAx, nx = dAx > 0 ? cA : -cA, ny = dAx > 0 ? sA : -sA;
+  if (fAy > 0.95 * sep + 0.01 * hAy) { eje = 1; sep = fAy; nx = dAy > 0 ? -sA : sA; ny = dAy > 0 ? cA : -cA; }
+  if (fBx > 0.95 * sep + 0.01 * hBx) { eje = 2; sep = fBx; nx = dBx > 0 ? cB : -cB; ny = dBx > 0 ? sB : -sB; }
+  if (fBy > 0.95 * sep + 0.01 * hBy) { eje = 3; sep = fBy; nx = dBy > 0 ? -sB : sB; ny = dBy > 0 ? cB : -cB; }
+  let fnx, fny, frente, snx, sny, neg, pos, inc;
+  if (eje === 0) { fnx = nx; fny = ny; frente = A.x * fnx + A.y * fny + hAx; snx = -sA; sny = cA; const l = A.x * snx + A.y * sny; neg = -l + hAy; pos = l + hAy; inc = aristaIncidente(B, fnx, fny); }
+  else if (eje === 1) { fnx = nx; fny = ny; frente = A.x * fnx + A.y * fny + hAy; snx = cA; sny = sA; const l = A.x * snx + A.y * sny; neg = -l + hAx; pos = l + hAx; inc = aristaIncidente(B, fnx, fny); }
+  else if (eje === 2) { fnx = -nx; fny = -ny; frente = B.x * fnx + B.y * fny + hBx; snx = -sB; sny = cB; const l = B.x * snx + B.y * sny; neg = -l + hBy; pos = l + hBy; inc = aristaIncidente(A, fnx, fny); }
+  else { fnx = -nx; fny = -ny; frente = B.x * fnx + B.y * fny + hBy; snx = cB; sny = sB; const l = B.x * snx + B.y * sny; neg = -l + hBx; pos = l + hBx; inc = aristaIncidente(A, fnx, fny); }
+  let cp = recortar(inc, -snx, -sny, neg);
+  if (cp.length < 2) return null;
+  cp = recortar(cp, snx, sny, pos);
+  if (cp.length < 2) return null;
+  const puntos = [];
+  for (const [px, py] of cp) {
+    const s = fnx * px + fny * py - frente;
+    if (s <= 0) puntos.push({ x: px - s * fnx, y: py - s * fny, sep: s });
+  }
+  return puntos.length ? { nx, ny, puntos } : null;
+}
+
+function chocan(A, B) {
+  if (A.forma === 'bola') return B.forma === 'bola' ? bolaBola(A, B) : bolaCaja(A, B);
+  if (B.forma === 'bola') { const c = bolaCaja(B, A); if (c) { c.nx = -c.nx; c.ny = -c.ny; } return c; }
+  return cajaCaja(A, B);
+}
+
+// ── el mundo ────────────────────────────────────────────────────────────────
+class Mundo {
+  // `aire`: el roce con el aire (por segundo); con más, las cosas caen más lentas y se atajan mejor
+  constructor({ gravedad = 900, iteraciones = 10, aire = 0.35 } = {}) {
+    this.g = gravedad; this.iteraciones = iteraciones; this.aire = aire;
+    this.cuerpos = []; this.cuerdas = []; this.contactos = [];
+    this.grilla = new Map();
+    this.ventana = [-Infinity, Infinity];        // de qué alto a qué alto chocan las cosas
+    this.golpes = [];                            // choques fuertes contra `this.oido` (para el sonido)
+    this.oido = null;
+    this.hayMuertos = false;
+    // los contactos del paso anterior: su impulso arranca el de este (así una
+    // pila se asienta y se duerme en vez de temblar para siempre)
+    this.previos = new Map();
+    this.despiertos = [];
+  }
+  agregar(c) { this.cuerpos.push(c); return c; }
+  sacar(c) { if (c.vivo) { c.vivo = false; this.hayMuertos = true; } }
+  // Los que nacen dormidos juntos (una torre, una pared) se despiertan juntos:
+  // al tocar una caja, la torre entera siente el golpe.
+  grupo(lista) { const isla = { cuerpos: lista.filter((c) => c.dormido) }; for (const c of isla.cuerpos) c.isla = isla; return isla; }
+  // una bola colgada de un punto fijo (o de un cuerpo que se mueve), de largo fijo
+  cuerda(b, x, y, largo, desde = null) { const c = { b, x, y, largo, desde }; this.cuerdas.push(c); return c; }
+
+  armarGrilla() {
+    const g = this.grilla; g.clear();
+    const [arriba, abajo] = this.ventana;
+    for (const b of this.cuerpos) {
+      if (!b.vivo || b.y + b.r < arriba || b.y - b.r > abajo) continue;
+      const i0 = Math.floor((b.x - b.r) / CELDA), i1 = Math.floor((b.x + b.r) / CELDA);
+      const j0 = Math.floor((b.y - b.r) / CELDA), j1 = Math.floor((b.y + b.r) / CELDA);
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const k = j * 4096 + i;
+        let l = g.get(k); if (!l) { l = []; g.set(k, l); }
+        l.push(b);
+      }
+    }
+  }
+  // todo lo que toca el círculo (x, y, r); `fn(cuerpo, contacto)`
+  cerca(x, y, r, fn) {
+    const sonda = { forma: 'bola', x, y, r, hx: r, hy: r, c: 1, s: 0 };
+    const i0 = Math.floor((x - r) / CELDA), i1 = Math.floor((x + r) / CELDA), j0 = Math.floor((y - r) / CELDA), j1 = Math.floor((y + r) / CELDA);
+    const vistos = new Set();
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) for (const b of this.grilla.get(j * 4096 + i) || []) {
+      if (vistos.has(b) || !b.vivo) continue;
+      vistos.add(b);
+      const c = chocan(sonda, b);
+      if (c) fn(b, c);
+    }
+  }
+
+  // Despierta a un dormido y a los que se durmieron con él (su "isla"): si se
+  // despertara solo la caja de arriba de una pila, la de abajo seguiría
+  // dormida sin sentir el peso.
+  despertar(b) {
+    const lista = b.isla ? b.isla.cuerpos : [b];
+    for (const c of lista) if (c.vivo && c.dormido) { c.despertar(); c.isla = null; this.despiertos.push(c); }
+  }
+
+  detectar() {
+    this.contactos.length = 0;
+    this.despiertos = [];
+    const previos = this.previos, nuevos = new Map();
+    const g = this.grilla, [arriba, abajo] = this.ventana;
+    // la marca de "ya probado con A" no vuelve a empezar nunca: si empezara de
+    // cero en cada paso, lo marcado en el paso anterior parecería ya probado
+    // (una caja sola atravesaba el piso)
+    let marca = this.marca || 0;
+    const probar = (A, tarde) => {
+      marca++;
+      const i0 = Math.floor((A.x - A.r) / CELDA), i1 = Math.floor((A.x + A.r) / CELDA);
+      const j0 = Math.floor((A.y - A.r) / CELDA), j1 = Math.floor((A.y + A.r) / CELDA);
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const l = g.get(j * 4096 + i);
+        if (!l) continue;
+        for (const B of l) {
+          if (B === A || B.marca === marca || !B.vivo) continue;
+          B.marca = marca;
+          const Bmueve = B.tipo !== ESTATICO && !B.dormido;
+          if (Bmueve && B.id < A.id) continue;                   // ese par ya lo probó B
+          if (A.tipo !== DINAMICO && (B.tipo !== DINAMICO)) continue;  // cinemático contra fijo: nada
+          // uno que se despertó en este paso puede tener ya el par, probado del otro lado
+          if (tarde && nuevos.has(B.id * 1048576 + A.id)) continue;
+          const dx = B.x - A.x, dy = B.y - A.y, rr = A.r + B.r;
+          if (dx * dx + dy * dy > rr * rr) continue;
+          const c = chocan(A, B);
+          if (!c) continue;
+          if (B.dormido) this.despertar(B);
+          c.a = A; c.b = B;
+          c.f = Math.sqrt(A.friccion * B.friccion); c.e = Math.max(A.rebote, B.rebote);
+          const clave = A.id * 1048576 + B.id, viejo = previos.get(clave);
+          if (viejo) for (const p of c.puntos) {
+            let mejor = null, d2m = 4;
+            for (const q of viejo.puntos) { const d2 = (q.x - p.x) ** 2 + (q.y - p.y) ** 2; if (d2 < d2m) { d2m = d2; mejor = q; } }
+            if (mejor) { p.pn = mejor.pn; p.pt = mejor.pt; }
+          }
+          nuevos.set(clave, c);
+          this.contactos.push(c);
+        }
+      }
+    };
+    const enVentana = (A) => A.y + A.r >= arriba && A.y - A.r <= abajo;
+    // buscan pareja los que se mueven; los quietos (estáticos y dormidos) solo esperan
+    for (const A of this.cuerpos) if (A.vivo && A.tipo !== ESTATICO && !A.dormido && enVentana(A)) probar(A, false);
+    // Los que se despertaron recién ya habían pasado dormidos por la vuelta:
+    // se prueban ahora, si no la caja de abajo de la pila se quedaba este paso
+    // sin el piso y la de arriba la hundía.
+    for (let k = 0; k < this.despiertos.length; k++) { const A = this.despiertos[k]; if (enVentana(A)) probar(A, true); }
+    this.marca = marca;
+    this.previos = nuevos;
+  }
+
+  // Se duermen de a islas (los que se tocan): una caja de abajo que se durmiera
+  // sola mientras la de arriba todavía se acomoda la despertaría a cada rato,
+  // y cada despertar es un golpe (la pila no paraba nunca).
+  dormir(dt) {
+    const act = [];
+    const raiz = (b) => { while (b.padre !== b) { b.padre = b.padre.padre; b = b.padre; } return b; };
+    for (const b of this.cuerpos) {
+      if (!b.vivo || b.tipo !== DINAMICO || b.dormido) continue;
+      if (b.vx * b.vx + b.vy * b.vy < DORMIR_V2 && Math.abs(b.w) < DORMIR_W && !b.colgado) b.quieto += dt; else b.quieto = 0;
+      b.padre = b; b.menor = b.quieto; act.push(b);
+    }
+    for (const ct of this.contactos) {
+      const A = ct.a, B = ct.b;
+      if (A.tipo !== DINAMICO || B.tipo !== DINAMICO || A.dormido || B.dormido) {
+        // apoyado en algo que se mueve solo (el escudo): no se duerme
+        if (A.tipo === CINEMATICO) B.menor = 0; else if (B.tipo === CINEMATICO) A.menor = 0;
+        continue;
+      }
+      const ra = raiz(A), rb = raiz(B);
+      if (ra !== rb) { rb.padre = ra; if (rb.menor < ra.menor) ra.menor = rb.menor; }
+    }
+    const islas = new Map();
+    for (const b of act) {
+      const r = raiz(b);
+      if (b.menor < r.menor) r.menor = b.menor;
+    }
+    for (const b of act) {
+      const r = raiz(b);
+      if (r.menor <= DORMIR_T) continue;
+      let isla = islas.get(r); if (!isla) { isla = { cuerpos: [] }; islas.set(r, isla); }
+      isla.cuerpos.push(b);
+      b.dormido = true; b.vx = b.vy = b.w = 0; b.isla = isla;
+    }
+  }
+
+  paso(dt) {
+    const inv = 1 / dt, [arriba, abajo] = this.ventana;
+    this.armarGrilla();
+    this.detectar();
+    // la gravedad después de buscar los choques: así la reciben también los que se despertaron recién
+    const activo = (b) => b.vivo && !b.dormido && b.y + b.r >= arriba - 200 && b.y - b.r <= abajo + 200;
+    for (const b of this.cuerpos) if (b.tipo === DINAMICO && activo(b)) {
+      b.vy += this.g * b.gravedad * dt;
+      const k = 1 / (1 + dt * (b.aire ?? this.aire)); b.vx *= k; b.vy *= k; b.w /= 1 + dt * (b.roceGiro ?? AIRE_GIRO);
+    }
+    // primero se miden todos los choques y recién después se aplica el
+    // arranque: si el arranque de un contacto entrara antes de medir el
+    // siguiente, el de más arriba "veía" un golpe fuerte que no existía y
+    // rebotaba (una pila de 6 cajas no se quedaba quieta nunca)
+    for (const ct of this.contactos) preparar(ct, inv);
+    for (const ct of this.contactos) arrancar(ct);
+    for (let it = 0; it < this.iteraciones; it++) {
+      for (const ct of this.contactos) resolver(ct);
+      for (const cu of this.cuerdas) tirar(cu, inv);
+    }
+    // los golpes contra el que escucha (el escudo), con la velocidad del choque: para el sonido
+    if (this.oido) for (const ct of this.contactos) if ((ct.a === this.oido || ct.b === this.oido) && ct.impacto > UMBRAL_REBOTE) {
+      this.golpes.push({ vel: ct.impacto, x: ct.puntos[0].x, y: ct.puntos[0].y, cuerpo: ct.a === this.oido ? ct.b : ct.a });
+    }
+    for (const b of this.cuerpos) {
+      if (!b.vivo || b.tipo === ESTATICO || b.dormido) continue;
+      const v2 = b.vx * b.vx + b.vy * b.vy;
+      if (v2 > VEL_MAX * VEL_MAX) { const k = VEL_MAX / Math.sqrt(v2); b.vx *= k; b.vy *= k; }
+      const gm = b.giroMax ?? GIRO_MAX;
+      if (b.w > gm) b.w = gm; else if (b.w < -gm) b.w = -gm;
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      if (b.w) b.girar(b.a + b.w * dt);
+      // el tope de giro (un molinete que abre como tranquera): contra el tope, se frena
+      if (b.tope) {
+        if (b.a < b.tope[0]) { b.girar(b.tope[0]); if (b.w < 0) b.w = 0; }
+        else if (b.a > b.tope[1]) { b.girar(b.tope[1]); if (b.w > 0) b.w = 0; }
+      }
+    }
+    // quieto un rato: se duerme (una pila que ya cayó no gasta nada)
+    this.dormir(dt);
+    if (this.hayMuertos) {
+      this.cuerpos = this.cuerpos.filter((b) => b.vivo);
+      this.cuerdas = this.cuerdas.filter((c) => c.b.vivo);
+      this.hayMuertos = false;
+    }
+  }
+}
+
+function preparar(ct, inv) {
+  const A = ct.a, B = ct.b, nx = ct.nx, ny = ct.ny, tx = ny, ty = -nx;
+  ct.impacto = 0;
+  for (const p of ct.puntos) {
+    p.r1x = p.x - A.x; p.r1y = p.y - A.y; p.r2x = p.x - B.x; p.r2y = p.y - B.y;
+    const rn1 = p.r1x * nx + p.r1y * ny, rn2 = p.r2x * nx + p.r2y * ny;
+    const r1 = p.r1x * p.r1x + p.r1y * p.r1y, r2 = p.r2x * p.r2x + p.r2y * p.r2y;
+    const kn = A.im + B.im + A.ii * (r1 - rn1 * rn1) + B.ii * (r2 - rn2 * rn2);
+    p.mn = kn > 0 ? 1 / kn : 0;
+    const rt1 = p.r1x * tx + p.r1y * ty, rt2 = p.r2x * tx + p.r2y * ty;
+    const kt = A.im + B.im + A.ii * (r1 - rt1 * rt1) + B.ii * (r2 - rt2 * rt2);
+    p.mt = kt > 0 ? 1 / kt : 0;
+    p.sesgo = Math.min(CORRECCION_MAX, -BETA * inv * Math.min(0, p.sep + HOLGURA));
+    const dvx = B.vx - B.w * p.r2y - (A.vx - A.w * p.r1y), dvy = B.vy + B.w * p.r2x - (A.vy + A.w * p.r1x);
+    const vn = dvx * nx + dvy * ny;
+    if (vn < -UMBRAL_REBOTE) p.sesgo = Math.max(p.sesgo, -ct.e * vn);
+    if (-vn > ct.impacto) ct.impacto = -vn;
+    p.pn = p.pn || 0; p.pt = p.pt || 0;
+  }
+}
+
+// el impulso del paso anterior, de arranque
+function arrancar(ct) {
+  const A = ct.a, B = ct.b, nx = ct.nx, ny = ct.ny, tx = ny, ty = -nx;
+  for (const p of ct.puntos) {
+    if (!p.pn && !p.pt) continue;
+    const px = p.pn * nx + p.pt * tx, py = p.pn * ny + p.pt * ty;
+    A.vx -= A.im * px; A.vy -= A.im * py; A.w -= A.ii * (p.r1x * py - p.r1y * px);
+    B.vx += B.im * px; B.vy += B.im * py; B.w += B.ii * (p.r2x * py - p.r2y * px);
+  }
+}
+
+function resolver(ct) {
+  const A = ct.a, B = ct.b, nx = ct.nx, ny = ct.ny, tx = ny, ty = -nx;
+  for (const p of ct.puntos) {
+    let dvx = B.vx - B.w * p.r2y - (A.vx - A.w * p.r1y), dvy = B.vy + B.w * p.r2x - (A.vy + A.w * p.r1x);
+    let d = p.mn * (-(dvx * nx + dvy * ny) + p.sesgo);
+    const pn0 = p.pn; p.pn = Math.max(pn0 + d, 0); d = p.pn - pn0;
+    let px = d * nx, py = d * ny;
+    A.vx -= A.im * px; A.vy -= A.im * py; A.w -= A.ii * (p.r1x * py - p.r1y * px);
+    B.vx += B.im * px; B.vy += B.im * py; B.w += B.ii * (p.r2x * py - p.r2y * px);
+    dvx = B.vx - B.w * p.r2y - (A.vx - A.w * p.r1y); dvy = B.vy + B.w * p.r2x - (A.vy + A.w * p.r1x);
+    d = p.mt * -(dvx * tx + dvy * ty);
+    const tope = ct.f * p.pn, pt0 = p.pt;
+    p.pt = Math.max(-tope, Math.min(tope, pt0 + d)); d = p.pt - pt0;
+    px = d * tx; py = d * ty;
+    A.vx -= A.im * px; A.vy -= A.im * py; A.w -= A.ii * (p.r1x * py - p.r1y * px);
+    B.vx += B.im * px; B.vy += B.im * py; B.w += B.ii * (p.r2x * py - p.r2y * px);
+  }
+}
+
+// La cuerda: la bola no se aleja del punto más que su largo (una vara, además,
+// no deja que se acerque). Se corrige la velocidad a lo largo de la cuerda,
+// con la misma corrección de a poco que los contactos.
+function tirar(cu, inv) {
+  const b = cu.b;
+  if (!b.vivo || b.dormido) return;
+  const ox = cu.desde ? cu.desde.x : cu.x, oy = cu.desde ? cu.desde.y : cu.y;
+  const dx = b.x - ox, dy = b.y - oy, d = Math.hypot(dx, dy);
+  if (d < 1e-6) return;
+  const nx = dx / d, ny = dy / d, err = d - cu.largo;
+  if (!cu.vara && err < 0) return;                 // floja: no tira
+  const ovx = cu.desde ? cu.desde.vx : 0, ovy = cu.desde ? cu.desde.vy : 0;
+  const l = -((b.vx - ovx) * nx + (b.vy - ovy) * ny + BETA * inv * err);
+  if (!cu.vara && l > 0) return;                   // una cuerda tira, no empuja
+  b.vx += l * nx; b.vy += l * ny;
+}
+return { ESTATICO, CINEMATICO, DINAMICO, Cuerpo, chocan, Mundo };
+})();
+
+/* ── temas ── */
+const M_temas = (() => {
+// Los tres cielos de Globo Libre (diez niveles cada uno) y sus colores.
+// Todo plano: cada cosa es un color lleno con su sombra en un tono más oscuro
+// (util.js › tono), sin degradés por cuerpo. El cielo sí va degradé, pero se
+// arma una vez por tema y altura, no por cuadro.
+const TEMAS = [
+  {
+    id: 'dia',
+    cielo: [['#5fb8ff', '#bfe6ff'], ['#4aa3f5', '#a9dcff']],   // abajo del nivel → arriba
+    nube: '#ffffff', nubeSombra: '#d9efff',
+    piso: '#7bd35a', pisoSombra: '#56a83d', flor: ['#ff6b8b', '#ffd23f', '#ffffff'],
+    cuerpos: ['#ff6b6b', '#ffd23f', '#2ecc9a', '#4d8dff', '#a770ff', '#ff9f43'],
+    fijo: '#3d4466', fijoRaya: '#4b5480', tinta: '#1d2440', meta: '#ffd23f',
+    estrellas: 0,
+  },
+  {
+    id: 'tarde',
+    cielo: [['#ff9a6b', '#ffd49a'], ['#b85cc9', '#ff8fa3']],
+    nube: '#ffe3ec', nubeSombra: '#f7b7cc',
+    piso: '#e38b4f', pisoSombra: '#b86a38', flor: ['#fff1c1', '#ff5d8f', '#7b2cbf'],
+    cuerpos: ['#7b2cbf', '#2ec4b6', '#ff9f1c', '#ff5d8f', '#3a86ff', '#ffbe0b'],
+    fijo: '#4a2c5e', fijoRaya: '#5c3873', tinta: '#2a1433', meta: '#fff1c1',
+    estrellas: 0.25,
+  },
+  {
+    id: 'noche',
+    cielo: [['#18265c', '#2e4a8f'], ['#0a0f2e', '#1b2660']],
+    nube: '#3a4a86', nubeSombra: '#2a3870',
+    piso: '#2c3e7a', pisoSombra: '#1f2c5c', flor: ['#3de7ff', '#ff4fd8', '#b8ff3d'],
+    cuerpos: ['#3de7ff', '#ff4fd8', '#b8ff3d', '#ffd23f', '#8f7bff', '#ff7a59'],
+    fijo: '#c9d2ff', fijoRaya: '#aab6f5', tinta: '#060a22', meta: '#3de7ff',
+    estrellas: 1,
+  },
+];
+
+const temaDeNivel = (n) => TEMAS[Math.min(TEMAS.length - 1, Math.floor(n / 10))];
+return { TEMAS, temaDeNivel };
+})();
+
+/* ── partida ── */
+const M_partida = (() => {
+// Una partida: el globo que sube solo, el escudo que maneja el dedo, las
+// formaciones que van apareciendo y la física que las mueve.
+//
+// El globo sube a velocidad fija por x = 180 y la cámara lo sigue (queda al
+// 72 % del alto de la vista). El escudo es un cuerpo cinemático: se mueve con
+// la cámara (si el dedo no se mueve, queda quieto en la pantalla y en el
+// mundo va subiendo, empujando lo que tenga arriba) más lo que arrastre el
+// dedo. Cualquier cosa que no sea el escudo y toque el globo, lo revienta.
+//
+// La física va a 120 pasos por segundo (a 60 el escudo rápido atravesaría las
+// bolas chicas) y el movimiento del dedo de cada cuadro se reparte entre los
+// pasos de ese cuadro.
+const { Mundo, Cuerpo, ESTATICO, CINEMATICO, DINAMICO } = M_fisica;
+const { armarNivel, crearInfinito, ANCHO } = M_niveles;
+const { TEMAS } = M_temas;
+const { azar, clamp, trozos } = M_util;
+const PASO_FIS = 1 / 120;
+const R_GLOBO = 22;
+const R_ESCUDO = 20;
+const R_MONEDA = 10;
+// liviana, como en el aire: lo que se suelta cae despacio y da tiempo a atajarlo
+const GRAVEDAD = 320;
+const VEL_ESCUDO = 2600;        // tope del escudo, en unidades por segundo
+const ALTO_GLOBO = 0.72;        // dónde va el globo en la vista (desde arriba)
+const VAIVEN = 12;        // cuánto se hamaca el globo de lado (niveles.js › COLUMNA lo tiene en cuenta)
+
+class Partida {
+  // `formaciones`: una lista propia en vez de la del nivel (las pruebas arman así una formación sola)
+  // `inmortal`: el globo no revienta (para que las pruebas recorran el infinito entero)
+  constructor({ nivel = 0, infinito = false, semilla = 1, formaciones = null, inmortal = false } = {}) {
+    this.nivel = nivel; this.infinito = infinito; this.inmortal = inmortal;
+    this.def = infinito ? crearInfinito(semilla) : armarNivel(nivel);
+    if (formaciones) {
+      this.def.formaciones = formaciones;
+      const ult = formaciones[formaciones.length - 1];
+      this.def.largo = -(ult.y0 - ult.alto) + 300;
+    }
+    this.vel = this.def.vel;
+    this.largo = this.def.largo;
+    this.mundo = new Mundo({ gravedad: GRAVEDAD, iteraciones: 8, aire: 0.6 });
+    this.globo = { x: ANCHO / 2, y: 0, r: R_GLOBO, vivo: true, vx: 0 };
+    this.escudo = this.mundo.agregar(new Cuerpo({ tipo: CINEMATICO, forma: 'bola', r: R_ESCUDO, x: ANCHO / 2 - 70, y: -95, friccion: 0.5, rebote: 0.1 }));
+    this.mundo.oido = this.escudo;
+    this.vista = { w: ANCHO, h: 640 };
+    // el escudo, medido desde el globo (así cambiar el alto de la vista no lo
+    // corre). Arranca corrido a un costado: la primera caja está justo arriba
+    // del globo y hay que moverlo para correrla (el nivel 1 lo enseña así).
+    this.rel = { x: ANCHO / 2 - 70, y: -95 };
+    this.relObj = { x: ANCHO / 2 - 70, y: -95 };
+    this.pendientes = this.infinito ? [] : [...this.def.formaciones];
+    this.activas = [];
+    this.monedas = [];
+    this.tomadas = 0;
+    this.estado = 'juego';                     // juego → pum | meta
+    this.tFin = 0; this.t = 0;
+    this.eventos = [];
+    this.particulas = [];
+    this.azarVisual = azar(1234 + nivel);
+    this.clavos = [];
+    this.medir(ANCHO, 640);
+    this.escudo.y = this.globo.y + this.rel.y;
+    this.cargar();
+  }
+
+  // la vista en unidades del mundo (main.js la pasa según la pantalla)
+  medir(w, h) {
+    this.vista.w = w; this.vista.h = h;
+    this.relObj.x = clamp(this.relObj.x, R_ESCUDO, ANCHO - R_ESCUDO);
+    this.relObj.y = clamp(this.relObj.y, R_ESCUDO - h * ALTO_GLOBO, h * (1 - ALTO_GLOBO) - R_ESCUDO);
+  }
+  arriba() { return this.globo.y - this.vista.h * ALTO_GLOBO; }
+  abajo() { return this.arriba() + this.vista.h; }
+  altura() { return Math.max(0, -this.globo.y); }
+  progreso() { return this.infinito ? 0 : clamp(this.altura() / this.largo, 0, 1); }
+  tema() {
+    if (!this.infinito) return TEMAS[this.def.tema];
+    return TEMAS[this.def.tema(this.altura())];
+  }
+
+  // lo que arrastró el dedo en este cuadro, en unidades del mundo
+  mover(dx, dy) {
+    const h = this.vista.h;
+    this.relObj.x = clamp(this.relObj.x + dx, R_ESCUDO, ANCHO - R_ESCUDO);
+    this.relObj.y = clamp(this.relObj.y + dy, R_ESCUDO - h * ALTO_GLOBO, h * (1 - ALTO_GLOBO) - R_ESCUDO);
+  }
+
+  // ── las formaciones: se arman un poco antes de verse y se sacan al pasar ──
+  cargar() {
+    const tope = this.arriba() - 900;
+    if (this.infinito) while (!this.pendientes.length || this.pendientes[this.pendientes.length - 1].y0 > tope) this.pendientes.push(this.def.siguiente());
+    while (this.pendientes.length && this.pendientes[0].y0 > tope) this.armar(this.pendientes.shift());
+  }
+  armar(f) {
+    const m = this.mundo, tema = this.tema(), cuerpos = [], grupos = new Map();
+    const r = azar(Math.round(-f.y0) * 31 + 7);
+    for (const p of f.piezas) {
+      const tipo = p.tipo === 'fijo' ? ESTATICO : p.tipo === 'aspa' ? CINEMATICO : DINAMICO;
+      const color = p.tipo === 'fijo' ? tema.fijo : r.uno(tema.cuerpos);
+      const c = new Cuerpo({
+        tipo, forma: p.forma, x: p.x, y: f.y0 + p.y, a: p.a || 0, w: p.w, h: p.h, r: p.r,
+        densidad: p.densidad || 1, dormido: tipo === DINAMICO, pivote: p.tipo === 'molinete', color,
+        friccion: p.forma === 'bola' ? 0.3 : 0.5, rebote: p.forma === 'bola' ? 0.25 : 0.08,
+        datos: { pieza: p.tipo || 'suelta', formacion: f },
+      });
+      if (p.tipo === 'aspa') c.w = p.giro;
+      // el molinete gira duro, como una bisagra con óxido: si girara libre, al
+      // empujarlo daba media vuelta y la otra punta volvía contra el globo
+      if (p.tipo === 'molinete') { c.roceGiro = 2.6; c.giroMax = 5; c.tope = p.tope; }
+      m.agregar(c); cuerpos.push(c);
+      if (p.grupo) { if (!grupos.has(p.grupo)) grupos.set(p.grupo, []); grupos.get(p.grupo).push(c); }
+      if (p.tipo === 'pendulo') {
+        // pesada: el aire casi no la frena (con el roce de todos, no llegaba a la columna)
+        c.colgado = true; c.aire = 0.03;
+        const clavo = m.agregar(new Cuerpo({ tipo: ESTATICO, forma: 'bola', r: 6, x: p.ax, y: f.y0 + p.ay, color: tema.fijo, datos: { pieza: 'clavo', formacion: f } }));
+        cuerpos.push(clavo);
+        c.cuerda = m.cuerda(c, p.ax, f.y0 + p.ay, p.largo);
+        // cuánto tarda en llegar a la columna desde que se suelta: la bajada
+        // (un cuarto de hamaca, un poco más por ser amplia) más el tramo hasta
+        // la columna, que hace casi a su velocidad más alta
+        const sep = Math.abs(p.ax - ANCHO / 2), cuarto = (Math.PI / 2) * Math.sqrt(p.largo / GRAVEDAD) * (1 + p.alzada * p.alzada / 16);
+        const vmax = Math.sqrt(2 * GRAVEDAD * p.largo * (1 - Math.cos(p.alzada)));
+        f.tarda = cuarto + (Math.asin(Math.min(1, sep / p.largo)) * p.largo) / vmax;
+      }
+    }
+    for (const lista of grupos.values()) m.grupo(lista);
+    for (const [x, y] of f.monedas) this.monedas.push({ x, y: f.y0 + y, tomada: false, t: r() * 6 });
+    f.cuerpos = cuerpos; f.activada = f.cruce === undefined;
+    // lo que llueve cae de a una pieza, cuando cada una asoma arriba de la
+    // vista: todas juntas eran un bloque imposible de atajar
+    f.caen = cuerpos.filter((c) => c.datos.pieza === 'cae');
+    this.activas.push(f);
+  }
+  activar(f) {
+    f.activada = true;
+    for (const c of f.cuerpos) if (c.datos.pieza === 'pendulo') this.mundo.despertar(c);
+    this.eventos.push({ tipo: 'pendulo' });
+  }
+  soltar(f, arriba) {
+    for (let i = f.caen.length - 1; i >= 0; i--) {
+      const c = f.caen[i];
+      if (!c.vivo || !c.dormido) { f.caen.splice(i, 1); continue; }
+      if (c.y + c.r > arriba + 4) {
+        this.mundo.despertar(c); f.caen.splice(i, 1);
+        if (!f.llovio) { f.llovio = true; this.eventos.push({ tipo: 'lluvia' }); }
+      }
+    }
+  }
+
+  // ── el tiempo ──────────────────────────────────────────────────────────────
+  avanzar(dtCuadro) {
+    const [n, d] = trozos(dtCuadro, PASO_FIS);
+    const x0 = this.rel.x, y0 = this.rel.y;
+    for (let k = 1; k <= n; k++) this.paso(d, x0 + ((this.relObj.x - x0) * k) / n, y0 + ((this.relObj.y - y0) * k) / n);
+  }
+
+  paso(dt, relX, relY) {
+    this.t += dt;
+    const g = this.globo, m = this.mundo, e = this.escudo;
+    if (this.infinito) this.vel = this.def.velEn(this.altura());
+    // el globo sube (después de reventar, ya no; en la meta, sigue y se va) y
+    // se hamaca un poco de lado a lado, como un globo de verdad
+    if (this.estado === 'juego' || this.estado === 'meta') {
+      g.y -= this.vel * dt * (this.estado === 'meta' ? 1.6 : 1);
+      g.x = ANCHO / 2 + Math.sin(this.t * 0.9) * VAIVEN + Math.sin(this.t * 2.3) * 1.5;
+    }
+    const arriba = this.arriba(), abajo = arriba + this.vista.h;
+    // el escudo va hacia donde lo lleva el dedo, sin pasar el tope de velocidad
+    if (this.estado === 'juego') {
+      const ox = relX, oy = g.y + relY;
+      let vx = (ox - e.x) / dt, vy = (oy - e.y) / dt;
+      const v = Math.hypot(vx, vy);
+      if (v > VEL_ESCUDO) { vx *= VEL_ESCUDO / v; vy *= VEL_ESCUDO / v; }
+      e.vx = vx; e.vy = vy;
+      this.rel.x = relX; this.rel.y = relY;
+    } else { e.vx *= 0.9; e.vy = -this.vel * (this.estado === 'meta' ? 1.6 : 0); }
+    m.ventana[0] = arriba - 420; m.ventana[1] = abajo + 160;
+    this.cargar();
+    for (const f of this.activas) {
+      // el péndulo se suelta cuando al globo le falta `tarda` segundos para llegar al cruce
+      if (!f.activada && g.y - (f.y0 + f.cruce) < this.vel * f.tarda) this.activar(f);
+      if (f.caen.length) this.soltar(f, arriba);
+    }
+    m.paso(dt);
+    // los golpes del escudo, para el sonido y el polvo
+    for (const gp of m.golpes) {
+      if (gp.vel > 140) {
+        this.eventos.push({ tipo: 'golpe', vel: gp.vel });
+        this.polvo(gp.x, gp.y, Math.min(8, 2 + gp.vel / 150), gp.cuerpo.color);
+      }
+    }
+    m.golpes.length = 0;
+    if (this.estado === 'juego') {
+      // ¿algo toca el globo?
+      let quien = null;
+      m.cerca(g.x, g.y, g.r * 0.92, (b) => { if (b !== e && !quien) quien = b; });
+      if (quien && !this.inmortal) this.reventar(quien);
+      else if (!this.infinito && -g.y >= this.largo) this.meta();
+    }
+    // las monedas: las junta el escudo (o el globo, si pasa por encima)
+    for (const mo of this.monedas) {
+      if (mo.tomada || mo.y < arriba - 40 || mo.y > abajo + 40) continue;
+      mo.t += dt;
+      const aEscudo = Math.hypot(mo.x - e.x, mo.y - e.y) < R_ESCUDO + R_MONEDA, aGlobo = this.estado === 'juego' && Math.hypot(mo.x - g.x, mo.y - g.y) < R_GLOBO + R_MONEDA;
+      if (aEscudo || aGlobo) {
+        mo.tomada = true; this.tomadas++;
+        this.eventos.push({ tipo: 'moneda', n: this.tomadas });
+        for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; this.particulas.push({ tipo: 'brillo', x: mo.x, y: mo.y, vx: Math.cos(a) * 90, vy: Math.sin(a) * 90, t: 0, vida: 0.4, color: '#ffd23f', r: 3 }); }
+      }
+    }
+    this.monedas = this.monedas.filter((mo) => !mo.tomada && mo.y < abajo + 200);
+    // lo que cayó por debajo de la vista (o salió por los costados) se va
+    for (const b of m.cuerpos) {
+      if (b === e) continue;
+      if (b.y - b.r > abajo + 140 || b.x < -260 || b.x > ANCHO + 260) m.sacar(b);
+    }
+    this.activas = this.activas.filter((f) => f.y0 - f.alto < abajo + 400 || f.cuerpos.some((c) => c.vivo && c.tipo !== ESTATICO));
+    for (const p of this.particulas) {
+      p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 1 - dt * (p.roce ?? 2); p.vy = p.vy * (1 - dt * (p.roce ?? 2)) + (p.g ?? 0) * dt;
+      if (p.giro) p.a = (p.a || 0) + p.giro * dt;
+    }
+    this.particulas = this.particulas.filter((p) => p.t < p.vida);
+    if (this.estado !== 'juego') this.tFin += dt;
+  }
+
+  polvo(x, y, n, color) {
+    const r = this.azarVisual;
+    for (let k = 0; k < n; k++) {
+      const a = r() * Math.PI * 2, v = 40 + r() * 110;
+      this.particulas.push({ tipo: 'polvo', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, vida: 0.35 + r() * 0.25, color: color || '#ffffff', r: 2 + r() * 3 });
+    }
+  }
+
+  reventar(quien) {
+    const g = this.globo;
+    this.estado = 'pum'; g.vivo = false; this.tFin = 0;
+    this.culpable = quien;
+    this.eventos.push({ tipo: 'pum' });
+    // los pedazos del globo, del color del globo (dibujo.js les pone el color)
+    const r = this.azarVisual;
+    for (let k = 0; k < 18; k++) {
+      const a = r() * Math.PI * 2, v = 120 + r() * 260;
+      this.particulas.push({ tipo: 'pedazo', x: g.x + Math.cos(a) * g.r * 0.6, y: g.y + Math.sin(a) * g.r * 0.6, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, t: 0, vida: 0.9 + r() * 0.5, g: 520, roce: 1.2, r: 3 + r() * 5, a: r() * 6, giro: (r() - 0.5) * 20 });
+    }
+  }
+
+  meta() {
+    this.estado = 'meta'; this.tFin = 0;
+    this.eventos.push({ tipo: 'meta' });
+    const r = this.azarVisual, cols = this.tema().cuerpos;
+    for (let k = 0; k < 70; k++) {
+      // desde los dos costados, hacia arriba y hacia el medio
+      const lado = k % 2 ? 1 : -1, ang = 0.35 + r() * 0.6, v = 380 + r() * 380;
+      this.particulas.push({ tipo: 'papel', x: lado < 0 ? 0 : ANCHO, y: this.globo.y + 40, vx: -lado * Math.sin(ang) * v, vy: -Math.cos(ang) * v, t: 0, vida: 2.2 + r(), g: 300, roce: 1.4, r: 3 + r() * 3, a: r() * 6, giro: (r() - 0.5) * 14, color: cols[k % cols.length] });
+    }
+  }
+
+  sacarEventos() { const e = this.eventos; this.eventos = []; return e; }
+}
+return { PASO_FIS, R_GLOBO, R_ESCUDO, R_MONEDA, VAIVEN, Partida };
+})();
+
+/* ── dibujo ── */
+const M_dibujo = (() => {
+// El dibujo de Globo Libre: plano y de colores, como un libro para chicos.
+// Cada cosa es un color lleno con su sombra en un tono más oscuro (una franja
+// abajo, siempre del mismo lado del cuerpo) y un brillo claro; nada de
+// degradés por cuerpo. El cielo, las nubes y las monedas se arman una vez y
+// después son un `drawImage`.
+//
+// La cámara: `cam = { esc, ox, arriba }`. Un punto del mundo (x, y) va a la
+// pantalla en (ox + x·esc, (y − arriba)·esc).
+const { ANCHO } = M_niveles;
+const { R_ESCUDO, R_MONEDA } = M_partida;
+const { azar, tono, lerp } = M_util;
+// ── lo que se arma una vez ─────────────────────────────────────────────────
+const cache = new Map();
+function lienzo(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; }
+function mezclar(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const c = [16, 8, 0].map((s) => Math.round(lerp((pa >> s) & 255, (pb >> s) & 255, t)));
+  return '#' + c.map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+
+// el cielo: un degradé vertical de alto 256 que se estira a la pantalla; se
+// rehace solo cuando cambia de verdad (el avance del nivel va en 24 escalones)
+function cielo(tema, avance) {
+  const k = `cielo:${tema.id}:${Math.round(avance * 24)}`;
+  if (cache.has(k)) return cache.get(k);
+  const t = Math.round(avance * 24) / 24;
+  const abajo = mezclar(tema.cielo[0][1], tema.cielo[1][1], t), arriba = mezclar(tema.cielo[0][0], tema.cielo[1][0], t);
+  const c = lienzo(1, 256), g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, arriba); gr.addColorStop(1, abajo);
+  g.fillStyle = gr; g.fillRect(0, 0, 1, 256);
+  for (const kk of cache.keys()) if (kk.startsWith(`cielo:${tema.id}:`) && cache.size > 60) cache.delete(kk);
+  cache.set(k, c);
+  return c;
+}
+
+// una nube plana: círculos que se pisan, con la panza en un tono más oscuro
+function nube(tema, variante, px) {
+  const k = `nube:${tema.id}:${variante}:${px}`;
+  if (cache.has(k)) return cache.get(k);
+  const r = azar(variante * 97 + 5), w = px * 2.2, h = px * 1.1, c = lienzo(w, h), g = c.getContext('2d');
+  const bolas = [];
+  for (let i = 0; i < 5; i++) bolas.push([w * (0.2 + i * 0.15) + r.entre(-4, 4), h * 0.62 - Math.sin((i / 4) * Math.PI) * h * r.entre(0.18, 0.32), px * r.entre(0.26, 0.38)]);
+  g.fillStyle = tema.nubeSombra;
+  for (const [x, y, rr] of bolas) { g.beginPath(); g.arc(x, y + px * 0.06, rr, 0, Math.PI * 2); g.fill(); }
+  g.fillRect(w * 0.18, h * 0.62, w * 0.64, h * 0.3);
+  g.fillStyle = tema.nube;
+  for (const [x, y, rr] of bolas) { g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2); g.fill(); }
+  g.fillRect(w * 0.18, h * 0.55, w * 0.64, h * 0.3);
+  cache.set(k, c);
+  return c;
+}
+
+// la moneda de frente (se "gira" estirándola a lo ancho)
+function monedaImg(px) {
+  const k = 'moneda:' + px;
+  if (cache.has(k)) return cache.get(k);
+  const c = lienzo(px * 2 + 4, px * 2 + 4), g = c.getContext('2d'), m = px + 2;
+  g.fillStyle = '#e0a800'; g.beginPath(); g.arc(m, m + px * 0.12, px, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(m, m, px, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#ffe98a'; g.beginPath(); g.arc(m, m, px * 0.66, 0, Math.PI * 2); g.fill();
+  estrella(g, m, m, px * 0.42, '#f0b400');
+  g.fillStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.ellipse(m - px * 0.35, m - px * 0.4, px * 0.22, px * 0.13, -0.6, 0, Math.PI * 2); g.fill();
+  cache.set(k, c);
+  return c;
+}
+
+function estrella(g, x, y, r, color, puntas = 5) {
+  g.fillStyle = color; g.beginPath();
+  for (let i = 0; i < puntas * 2; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / puntas, rr = i % 2 ? r * 0.45 : r;
+    g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  g.closePath(); g.fill();
+}
+
+function cajaRedonda(g, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  g.beginPath();
+  g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
+  g.lineTo(x + w, y + h - r); g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  g.lineTo(x + r, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r);
+  g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y);
+  g.closePath();
+}
+
+// los tonos de cada color, calculados una vez
+const tonos = new Map();
+function sombras(color) {
+  let t = tonos.get(color);
+  if (!t) { t = { osc: tono(color, -0.28), claro: tono(color, 0.35), linea: tono(color, -0.45) }; tonos.set(color, t); }
+  return t;
+}
+
+// ── el fondo ───────────────────────────────────────────────────────────────
+function dibujarFondo(g, W, H, cam, { tema, avance = 0, t = 0, suelo = true }) {
+  g.drawImage(cielo(tema, avance), 0, 0, W, H);
+  const esc = cam.esc;
+  // estrellas (de noche, y algunas al atardecer): fijas en el cielo, titilan
+  if (tema.estrellas > 0) {
+    const r = azar(77), n = Math.round(90 * tema.estrellas);
+    for (let i = 0; i < n; i++) {
+      const x = r() * W, y = ((r() * 1.4 - (cam.arriba * esc * 0.05) / H) % 1.4 + 1.4) % 1.4 * H - H * 0.2, br = 0.5 + 0.5 * Math.sin(t * (1 + r() * 2) + i);
+      g.globalAlpha = tema.estrellas * (0.35 + br * 0.6);
+      g.fillStyle = '#ffffff';
+      const s = (1 + (i % 3)) * Math.max(1, esc * 0.8);
+      g.fillRect(x, y, s, s);
+    }
+    g.globalAlpha = 1;
+  }
+  // el sol (o la luna) lejos: se mueve poquito con la cámara
+  const sx = W * 0.78, sy = H * 0.2 - (cam.arriba * esc * 0.02) % (H * 0.3);
+  const rs = Math.min(W, H) * 0.09;
+  if (tema.id === 'noche') {
+    g.fillStyle = '#f4f1d0'; g.beginPath(); g.arc(sx, sy, rs, 0, Math.PI * 2); g.fill();
+    g.fillStyle = tema.cielo[1][0]; g.beginPath(); g.arc(sx + rs * 0.45, sy - rs * 0.25, rs * 0.85, 0, Math.PI * 2); g.fill();
+  } else {
+    g.fillStyle = tema.id === 'dia' ? 'rgba(255,241,160,0.35)' : 'rgba(255,220,160,0.35)';
+    g.beginPath(); g.arc(sx, sy, rs * 1.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = tema.id === 'dia' ? '#fff1a0' : '#ffd08a'; g.beginPath(); g.arc(sx, sy, rs, 0, Math.PI * 2); g.fill();
+  }
+  // dos capas de nubes que se corren más lento que el mundo (profundidad)
+  for (const [capa, vel, px, n] of [[0, 0.25, 60, 5], [1, 0.55, 90, 4]]) {
+    const r = azar(31 + capa * 13), alto = H * 1.6;
+    for (let i = 0; i < n; i++) {
+      const img = nube(tema, (i + capa * 7) % 6, Math.round(px * Math.min(1.4, esc)));
+      const x = r() * (W + img.width) - img.width * 0.6 + Math.sin(t * 0.05 + i) * 12;
+      const y = (((r() * alto - cam.arriba * esc * vel) % alto) + alto) % alto - img.height;
+      g.globalAlpha = capa === 0 ? 0.55 : 0.85;
+      g.drawImage(img, x, y);
+    }
+  }
+  g.globalAlpha = 1;
+  // el suelo de donde salió el globo (se ve al empezar el nivel)
+  if (suelo) {
+    const ys = (60 - cam.arriba) * esc;
+    if (ys < H + 40 * esc) {
+      g.fillStyle = tema.pisoSombra;
+      g.beginPath(); g.moveTo(0, ys + 30 * esc);
+      for (let x = 0; x <= W + 20; x += 20) g.lineTo(x, ys + 12 * esc - Math.sin(x / (80 * esc) + 1) * 10 * esc);
+      g.lineTo(W, H); g.lineTo(0, H); g.closePath(); g.fill();
+      g.fillStyle = tema.piso;
+      g.beginPath(); g.moveTo(0, ys + 40 * esc);
+      for (let x = 0; x <= W + 20; x += 20) g.lineTo(x, ys + 26 * esc - Math.sin(x / (60 * esc)) * 8 * esc);
+      g.lineTo(W, H); g.lineTo(0, H); g.closePath(); g.fill();
+      const r = azar(5);
+      for (let i = 0; i < 14; i++) {
+        const x = r() * W, y = ys + (34 + r() * 30) * esc;
+        g.fillStyle = tema.flor[i % tema.flor.length];
+        for (let p = 0; p < 5; p++) { const a = (p / 5) * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 3 * esc, y + Math.sin(a) * 3 * esc, 2.2 * esc, 0, Math.PI * 2); g.fill(); }
+        g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(x, y, 1.8 * esc, 0, Math.PI * 2); g.fill();
+      }
+    }
+  }
+}
+
+// ── la meta: una franja a cuadros de lado a lado, con dos banderines ──────
+function dibujarMeta(g, cam, y, texto, tema, t) {
+  const esc = cam.esc, sy = (y - cam.arriba) * esc, x0 = cam.ox, x1 = cam.ox + ANCHO * esc;
+  if (sy < -60 * esc || sy > 2000) return;
+  const alto = 14 * esc, cuad = 14 * esc;
+  for (let x = x0, i = 0; x < x1; x += cuad, i++) {
+    g.fillStyle = i % 2 ? '#ffffff' : tema.tinta; g.fillRect(x, sy - alto, cuad + 0.5, alto / 2);
+    g.fillStyle = i % 2 ? tema.tinta : '#ffffff'; g.fillRect(x, sy - alto / 2, cuad + 0.5, alto / 2);
+  }
+  for (const [px, lado] of [[x0 + 10 * esc, 1], [x1 - 10 * esc, -1]]) {
+    g.fillStyle = tema.tinta; g.fillRect(px - 2 * esc, sy - 70 * esc, 4 * esc, 70 * esc);
+    const ola = Math.sin(t * 5) * 4 * esc;
+    g.fillStyle = tema.meta;
+    g.beginPath(); g.moveTo(px, sy - 70 * esc); g.quadraticCurveTo(px + lado * 20 * esc, sy - 64 * esc + ola, px + lado * 36 * esc, sy - 60 * esc); g.lineTo(px, sy - 48 * esc); g.closePath(); g.fill();
+  }
+  g.font = `900 ${Math.round(22 * esc)}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.fillStyle = tono(tema.tinta, 0.1); g.fillText(texto, cam.ox + (ANCHO / 2) * esc, sy - alto - 4 * esc + 2 * esc);
+  g.fillStyle = '#ffffff'; g.fillText(texto, cam.ox + (ANCHO / 2) * esc, sy - alto - 4 * esc);
+}
+
+// ── los cuerpos ────────────────────────────────────────────────────────────
+function cuerpo(g, b, esc, tema) {
+  const color = b.color || tema.cuerpos[0], s = sombras(color), pieza = b.datos?.pieza;
+  g.save();
+  g.translate(b.x * esc, b.y * esc);
+  g.rotate(b.a);
+  if (b.forma === 'bola') {
+    const r = b.hx * esc;
+    if (pieza === 'clavo') {
+      g.fillStyle = tema.fijo; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();
+      g.fillStyle = tema.fijoRaya; g.beginPath(); g.arc(0, 0, r * 0.5, 0, Math.PI * 2); g.fill();
+      g.restore(); return;
+    }
+    g.fillStyle = s.osc; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = s.linea; g.lineWidth = 1.5 * esc; g.stroke();
+    g.fillStyle = color; g.beginPath(); g.arc(-r * 0.08, -r * 0.1, r * 0.86, 0, Math.PI * 2); g.fill();
+    g.fillStyle = s.claro; g.beginPath(); g.ellipse(-r * 0.36, -r * 0.4, r * 0.3, r * 0.18, -0.7, 0, Math.PI * 2); g.fill();
+    if (pieza === 'pendulo') { g.fillStyle = s.linea; g.beginPath(); g.arc(0, 0, r * 0.18, 0, Math.PI * 2); g.fill(); }
+  } else {
+    const w = b.hx * 2 * esc, h = b.hy * 2 * esc, rr = Math.min(6 * esc, h * 0.3);
+    if (b.tipo === 0) {
+      // lo fijo: oscuro y rayado en diagonal (se nota que no se mueve)
+      g.fillStyle = tema.fijo; cajaRedonda(g, -w / 2, -h / 2, w, h, rr); g.fill();
+      g.strokeStyle = tema.tinta; g.lineWidth = 2 * esc; g.stroke();
+      g.save(); g.clip();
+      g.strokeStyle = tema.fijoRaya; g.lineWidth = 4 * esc;
+      for (let x = -w / 2 - h; x < w / 2 + h; x += 12 * esc) { g.beginPath(); g.moveTo(x, h / 2); g.lineTo(x + h, -h / 2); g.stroke(); }
+      g.restore();
+    } else {
+      g.fillStyle = s.osc; cajaRedonda(g, -w / 2, -h / 2, w, h, rr); g.fill();
+      g.strokeStyle = s.linea; g.lineWidth = 1.5 * esc; g.stroke();
+      g.fillStyle = color; cajaRedonda(g, -w / 2, -h / 2, w, h - Math.min(5 * esc, h * 0.25), rr); g.fill();
+      if (w > 14 * esc && h > 14 * esc) { g.fillStyle = s.claro; cajaRedonda(g, -w / 2 + 4 * esc, -h / 2 + 3 * esc, Math.min(w * 0.35, 18 * esc), 3 * esc, 1.5 * esc); g.fill(); }
+      if (pieza === 'molinete' || pieza === 'aspa') {
+        // el eje: un tornillo en el medio
+        g.fillStyle = tema.fijo; g.beginPath(); g.arc(0, 0, 7 * esc, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#ffffff'; g.beginPath(); g.arc(0, 0, 2.5 * esc, 0, Math.PI * 2); g.fill();
+        if (pieza === 'aspa') { g.fillStyle = 'rgba(255,255,255,0.35)'; for (const lado of [-1, 1]) { g.beginPath(); g.arc(lado * (w / 2 - 8 * esc), 0, 3 * esc, 0, Math.PI * 2); g.fill(); } }
+      }
+    }
+  }
+  g.restore();
+}
+
+// ── el globo y el escudo (también se usan en el menú y en la tienda) ──────
+function dibujarGlobo(g, x, y, r, piel, t, { hilo = 70, inclina = 0 } = {}) {
+  const col = piel.color, s = sombras(col), ry = r * 1.16;
+  // el hilo, que ondea
+  g.strokeStyle = piel.hilo || 'rgba(40,40,60,0.55)'; g.lineWidth = Math.max(1, r * 0.07);
+  g.beginPath(); g.moveTo(x, y + ry);
+  const o = Math.sin(t * 3) * r * 0.25;
+  g.bezierCurveTo(x + o, y + ry + hilo * 0.35, x - o, y + ry + hilo * 0.65, x + o * 0.5, y + ry + hilo);
+  g.stroke();
+  g.save(); g.translate(x, y); g.rotate(inclina);
+  // el nudo
+  g.fillStyle = s.osc; g.beginPath(); g.moveTo(-r * 0.16, ry + r * 0.16); g.lineTo(r * 0.16, ry + r * 0.16); g.lineTo(0, ry - r * 0.08); g.closePath(); g.fill();
+  // el cuerpo: la sombra plana del lado de abajo a la derecha, después la cara
+  g.fillStyle = s.osc; g.beginPath(); g.ellipse(0, 0, r, ry, 0, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = 'rgba(29,36,64,0.35)'; g.lineWidth = Math.max(1, r * 0.07); g.stroke();
+  g.save(); g.beginPath(); g.ellipse(0, 0, r, ry, 0, 0, Math.PI * 2); g.clip();
+  g.fillStyle = col; g.beginPath(); g.ellipse(-r * 0.12, -r * 0.14, r * 0.95, ry * 0.95, 0, 0, Math.PI * 2); g.fill();
+  if (piel.dibujo) piel.dibujo(g, r, ry, t);
+  g.restore();
+  // el brillo
+  g.fillStyle = 'rgba(255,255,255,0.75)'; g.beginPath(); g.ellipse(-r * 0.42, -ry * 0.45, r * 0.18, ry * 0.3, 0.5, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.arc(-r * 0.2, -ry * 0.78, r * 0.08, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+
+function dibujarEscudo(g, x, y, r, piel, t) {
+  const col = piel.color;
+  g.fillStyle = piel.relleno || 'rgba(255,255,255,0.22)'; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  // el borde oscuro de afuera: sin él, el aro blanco se pierde en el cielo claro
+  g.strokeStyle = 'rgba(29,36,64,0.55)'; g.lineWidth = r * 0.36; g.beginPath(); g.arc(x, y + r * 0.05, r * 0.88, 0, Math.PI * 2); g.stroke();
+  g.strokeStyle = piel.borde || 'rgba(0,0,0,0.12)'; g.lineWidth = r * 0.3; g.beginPath(); g.arc(x, y + r * 0.06, r * 0.86, 0, Math.PI * 2); g.stroke();
+  g.strokeStyle = col; g.lineWidth = r * 0.22; g.beginPath(); g.arc(x, y, r * 0.88, 0, Math.PI * 2); g.stroke();
+  if (piel.dibujo) piel.dibujo(g, x, y, r, t);
+  // un brillo que da vueltas: se nota que está vivo aunque esté quieto
+  const a = t * 2.2;
+  g.strokeStyle = 'rgba(255,255,255,0.85)'; g.lineWidth = r * 0.12; g.lineCap = 'round';
+  g.beginPath(); g.arc(x, y, r * 0.88, a, a + 0.7); g.stroke();
+  g.lineCap = 'butt';
+}
+
+// ── la partida entera ──────────────────────────────────────────────────────
+function dibujarPartida(g, W, H, p, cam, { pielGlobo, pielEscudo, tr, t }) {
+  const tema = p.tema(), esc = cam.esc;
+  dibujarFondo(g, W, H, cam, { tema, avance: p.progreso(), t, suelo: true });
+  if (!p.infinito) dibujarMeta(g, cam, -p.largo, tr('meta'), tema, t);
+  g.save();
+  g.translate(cam.ox, -cam.arriba * esc);
+  // las cuerdas de los péndulos, detrás de todo
+  g.strokeStyle = tema.fijo; g.lineWidth = 2.5 * esc;
+  for (const cu of p.mundo.cuerdas) { if (!cu.b.vivo) continue; g.beginPath(); g.moveTo(cu.x * esc, cu.y * esc); g.lineTo(cu.b.x * esc, cu.b.y * esc); g.stroke(); }
+  // las monedas, que giran
+  const mon = monedaImg(Math.round(R_MONEDA * esc));
+  for (const m of p.monedas) {
+    const sy = (m.y - cam.arriba) * esc;
+    if (sy < -30 || sy > H + 30) continue;
+    const ancho = Math.abs(Math.cos(m.t * 2.6)) * 0.85 + 0.15, bob = Math.sin(m.t * 3) * 2 * esc;
+    g.drawImage(mon, m.x * esc - (mon.width * ancho) / 2, m.y * esc - mon.height / 2 + bob, mon.width * ancho, mon.height);
+  }
+  // los cuerpos que se ven
+  const y0 = cam.arriba - 60, y1 = cam.arriba + H / esc + 60;
+  for (const b of p.mundo.cuerpos) {
+    if (b === p.escudo || !b.vivo || b.y + b.r < y0 || b.y - b.r > y1) continue;
+    cuerpo(g, b, esc, tema);
+  }
+  // las partículas
+  for (const q of p.particulas) {
+    const k = 1 - q.t / q.vida;
+    if (q.tipo === 'polvo') { g.globalAlpha = k * 0.8; g.fillStyle = q.color; g.beginPath(); g.arc(q.x * esc, q.y * esc, q.r * esc * (0.6 + (1 - k) * 0.8), 0, Math.PI * 2); g.fill(); }
+    else if (q.tipo === 'brillo') { g.globalAlpha = k; estrella(g, q.x * esc, q.y * esc, q.r * esc * (0.5 + k), q.color, 4); }
+    else {
+      g.globalAlpha = Math.min(1, k * 3);
+      g.save(); g.translate(q.x * esc, q.y * esc); g.rotate(q.a || 0);
+      g.fillStyle = q.tipo === 'pedazo' ? pielGlobo.color : q.color;
+      g.fillRect(-q.r * esc, -q.r * esc * 0.5, q.r * 2 * esc, q.r * esc);
+      g.restore();
+    }
+  }
+  g.globalAlpha = 1;
+  // el globo y el escudo
+  const gl = p.globo;
+  if (gl.vivo) dibujarGlobo(g, gl.x * esc, gl.y * esc, gl.r * esc, pielGlobo, t, { hilo: 70 * esc, inclina: Math.cos(p.t * 0.9) * 0.08 });
+  const e = p.escudo;
+  if (p.estado !== 'pum' || p.tFin < 0.6) {
+    g.globalAlpha = p.estado === 'pum' ? 1 - p.tFin / 0.6 : 1;
+    dibujarEscudo(g, e.x * esc, e.y * esc, R_ESCUDO * esc, pielEscudo, t);
+    g.globalAlpha = 1;
+  }
+  g.restore();
+  // el aviso de lo que viene cayendo: triángulos que titilan arriba de todo
+  // (por pieza: la que está a menos de 320 de asomar)
+  if (p.estado === 'juego') {
+    const xs = new Set();
+    for (const f of p.activas) for (const c of f.caen) if (cam.arriba - (c.y + c.r) < 320) xs.add(Math.round(c.x / 45));
+    if (xs.size) {
+      g.globalAlpha = 0.55 + 0.45 * Math.sin(t * 14);
+      for (const k of xs) aviso(g, cam.ox + k * 45 * esc, 46 * esc, 12 * esc);
+      g.globalAlpha = 1;
+    }
+  }
+}
+
+function aviso(g, x, y, r) {
+  g.fillStyle = '#ffd23f'; g.strokeStyle = '#1d2440'; g.lineWidth = r * 0.22; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r * 1.05, y + r * 0.8); g.lineTo(x - r * 1.05, y + r * 0.8); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#1d2440'; g.fillRect(x - r * 0.1, y - r * 0.45, r * 0.2, r * 0.7); g.fillRect(x - r * 0.1, y + r * 0.38, r * 0.2, r * 0.2);
+}
+return { nube, estrella, cajaRedonda, dibujarFondo, dibujarMeta, dibujarGlobo, dibujarEscudo, dibujarPartida };
+})();
+
+/* ── entrada ── */
+const M_entrada = (() => {
+// Mover el escudo: se arrastra en CUALQUIER lado de la pantalla y el escudo
+// se mueve lo mismo que el dedo (arrastre relativo, como en los juegos del
+// género): así el dedo nunca tapa lo que viene. Manda el primer dedo que se
+// apoya; los demás no hacen nada (una palma apoyada no lo mueve).
+//  - Mouse: arrastrar con el botón apretado.
+//  - Teclado: flechas o WASD (Escape y P, la pausa, los atiende main.js).
+// Devuelve el arrastre acumulado en píxeles de CSS; main.js lo pasa al mundo.
+function crearEntrada(lienzo) {
+  const e = { activo: false, dedo: null, ux: 0, uy: 0, dx: 0, dy: 0, teclas: new Set(), toques: 0 };
+
+  lienzo.addEventListener('pointerdown', (ev) => {
+    if (!e.activo) return;
+    ev.preventDefault();
+    e.toques++;
+    if (e.dedo !== null) return;
+    lienzo.setPointerCapture?.(ev.pointerId);
+    e.dedo = ev.pointerId; e.ux = ev.clientX; e.uy = ev.clientY;
+  }, { passive: false });
+  lienzo.addEventListener('pointermove', (ev) => {
+    if (!e.activo || ev.pointerId !== e.dedo) return;
+    // los movimientos juntados por el navegador entre cuadro y cuadro (más parejo en teléfonos rápidos)
+    const lista = ev.getCoalescedEvents?.() || [];
+    const ult = lista.length ? lista[lista.length - 1] : ev;
+    e.dx += ult.clientX - e.ux; e.dy += ult.clientY - e.uy;
+    e.ux = ult.clientX; e.uy = ult.clientY;
+  });
+  const soltar = (ev) => { if (ev.pointerId === e.dedo) e.dedo = null; };
+  lienzo.addEventListener('pointerup', soltar);
+  lienzo.addEventListener('pointercancel', soltar);
+  lienzo.addEventListener('lostpointercapture', soltar);
+  lienzo.addEventListener('contextmenu', (ev) => ev.preventDefault());
+  for (const t of ['touchstart', 'touchmove', 'touchend']) lienzo.addEventListener(t, (ev) => { if (e.activo) ev.preventDefault(); }, { passive: false });
+
+  window.addEventListener('keydown', (ev) => {
+    e.teclas.add(ev.code);
+    if (e.activo && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(ev.code)) ev.preventDefault();
+  });
+  window.addEventListener('keyup', (ev) => e.teclas.delete(ev.code));
+  window.addEventListener('blur', () => { e.teclas.clear(); e.dedo = null; });
+
+  // el arrastre desde la última vez (y lo pone en cero)
+  e.sacar = () => { const r = [e.dx, e.dy]; e.dx = 0; e.dy = 0; return r; };
+  // hacia dónde piden las teclas (-1, 0 o 1 en cada eje)
+  e.flechas = () => {
+    const t = e.teclas;
+    return [(t.has('ArrowRight') || t.has('KeyD') ? 1 : 0) - (t.has('ArrowLeft') || t.has('KeyA') ? 1 : 0), (t.has('ArrowDown') || t.has('KeyS') ? 1 : 0) - (t.has('ArrowUp') || t.has('KeyW') ? 1 : 0)];
+  };
+  e.soltarTodo = () => { e.dedo = null; e.dx = 0; e.dy = 0; };
+  return e;
+}
+return { crearEntrada };
+})();
+
+/* ── pieles ── */
+const M_pieles = (() => {
+// Los globos y los escudos de la tienda. Cada uno es un color y, si tiene,
+// un dibujo que se pinta adentro (el globo ya viene recortado a su forma).
+// Se compran con las monedas que junta el escudo.
+const franjas = (colores, ancho) => (g, r, ry) => {
+  g.save(); g.rotate(-0.5);
+  colores.forEach((c, i) => { g.fillStyle = c; for (let x = -r * 3 + i * ancho; x < r * 3; x += ancho * colores.length) g.fillRect(x, -ry * 2, ancho, ry * 4); });
+  g.restore();
+};
+
+const GLOBOS = [
+  { id: 'rojo', precio: 0, color: '#ff4d5e' },
+  { id: 'azul', precio: 40, color: '#3d8bff' },
+  { id: 'verde', precio: 40, color: '#2ecc71' },
+  { id: 'amarillo', precio: 60, color: '#ffc93c' },
+  { id: 'rosa', precio: 60, color: '#ff7eb6' },
+  { id: 'violeta', precio: 90, color: '#9b5cff' },
+  {
+    id: 'rayas', precio: 150, color: '#3d8bff',
+    dibujo: (g, r, ry) => franjas(['rgba(255,255,255,0.85)', 'rgba(0,0,0,0)'], r * 0.34)(g, r, ry),
+  },
+  {
+    id: 'lunares', precio: 180, color: '#ff7eb6',
+    dibujo: (g, r, ry) => {
+      g.fillStyle = 'rgba(255,255,255,0.85)';
+      for (let y = -ry; y <= ry; y += r * 0.55) for (let x = -r + ((y / (r * 0.55)) & 1 ? r * 0.27 : 0); x <= r; x += r * 0.55) { g.beginPath(); g.arc(x, y, r * 0.1, 0, Math.PI * 2); g.fill(); }
+    },
+  },
+  {
+    id: 'sandia', precio: 220, color: '#ff5a6e',
+    dibujo: (g, r, ry) => {
+      g.strokeStyle = '#2ecc71'; g.lineWidth = r * 0.28; g.beginPath(); g.ellipse(0, 0, r * 0.98, ry * 0.98, 0, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = '#baf5a0'; g.lineWidth = r * 0.1; g.beginPath(); g.ellipse(0, 0, r * 0.84, ry * 0.84, 0, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = '#2a1a1a';
+      for (const [x, y] of [[-0.3, -0.2], [0.25, -0.35], [0.05, 0.1], [-0.35, 0.3], [0.35, 0.25], [0, 0.5]]) { g.beginPath(); g.ellipse(x * r, y * ry, r * 0.05, r * 0.09, 0.3, 0, Math.PI * 2); g.fill(); }
+    },
+  },
+  {
+    id: 'arcoiris', precio: 350, color: '#ff4d5e',
+    dibujo: (g, r, ry) => {
+      const cs = ['#ff4d5e', '#ff9f43', '#ffd23f', '#2ecc71', '#3d8bff', '#9b5cff'];
+      cs.forEach((c, i) => { g.fillStyle = c; g.fillRect(-r, -ry + (i * 2 * ry) / cs.length, r * 2, (2 * ry) / cs.length + 1); });
+    },
+  },
+  {
+    id: 'planeta', precio: 450, color: '#ff9f43',
+    dibujo: (g, r, ry) => {
+      g.fillStyle = '#e07b20'; for (const [y, h] of [[-0.5, 0.12], [-0.1, 0.18], [0.35, 0.1]]) g.fillRect(-r, y * ry, r * 2, h * ry);
+      g.strokeStyle = '#fff1c1'; g.lineWidth = r * 0.12; g.beginPath(); g.ellipse(0, ry * 0.1, r * 1.2, ry * 0.2, -0.3, 0, Math.PI * 2); g.stroke();
+    },
+  },
+  {
+    id: 'oro', precio: 700, color: '#ffc93c',
+    dibujo: (g, r, ry, t) => {
+      const x = ((t * 0.8) % 2) * r * 2.4 - r * 1.2;
+      g.fillStyle = 'rgba(255,255,255,0.55)'; g.save(); g.rotate(0.5); g.fillRect(x, -ry * 2, r * 0.3, ry * 4); g.restore();
+    },
+  },
+  {
+    id: 'jx', precio: 1000, color: '#1c1e24', hilo: 'rgba(200,205,215,0.7)',
+    dibujo: (g, r) => {
+      // las letras JX de JXSTUDIOS, en blanco
+      g.fillStyle = '#e9ebf0'; g.font = `900 ${Math.round(r * 0.9)}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('JX', 0, r * 0.05);
+    },
+  },
+];
+
+const ESCUDOS = [
+  { id: 'blanco', precio: 0, color: '#ffffff' },
+  { id: 'burbuja', precio: 50, color: '#7fe3ff', relleno: 'rgba(127,227,255,0.28)' },
+  { id: 'menta', precio: 80, color: '#2ecc9a', relleno: 'rgba(46,204,154,0.22)' },
+  { id: 'fuego', precio: 150, color: '#ff7a3d', relleno: 'rgba(255,122,61,0.25)' },
+  {
+    id: 'hielo', precio: 200, color: '#bfe9ff', relleno: 'rgba(191,233,255,0.35)',
+    dibujo: (g, x, y, r) => {
+      g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = r * 0.08;
+      for (let k = 0; k < 3; k++) { const a = (k * Math.PI) / 3; g.beginPath(); g.moveTo(x - Math.cos(a) * r * 0.5, y - Math.sin(a) * r * 0.5); g.lineTo(x + Math.cos(a) * r * 0.5, y + Math.sin(a) * r * 0.5); g.stroke(); }
+    },
+  },
+  {
+    id: 'galleta', precio: 260, color: '#c98a4b', relleno: 'rgba(201,138,75,0.6)', borde: 'rgba(90,50,20,0.25)',
+    dibujo: (g, x, y, r) => {
+      g.fillStyle = '#5a3417';
+      for (const [dx, dy] of [[-0.3, -0.25], [0.3, -0.1], [-0.05, 0.3], [0.1, -0.45], [-0.4, 0.2]]) { g.beginPath(); g.arc(x + dx * r, y + dy * r, r * 0.1, 0, Math.PI * 2); g.fill(); }
+    },
+  },
+  {
+    id: 'rueda', precio: 400, color: '#3d4466', relleno: 'rgba(61,68,102,0.25)',
+    dibujo: (g, x, y, r, t) => {
+      g.strokeStyle = '#ffd23f'; g.lineWidth = r * 0.09;
+      for (let k = 0; k < 4; k++) { const a = t * 3 + (k * Math.PI) / 4; g.beginPath(); g.moveTo(x - Math.cos(a) * r * 0.75, y - Math.sin(a) * r * 0.75); g.lineTo(x + Math.cos(a) * r * 0.75, y + Math.sin(a) * r * 0.75); g.stroke(); }
+    },
+  },
+  {
+    id: 'arcoiris', precio: 600, color: '#ffffff',
+    dibujo: (g, x, y, r, t) => {
+      const cs = ['#ff4d5e', '#ff9f43', '#ffd23f', '#2ecc71', '#3d8bff', '#9b5cff'];
+      g.lineWidth = r * 0.22;
+      cs.forEach((c, i) => { const a = t * 1.5 + (i / cs.length) * Math.PI * 2; g.strokeStyle = c; g.beginPath(); g.arc(x, y, r * 0.88, a, a + (Math.PI * 2) / cs.length + 0.02); g.stroke(); });
+    },
+  },
+];
+
+const globoPorId = (id) => GLOBOS.find((p) => p.id === id) || GLOBOS[0];
+const escudoPorId = (id) => ESCUDOS.find((p) => p.id === id) || ESCUDOS[0];
+return { GLOBOS, ESCUDOS, globoPorId, escudoPorId };
+})();
+
+/* ── guardado ── */
+const M_guardado = (() => {
+// Lo que se guarda en el teléfono (en try: sin localStorage, el juego anda
+// igual sin guardar). Lo leído se valida campo por campo.
+const { GLOBOS, ESCUDOS } = M_pieles;
+const { NIVELES } = M_niveles;
+const CLAVE = 'globo-libre-1';
+
+function base() {
+  return {
+    abierto: 0,                 // el nivel más alto que se puede jugar (0 a 29; 30 = pasó todos)
+    monedas: 0, globo: 'rojo', escudo: 'blanco',
+    globos: ['rojo'], escudos: ['blanco'],
+    mejorAltura: 0, partidas: 0,
+    ajustes: { musica: true, sonido: true, vibrar: true, sensibilidad: 'media', calidad: 'auto', idioma: null },
+  };
+}
+
+const num = (v, a, b, d) => (Number.isFinite(v) ? Math.max(a, Math.min(b, Math.floor(v))) : d);
+const lista = (v, validos, siempre) => [...new Set([siempre, ...(Array.isArray(v) ? v.filter((x) => validos.includes(x)) : [])])];
+
+function validar(d) {
+  const b = base();
+  if (!d || typeof d !== 'object') return b;
+  b.abierto = num(d.abierto, 0, NIVELES, 0);
+  b.monedas = num(d.monedas, 0, 1e9, 0);
+  b.globos = lista(d.globos, GLOBOS.map((p) => p.id), 'rojo');
+  b.escudos = lista(d.escudos, ESCUDOS.map((p) => p.id), 'blanco');
+  if (b.globos.includes(d.globo)) b.globo = d.globo;
+  if (b.escudos.includes(d.escudo)) b.escudo = d.escudo;
+  b.mejorAltura = num(d.mejorAltura, 0, 1e9, 0);
+  b.partidas = num(d.partidas, 0, 1e9, 0);
+  const a = d.ajustes || {};
+  for (const k of ['musica', 'sonido', 'vibrar']) if (typeof a[k] === 'boolean') b.ajustes[k] = a[k];
+  if (['baja', 'media', 'alta'].includes(a.sensibilidad)) b.ajustes.sensibilidad = a.sensibilidad;
+  if (['auto', 'alta', 'baja'].includes(a.calidad)) b.ajustes.calidad = a.calidad;
+  if (['es', 'en', 'pt'].includes(a.idioma)) b.ajustes.idioma = a.idioma;
+  return b;
+}
+
+function cargar() { try { return validar(JSON.parse(localStorage.getItem(CLAVE))); } catch { return base(); } }
+function guardar(d) { try { localStorage.setItem(CLAVE, JSON.stringify(d)); return true; } catch { return false; } }
+return { base, validar, cargar, guardar };
+})();
+
+/* ── hud ── */
+const M_hud = (() => {
+// Lo que se lee jugando, dibujado en el lienzo: arriba la barra del nivel (con
+// un globito que avanza) o la altura en el infinito, y las monedas; abajo, al
+// empezar el primer nivel, cómo se juega. `u` es un píxel de CSS en píxeles
+// del lienzo (la densidad de la pantalla). La pausa es un botón de HTML.
+const { dibujarGlobo, cajaRedonda, estrella } = M_dibujo;
+function dibujarHud(g, W, H, { p, u, tr, monedas, pielGlobo, consejo, t, record }) {
+  const tema = p.tema(), arriba = 14 * u, fuente = (px, peso = 900) => `${peso} ${Math.round(px * u)}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  g.textBaseline = 'middle';
+  if (!p.infinito) {
+    const w = Math.min(W - 150 * u, 300 * u), x = (W - w) / 2, y = arriba + 20 * u, h = 12 * u;
+    g.font = fuente(13, 800); g.textAlign = 'center';
+    sombreado(g, tr('nivel', p.nivel + 1), W / 2, arriba + 4 * u, '#ffffff', tema.tinta);
+    g.fillStyle = 'rgba(0,0,0,0.22)'; cajaRedonda(g, x, y + 2 * u, w, h, h / 2); g.fill();
+    g.fillStyle = '#ffffff'; cajaRedonda(g, x, y, w, h, h / 2); g.fill();
+    const k = p.progreso();
+    if (k > 0) { g.fillStyle = tema.meta; cajaRedonda(g, x + 2 * u, y + 2 * u, Math.max(h - 4 * u, (w - 4 * u) * k), h - 4 * u, (h - 4 * u) / 2); g.fill(); }
+    // la bandera de la meta en la punta y el globito que avanza
+    g.fillStyle = tema.tinta; g.fillRect(x + w + 4 * u, y - 8 * u, 2 * u, h + 10 * u);
+    g.fillStyle = tema.meta; g.beginPath(); g.moveTo(x + w + 6 * u, y - 8 * u); g.lineTo(x + w + 16 * u, y - 4 * u); g.lineTo(x + w + 6 * u, y); g.closePath(); g.fill();
+    dibujarGlobo(g, x + (w - 4 * u) * k + 2 * u, y - 2 * u, 7 * u, pielGlobo, t, { hilo: 6 * u });
+  } else {
+    g.font = fuente(30); g.textAlign = 'center';
+    sombreado(g, tr('metros', Math.floor(p.altura() / 10)), W / 2, arriba + 18 * u, '#ffffff', tema.tinta);
+    if (record > 0) { g.font = fuente(12, 800); sombreado(g, tr('record', record), W / 2, arriba + 42 * u, '#ffffff', tema.tinta); }
+  }
+  // las monedas, arriba a la derecha
+  const mx = W - 16 * u, my = arriba + 16 * u;
+  g.font = fuente(18); g.textAlign = 'right';
+  sombreado(g, String(monedas), mx - 22 * u, my + 1 * u, '#ffffff', tema.tinta);
+  g.fillStyle = '#e0a800'; g.beginPath(); g.arc(mx - 9 * u, my + 1.5 * u, 9 * u, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(mx - 9 * u, my, 9 * u, 0, Math.PI * 2); g.fill();
+  estrella(g, mx - 9 * u, my, 4.5 * u, '#f0b400');
+  // cómo se juega: una mano que arrastra, abajo, los primeros segundos
+  if (consejo) {
+    const a = consejo.alfa, y = H - 70 * u;
+    g.globalAlpha = a;
+    g.font = fuente(15, 800); g.textAlign = 'center';
+    sombreado(g, consejo.texto, W / 2, y, '#ffffff', tema.tinta);
+    const dx = Math.sin(t * 3) * 40 * u;
+    g.fillStyle = 'rgba(255,255,255,0.9)'; g.beginPath(); g.arc(W / 2 + dx, y + 32 * u, 10 * u, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 3 * u; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(W / 2 - 40 * u, y + 32 * u); g.lineTo(W / 2 + 40 * u, y + 32 * u); g.stroke();
+    g.lineCap = 'butt';
+    g.globalAlpha = 1;
+  }
+}
+
+// un texto con su sombra plana abajo (se lee arriba de cualquier cielo)
+function sombreado(g, txt, x, y, color, sombra) {
+  g.fillStyle = sombra; g.globalAlpha *= 0.55; g.fillText(txt, x, y + 2);
+  g.globalAlpha /= 0.55; g.fillStyle = color; g.fillText(txt, x, y);
+}
+return { dibujarHud, sombreado };
+})();
+
+/* ── idioma ── */
+const M_idioma = (() => {
+// Los textos en castellano, inglés y portugués. {n} se reemplaza.
+// El nombre del juego, GLOBO LIBRE, es el mismo en los tres (es una marca).
+const T = {
+  jugar: ['JUGAR', 'PLAY', 'JOGAR'],
+  niveles: ['NIVELES', 'LEVELS', 'NÍVEIS'],
+  infinito: ['INFINITO', 'ENDLESS', 'INFINITO'],
+  tienda: ['TIENDA', 'SHOP', 'LOJA'],
+  ajustes: ['AJUSTES', 'SETTINGS', 'AJUSTES'],
+  volver: ['VOLVER', 'BACK', 'VOLTAR'],
+  nivel: ['Nivel {n}', 'Level {n}', 'Nível {n}'],
+  meta: ['META', 'FINISH', 'CHEGADA'],
+  pum: ['¡PUM!', 'POP!', 'POF!'],
+  reventado: ['Se reventó el globo', 'Your balloon popped', 'O balão estourou'],
+  superado: ['¡Nivel superado!', 'Level complete!', 'Nível concluído!'],
+  ganaste: ['+{n} monedas', '+{n} coins', '+{n} moedas'],
+  juntaste: ['Juntaste {n}', 'You got {n}', 'Você pegou {n}'],
+  siguiente: ['SIGUIENTE', 'NEXT', 'PRÓXIMO'],
+  otraVez: ['OTRA VEZ', 'RETRY', 'DE NOVO'],
+  menu: ['MENÚ', 'MENU', 'MENU'],
+  pausa: ['PAUSA', 'PAUSED', 'PAUSA'],
+  seguir: ['SEGUIR', 'RESUME', 'CONTINUAR'],
+  metros: ['{n} m', '{n} m', '{n} m'],
+  record: ['Récord: {n} m', 'Best: {n} m', 'Recorde: {n} m'],
+  nuevoRecord: ['¡Nuevo récord!', 'New best!', 'Novo recorde!'],
+  llegaste: ['Llegaste a {n} m', 'You reached {n} m', 'Você chegou a {n} m'],
+  todos: ['¡Pasaste los 30 niveles!', 'You beat all 30 levels!', 'Você passou os 30 níveis!'],
+  consejo: ['Arrastrá en cualquier lado para mover el escudo', 'Drag anywhere to move the shield', 'Arraste em qualquer lugar para mover o escudo'],
+  consejoPc: ['Arrastrá con el mouse o usá las flechas', 'Drag with the mouse or use the arrow keys', 'Arraste com o mouse ou use as setas'],
+  cuidalo: ['¡Cuidá el globo!', 'Protect the balloon!', 'Proteja o balão!'],
+  globos: ['GLOBOS', 'BALLOONS', 'BALÕES'],
+  escudos: ['ESCUDOS', 'SHIELDS', 'ESCUDOS'],
+  usar: ['USAR', 'USE', 'USAR'],
+  enUso: ['EN USO', 'EQUIPPED', 'EM USO'],
+  comprar: ['COMPRAR · {n}', 'BUY · {n}', 'COMPRAR · {n}'],
+  faltan: ['Te faltan {n} monedas', 'You need {n} more coins', 'Faltam {n} moedas'],
+  bloqueado: ['Pasá el nivel {n}', 'Beat level {n}', 'Passe o nível {n}'],
+  musica: ['Música', 'Music', 'Música'],
+  sonido: ['Sonido', 'Sound', 'Som'],
+  vibrar: ['Vibración', 'Vibration', 'Vibração'],
+  sensibilidad: ['Sensibilidad', 'Sensitivity', 'Sensibilidade'],
+  calidad: ['Calidad', 'Quality', 'Qualidade'],
+  idioma: ['Idioma', 'Language', 'Idioma'],
+  si: ['Sí', 'On', 'Sim'],
+  no: ['No', 'Off', 'Não'],
+  auto: ['Auto', 'Auto', 'Auto'],
+  alta: ['Alta', 'High', 'Alta'],
+  media: ['Media', 'Medium', 'Média'],
+  baja: ['Baja', 'Low', 'Baixa'],
+  borrar: ['Borrar progreso', 'Reset progress', 'Apagar progresso'],
+  borrarSeguro: ['¿Seguro? Toca otra vez', 'Sure? Tap again', 'Certeza? Toque de novo'],
+  presenta: ['presenta', 'presents', 'apresenta'],
+  creditos: ['Un juego de JXSTUDIOS', 'A JXSTUDIOS game', 'Um jogo da JXSTUDIOS'],
+  cielo_dia: ['Día', 'Day', 'Dia'], cielo_tarde: ['Atardecer', 'Sunset', 'Pôr do sol'], cielo_noche: ['Noche', 'Night', 'Noite'],
+  globo_rojo: ['Rojo', 'Red', 'Vermelho'], globo_azul: ['Azul', 'Blue', 'Azul'], globo_verde: ['Verde', 'Green', 'Verde'],
+  globo_amarillo: ['Amarillo', 'Yellow', 'Amarelo'], globo_rosa: ['Rosa', 'Pink', 'Rosa'], globo_violeta: ['Violeta', 'Violet', 'Violeta'],
+  globo_rayas: ['Rayado', 'Striped', 'Listrado'], globo_lunares: ['Lunares', 'Polka dots', 'Bolinhas'], globo_sandia: ['Sandía', 'Watermelon', 'Melancia'],
+  globo_arcoiris: ['Arcoíris', 'Rainbow', 'Arco-íris'], globo_planeta: ['Planeta', 'Planet', 'Planeta'], globo_oro: ['Oro', 'Gold', 'Ouro'],
+  globo_jx: ['JXSTUDIOS', 'JXSTUDIOS', 'JXSTUDIOS'],
+  escudo_blanco: ['Blanco', 'White', 'Branco'], escudo_burbuja: ['Burbuja', 'Bubble', 'Bolha'], escudo_menta: ['Menta', 'Mint', 'Hortelã'],
+  escudo_fuego: ['Fuego', 'Fire', 'Fogo'], escudo_hielo: ['Hielo', 'Ice', 'Gelo'], escudo_galleta: ['Galletita', 'Cookie', 'Biscoito'],
+  escudo_rueda: ['Rueda', 'Wheel', 'Roda'], escudo_arcoiris: ['Arcoíris', 'Rainbow', 'Arco-íris'],
+};
+
+const IDIOMAS = ['es', 'en', 'pt'];
+const TABLA = T;
+
+function crearIdioma(inicial) {
+  const nav = (navigator.language || 'es').slice(0, 2).toLowerCase();
+  let actual = IDIOMAS.includes(inicial) ? inicial : IDIOMAS.includes(nav) ? nav : 'en';
+  const tr = (clave, n) => {
+    const fila = T[clave];
+    if (!fila) return clave;
+    const s = fila[IDIOMAS.indexOf(actual)] ?? fila[0];
+    return n === undefined ? s : s.replace('{n}', n);
+  };
+  tr.poner = (l) => { if (IDIOMAS.includes(l)) actual = l; };
+  tr.actual = () => actual;
+  return tr;
+}
+return { IDIOMAS, TABLA, crearIdioma };
+})();
+
+/* ── logojxs ── */
+const M_logojxs = (() => {
+// El logo de JXSTUDIOS, calcado de la imagen que mandó quien pide
+// (30/09/2026): el monograma JXS son cuatro trazos de metal del mismo
+// ancho, en paralelo de a dos (entre línea y línea, el doble del grosor):
+//   - la J de adentro (barra, palo y gancho);
+//   - la S de adentro;
+//   - A: la barra de arriba de la J que baja en diagonal (el "\" de la X) y
+//     abraza la S por abajo;
+//   - B: el gancho de abajo de la J que sube en diagonal (el "/" de la X,
+//     que pasa POR ENCIMA del "\") y abraza la S por arriba.
+// Coordenadas en una caja de 350 × 172. El mismo dibujo sirve para la
+// versión de píxeles (se rasteriza chico), la 2D suave (se traza) y la 3D
+// (se muestrea la línea y se engorda a los costados).
+const CAJA = { w: 350, h: 172 };
+const GROSOR = 14.5;
+
+const TRAZOS = [
+  // A va abajo en el cruce: se dibuja primero
+  { id: 'A', capa: 0, d: [['M', 40, 19], ['L', 114, 19], ['L', 176, 101], ['C', 194, 128, 222, 168, 268, 169], ['C', 310, 170, 342, 152, 342, 122]] },
+  { id: 'J', capa: 0, d: [['M', 40, 43], ['L', 98, 43], ['L', 98, 116], ['C', 98, 148, 44, 158, 36, 124]] },
+  { id: 'S', capa: 0, d: [['M', 312, 66], ['C', 306, 46, 288, 36, 266, 36], ['C', 242, 36, 226, 48, 226, 63], ['C', 226, 80, 248, 86, 272, 92], ['C', 302, 99, 320, 108, 320, 126], ['C', 320, 142, 300, 148, 272, 148], ['C', 246, 148, 226, 138, 216, 118]] },
+  { id: 'B', capa: 1, d: [['M', 10, 130], ['C', 18, 158, 50, 168, 86, 166], ['C', 108, 165, 122, 158, 134, 142], ['L', 200, 46], ['C', 216, 24, 244, 12, 272, 12], ['C', 310, 12, 340, 30, 340, 62]] },
+];
+
+// Un trazo como Path2D, escalado y corrido.
+function camino2d(t, esc = 1, ox = 0, oy = 0) {
+  const p = new Path2D();
+  for (const [op, ...n] of t.d) {
+    const q = n.map((v, i) => (i % 2 ? oy + v * esc : ox + v * esc));
+    if (op === 'M') p.moveTo(q[0], q[1]);
+    else if (op === 'L') p.lineTo(q[0], q[1]);
+    else p.bezierCurveTo(q[0], q[1], q[2], q[3], q[4], q[5]);
+  }
+  return p;
+}
+
+// Puntos a lo largo del trazo, más o menos parejos (para la 3D, para animar
+// el dibujo de la línea y para medir el largo).
+function muestrear(t, cada = 3) {
+  const pts = [];
+  let x = 0, y = 0;
+  for (const [op, ...n] of t.d) {
+    if (op === 'M') { x = n[0]; y = n[1]; pts.push([x, y]); continue; }
+    if (op === 'L') {
+      const [x1, y1] = n, largo = Math.hypot(x1 - x, y1 - y), k = Math.max(1, Math.ceil(largo / cada));
+      for (let i = 1; i <= k; i++) pts.push([x + ((x1 - x) * i) / k, y + ((y1 - y) * i) / k]);
+      x = x1; y = y1; continue;
+    }
+    const [c1x, c1y, c2x, c2y, x1, y1] = n;
+    const aprox = Math.hypot(c1x - x, c1y - y) + Math.hypot(c2x - c1x, c2y - c1y) + Math.hypot(x1 - c2x, y1 - c2y);
+    const k = Math.max(2, Math.ceil(aprox / cada));
+    for (let i = 1; i <= k; i++) {
+      const s = i / k, r = 1 - s;
+      pts.push([r * r * r * x + 3 * r * r * s * c1x + 3 * r * s * s * c2x + s * s * s * x1, r * r * r * y + 3 * r * r * s * c1y + 3 * r * s * s * c2y + s * s * s * y1]);
+    }
+    x = x1; y = y1;
+  }
+  return pts;
+}
+
+function largo(t) {
+  const p = muestrear(t, 2);
+  let l = 0;
+  for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+  return l;
+}
+
+// El monograma dibujado en 2D con su metal, en un lienzo aparte (así el
+// reflejo, que se pinta "arriba de lo dibujado", toca solo el metal):
+// sombra, borde oscuro (que en el cruce hace de hueco y deja ver que B pasa
+// por encima), el cuerpo con un degradé de cromo y el filo de luz.
+// `avance` (0 a 1) dibuja cada trazo hasta ahí: el metal "se escribe".
+// `brillo` (0 a 1) pasa una franja de luz de izquierda a derecha.
+function monograma(ancho, { avance = 1, brillo = -1, sombra = true, lienzo = null } = {}) {
+  const esc = ancho / CAJA.w, gro = GROSOR * esc, alto = Math.ceil(CAJA.h * esc);
+  const m = Math.ceil(10 * esc) + 2;
+  const c = lienzo || document.createElement('canvas');
+  c.width = Math.ceil(ancho) + 2 * m; c.height = alto + 2 * m;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  const crom = g.createLinearGradient(0, m, 0, m + alto);
+  crom.addColorStop(0, '#fbfbfd'); crom.addColorStop(0.35, '#c9ccd4'); crom.addColorStop(0.55, '#8a8f99');
+  crom.addColorStop(0.7, '#d9dce3'); crom.addColorStop(1, '#6f747e');
+  g.lineCap = 'butt'; g.lineJoin = 'round';
+  for (const capa of [0, 1]) for (const t of TRAZOS) {
+    if (t.capa !== capa) continue;
+    const p = camino2d(t, esc, m, m), l = largo(t) * esc;
+    const trazo = (a, estilo, dx = 0, dy = 0) => {
+      g.save();
+      g.translate(dx, dy);
+      if (avance < 1) g.setLineDash([Math.max(0.01, l * avance), l + 10]);
+      g.lineWidth = a; g.strokeStyle = estilo; g.stroke(p);
+      g.restore();
+    };
+    // cara plana con bisel (como el logo): el borde que abre el hueco del
+    // cruce, el bisel gris y la cara de cromo
+    if (sombra) trazo(gro + 2 * esc, 'rgba(0,0,0,0.6)', 3 * esc, 5 * esc);
+    trazo(gro + 5 * esc, '#050607');
+    trazo(gro, '#5b5f68');
+    trazo(gro * 0.74, crom);
+  }
+  if (brillo >= 0 && brillo <= 1) {
+    g.globalCompositeOperation = 'source-atop';
+    const bx = m + (brillo * 1.6 - 0.3) * ancho;
+    const f = g.createLinearGradient(bx - ancho * 0.12, 0, bx + ancho * 0.12, 0);
+    f.addColorStop(0, 'rgba(255,255,255,0)'); f.addColorStop(0.5, 'rgba(255,255,255,0.85)'); f.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = f; g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = 'source-over';
+  }
+  c.margen = m;
+  return c;
+}
+
+// La palabra "JXStudios" en metal, con la letra del sistema (sans gruesa):
+// se mide y se escala para que ocupe justo `ancho`.
+function palabra(ancho, { color = null } = {}) {
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  const fuente = (px) => `600 ${px}px "Montserrat", "Poppins", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+  g.font = fuente(100);
+  const w100 = g.measureText('JXStudios').width || 400;
+  const px = Math.max(8, (ancho / w100) * 100);
+  c.width = Math.ceil(ancho + px * 0.2); c.height = Math.ceil(px * 1.35);
+  g.font = fuente(px); g.textBaseline = 'alphabetic';
+  const base = Math.round(px * 1.02), x = Math.round(px * 0.1);
+  g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillText('JXStudios', x + px * 0.03, base + px * 0.05);
+  const crom = g.createLinearGradient(0, base - px * 0.75, 0, base);
+  crom.addColorStop(0, '#ffffff'); crom.addColorStop(0.5, '#d2d5dc'); crom.addColorStop(0.62, '#9aa0aa'); crom.addColorStop(1, '#e7e9ee');
+  g.fillStyle = color || crom; g.fillText('JXStudios', x, base);
+  return c;
+}
+
+// El monograma en píxeles: se traza chico (con el hueco del cruce), se
+// separa metal de borde por color y se vuelve a pintar a mano en escalones
+// de cromo (claro arriba, oscuro al medio, claro abajo) con bisel.
+function monogramaPixel(anchoPx, { avance = 1 } = {}) {
+  const esc = anchoPx / CAJA.w, alto = Math.ceil(CAJA.h * esc) + 4, ancho = Math.ceil(anchoPx) + 4;
+  const c = document.createElement('canvas');
+  c.width = ancho; c.height = alto;
+  const g = c.getContext('2d');
+  for (const capa of [0, 1]) for (const t of TRAZOS) {
+    if (t.capa !== capa) continue;
+    const p = camino2d(t, esc, 2, 2), l = largo(t) * esc;
+    g.save();
+    if (avance < 1) g.setLineDash([Math.max(0.01, l * avance), l + 10]);
+    g.lineCap = 'butt';
+    g.lineWidth = GROSOR * esc + 2.2; g.strokeStyle = '#ff0000'; g.stroke(p);
+    g.lineWidth = GROSOR * esc; g.strokeStyle = '#00ff00'; g.stroke(p);
+    g.restore();
+  }
+  const img = g.getImageData(0, 0, ancho, alto), d = img.data;
+  const metal = new Uint8Array(ancho * alto), borde = new Uint8Array(ancho * alto);
+  for (let i = 0; i < ancho * alto; i++) {
+    if (d[i * 4 + 3] < 90) continue;
+    if (d[i * 4 + 1] > 110) metal[i] = 1; else if (d[i * 4] > 110) borde[i] = 1;
+  }
+  const ESCALON = ['#f4f5f8', '#d9dbe1', '#b7bbc4', '#8d929c', '#a9adb6', '#d3d6dc', '#9ea3ad', '#767b85'];
+  for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
+    const i = y * ancho + x, k = i * 4;
+    if (metal[i]) {
+      const arriba = y > 0 && metal[i - ancho], abajo = y < alto - 1 && metal[i + ancho];
+      const izq = x > 0 && metal[i - 1], der = x < ancho - 1 && metal[i + 1];
+      let col = ESCALON[Math.min(ESCALON.length - 1, Math.floor(((y - 2) / (alto - 4)) * ESCALON.length))];
+      if (!arriba || !izq) col = '#ffffff';            // el filo que da a la luz
+      else if (!abajo || !der) col = '#5b5f68';        // el bisel en sombra
+      const n = parseInt(col.slice(1), 16);
+      d[k] = n >> 16; d[k + 1] = (n >> 8) & 255; d[k + 2] = n & 255; d[k + 3] = 255;
+    } else if (borde[i]) { d[k] = 5; d[k + 1] = 6; d[k + 2] = 8; d[k + 3] = 255; }
+    else d[k + 3] = 0;
+  }
+  g.putImageData(img, 0, 0);
+  c.mascara = metal;       // para pasarle el brillo solo por el metal
+  c.esc = esc;             // para ubicar puntas de trazo en pantalla
+  return c;
+}
+
+// Dónde va la punta de cada trazo cuando está escrito hasta `avance`
+// (coordenadas de la caja del logo).
+const cacheMuestras = new Map();
+function puntas(avance) {
+  const out = [];
+  for (const t of TRAZOS) {
+    if (!cacheMuestras.has(t.id)) {
+      const p = muestrear(t, 2), acum = [0];
+      for (let i = 1; i < p.length; i++) acum.push(acum[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+      cacheMuestras.set(t.id, { p, acum });
+    }
+    const { p, acum } = cacheMuestras.get(t.id), meta = acum[acum.length - 1] * avance;
+    let i = 1;
+    while (i < acum.length - 1 && acum[i] < meta) i++;
+    out.push(p[i]);
+  }
+  return out;
+}
+return { CAJA, GROSOR, TRAZOS, camino2d, muestrear, largo, monograma, palabra, monogramaPixel, puntas };
+})();
+
+/* ── intro ── */
+const M_intro = (() => {
+// La intro de JXSTUDIOS con el estilo de Globo Libre: plana y de colores (la
+// de Cripta es de píxeles y la de Víbora de metal; cada juego la suya).
+// Tres barridos de color abren un fondo azul; el ESCUDO del juego escribe el
+// monograma JXS en blanco, trazo por trazo; un globo sube, choca el logo desde
+// abajo (el logo salta y larga papel picado) y se va volando; la palabra
+// JXStudios aparece letra por letra y un círculo del color del cielo tapa todo
+// para dar paso al menú. Dura menos de tres segundos y arranca sola
+// (main.js); la música sale de sonido.js › jingleJXS con el mismo reloj.
+const { TRAZOS, CAJA, GROSOR, camino2d, muestrear } = M_logojxs;
+const { dibujarGlobo, dibujarEscudo } = M_dibujo;
+const { clamp, salida, suave, elastico, azar } = M_util;
+const T = { barridos: [0, 0.5], traza: [0.45, 1.3], sube: [1.28, 1.5], golpe: 1.5, letras: 1.62, presenta: 2.1, fin: 2.55, cierre: 0.4, salto: 0.3 };
+const FONDO = '#2f6bff', SOMBRA = '#1c47c4', CIELO = '#9fd8ff';
+const CONFETI = ['#ffd23f', '#ff5d8f', '#2ecc9a', '#ffffff', '#ff9f43'];
+
+// el largo de cada trazo y sus puntos, para saber dónde va la punta
+const MUESTRAS = TRAZOS.map((tr) => {
+  const p = muestrear(tr, 2), acum = [0];
+  for (let i = 1; i < p.length; i++) acum.push(acum[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+  return { p, acum, largo: acum[acum.length - 1] };
+});
+// el orden en que los escribe el escudo (A, J, S y B arriba de todo)
+const ORDEN = [0, 1, 2, 3];
+const TOTAL = MUESTRAS.reduce((a, m) => a + m.largo, 0);
+
+function punta(i, avance) {
+  const { p, acum, largo } = MUESTRAS[i], meta = largo * avance;
+  let k = 1;
+  while (k < acum.length - 1 && acum[k] < meta) k++;
+  return p[k];
+}
+
+class IntroJXS {
+  constructor({ sonido, vibrar = () => {}, alTerminar }) {
+    this.t = 0; this.terminado = false; this.golpeado = false;
+    this.alTerminar = alTerminar; this.vibrar = vibrar;
+    this.musica = sonido.jingleJXS?.() || null;
+    this.papeles = []; this.pops = [];
+    this.r = azar(2026);
+  }
+  saltear() {
+    if (this.t < T.salto || this.terminado) return;
+    this.musica?.cortar();
+    this.t = Math.max(this.t, T.fin);
+  }
+  // cuánto lleva escrito cada trazo (se escriben de a uno, a velocidad pareja)
+  avances() {
+    const k = clamp((this.t - T.traza[0]) / (T.traza[1] - T.traza[0]), 0, 1), hecho = suave(k) * TOTAL;
+    let antes = 0;
+    return ORDEN.map((i) => { const l = MUESTRAS[i].largo, a = clamp((hecho - antes) / l, 0, 1); antes += l; return a; });
+  }
+  medidas(W, H) {
+    const ancho = Math.min(W * 0.74, H * 0.9, 640), esc = ancho / CAJA.w;
+    return { ancho, esc, x0: W / 2 - ancho / 2, y0: H * 0.42 - (CAJA.h * esc) / 2 };
+  }
+  pasar(dt, W, H) {
+    this.t += dt;
+    const { ancho, x0, y0, esc } = this.medidas(W, H), r = this.r;
+    // lo que va dejando el escudo al escribir: burbujitas
+    const av = this.avances(), i = av.findIndex((a) => a > 0 && a < 1);
+    if (i >= 0 && r() < 0.8) {
+      const [px, py] = punta(ORDEN[i], av[i]);
+      this.pops.push({ x: x0 + px * esc, y: y0 + py * esc, t: 0, r: (2 + r() * 4) * esc * 2, color: CONFETI[(r() * CONFETI.length) | 0] });
+    }
+    if (!this.golpeado && this.t >= T.golpe) {
+      this.golpeado = true;
+      this.vibrar([25, 30, 25]);
+      for (let k = 0; k < 110; k++) {
+        const a = -Math.PI / 2 + (r() - 0.5) * 2.6, v = (220 + r() * 520) * (ancho / 500);
+        this.papeles.push({ x: W / 2 + (r() - 0.5) * ancho * 0.5, y: y0 + CAJA.h * esc * 0.8, vx: Math.cos(a) * v, vy: Math.sin(a) * v, a: r() * 6, giro: (r() - 0.5) * 16, t: 0, vida: 1.2 + r() * 0.8, color: CONFETI[k % CONFETI.length], w: (4 + r() * 5) * (ancho / 500), redondo: r() < 0.3 });
+      }
+    }
+    for (const p of this.papeles) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 1 - dt * 1.6; p.vy = p.vy * (1 - dt * 1.6) + 520 * (ancho / 500) * dt; p.a += p.giro * dt; }
+    this.papeles = this.papeles.filter((p) => p.t < p.vida);
+    for (const p of this.pops) p.t += dt;
+    this.pops = this.pops.filter((p) => p.t < 0.5);
+    if (this.t >= T.fin + T.cierre && !this.terminado) { this.terminado = true; this.alTerminar?.(); }
+  }
+
+  dibujar(g, W, H) {
+    const t = this.t, { ancho, esc, x0, y0 } = this.medidas(W, H);
+    g.save();
+    // 1) los barridos de color, en diagonal, y el fondo azul que queda
+    g.fillStyle = CIELO; g.fillRect(0, 0, W, H);
+    const bandas = [['#ffd23f', 0], ['#ff5d8f', 0.09], [FONDO, 0.18]];
+    for (const [col, retraso] of bandas) {
+      const k = salida(clamp((t - retraso) / 0.32, 0, 1));
+      if (k <= 0) continue;
+      const d = Math.hypot(W, H) * 1.2;
+      g.save(); g.translate(W / 2, H / 2); g.rotate(-0.5);
+      g.fillStyle = col; g.fillRect(-d / 2, -d / 2, d * k, d);
+      g.restore();
+    }
+    // círculos grandes y claros que flotan en el azul
+    if (t > 0.3) {
+      g.globalAlpha = clamp((t - 0.3) / 0.3, 0, 1) * 0.12; g.fillStyle = '#ffffff';
+      for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(W * ((k * 0.23 + 0.1 + t * 0.02) % 1.1), H * (0.15 + ((k * 0.37) % 0.8)), Math.min(W, H) * (0.08 + (k % 3) * 0.05), 0, Math.PI * 2); g.fill(); }
+      g.globalAlpha = 1;
+    }
+    // 2) el monograma: se escribe en blanco con su sombra plana; salta con el golpe
+    const av = this.avances();
+    const golpe = t >= T.golpe ? clamp((t - T.golpe) / 0.6, 0, 1) : 0;
+    const salto = golpe > 0 ? Math.sin(golpe * Math.PI) * (1 - golpe) * 0.5 : 0;
+    const estira = golpe > 0 ? 1 + (1 - elastico(golpe)) * -0.12 : 1;
+    g.save();
+    g.translate(W / 2, y0 + CAJA.h * esc * 0.5 - salto * ancho * 0.25);
+    g.scale(1 / estira, estira);
+    g.translate(-W / 2, -(y0 + CAJA.h * esc * 0.5));
+    for (const capa of [0, 1]) TRAZOS.forEach((tr, i) => {
+      if (tr.capa !== capa || av[i] <= 0) return;
+      const p = camino2d(tr, esc, x0, y0), l = MUESTRAS[i].largo * esc;
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      g.setLineDash(av[i] < 1 ? [Math.max(0.01, l * av[i]), l + 10] : []);
+      g.save(); g.translate(3 * esc, 6 * esc); g.lineWidth = GROSOR * esc; g.strokeStyle = SOMBRA; g.stroke(p); g.restore();
+      // el borde azul abre el hueco del cruce: se ve que B pasa por encima de A
+      if (capa === 1) { g.lineWidth = GROSOR * esc + 7 * esc; g.strokeStyle = FONDO; g.stroke(p); }
+      g.lineWidth = GROSOR * esc; g.strokeStyle = '#ffffff'; g.stroke(p);
+    });
+    g.setLineDash([]);
+    g.restore();
+    // las burbujitas y el escudo que escribe
+    for (const p of this.pops) { g.globalAlpha = 1 - p.t / 0.5; g.fillStyle = p.color; g.beginPath(); g.arc(p.x, p.y - p.t * 20 * esc, p.r * (1 - p.t), 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = 1;
+    const i = av.findIndex((a) => a > 0 && a < 1);
+    const escribe = t > T.traza[0] - 0.08 && t < T.traza[1] + 0.25;
+    if (escribe) {
+      const k = i >= 0 ? i : t < T.traza[0] ? 0 : 3, [px, py] = i >= 0 ? punta(k, av[k]) : punta(k, t < T.traza[0] ? 0 : 1);
+      const aparece = clamp((t - (T.traza[0] - 0.08)) / 0.1, 0, 1), se_va = clamp((t - T.traza[1]) / 0.25, 0, 1);
+      g.globalAlpha = aparece * (1 - se_va);
+      dibujarEscudo(g, x0 + px * esc, y0 + py * esc - se_va * 40 * esc, 17 * esc * (1 + se_va * 0.5), { color: '#ffffff', relleno: 'rgba(255,255,255,0.3)' }, t * 2);
+      g.globalAlpha = 1;
+    }
+    // 3) el globo: sube, choca el logo desde abajo y se va volando
+    if (t > T.sube[0]) {
+      const r = ancho * 0.075, xb = W / 2 + ancho * 0.08;
+      let yb;
+      if (t < T.golpe) yb = H + r * 3 - (H + r * 3 - (y0 + CAJA.h * esc + r * 1.1)) * salida((t - T.sube[0]) / (T.golpe - T.sube[0]));
+      else { const k = (t - T.golpe) / 1.1; yb = y0 + CAJA.h * esc + r * 1.1 + Math.sin(Math.min(1, k * 3) * Math.PI) * r * 0.4 - k * k * H * 1.3; }
+      const xx = t < T.golpe ? xb : xb + ((t - T.golpe) ** 2) * ancho * 0.5 + Math.sin(t * 7) * r * 0.1;
+      const aplasta = t >= T.golpe && t < T.golpe + 0.18 ? 1 - Math.sin(((t - T.golpe) / 0.18) * Math.PI) * 0.2 : 1;
+      g.save(); g.translate(xx, yb); g.scale(1 / aplasta, aplasta);
+      dibujarGlobo(g, 0, 0, r, { color: '#ff4d5e' }, t, { hilo: r * 3, inclina: t > T.golpe ? 0.25 : 0 });
+      g.restore();
+    }
+    // el papel picado
+    for (const p of this.papeles) {
+      g.globalAlpha = Math.min(1, (p.vida - p.t) * 3);
+      g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = p.color;
+      if (p.redondo) { g.beginPath(); g.arc(0, 0, p.w * 0.5, 0, Math.PI * 2); g.fill(); } else g.fillRect(-p.w / 2, -p.w * 0.3, p.w, p.w * 0.6);
+      g.restore();
+    }
+    g.globalAlpha = 1;
+    // 4) JXStudios, letra por letra, y "presenta"
+    if (t > T.letras) {
+      const px = Math.round(ancho * 0.13), txt = 'JXStudios';
+      g.font = `900 ${px}px system-ui, -apple-system, "Segoe UI", Roboto, "Arial Black", sans-serif`;
+      g.textBaseline = 'middle'; g.textAlign = 'left';
+      const anchos = [...txt].map((ch) => g.measureText(ch).width), total = anchos.reduce((a, b) => a + b, 0);
+      let x = W / 2 - total / 2;
+      const y = y0 + CAJA.h * esc + ancho * 0.16;
+      [...txt].forEach((ch, k) => {
+        const e = elastico(clamp((t - T.letras - k * 0.045) / 0.5, 0, 1));
+        if (e > 0) {
+          g.save(); g.translate(x + anchos[k] / 2, y); g.scale(e, e);
+          g.fillStyle = SOMBRA; g.fillText(ch, -anchos[k] / 2 + px * 0.04, px * 0.07);
+          g.fillStyle = '#ffffff'; g.fillText(ch, -anchos[k] / 2, 0);
+          g.restore();
+        }
+        x += anchos[k];
+      });
+      if (t > T.presenta && this.textoPresenta) {
+        g.globalAlpha = clamp((t - T.presenta) / 0.25, 0, 1) * 0.85;
+        g.font = `700 ${Math.round(px * 0.34)}px system-ui, sans-serif`; g.textAlign = 'center';
+        g.fillStyle = '#ffffff'; g.fillText(this.textoPresenta, W / 2, y + px * 0.75);
+        g.globalAlpha = 1;
+      }
+    }
+    // 5) el cierre: un círculo del color del cielo que crece desde el logo
+    if (t > T.fin) {
+      const k = salida(clamp((t - T.fin) / T.cierre, 0, 1));
+      g.fillStyle = CIELO; g.beginPath(); g.arc(W / 2, H * 0.42, Math.hypot(W, H) * k, 0, Math.PI * 2); g.fill();
+    }
+    g.restore();
+  }
+}
+return { T, IntroJXS };
+})();
+
+/* ── menu ── */
+const M_menu = (() => {
+// El fondo de los menús: el cielo con nubes que se corren por capas según el
+// dedo, globos que suben lejos, y el cartel GLOBO LIBRE colgado de tres
+// globos que se hamaca: un péndulo con resorte que el dedo empuja (como el
+// cartel de Cripta Neón). Los botones son HTML, encima.
+const { dibujarFondo, dibujarGlobo, dibujarEscudo, cajaRedonda } = M_dibujo;
+const { TEMAS } = M_temas;
+const { azar, clamp, tono } = M_util;
+const LETRAS = ['#ff4d5e', '#ffc93c', '#2ecc71', '#3d8bff', '#9b5cff', '#ff9f43'];
+
+// el cartel se arma una vez por tamaño (letras, borde y sombra)
+let cartelC = null;
+function cartel(ancho) {
+  ancho = Math.round(ancho);
+  if (cartelC && cartelC.ancho === ancho) return cartelC;
+  const alto = Math.round(ancho * 0.46), m = Math.round(ancho * 0.04);
+  const c = document.createElement('canvas'); c.width = ancho + m * 2; c.height = alto + m * 2;
+  const g = c.getContext('2d'), borde = Math.max(3, ancho * 0.018), r = ancho * 0.07;
+  // la tabla: sombra plana, borde oscuro, cara clara con una franja abajo
+  g.fillStyle = 'rgba(20,24,50,0.25)'; cajaRedonda(g, m + ancho * 0.015, m + ancho * 0.03, ancho, alto, r); g.fill();
+  g.fillStyle = '#1d2440'; cajaRedonda(g, m, m, ancho, alto, r); g.fill();
+  g.fillStyle = '#e9dcc0'; cajaRedonda(g, m + borde, m + borde, ancho - 2 * borde, alto - 2 * borde, r - borde); g.fill();
+  g.fillStyle = '#fff6e2'; cajaRedonda(g, m + borde, m + borde, ancho - 2 * borde, alto - 2 * borde - ancho * 0.03, r - borde); g.fill();
+  // los clavitos de las esquinas
+  g.fillStyle = '#c9b48f';
+  for (const [x, y] of [[0.06, 0.13], [0.94, 0.13], [0.06, 0.87], [0.94, 0.87]]) { g.beginPath(); g.arc(m + ancho * x, m + alto * y, ancho * 0.012, 0, Math.PI * 2); g.fill(); }
+  // las letras, cada una de un color, con su sombra plana y un borde oscuro
+  const linea = (txt, y, px, desde) => {
+    g.font = `900 ${Math.round(px)}px system-ui, -apple-system, "Segoe UI", Roboto, "Arial Black", sans-serif`;
+    g.textBaseline = 'middle'; g.textAlign = 'left';
+    const anchos = [...txt].map((ch) => g.measureText(ch).width), sep = px * 0.04;
+    const total = anchos.reduce((a, b) => a + b, 0) + sep * (txt.length - 1);
+    let x = m + ancho / 2 - total / 2;
+    [...txt].forEach((ch, i) => {
+      const col = LETRAS[(i + desde) % LETRAS.length];
+      g.lineJoin = 'round'; g.lineWidth = px * 0.16; g.strokeStyle = '#1d2440';
+      g.strokeText(ch, x, y + px * 0.09); g.fillStyle = '#1d2440'; g.fillText(ch, x, y + px * 0.09);
+      g.strokeText(ch, x, y); g.fillStyle = tono(col, -0.25); g.fillText(ch, x, y);
+      g.fillStyle = col; g.fillText(ch, x, y - px * 0.035);
+      x += anchos[i] + sep;
+    });
+  };
+  linea('GLOBO', m + alto * 0.33, alto * 0.36, 0);
+  linea('LIBRE', m + alto * 0.7, alto * 0.36, 3);
+  c.ancho = ancho; c.margen = m; c.alto = alto;
+  cartelC = c;
+  return c;
+}
+
+class FondoMenu {
+  constructor() {
+    this.t = 0; this.balanceo = 0; this.vel = 0;
+    this.mx = 0; this.my = 0; this.dedoX = null; this.dedoY = null;
+    const r = azar(3);
+    this.lejanos = Array.from({ length: 7 }, (_, i) => ({ x: r(), y: r(), v: 0.02 + r() * 0.03, r: 5 + r() * 6, color: LETRAS[i % LETRAS.length], fase: r() * 6 }));
+    this.arriba = 0;
+  }
+  // el dedo (o el mouse) sobre el fondo: empuja el cartel e inclina las capas
+  mover(x, y, dx) { this.dedoX = x; this.dedoY = y; this.vel += dx * 0.004; }
+  empujar(fuerza) { this.vel += fuerza; }
+  pasar(dt, W, H) {
+    this.t += dt;
+    // un péndulo con resorte: vuelve al medio y se va frenando
+    this.vel += (-this.balanceo * 7 - this.vel * 1.4) * dt;
+    this.balanceo = clamp(this.balanceo + this.vel * dt, -0.5, 0.5);
+    let ox = Math.sin(this.t * 0.45) * 0.3, oy = Math.cos(this.t * 0.33) * 0.2;
+    if (this.dedoX !== null) { ox += clamp((this.dedoX / W) * 2 - 1, -1, 1) * 0.7; oy += clamp((this.dedoY / H) * 2 - 1, -1, 1) * 0.4; }
+    this.mx += (ox - this.mx) * Math.min(1, dt * 3); this.my += (oy - this.my) * Math.min(1, dt * 3);
+    this.arriba -= dt * 40;               // el cielo sube despacio (las nubes bajan)
+    for (const b of this.lejanos) { b.y -= b.v * dt; if (b.y < -0.1) { b.y = 1.1; b.x = Math.random(); } }
+  }
+
+  // `zona`: dónde va el cartel {cx, y, ancho}; `jugador`: el globo y el escudo elegidos (o null)
+  dibujar(g, W, H, u, { tema = TEMAS[0], zona, jugador = null } = {}) {
+    const esc = Math.max(W, H) / 700;
+    dibujarFondo(g, W, H, { esc, ox: this.mx * 20 * u, arriba: this.arriba + this.my * 30 }, { tema, avance: 0.3, t: this.t, suelo: false });
+    // globos lejos que suben (chiquitos y claros: están lejos)
+    g.globalAlpha = 0.5;
+    for (const b of this.lejanos) dibujarGlobo(g, b.x * W + this.mx * 12 * u, b.y * H, b.r * u, { color: b.color }, this.t + b.fase, { hilo: b.r * 3 * u });
+    g.globalAlpha = 1;
+    if (jugador) {
+      // el globo del jugador flota y el escudo le da vueltas
+      const { x, y, pielGlobo, pielEscudo } = jugador, r = 26 * u;
+      const bx = x + Math.sin(this.t * 0.9) * 8 * u + this.mx * 8 * u, by = y + Math.sin(this.t * 1.7) * 5 * u;
+      dibujarGlobo(g, bx, by, r, pielGlobo, this.t, { hilo: 60 * u, inclina: Math.cos(this.t * 0.9) * 0.08 });
+      const a = this.t * 1.3, ex = bx + Math.cos(a) * 58 * u, ey = by + Math.sin(a) * 22 * u - 6 * u;
+      dibujarEscudo(g, ex, ey, 20 * u, pielEscudo, this.t);
+    }
+    if (zona) this.dibujarCartel(g, zona.cx + this.mx * 6 * u, zona.y, zona.ancho, u);
+  }
+
+  dibujarCartel(g, cx, y, ancho, u) {
+    const c = cartel(ancho), ang = this.balanceo + Math.sin(this.t * 1.1) * 0.03;
+    const cuelga = ancho * 0.42;                 // del cartel a los globos
+    const px = cx, py = y - cuelga;              // el punto de donde cuelga todo
+    // los tres globos que lo sostienen (se van un poco para el lado contrario al vaivén)
+    const puntas = [-0.34, 0, 0.34].map((k, i) => {
+      const lx = k * ancho, ly = cuelga;         // donde se ata el hilo, en el cartel (sin girar)
+      const ax = px + Math.cos(ang) * lx - Math.sin(ang) * ly, ay = py + Math.sin(ang) * lx + Math.cos(ang) * ly;
+      const gx = px + k * ancho * 1.25 - ang * 40 * u + Math.sin(this.t * 1.3 + i * 2) * 5 * u;
+      const gy = py - (i === 1 ? 26 : 8) * u + Math.sin(this.t * 1.6 + i) * 4 * u;
+      return { ax, ay, gx, gy, color: ['#ff4d5e', '#ffc93c', '#3d8bff'][i] };
+    });
+    g.strokeStyle = 'rgba(29,36,64,0.7)'; g.lineWidth = Math.max(1.5, 1.6 * u);
+    for (const p of puntas) { g.beginPath(); g.moveTo(p.ax, p.ay); g.quadraticCurveTo((p.ax + p.gx) / 2 + 6 * u, (p.ay + p.gy) / 2, p.gx, p.gy + 30 * u); g.stroke(); }
+    for (const p of puntas) dibujarGlobo(g, p.gx, p.gy, 24 * u, { color: p.color }, this.t, { hilo: 0, inclina: -ang * 0.6 });
+    // el cartel, girado desde el punto de donde cuelga
+    g.save();
+    g.translate(px, py); g.rotate(ang);
+    g.drawImage(c, -c.width / 2, cuelga - c.margen);
+    g.restore();
+  }
+}
+return { FondoMenu };
+})();
+
+/* ── sonido ── */
+const M_sonido = (() => {
+// El sonido, sintetizado con WebAudio (nada de archivos): una marimba
+// tranquila para el menú y otra con más ritmo para jugar (progresiones fijas:
+// una al azar suena a nada), el "toc" de madera del escudo, la moneda que
+// sube de nota si se juntan seguidas, el ¡pum! del globo y la fanfarria de
+// la meta. El audio se crea al abrir: si el navegador deja sonar, nace
+// andando; si no, arranca con el primer toque (main.js › despertar).
+const { T: TI } = M_intro;
+const NOTA = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11, Bb: 10, Eb: 3 };
+const midi = (n) => { const m = /^([A-G][#b]?)(\d)$/.exec(n); return 12 * (+m[2] + 1) + NOTA[m[1]]; };
+const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+const f = (n) => hz(midi(n));
+
+// acordes (raíz y tipo); bajo, marimba, bombo, palmas y shaker en 16 pasos
+const CANCIONES = {
+  menu: {
+    bpm: 92, acordes: [['C3', 'M7'], ['A2', 'm7'], ['F2', 'M7'], ['G2', 'M']],
+    bajo: 'R-------5-----R-', marimba: '0..2..1.3..2..1.', bombo: 'x.......x.......', palmas: '................', shaker: '..x...x...x...x.',
+  },
+  juego: {
+    bpm: 106, acordes: [['F2', 'M'], ['D2', 'm'], ['A#2', 'M'], ['C3', 'M']],
+    bajo: 'R..R..O.R..5..O.', marimba: '0.1.2.1.3.2.1.2.', bombo: 'x.....x...x.....', palmas: '....x.......x...', shaker: 'x.x.x.x.x.x.x.x.',
+  },
+};
+const TIPOS = { m: [0, 3, 7, 12], M: [0, 4, 7, 12], m7: [0, 3, 7, 10], M7: [0, 4, 7, 11] };
+
+function crearSonido(ajustes) {
+  let ctx = null, maestro, busSfx, busMus, ruido;
+  const s = { ajustes, errores: [] };
+  let tema = null, proximo = 0, pasoN = 0, reloj = null, ultimaMoneda = -9, racha = 0, ultimoGolpe = 0;
+
+  function iniciar() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    ctx = new AC();
+    maestro = ctx.createGain(); maestro.gain.value = 0.9;
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+    maestro.connect(comp); comp.connect(ctx.destination);
+    busSfx = ctx.createGain(); busSfx.connect(maestro);
+    busMus = ctx.createGain(); busMus.connect(maestro);
+    // un eco corto en la música: le da aire
+    const eco = ctx.createDelay(1), vuelta = ctx.createGain(), sal = ctx.createGain();
+    eco.delayTime.value = 0.28; vuelta.gain.value = 0.25; sal.gain.value = 0.22;
+    busMus.connect(eco); eco.connect(vuelta); vuelta.connect(eco); eco.connect(sal); sal.connect(maestro);
+    const b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    ruido = b;
+    s.aplicar();
+    return true;
+  }
+
+  function tono({ onda = 'sine', f0, f1 = f0, dur = 0.1, vol = 0.1, t = ctx.currentTime, ataque = 0.005, destino = busSfx }) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = onda;
+    o.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + ataque);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(destino);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function soplo({ dur = 0.1, vol = 0.1, tipo = 'bandpass', f0 = 1000, f1 = f0, q = 1, t = ctx.currentTime, destino = busSfx }) {
+    const n = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
+    n.buffer = ruido; n.loop = true;
+    fl.type = tipo; fl.Q.value = q;
+    fl.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) fl.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    n.connect(fl); fl.connect(g); g.connect(destino);
+    n.start(t, Math.random() * 0.5); n.stop(t + dur + 0.02);
+  }
+  // una tecla de marimba: el golpe (seno que se apaga rápido) y un armónico de madera
+  function marimba(fr, t, vol, destino = busMus, dur = 0.5) {
+    tono({ onda: 'sine', f0: fr, dur, vol, t, destino });
+    tono({ onda: 'sine', f0: fr * 4, dur: 0.06, vol: vol * 0.25, t, destino });
+  }
+
+  const SFX = {
+    boton: () => { tono({ onda: 'sine', f0: 700, f1: 1100, dur: 0.07, vol: 0.08 }); soplo({ dur: 0.03, vol: 0.03, f0: 4000, tipo: 'highpass' }); },
+    // el escudo contra algo: madera, más fuerte cuanto más fuerte el golpe
+    golpe: ({ vel = 300 } = {}) => {
+      const t = ctx.currentTime;
+      if (t - ultimoGolpe < 0.045) return;
+      ultimoGolpe = t;
+      const k = Math.min(1, vel / 900);
+      tono({ onda: 'triangle', f0: 260 - k * 80, f1: 90, dur: 0.09 + k * 0.05, vol: 0.06 + k * 0.14 });
+      soplo({ dur: 0.04, vol: 0.03 + k * 0.05, f0: 1800, q: 1.2 });
+    },
+    // la moneda: si vienen seguidas, cada una un tono más arriba
+    moneda: () => {
+      const t = ctx.currentTime;
+      racha = t - ultimaMoneda < 1.1 ? Math.min(racha + 1, 12) : 0;
+      ultimaMoneda = t;
+      const base = 76 + [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28][racha];
+      tono({ onda: 'sine', f0: hz(base), dur: 0.09, vol: 0.09 });
+      tono({ onda: 'sine', f0: hz(base + 7), dur: 0.22, vol: 0.08, t: t + 0.06 });
+      tono({ onda: 'triangle', f0: hz(base + 19), dur: 0.12, vol: 0.02, t: t + 0.06 });
+    },
+    pum: () => {
+      soplo({ dur: 0.09, vol: 0.5, tipo: 'highpass', f0: 1200 });
+      soplo({ dur: 0.35, vol: 0.18, tipo: 'lowpass', f0: 3000, f1: 300 });
+      tono({ onda: 'sine', f0: 150, f1: 45, dur: 0.3, vol: 0.35 });
+      tono({ onda: 'triangle', f0: 900, f1: 180, dur: 0.35, vol: 0.06, t: ctx.currentTime + 0.05 });
+    },
+    meta: () => {
+      const t = ctx.currentTime;
+      ['C5', 'E5', 'G5', 'C6'].forEach((n, k) => marimba(f(n), t + k * 0.09, 0.12, busSfx, 0.6));
+      for (const n of ['C4', 'E4', 'G4', 'B4']) tono({ onda: 'triangle', f0: f(n), dur: 1.3, vol: 0.04, t: t + 0.36, ataque: 0.05 });
+      for (let k = 0; k < 6; k++) tono({ onda: 'sine', f0: f('C7') * (1 + k * 0.12), dur: 0.1, vol: 0.025, t: t + 0.4 + k * 0.05 });
+    },
+    // viene algo cayendo: un soplido que baja y dos pitidos
+    lluvia: () => {
+      const t = ctx.currentTime;
+      soplo({ dur: 0.45, vol: 0.1, f0: 3500, f1: 500, q: 1.5 });
+      tono({ onda: 'square', f0: 880, dur: 0.06, vol: 0.025, t }); tono({ onda: 'square', f0: 880, dur: 0.06, vol: 0.025, t: t + 0.12 });
+    },
+    pendulo: () => soplo({ dur: 0.5, vol: 0.08, f0: 300, f1: 900, q: 2 }),
+    compra: () => { const t = ctx.currentTime; tono({ onda: 'sine', f0: f('E6'), dur: 0.1, vol: 0.08, t }); tono({ onda: 'sine', f0: f('A6'), dur: 0.3, vol: 0.08, t: t + 0.08 }); soplo({ dur: 0.2, vol: 0.05, f0: 6000, tipo: 'highpass', t: t + 0.08 }); },
+    error: () => { tono({ onda: 'triangle', f0: 190, dur: 0.1, vol: 0.1 }); tono({ onda: 'triangle', f0: 150, dur: 0.14, vol: 0.1, t: ctx.currentTime + 0.1 }); },
+    cambia: () => { soplo({ dur: 0.12, vol: 0.05, f0: 1500, f1: 4000 }); tono({ onda: 'sine', f0: 660, f1: 990, dur: 0.1, vol: 0.05 }); },
+  };
+
+  function programar() {
+    if (!tema || !ctx) return;
+    const c = CANCIONES[tema], d = 60 / c.bpm / 4;
+    if (proximo < ctx.currentTime - 0.3) proximo = ctx.currentTime + 0.05;
+    try {
+      while (proximo < ctx.currentTime + 0.12) { paso(c, pasoN, proximo, d); proximo += d; pasoN++; }
+    } catch (e) { s.errores.push('música ' + tema + ': ' + e.message); tema = null; }
+  }
+  function paso(c, n, t, d) {
+    const p = n % 16, compas = Math.floor(n / 16) % c.acordes.length;
+    const [raizN, tipo] = c.acordes[compas], raiz = midi(raizN), ac = TIPOS[tipo];
+    const b = c.bajo[p];
+    if (b !== '.' && b !== '-') {
+      let l = 1; while (c.bajo[p + l] === '-') l++;
+      const nota = raiz + (b === 'O' ? 12 : b === '5' ? 7 : 0);
+      tono({ onda: 'triangle', f0: hz(nota), dur: d * l * 0.9, vol: 0.18, t, destino: busMus, ataque: 0.01 });
+    }
+    const m = c.marimba[p];
+    if (m !== '.') marimba(hz(raiz + 24 + ac[+m]), t, 0.06);
+    // el colchón del acorde al empezar cada compás
+    if (p === 0) for (const k of ac.slice(0, 3)) tono({ onda: 'triangle', f0: hz(raiz + 12 + k), dur: d * 15, vol: 0.018, t, ataque: 0.3, destino: busMus });
+    if (c.bombo[p] === 'x') tono({ onda: 'sine', f0: 120, f1: 45, dur: 0.15, vol: 0.22, t, destino: busMus });
+    if (c.palmas[p] === 'x') { soplo({ dur: 0.08, vol: 0.05, f0: 1500, q: 0.9, t, destino: busMus }); soplo({ dur: 0.06, vol: 0.04, f0: 1500, q: 0.9, t: t + 0.012, destino: busMus }); }
+    if (c.shaker[p] === 'x') soplo({ dur: 0.035, vol: 0.014, tipo: 'highpass', f0: 7000, t, destino: busMus });
+  }
+
+  s.despertar = () => {
+    if (!ctx && !iniciar()) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    if (!reloj) reloj = setInterval(programar, 25);
+  };
+  s.tocar = (nombre, op) => {
+    if (!ctx || !ajustes.sonido || ctx.state !== 'running') return;
+    if (!SFX[nombre]) { s.errores.push('no existe ' + nombre); return; }
+    try { SFX[nombre](op); } catch (e) { s.errores.push(nombre + ': ' + e.message); }
+  };
+  s.musica = (nombre) => {
+    if (s.cancion === nombre) return;
+    s.cancion = nombre; tema = CANCIONES[nombre] ? nombre : null; pasoN = 0;
+    if (ctx) proximo = ctx.currentTime + 0.05;
+  };
+  s.aplicar = () => {
+    if (!ctx) return;
+    busSfx.gain.setTargetAtTime(ajustes.sonido ? 0.9 : 0, ctx.currentTime, 0.02);
+    busMus.gain.setTargetAtTime(ajustes.musica ? 0.5 : 0, ctx.currentTime, 0.05);
+  };
+  s.lava = (v) => { if (ctx) maestro.gain.setTargetAtTime(v, ctx.currentTime, 0.05); };
+  // La música de la intro de JXSTUDIOS, con los tiempos de intro.js › T:
+  // tres soplidos (los barridos), la marimba que sube mientras el escudo
+  // escribe, el silbato del globo que sube, el ¡boing! del choque con un
+  // acorde brillante, un pop por letra y un acorde tibio para cerrar.
+  s.jingleJXS = () => {
+    // con el audio suspendido (sin un toque) se agendaría y sonaría tarde, fuera de fase
+    if (!ctx || ctx.state !== 'running' || !(ajustes.sonido || ajustes.musica)) return null;
+    const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(maestro);
+    const t0 = ctx.currentTime + 0.03;
+    [0, 0.09, 0.18].forEach((dd, k) => soplo({ dur: 0.28, vol: 0.09, f0: 600 + k * 400, f1: 4000 + k * 1500, q: 1.1, t: t0 + dd, destino: bus }));
+    const escala = ['C5', 'D5', 'E5', 'G5', 'A5', 'C6', 'D6', 'E6', 'G6', 'A6'];
+    escala.forEach((n, k) => marimba(f(n), t0 + TI.traza[0] + (k * (TI.traza[1] - TI.traza[0])) / escala.length, 0.08, bus, 0.4));
+    tono({ onda: 'sine', f0: 320, f1: 1150, dur: TI.golpe - TI.sube[0], vol: 0.06, t: t0 + TI.sube[0], ataque: 0.03, destino: bus });
+    const tg = t0 + TI.golpe;
+    tono({ onda: 'sine', f0: 130, f1: 42, dur: 0.3, vol: 0.4, t: tg, destino: bus });
+    tono({ onda: 'sine', f0: 560, f1: 240, dur: 0.18, vol: 0.12, t: tg, destino: bus });
+    tono({ onda: 'sine', f0: 420, f1: 300, dur: 0.22, vol: 0.08, t: tg + 0.16, destino: bus });
+    ['C5', 'E5', 'G5', 'C6', 'E6'].forEach((n, k) => marimba(f(n), tg + 0.03 + k * 0.025, 0.07, bus, 0.7));
+    for (let k = 0; k < 9; k++) tono({ onda: 'sine', f0: 880 + k * 70, dur: 0.05, vol: 0.035, t: t0 + TI.letras + k * 0.045 + 0.08, destino: bus });
+    soplo({ dur: 0.12, vol: 0.25, tipo: 'highpass', f0: 1500, t: t0 + TI.fin, destino: bus });
+    for (const n of ['C4', 'E4', 'G4', 'B4', 'D5']) tono({ onda: 'triangle', f0: f(n), dur: 1.4, vol: 0.04, t: t0 + TI.fin, ataque: 0.06, destino: bus });
+    return { cortar: () => bus.gain.setTargetAtTime(0, ctx.currentTime, 0.06) };
+  };
+  s.activo = () => !!ctx && ctx.state === 'running';
+  return s;
+}
+return { crearSonido, CANCIONES };
+})();
+
+/* ── main ── */
+(() => {
+// Globo Libre, de JXSTUDIOS: el arranque, las pantallas y el bucle.
+//
+// Cada cuadro la partida avanza lo que tardó el cuadro, en pasos de a lo sumo
+// 1/60 s (y adentro, la física en pasos de 1/120), y se dibuja una vez. Los
+// menús son HTML arriba del lienzo; el lienzo dibuja detrás el cielo, el
+// cartel que se hamaca y lo que se está eligiendo en la tienda.
+//
+// Para probar: ?sinintro (directo al menú), ?directo=nivel:4 o
+// ?directo=infinito, ?pausa (no avanza solo: __G.pasos(n); también saltea la
+// intro, salvo con ?intro), ?limpio (sin lo guardado), ?idioma=en.
+const { Partida } = M_partida;
+const { NIVELES, ANCHO } = M_niveles;
+const { TEMAS, temaDeNivel } = M_temas;
+const { dibujarPartida, dibujarGlobo, dibujarEscudo } = M_dibujo;
+const { dibujarHud } = M_hud;
+const { FondoMenu } = M_menu;
+const { crearEntrada } = M_entrada;
+const { crearSonido } = M_sonido;
+const { crearIdioma, IDIOMAS } = M_idioma;
+const { cargar, guardar, base } = M_guardado;
+const { GLOBOS, ESCUDOS, globoPorId, escudoPorId } = M_pieles;
+const { IntroJXS } = M_intro;
+const { clamp, trozos } = M_util;
+const PASO = 1 / 60;
+const SENS = { baja: 1.0, media: 1.3, alta: 1.7 };
+const TECLAS_VEL = 430;              // el escudo con las flechas, en unidades por segundo
+const COLOR_CIELO = { dia: '#3d8bff', tarde: '#ff9f43', noche: '#6c3cc4' };
+const q = new URLSearchParams(location.search);
+const $ = (id) => document.getElementById(id);
+const lienzo = $('juego'), g = lienzo.getContext('2d');
+
+let datos = q.has('limpio') ? base() : cargar();
+if (IDIOMAS.includes(q.get('idioma'))) datos.ajustes.idioma = q.get('idioma');
+const tr = crearIdioma(datos.ajustes.idioma);
+const sonido = crearSonido(datos.ajustes);
+const entrada = crearEntrada(lienzo);
+const tactil = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+const guardarTodo = () => guardar(datos);
+// antes del primer toque el navegador no deja vibrar (y lo avisa en la consola)
+const vibrar = (p) => { if (datos.ajustes.vibrar && navigator.vibrate && navigator.userActivation?.hasBeenActive !== false) try { navigator.vibrate(p); } catch { /* no deja */ } };
+
+// ── la pantalla: resolución de verdad, con tope según la calidad ──────────
+let W = 0, H = 0, dpr = 1, dprTope = tactil ? 1.5 : 2;
+function medir() {
+  const tope = datos.ajustes.calidad === 'baja' ? 1 : datos.ajustes.calidad === 'alta' ? 2.5 : dprTope;
+  dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, tope));
+  const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  if (w !== W || h !== H) { W = lienzo.width = w; H = lienzo.height = h; }
+}
+medir();
+addEventListener('resize', medir);
+
+let estado = 'espera', partida = null, intro = null, t = 0, sacudida = 0, avisado = false, recordNuevo = false;
+const fondo = new FondoMenu();
+const tienda = { tipo: 'globos', i: 0 };
+
+// la cámara del juego: el mundo (360 de ancho) entra a lo ancho en el
+// teléfono parado; acostado, se ven al menos 560 de alto y sobran costados
+function camara() {
+  const esc = Math.min(W / ANCHO, H / 560);
+  const sx = sacudida > 0 ? (Math.random() - 0.5) * sacudida * 14 * dpr : 0, sy = sacudida > 0 ? (Math.random() - 0.5) * sacudida * 14 * dpr : 0;
+  return { esc, ox: (W - ANCHO * esc) / 2 + sx, arriba: partida.arriba() + sy / esc };
+}
+
+// ── las pantallas de HTML ──────────────────────────────────────────────────
+function mostrar(id) {
+  for (const s of document.querySelectorAll('.pantalla')) s.classList.toggle('oculto', s.id !== id);
+  $('bPausa').classList.toggle('oculto', id !== null || estado !== 'juego');
+}
+function boton(id, fn) { $(id).addEventListener('click', () => { sonido.tocar('boton'); fn(); }); }
+
+function textos() {
+  document.documentElement.lang = tr.actual();
+  const n = Math.min(datos.abierto, NIVELES - 1);
+  $('tJugar').textContent = tr('jugar');
+  $('tNivelJugar').textContent = datos.abierto >= NIVELES ? tr('todos') : tr('nivel', n + 1);
+  $('bNiveles').textContent = tr('niveles'); $('bInfinito').textContent = tr('infinito');
+  $('bTienda').textContent = tr('tienda'); $('bAjustes').textContent = tr('ajustes');
+  $('tRecordMenu').textContent = datos.mejorAltura ? tr('record', datos.mejorAltura) : '';
+  $('tFirma').textContent = tr('creditos').toUpperCase();
+  $('tMonedas').textContent = datos.monedas; $('tMonedasTienda').textContent = datos.monedas;
+  $('tNiveles').textContent = tr('niveles'); $('bVolverNiveles').textContent = tr('volver');
+  $('bPestGlobos').textContent = tr('globos'); $('bPestEscudos').textContent = tr('escudos'); $('bVolverTienda').textContent = tr('volver');
+  $('tAjustes').textContent = tr('ajustes'); $('bCerrarAjustes').textContent = tr('volver');
+  $('tPausa').textContent = tr('pausa'); $('bSeguir').textContent = tr('seguir'); $('bSalirPausa').textContent = tr('menu');
+  $('tPum').textContent = tr('pum'); $('bOtraVez').textContent = tr('otraVez'); $('bMenuPum').textContent = tr('menu');
+  $('tGano').textContent = tr('superado'); $('bSiguienteNivel').textContent = tr('siguiente'); $('bMenuGano').textContent = tr('menu');
+}
+
+// ── el ir y venir ──────────────────────────────────────────────────────────
+function entrar() {
+  if (estado !== 'espera') return;
+  sonido.despertar();
+  estado = 'intro'; mostrar(null);
+  intro = new IntroJXS({ sonido, vibrar, alTerminar: () => (datos.ajustes.idioma ? aMenu() : elegirIdioma()) });
+  intro.textoPresenta = tr('presenta');
+}
+// después del logo, la primera vez, elegir el idioma (?idioma= ya lo trae elegido)
+function elegirIdioma() {
+  estado = 'idiomas'; mostrar('idiomas');
+  sonido.musica('menu');
+  setTimeout(() => $('bIdioma_' + tr.actual())?.focus(), 50);
+}
+// dónde empiezan los botones del menú (en píxeles de CSS), para que el globo de muestra no quede detrás
+let topeBotones = Infinity;
+function medirBotones() { const r = $('bJugar').getBoundingClientRect(); if (r.height) topeBotones = r.top; }
+addEventListener('resize', () => { if (estado === 'menu') medirBotones(); });
+function aMenu() {
+  estado = 'menu'; partida = null;
+  entrada.activo = false; entrada.soltarTodo();
+  sonido.musica('menu');
+  textos(); mostrar('menu');
+  medirBotones();
+}
+function jugar(n = Math.min(datos.abierto, NIVELES - 1)) {
+  partida = new Partida({ nivel: clamp(n, 0, NIVELES - 1) });
+  empezar();
+}
+function infinito() {
+  partida = new Partida({ infinito: true, semilla: (Date.now() & 0xffff) + 1 });
+  empezar();
+}
+function empezar() {
+  datos.partidas++; guardarTodo();
+  estado = 'juego'; avisado = false; recordNuevo = false; sacudida = 0;
+  mostrar(null);
+  entrada.activo = true; entrada.soltarTodo(); entrada.toques = 0;
+  sonido.musica('juego');
+}
+function pausar() { if (estado !== 'juego' || !partida || partida.estado !== 'juego') return; estado = 'pausa'; entrada.soltarTodo(); mostrar('pausa'); }
+function seguir() { if (estado !== 'pausa') return; estado = 'juego'; mostrar(null); }
+
+// cuando la partida termina (reventó o llegó), un rato después, la pantalla del final
+function terminar() {
+  const p = partida;
+  if (p.estado === 'pum') {
+    estado = 'pum';
+    datos.monedas += p.tomadas;
+    if (p.infinito) {
+      const m = Math.floor(p.altura() / 10);
+      recordNuevo = m > datos.mejorAltura;
+      if (recordNuevo) datos.mejorAltura = m;
+      $('tPumCausa').textContent = tr('llegaste', m);
+      $('tPumRecord').textContent = recordNuevo ? tr('nuevoRecord') : '';
+    } else {
+      $('tPumCausa').textContent = tr('reventado') + ' · ' + Math.round(p.progreso() * 100) + '%';
+      $('tPumRecord').textContent = '';
+    }
+    $('tPumDato').textContent = p.tomadas ? tr('juntaste', p.tomadas) : '';
+    guardarTodo(); mostrar('pum');
+    setTimeout(() => $('bOtraVez').focus({ preventScroll: true }), 50);
+  } else {
+    estado = 'gano';
+    const premio = p.tomadas + 10 + p.nivel * 2;
+    datos.monedas += premio;
+    datos.abierto = Math.max(datos.abierto, p.nivel + 1);
+    guardarTodo();
+    $('tGanoMonedas').textContent = tr('ganaste', premio);
+    $('tGano').textContent = p.nivel + 1 >= NIVELES ? tr('todos') : tr('superado');
+    $('bSiguienteNivel').classList.toggle('oculto', p.nivel + 1 >= NIVELES);
+    mostrar('gano');
+    setTimeout(() => $('bSiguienteNivel').focus({ preventScroll: true }), 50);
+  }
+  entrada.activo = false; entrada.soltarTodo();
+}
+function otraVez() { if (partida?.infinito) infinito(); else jugar(partida ? partida.nivel : 0); }
+
+// ── los niveles ────────────────────────────────────────────────────────────
+function armarNiveles() {
+  const grilla = $('grillaNiveles');
+  grilla.textContent = '';
+  for (let c = 0; c < 3; c++) {
+    const h = document.createElement('h3'); h.textContent = tr('cielo_' + TEMAS[c].id); grilla.appendChild(h);
+    const caja = document.createElement('div'); caja.className = 'cielo';
+    for (let n = c * 10; n < c * 10 + 10; n++) {
+      const b = document.createElement('button');
+      const abierto = n <= datos.abierto;
+      b.className = 'nivelB' + (abierto ? '' : ' cerrado') + (n < datos.abierto ? ' hecho' : '');
+      b.style.background = COLOR_CIELO[TEMAS[c].id];
+      b.textContent = abierto ? String(n + 1) : '🔒';
+      b.setAttribute('aria-label', tr('nivel', n + 1));
+      b.dataset.n = n;
+      b.addEventListener('click', () => {
+        if (n > datos.abierto) { sonido.tocar('error'); return; }
+        sonido.tocar('boton'); jugar(n);
+      });
+      caja.appendChild(b);
+    }
+    grilla.appendChild(caja);
+  }
+}
+
+// ── la tienda: una muestra grande en el medio, flechas y comprar o usar ────
+function lista() { return tienda.tipo === 'globos' ? GLOBOS : ESCUDOS; }
+function abrirTienda(tipo = tienda.tipo) {
+  tienda.tipo = tipo;
+  const actual = tipo === 'globos' ? datos.globo : datos.escudo;
+  tienda.i = Math.max(0, lista().findIndex((p) => p.id === actual));
+  estado = 'tienda'; mostrar('tienda');
+  actualizarTienda();
+}
+function actualizarTienda() {
+  const p = lista()[tienda.i], tipo = tienda.tipo, tengo = (tipo === 'globos' ? datos.globos : datos.escudos).includes(p.id);
+  const usando = (tipo === 'globos' ? datos.globo : datos.escudo) === p.id;
+  $('bPestGlobos').classList.toggle('elegida', tipo === 'globos'); $('bPestEscudos').classList.toggle('elegida', tipo === 'escudos');
+  $('bPestGlobos').setAttribute('aria-selected', tipo === 'globos'); $('bPestEscudos').setAttribute('aria-selected', tipo === 'escudos');
+  $('tNombre').textContent = tr((tipo === 'globos' ? 'globo_' : 'escudo_') + p.id);
+  const b = $('bComprar');
+  b.textContent = usando ? tr('enUso') : tengo ? tr('usar') : tr('comprar', p.precio);
+  b.classList.toggle('apagado', usando || (!tengo && datos.monedas < p.precio));
+  $('tAviso').textContent = !tengo && datos.monedas < p.precio ? tr('faltan', p.precio - datos.monedas) : '';
+  $('tMonedasTienda').textContent = datos.monedas; $('tMonedas').textContent = datos.monedas;
+}
+function moverTienda(d) { tienda.i = (tienda.i + d + lista().length) % lista().length; sonido.tocar('cambia'); actualizarTienda(); }
+function comprarOUsar() {
+  const p = lista()[tienda.i], mias = tienda.tipo === 'globos' ? datos.globos : datos.escudos;
+  if (!mias.includes(p.id)) {
+    if (datos.monedas < p.precio) { sonido.tocar('error'); vibrar(40); return; }
+    datos.monedas -= p.precio; mias.push(p.id); sonido.tocar('compra'); vibrar(20);
+  }
+  if (tienda.tipo === 'globos') datos.globo = p.id; else datos.escudo = p.id;
+  guardarTodo(); actualizarTienda();
+}
+
+// ── los ajustes, armados con botones de opción ─────────────────────────────
+let borrarArmado = false;
+function armarAjustes() {
+  const a = datos.ajustes, listaA = $('listaAjustes');
+  listaA.textContent = '';
+  const fila = (nombre, opciones, actual, poner) => {
+    const d = document.createElement('div'); d.className = 'item';
+    const s = document.createElement('span'); s.textContent = nombre; d.appendChild(s);
+    const ops = document.createElement('div'); ops.className = 'ops';
+    for (const [valor, texto, clase] of opciones) {
+      const b = document.createElement('button'); b.className = 'opcion' + (valor === actual ? ' elegida' : '') + (clase ? ' ' + clase : ''); b.textContent = texto;
+      b.addEventListener('click', () => { poner(valor); sonido.aplicar(); guardarTodo(); sonido.tocar('boton'); textos(); armarAjustes(); });
+      ops.appendChild(b);
+    }
+    d.appendChild(ops); listaA.appendChild(d);
+  };
+  const siNo = [[true, tr('si')], [false, tr('no')]];
+  fila(tr('musica'), siNo, a.musica, (v) => (a.musica = v));
+  fila(tr('sonido'), siNo, a.sonido, (v) => (a.sonido = v));
+  fila(tr('vibrar'), siNo, a.vibrar, (v) => { a.vibrar = v; if (v) vibrar(30); });
+  fila(tr('sensibilidad'), [['baja', tr('baja')], ['media', tr('media')], ['alta', tr('alta')]], a.sensibilidad, (v) => (a.sensibilidad = v));
+  fila(tr('calidad'), [['auto', tr('auto')], ['alta', tr('alta')], ['baja', tr('baja')]], a.calidad, (v) => { a.calidad = v; medir(); });
+  fila(tr('idioma'), IDIOMAS.map((l) => [l, l.toUpperCase()]), tr.actual(), (v) => { a.idioma = v; tr.poner(v); });
+  // borrar el progreso pide dos toques (los ajustes y el idioma quedan)
+  fila('', [['borrar', borrarArmado ? tr('borrarSeguro') : tr('borrar'), 'peligro']], null, () => {
+    if (!borrarArmado) { borrarArmado = true; return; }
+    borrarArmado = false;
+    const nuevo = base(); nuevo.ajustes = datos.ajustes; datos = nuevo;
+  });
+}
+
+for (const l of IDIOMAS) boton('bIdioma_' + l, () => { datos.ajustes.idioma = l; tr.poner(l); guardarTodo(); aMenu(); });
+boton('bJugar', () => jugar());
+boton('bNiveles', () => { armarNiveles(); estado = 'niveles'; mostrar('niveles'); });
+boton('bInfinito', infinito);
+boton('bTienda', () => abrirTienda());
+boton('bAjustes', () => { borrarArmado = false; armarAjustes(); estado = 'ajustes'; mostrar('ajustes'); });
+boton('bVolverNiveles', aMenu);
+boton('bVolverTienda', aMenu);
+boton('bCerrarAjustes', aMenu);
+boton('bPestGlobos', () => abrirTienda('globos'));
+boton('bPestEscudos', () => abrirTienda('escudos'));
+boton('bAnterior', () => moverTienda(-1));
+boton('bSiguiente', () => moverTienda(1));
+$('bComprar').addEventListener('click', comprarOUsar);
+boton('bPausa', pausar);
+boton('bSeguir', seguir);
+boton('bSalirPausa', aMenu);
+boton('bOtraVez', otraVez);
+boton('bMenuPum', aMenu);
+boton('bSiguienteNivel', () => jugar(partida.nivel + 1));
+boton('bMenuGano', aMenu);
+// el primer toque en cualquier lado despierta el audio (tiene que ser dentro del evento)
+addEventListener('pointerdown', () => sonido.despertar(), { capture: true });
+addEventListener('keydown', (ev) => {
+  sonido.despertar();
+  if (estado === 'intro') intro?.saltear();
+  else if (estado === 'tienda' && ev.code === 'ArrowLeft') moverTienda(-1);
+  else if (estado === 'tienda' && ev.code === 'ArrowRight') moverTienda(1);
+  // la pausa se maneja acá: si no, la misma tecla que la saca la vuelve a poner
+  else if ((ev.code === 'Escape' || ev.code === 'KeyP') && !ev.repeat) {
+    if (estado === 'juego') pausar();
+    else if (estado === 'pausa') seguir();
+    else if (['niveles', 'tienda', 'ajustes'].includes(estado) && ev.code === 'Escape') aMenu();
+  }
+}, { capture: true });
+// el dedo sobre el fondo de los menús empuja el cartel (en la ventana: el
+// menú de HTML tapa el lienzo entero y el lienzo no se enteraba)
+let ultimoX = null;
+const sobreBoton = (ev) => ev.target?.closest?.('button, input');
+lienzo.addEventListener('pointerdown', () => { if (estado === 'intro') intro?.saltear(); });
+addEventListener('pointerdown', (ev) => {
+  ultimoX = ev.clientX;
+  if (estado === 'menu' && !sobreBoton(ev)) fondo.empujar((ev.clientX < innerWidth / 2 ? -1 : 1) * 0.5);
+});
+addEventListener('pointermove', (ev) => {
+  if (estado === 'juego' || estado === 'intro') return;
+  const dx = ultimoX === null ? 0 : ev.clientX - ultimoX;
+  ultimoX = ev.clientX;
+  fondo.mover(ev.clientX * dpr, ev.clientY * dpr, ev.buttons || ev.pointerType !== 'mouse' ? dx : dx * 0.4);
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) { pausar(); sonido.lava(0); } else sonido.lava(0.9); });
+
+// ── el paso ────────────────────────────────────────────────────────────────
+function paso(dt) {
+  t += dt;
+  if (estado === 'espera') return;
+  if (estado === 'intro') { intro.pasar(dt, W, H); return; }
+  fondo.pasar(dt, W, H);
+  if (!partida || estado === 'pausa') return;
+  if (estado === 'juego' && partida.estado === 'juego') {
+    // el arrastre del dedo (en píxeles de CSS) pasa al mundo; las flechas, a velocidad fija
+    const esc = Math.min(W / ANCHO, H / 560), s = SENS[datos.ajustes.sensibilidad] || 1.3;
+    const [dx, dy] = entrada.sacar(), [fx, fy] = entrada.flechas();
+    partida.mover((dx * dpr * s) / esc + fx * TECLAS_VEL * dt, (dy * dpr * s) / esc + fy * TECLAS_VEL * dt);
+  }
+  partida.medir(W / Math.min(W / ANCHO, H / 560), H / Math.min(W / ANCHO, H / 560));
+  partida.avanzar(dt);
+  for (const ev of partida.sacarEventos()) {
+    if (ev.tipo === 'golpe') { sonido.tocar('golpe', { vel: ev.vel }); if (ev.vel > 600) vibrar(12); }
+    else if (ev.tipo === 'moneda') { sonido.tocar('moneda'); vibrar(8); }
+    else if (ev.tipo === 'pum') { sonido.tocar('pum'); vibrar([40, 30, 70]); sacudida = 1; }
+    else if (ev.tipo === 'meta') { sonido.tocar('meta'); vibrar([20, 40, 20]); }
+    else if (ev.tipo === 'lluvia') sonido.tocar('lluvia');
+    else if (ev.tipo === 'pendulo') sonido.tocar('pendulo');
+  }
+  sacudida = Math.max(0, sacudida - dt * 3);
+  if (estado === 'juego' && partida.estado !== 'juego' && partida.tFin > (partida.estado === 'pum' ? 1.1 : 1.8)) terminar();
+}
+
+// ── el dibujo ──────────────────────────────────────────────────────────────
+function temaMenu() { return temaDeNivel(Math.min(datos.abierto, NIVELES - 1)); }
+function dibujar() {
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  if (estado === 'espera') { g.fillStyle = '#9fd8ff'; g.fillRect(0, 0, W, H); return; }
+  if (estado === 'intro') { intro.dibujar(g, W, H); return; }
+  const pielGlobo = globoPorId(datos.globo), pielEscudo = escudoPorId(datos.escudo);
+  if (partida && ['juego', 'pausa', 'pum', 'gano'].includes(estado)) {
+    const cam = camara();
+    dibujarPartida(g, W, H, partida, cam, { pielGlobo, pielEscudo, tr, t });
+    if (estado === 'juego' || estado === 'pausa') {
+      const consejo = partida.nivel === 0 && !partida.infinito && partida.t < 7 && entrada.toques === 0 ? { texto: tactil ? tr('consejo') : tr('consejoPc'), alfa: clamp((7 - partida.t) / 1.5, 0, 1) * clamp(partida.t / 0.4, 0, 1) } : null;
+      dibujarHud(g, W, H, { p: partida, u: dpr, tr, monedas: datos.monedas + partida.tomadas, pielGlobo, consejo, t, record: datos.mejorAltura });
+    }
+    return;
+  }
+  const acostado = W > H * 1.2;
+  if (estado === 'tienda') {
+    fondo.dibujar(g, W, H, dpr, { tema: temaMenu() });
+    const p = lista()[tienda.i], cx = W / 2, cy = acostado ? H * 0.5 : H * 0.42, r = Math.min(W, H) * (acostado ? 0.13 : 0.15);
+    if (tienda.tipo === 'globos') dibujarGlobo(g, cx, cy - r * 0.3 + Math.sin(t * 1.6) * r * 0.06, r, p, t, { hilo: r * 2.4, inclina: Math.cos(t * 0.9) * 0.08 });
+    else {
+      dibujarGlobo(g, cx, cy + r * 1.1, r * 0.55, pielGlobo, t, { hilo: r * 1.2 });
+      dibujarEscudo(g, cx + Math.sin(t * 1.2) * r * 0.3, cy - r * 0.35, r * 0.8, p, t);
+    }
+    return;
+  }
+  const ancho = acostado ? Math.min(W * 0.4, H * 0.85) : Math.min(W * 0.84, 440 * dpr);
+  const zona = estado === 'menu' || estado === 'idiomas' ? { cx: acostado ? W * 0.27 : W / 2, y: ancho * 0.42 + (acostado ? 70 : 90) * dpr, ancho } : null;
+  // el globo del jugador flota entre el cartel y los botones, si hay lugar
+  let jugador = null;
+  if (estado === 'menu' && !acostado) {
+    const abajoCartel = zona.y + ancho * 0.5, arribaBotones = topeBotones * dpr, lugar = arribaBotones - abajoCartel;
+    if (lugar > 130 * dpr) jugador = { x: W / 2, y: abajoCartel + lugar * 0.4, pielGlobo, pielEscudo };
+  }
+  fondo.dibujar(g, W, H, dpr, { tema: temaMenu(), zona, jugador });
+  if (estado === 'niveles' || estado === 'ajustes') { g.fillStyle = 'rgba(29,36,64,0.25)'; g.fillRect(0, 0, W, H); }
+}
+
+// ── el bucle, con calidad que se ajusta sola ──────────────────────────────
+let ultimo = performance.now(), lento = 0;
+const manual = q.has('pausa');
+function cuadro(ahora) {
+  requestAnimationFrame(cuadro);
+  const dtReal = Math.min(0.1, (ahora - ultimo) / 1000);
+  ultimo = ahora;
+  // si los cuadros tardan mucho seguido, se baja la resolución (un cuarto de punto por vez)
+  if (datos.ajustes.calidad === 'auto' && estado === 'juego') {
+    lento = dtReal > 0.026 ? lento + 1 : Math.max(0, lento - 1);
+    if (lento > 45 && dprTope > 1) { dprTope = Math.max(1, dprTope - 0.25); lento = 0; medir(); }
+  }
+  if (!manual) {
+    const [n, d] = trozos(dtReal, PASO);
+    for (let k = 0; k < n; k++) paso(d);
+  }
+  dibujar();
+}
+
+textos();
+const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
+// La intro arranca apenas abre, sin tocar nada. Si el navegador deja sonar
+// sin un toque, el audio nace andando y la música va en fase; si no (lo
+// normal), la intro va muda y el primer toque la saltea y prende el sonido.
+if (conIntro) { mostrar(null); entrar(); }
+else {
+  aMenu();
+  const d = q.get('directo') || '';
+  if (d.startsWith('nivel:')) jugar((+d.slice(6) || 1) - 1);
+  else if (d === 'infinito') infinito();
+}
+requestAnimationFrame(cuadro);
+
+// Las sondas para las pruebas (pruebas/juego.mjs).
+window.__G = {
+  get estado() { return estado; }, get partida() { return partida; }, get datos() { return datos; }, get intro() { return intro; },
+  get tienda() { return tienda; }, get fondo() { return fondo; },
+  pasos(n, dib = false) { for (let k = 0; k < n; k++) paso(PASO); if (dib) dibujar(); },
+  mover(dx, dy) { partida.mover(dx, dy); },
+  dibujar, entrar, jugar, infinito, aMenu, pausar, seguir, elegirIdioma, abrirTienda, moverTienda, comprarOUsar, entrada, sonido, tr,
+  get W() { return W; }, get H() { return H; }, get dpr() { return dpr; },
+};
+window.listo = true;
+
+})();
+
+</script>
+</body>
+</html>

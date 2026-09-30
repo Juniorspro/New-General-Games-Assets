@@ -1,0 +1,127 @@
+/* El juego se dibuja en el lienzo; los menús son HTML encima. Plano y de
+   colores, como el juego: botones gordos con un borde oscuro y la sombra
+   dura abajo (un "escalón"), sin brillos de vidrio. */
+:root {
+  --tinta: #1d2440;
+  --blanco: #ffffff;
+  --crema: #fff6e2;
+  --verde: #2ecc71; --verde-osc: #1f9d55;
+  --azul: #3d8bff; --azul-osc: #2a62c4;
+  --violeta: #9b5cff; --violeta-osc: #6c3cc4;
+  --naranja: #ff9f43; --naranja-osc: #d0772a;
+  --gris: #8b93b8; --gris-osc: #5f6789;
+  --rojo: #ff4d5e; --oro: #ffc93c;
+  color-scheme: light;
+}
+html, body { margin: 0; height: 100%; background: #5fb8ff; overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; inset: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--tinta); }
+#juego { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+#ui { position: absolute; inset: 0; pointer-events: none; }
+.pantalla {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 1.6vh, 14px);
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); box-sizing: border-box;
+  pointer-events: auto; text-align: center;
+}
+.pantalla.oculto, .oculto { display: none !important; }
+.velo { background: rgba(29, 36, 64, 0.45); }
+h2 { margin: 0; font-size: clamp(24px, 4.4vh, 36px); font-weight: 900; color: var(--blanco); letter-spacing: 0.02em; text-shadow: 0 3px 0 var(--tinta); }
+h2.grande { font-size: clamp(40px, 8vh, 64px); }
+h2.rojo { color: var(--rojo); -webkit-text-stroke: 2px var(--tinta); paint-order: stroke fill; }
+
+.boton {
+  all: unset; cursor: pointer; box-sizing: border-box; border-radius: 18px; font-weight: 900; letter-spacing: 0.03em; text-align: center;
+  color: #fff; border: 3px solid var(--tinta); text-shadow: 0 2px 0 rgba(29, 36, 64, 0.45);
+  transition: transform 0.06s ease; -webkit-tap-highlight-color: transparent; display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.boton:active { transform: translateY(4px); }
+.boton:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.boton.principal {
+  min-width: min(72vw, 290px); padding: 12px 28px; font-size: clamp(22px, 3.8vh, 30px);
+  background: var(--verde); box-shadow: 0 6px 0 var(--tinta), inset 0 -6px 0 var(--verde-osc);
+}
+.boton.principal:active { box-shadow: 0 2px 0 var(--tinta), inset 0 -6px 0 var(--verde-osc); }
+.boton.principal small { font-size: 0.5em; font-weight: 800; opacity: 0.95; letter-spacing: 0.06em; }
+.boton.chico { min-width: min(34vw, 138px); padding: 10px 14px; font-size: clamp(14px, 2.3vh, 18px); box-shadow: 0 5px 0 var(--tinta), inset 0 -5px 0 var(--gris-osc); background: var(--gris); }
+.boton.chico:active { box-shadow: 0 1px 0 var(--tinta), inset 0 -5px 0 var(--gris-osc); }
+.boton.azul { background: var(--azul); box-shadow: 0 5px 0 var(--tinta), inset 0 -5px 0 var(--azul-osc); }
+.boton.violeta { background: var(--violeta); box-shadow: 0 5px 0 var(--tinta), inset 0 -5px 0 var(--violeta-osc); }
+.boton.naranja { background: var(--naranja); box-shadow: 0 5px 0 var(--tinta), inset 0 -5px 0 var(--naranja-osc); }
+.boton.apagado { filter: grayscale(0.7) brightness(0.9); }
+.fila { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+.titulo-idioma { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; }
+.titulo-idioma small { font-size: clamp(13px, 2vh, 16px); font-weight: 800; color: var(--blanco); opacity: 0.9; text-shadow: 0 2px 0 var(--tinta); letter-spacing: 0.01em; }
+
+/* el menú y la elección de idioma: el cartel lo dibuja el lienzo arriba; los botones van abajo */
+#menu, #idiomas { justify-content: flex-end; padding-bottom: max(42px, env(safe-area-inset-bottom)); }
+.botonera { display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.5vh, 14px); }
+.bolsa {
+  position: absolute; top: max(12px, env(safe-area-inset-top)); right: 14px; display: flex; align-items: center; gap: 6px;
+  background: var(--crema); border: 3px solid var(--tinta); border-radius: 999px; padding: 4px 12px 4px 6px; font-weight: 900; font-size: 18px; box-shadow: 0 4px 0 var(--tinta);
+}
+.moneda { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 50% 50%, #ffe98a 0 42%, #ffd23f 44% 100%); box-shadow: inset 0 -3px 0 #e0a800; display: inline-block; }
+.dato { margin: 0; font-weight: 900; color: var(--blanco); font-size: clamp(15px, 2.4vh, 19px); text-shadow: 0 2px 0 var(--tinta); }
+.dato.oro { color: var(--oro); }
+.record { margin: 0; min-height: 1.2em; font-weight: 900; color: var(--oro); text-shadow: 0 2px 0 var(--tinta); animation: late 0.8s ease-in-out infinite; }
+@keyframes late { 50% { opacity: 0.35; } }
+.firma { position: absolute; bottom: max(12px, env(safe-area-inset-bottom)); margin: 0; font-size: 12px; letter-spacing: 0.2em; color: var(--blanco); font-weight: 900; text-shadow: 0 2px 0 rgba(29, 36, 64, 0.5); }
+
+/* los niveles: diez por cielo */
+.grilla { display: grid; gap: 10px; width: min(94vw, 460px); max-height: 70vh; overflow-y: auto; padding: 4px; box-sizing: border-box; }
+.grilla h3 { grid-column: 1 / -1; margin: 6px 0 0; font-size: 15px; font-weight: 900; color: var(--blanco); text-shadow: 0 2px 0 var(--tinta); letter-spacing: 0.08em; text-transform: uppercase; }
+.grilla .cielo { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.nivelB {
+  all: unset; cursor: pointer; aspect-ratio: 1; border-radius: 14px; border: 3px solid var(--tinta); font-weight: 900; font-size: clamp(16px, 2.6vh, 20px);
+  display: flex; align-items: center; justify-content: center; color: #fff; text-shadow: 0 2px 0 rgba(29, 36, 64, 0.5); box-shadow: 0 4px 0 var(--tinta);
+}
+.nivelB:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+.nivelB.cerrado { background: #b9bfd8 !important; color: #6f7699; text-shadow: none; cursor: default; }
+.nivelB.hecho::after { content: "★"; position: absolute; transform: translate(18px, -18px); color: var(--oro); font-size: 14px; text-shadow: 0 1px 0 var(--tinta); }
+.nivelB:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* la tienda */
+#tienda { justify-content: space-between; padding-top: max(64px, env(safe-area-inset-top)); }
+.pestanas { display: flex; gap: 6px; background: var(--crema); border: 3px solid var(--tinta); border-radius: 16px; padding: 4px; box-shadow: 0 4px 0 var(--tinta); }
+.pestana { all: unset; cursor: pointer; padding: 8px 16px; border-radius: 11px; font-weight: 900; font-size: clamp(14px, 2.2vh, 17px); color: var(--tinta); }
+.pestana.elegida { background: var(--azul); color: #fff; text-shadow: 0 2px 0 rgba(29, 36, 64, 0.4); }
+.flechas { display: flex; align-items: center; justify-content: space-between; width: min(96vw, 520px); flex: 1; }
+.flechas .hueco { flex: 1; }
+.flecha {
+  all: unset; cursor: pointer; width: 58px; height: 58px; border-radius: 50%; font-size: 40px; line-height: 52px; text-align: center; font-weight: 900; color: #fff;
+  background: var(--azul); border: 3px solid var(--tinta); box-shadow: 0 5px 0 var(--tinta); box-sizing: border-box;
+}
+.flecha:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--tinta); }
+.nombre { margin: 0; font-size: clamp(22px, 3.6vh, 28px); font-weight: 900; color: var(--blanco); text-shadow: 0 3px 0 var(--tinta); }
+.aviso { margin: 0; min-height: 1.2em; font-weight: 800; color: var(--blanco); text-shadow: 0 2px 0 var(--tinta); }
+
+.lista { display: grid; gap: 8px; width: min(92vw, 440px); background: var(--crema); border: 3px solid var(--tinta); box-shadow: 0 5px 0 var(--tinta); padding: 12px; border-radius: 18px; box-sizing: border-box; }
+.lista .item { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
+.lista .ops { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.opcion { all: unset; cursor: pointer; padding: 6px 11px; border-radius: 10px; font-weight: 900; font-size: 13px; color: var(--tinta); border: 2px solid transparent; }
+.opcion.elegida { background: var(--azul); color: #fff; border-color: var(--tinta); }
+.opcion.peligro { color: var(--rojo); }
+
+/* la pausa, arriba a la izquierda mientras se juega */
+.pausa {
+  all: unset; position: absolute; top: max(10px, env(safe-area-inset-top)); left: 12px; width: 42px; height: 42px; border-radius: 12px; pointer-events: auto; cursor: pointer;
+  background: rgba(255, 255, 255, 0.85); border: 3px solid var(--tinta); box-shadow: 0 4px 0 var(--tinta); display: flex; align-items: center; justify-content: center; gap: 5px; box-sizing: border-box;
+}
+.pausa span { width: 6px; height: 16px; background: var(--tinta); border-radius: 2px; }
+.pausa:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tinta); }
+
+/* con el teléfono acostado: los botones a la derecha, el cartel a la izquierda (lo dibuja el lienzo) */
+@media (orientation: landscape) and (max-height: 560px) {
+  #menu, #idiomas { align-items: flex-end; justify-content: center; padding-right: max(24px, env(safe-area-inset-right)); padding-bottom: 16px; }
+  .botonera, #idiomas > * { width: 48vw; }
+  #idiomas .boton.principal { min-width: 0; }
+  .boton.principal { min-width: min(40vw, 280px); padding: 8px 20px; }
+  .grilla { max-height: 62vh; width: min(70vw, 560px); }
+  .grilla .cielo { grid-template-columns: repeat(10, 1fr); }
+  .nivelB { aspect-ratio: auto; height: clamp(30px, 9vh, 42px); }
+  .grilla h3 { margin: 2px 0 0; font-size: 13px; }
+  #tienda { padding-top: max(12px, env(safe-area-inset-top)); gap: 6px; }
+  .flechas { width: min(70vw, 520px); }
+  .boton.chico { padding: 6px 12px; }
+}
+@media (max-width: 360px) { .boton.chico { min-width: 42vw; padding: 9px 8px; } }
+@media (prefers-reduced-motion: reduce) { .record { animation: none; } .boton { transition: none; } }
