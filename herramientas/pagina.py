@@ -18,6 +18,7 @@ AGREGADOS = {
               'body { height: 100%; margin: 0; padding-inline: 16px; box-sizing: border-box; background: #05040b; overflow: hidden; overscroll-behavior: none; }',
     'vibora': 'html { color-scheme: dark; }',
     'isla': 'html { color-scheme: light; }',
+    'globo': 'html { color-scheme: light; background: #5fb8ff; }',
 }
 
 if len(sys.argv) != 3 or sys.argv[1] not in AGREGADOS:

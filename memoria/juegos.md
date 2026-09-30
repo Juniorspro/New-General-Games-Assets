@@ -39,7 +39,8 @@ Lo que junta las tres guías de `guias/` y lo que se ve en los juegos de este re
 
 ## Publicar un juego como página (30/09/2026)
 - `python3 herramientas/pagina.py <juego> <carpeta>` pasa el archivo único a página publicable: sin doctype/html/head/body, con el `<title>` arriba (la publicación pone el esqueleto).
-- Trampa: después de que la conversación se resume, publicar el mismo archivo crea OTRA página. Para actualizar la vieja hay que pasar su `url` y leerla antes (leerla entera trae toda la página a la conversación). Cripta quedó repetida así.
+- Trampa: después de que la conversación se resume, publicar el mismo archivo crea OTRA página. Para actualizar la vieja: `read` con su `url` (sin `path`: con `path` la guarda pero no cuenta como leída); trae solo el principio y guarda el resto en un archivo. Después, publicar con esa `url`. Cripta quedó repetida la primera vez (30/09/2026).
+- Las páginas publicadas: Globo Libre `…/8wbmLxhdGiBbf4mtwsJKfR`, Víbora.io `…/TAVP1DJMsS6hF3W7gfNWZg`, Cripta Neón `…/T1PGRxSYXXGYAU3g7w3y9C` (la vieja repetida es `…/7CNiZDnZJjKrDEr5DPpQvU`), La Isla `…/PXbogbznmFXVjJwP7ZGnbc` (todas `claude.ai/artifact/`).
 
 ## Física y dificultad (Globo Libre, 30/09/2026)
 - Física 2D propia en vez de una librería (el repo es público y el juego va en un archivo): el método de Box2D-lite anda, pero hay que probar pilas quietas y que MÁS vueltas asienten mejor. → [globo](globo.md)
