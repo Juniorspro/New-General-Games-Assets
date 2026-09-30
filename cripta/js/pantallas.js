@@ -9,7 +9,8 @@ import { Partida } from './juego.js';
 import { leer } from './reglas.js';
 import { NIVELES } from './niveles.js';
 import { Torre, dificultadTorre } from './infinito.js';
-import { CELDA } from './nivel.js';
+import { CELDA, patronRoca } from './nivel.js';
+import { luzRedonda } from './juego.js';
 import { PIELES_TIENDA, MEJORAS, NIVEL_MAX, PRECIO_MEJORA, REVIVIR, PREMIO } from './catalogo.js';
 import { IDIOMAS } from './idioma.js';
 import { salidaAtras, rebote, clamp, acercar } from './util.js';
@@ -155,7 +156,7 @@ export class Mapa {
   posNodo(i) {
     const { W } = this.app, def = NIVELES[i], k = i - NIVELES.findIndex((n) => n.mundo === def.mundo);
     const x = Math.round(W / 2 + Math.sin(k * 1.05 + def.mundo) * (this.ancho * 0.32));
-    return [x, this.fondoMundo(def.mundo) - 40 - k * PASO_NODO];
+    return [x, this.fondoMundo(def.mundo) - 62 - k * PASO_NODO];
   }
 
   enfocarNodo(i, suave = true) {
@@ -182,6 +183,7 @@ export class Mapa {
         this.vel = (this.arrastre.ultimo - ev.y) * 60 * 0.5 + this.vel * 0.5;
         this.arrastre.ultimo = ev.y;
       } else if (ev.tipo === 'soltar') this.arrastre = null;
+      else if (ev.tipo === 'rueda') { this.scroll = clamp(this.scroll + ev.dy * 0.4 / app.pantalla.s, 0, max); this.vel = 0; this.objetivo = null; }
       else if (ev.tipo === 'tocar') this.tocar(ev.x, ev.y);
       else if (ev.tipo === 'deslizar' && ev.tecla) {
         const n = clamp(this.sel + (ev.dy < 0 || ev.dx > 0 ? 1 : -1), 0, NIVELES.length - 1);
@@ -218,12 +220,25 @@ export class Mapa {
   dibujar(g, W, H) {
     const app = this.app, tr = app.tr, d = app.datos, s = Math.round(this.scroll);
     this.fondo.dibujar(g, W, H, 0);
-    // las franjas de cada mundo, con su piedra y su color
+    // las franjas de cada mundo, con su piedra y su color (la de un mundo
+    // cerrado, más apagada)
     for (let m = 0; m < MUNDOS; m++) {
       const yTop = this.fondoMundo(m) - ALTO_MUNDO - s, c = MUNDOS_COLOR[m];
       if (yTop > H || yTop + ALTO_MUNDO < 0) continue;
-      g.fillStyle = c.sombra; g.globalAlpha = 0.55; g.fillRect(0, yTop, W, ALTO_MUNDO); g.globalAlpha = 1;
+      g.save();
+      g.beginPath(); g.rect(0, yTop, W, ALTO_MUNDO); g.clip();
+      g.translate(0, -Math.round(s * 0.5) % 16);
+      g.fillStyle = patronRoca(g, m); g.fillRect(0, yTop - 16, W, ALTO_MUNDO + 32);
+      g.restore();
+      g.fillStyle = abierto(d, m * 10) ? 'rgba(5,4,11,0.45)' : 'rgba(5,4,11,0.72)';
+      g.fillRect(0, yTop, W, ALTO_MUNDO);
+      // el camino ancho por donde van los nodos, un poco más claro
+      g.fillStyle = 'rgba(5,4,11,0.35)';
+      const aw = Math.round(this.ancho * 0.8);
+      g.fillRect(Math.round(W / 2 - aw / 2), yTop, aw, ALTO_MUNDO);
       g.fillStyle = c.borde; g.fillRect(0, yTop, W, 1);
+      g.fillStyle = c.claro; g.fillRect(0, yTop + 1, W, 1);
+      this.antorchas(g, m, yTop, W);
     }
     // el camino entre nodos: puntitos que avanzan hacia el que sigue
     for (let i = 0; i < NIVELES.length - 1; i++) {
@@ -238,21 +253,22 @@ export class Mapa {
         g.fillRect(Math.round(a[0] + (b[0] - a[0]) * q), Math.round(a[1] + (b[1] - a[1]) * q), 1, 1);
       }
     }
-    // los carteles de cada mundo, colgados y hamacándose
+    // el cartel de cada mundo, en la entrada (abajo del primer nivel), colgado y hamacándose
     for (let m = 0; m < MUNDOS; m++) {
-      const y = this.fondoMundo(m) - 40 - 9 * PASO_NODO - 38 - s;
-      if (y < -30 || y > H + 10) continue;
-      const nombre = tr('mundo_' + m), sub = tr('mundo', m + 1);
-      const w = Math.max(anchoTexto(nombre), anchoTexto(sub)) + 14, bx = Math.round(W / 2 - w / 2 + Math.sin(this.t * 1.2 + m) * 2);
-      g.fillStyle = '#4a4668';
-      for (let k = 0; k < 10; k += 3) { g.fillRect(bx + 6, y - 10 + k, 1, 2); g.fillRect(bx + w - 7, y - 10 + k, 1, 2); }
-      panel(g, bx, y, w, 24, { borde: MUNDOS_COLOR[m].borde, fondo: P.fondo2 });
-      texto(g, sub, bx + w / 2, y + 2, P.gris, { alinear: 'centro' });
-      texto(g, nombre, bx + w / 2, y + 12, MUNDOS_COLOR[m].borde, { alinear: 'centro', sombra: P.negro });
-      const ne = estrellasDe(d, m);
-      contador(g, S.ICONO.estrella, `${ne}/30`, bx + w + 6, y + 8);
+      const y = this.fondoMundo(m) - 40 - s;
+      if (y < -40 || y > H + 10) continue;
       const cerrado = !abierto(d, m * 10);
-      if (cerrado) { g.drawImage(S.ICONO.candado, bx - 12, y + 8); }
+      const nombre = tr('mundo_' + m), sub = cerrado ? tr('cerrado', m) : tr('mundo', m + 1);
+      const cuenta = `${estrellasDe(d, m)}/30`;
+      const w = Math.min(W - 8, Math.max(anchoTexto(nombre), anchoTexto(sub), anchoTexto(cuenta) + 10) + 14);
+      const bx = Math.round(W / 2 - w / 2 + Math.sin(this.t * 1.2 + m) * 2);
+      g.fillStyle = '#6a6690';
+      for (let k = 0; k < 8; k += 3) { g.fillRect(bx + 6, y - 8 + k, 1, 2); g.fillRect(bx + w - 7, y - 8 + k, 1, 2); }
+      panel(g, bx, y, w, 33, { borde: cerrado ? P.grisOsc : MUNDOS_COLOR[m].borde, fondo: P.fondo2 });
+      texto(g, sub, bx + w / 2, y + 2, cerrado ? P.rojoLuz : P.gris, { alinear: 'centro' });
+      texto(g, nombre, bx + w / 2, y + 12, cerrado ? P.gris : MUNDOS_COLOR[m].borde, { alinear: 'centro', sombra: P.negro });
+      if (cerrado) g.drawImage(S.ICONO.candado, Math.round(bx + w / 2 - 2), y + 23);
+      else contador(g, S.ICONO.estrella, cuenta, bx + w / 2, y + 21, { alinear: 'centro', color: P.estrella });
     }
     // los nodos
     let actual = -1;
@@ -265,6 +281,9 @@ export class Mapa {
     // Lu flotando arriba del nivel que toca
     if (actual >= 0) {
       const [x, y0] = this.posNodo(actual), y = y0 - s;
+      g.globalCompositeOperation = 'lighter';
+      g.drawImage(luzRedonda('#2a3a0c', 16), x - 16, y - 33);
+      g.globalCompositeOperation = 'source-over';
       luVolando(g, d.piel, x, y - 17 + Math.round(Math.sin(this.t * 3) * 2), this.t);
     }
     // la barra de arriba
@@ -275,6 +294,30 @@ export class Mapa {
     this.botones.dibujar(g);
   }
 
+  // Antorchas a los costados del camino (en el jardín, hongos que brillan;
+  // en el horno, grietas de brasa), fijas en el mapa y con su luz.
+  antorchas(g, m, yTop, W) {
+    const x0 = Math.round(W / 2 - this.ancho * 0.46), x1 = Math.round(W / 2 + this.ancho * 0.46);
+    for (let k = 0; k < 6; k++) {
+      const y = yTop + 30 + k * 52, x = k % 2 ? x1 : x0;
+      if (y < -20 || y > this.app.H + 20) continue;
+      const luz = ['#4a2a10', '#3a1450', '#5a2008'][m];
+      g.globalCompositeOperation = 'lighter';
+      g.drawImage(luzRedonda(luz, 16), x - 16, y - 14);
+      g.globalCompositeOperation = 'source-over';
+      if (m === 1) {
+        const late = ((this.t * 2 + k) | 0) % 2;
+        g.fillStyle = late ? '#ff9af0' : '#e66bff'; g.fillRect(x - 3, y, 7, 2); g.fillRect(x - 2, y - 1, 5, 1);
+        g.fillStyle = '#ffe0fb'; g.fillRect(x - 1, y, 1, 1); g.fillRect(x + 2, y + 1, 1, 1);
+        g.fillStyle = '#d7b6e8'; g.fillRect(x, y + 2, 1, 4);
+      } else if (m === 2) {
+        const f = ((this.t * 6 + k * 3) | 0) % 3;
+        g.fillStyle = P.lavaOsc; g.fillRect(x - 3, y + 2, 7, 1); g.fillRect(x - 1, y + 1, 3, 3);
+        g.fillStyle = f ? P.fuego : P.lavaLuz; g.fillRect(x, y + 1 - f, 1, 2 + f);
+      } else g.drawImage(S.ANTORCHA[((this.t * 9 + k * 5) | 0) % 3], x - 2, y - 3);
+    }
+  }
+
   nodo(g, i, x, y, esActual) {
     const d = this.app.datos, def = NIVELES[i], c = MUNDOS_COLOR[def.mundo];
     const abre = abierto(d, i), hecho = !!d.hechos[def.id];
@@ -282,7 +325,10 @@ export class Mapa {
     let ox = 0;
     if (this.sacude && this.sacude.i === i && this.sacude.t > 0) { ox = Math.round(Math.sin(this.sacude.t * 70) * 2); this.sacude.t -= 1 / 60; }
     const late = esActual ? Math.round(Math.sin(this.t * 5) * 1) : 0;
-    const r = 9 + late, px = x + ox;
+    // al abrir el mapa los nodos brotan de a uno, desde el más cercano a Lu
+    const brota = salidaAtras(clamp((this.t - Math.abs(i - this.sel) * 0.035) / 0.3, 0, 1));
+    if (brota <= 0.05) return;
+    const r = Math.max(2, Math.round((9 + late) * Math.min(1.15, brota))), px = x + ox;
     // una piedra redonda de a píxel
     const borde = !abre ? P.grisOsc : hecho ? c.borde : P.blanco;
     for (let yy = -r - 1; yy <= r + 1; yy++) for (let xx = -r - 1; xx <= r + 1; xx++) {
@@ -291,6 +337,7 @@ export class Mapa {
       g.fillStyle = dd > r ? P.negro : dd > r - 1 ? borde : yy < -r / 3 ? (abre ? c.relleno : '#1a1830') : (abre ? c.sombra : '#121024');
       g.fillRect(px + xx, y + yy, 1, 1);
     }
+    if (brota < 0.8) return;
     if (!abre) g.drawImage(S.ICONO.candado, px - 2, y - 3);
     else texto(g, String(k), px + 1, y - 5, hecho ? c.borde : P.blanco, { alinear: 'centro', sombra: P.negro });
     if (hecho) {
@@ -335,6 +382,7 @@ export class Juego {
       this.partida = new Partida({ ...comun, nv: torre.nv, modo: 'torre', torre, lava: { y: (torre.nv.alto + 3) * CELDA, vel: 0.7, espera: 2.5 } });
       this.partida.cartel = { clave: 'aviso_torre', t: 0 };
       this.revivio = false; this.cobrado = 0;
+      this.hito = 0; this.pasoRecord = false; this.cartelHito = null;
       d.torre.partidas++;
     } else {
       const def = this.def, nv = leer(def);
@@ -373,12 +421,42 @@ export class Juego {
     }
     p.medir(app.W, app.H);
     p.pasar(dt);
+    if (p.recogido.monedas > (this.monedasVistas || 0)) { this.golpeMoneda = 0.18; this.monedasVistas = p.recogido.monedas; }
+    if (this.golpeMoneda > 0) this.golpeMoneda -= dt;
+    if (this.esTorre) this.pasarHitos(dt);
     // el rumor de la lava cuando está cerca
     if (p.lava) {
       const lejos = p.lava.y / CELDA - p.posLu()[1];
       app.sonido.lava(p.estado === 'jugando' ? 1 - clamp((lejos - 4) / 22, 0, 1) : 0);
     }
     if (p.estado === 'terminado') this.terminar();
+  }
+
+  // En la torre, cada 50 m un cartel que cae, y otro al pasar el récord.
+  pasarHitos(dt) {
+    const p = this.partida, rec = this.app.datos.torre.record;
+    const hito = Math.floor(p.altoMax / 50);
+    if (hito > (this.hito || 0)) {
+      this.hito = hito;
+      this.cartelHito = { txt: this.app.tr('metros', hito * 50), t: 0, col: MUNDOS_COLOR[3].borde };
+      this.app.sonido.tocar('ganada', { n: Math.min(4, hito) });
+      this.app.vibrar(20);
+    }
+    if (rec > 0 && !this.pasoRecord && p.altoMax > rec) {
+      this.pasoRecord = true;
+      this.cartelHito = { txt: this.app.tr('nuevoRecord'), t: 0, col: P.estrella };
+      this.app.sonido.tocar('record');
+    }
+    if (this.cartelHito && (this.cartelHito.t += dt) > 1.8) this.cartelHito = null;
+  }
+
+  dibujarHito(g, W) {
+    const c = this.cartelHito;
+    if (!c) return;
+    const entra = clamp(c.t / 0.3, 0, 1), sale = clamp((c.t - 1.4) / 0.4, 0, 1);
+    if (sale > 0 && ((c.t * 20) | 0) % 2) return;
+    const y = Math.round(28 - (1 - rebote(entra)) * 30);
+    texto(g, c.txt, W / 2, y, c.col, { alinear: 'centro', esc: 2, borde: P.negro });
   }
 
   terminar() {
@@ -440,6 +518,7 @@ export class Juego {
     if (p.cartel && app.tr.hay(p.cartel.clave)) p.dibujarCartel(g, W, H, app.tr(p.cartel.clave));
     this.dibujarIntro(g, W, H);
     this.dibujarPista(g);
+    if (this.esTorre) this.dibujarHito(g, W);
     if (this.capa) this.capa.dibujar(g, W, H);
     if (this.reinicio) {
       const r = this.reinicio, k = r.t < 0.28 ? 1 - r.t / 0.28 : (r.t - 0.28) / 0.34;
@@ -486,7 +565,8 @@ export class Juego {
       // la barra de chispas, debajo de la línea
       const k = p.nv.chispas ? p.recogido.chispas / p.nv.chispas : 0;
       g.fillStyle = P.chispa; g.fillRect(0, 14, Math.round(W * k), 1);
-      if (p.recogido.monedas) contador(g, S.ICONO.moneda, p.recogido.monedas, W - 4, 17, { alinear: 'der' });
+      if (p.recogido.monedas) contador(g, S.ICONO.moneda, p.recogido.monedas, W - 4, 17 - (this.golpeMoneda > 0 ? 1 : 0), { alinear: 'der', color: this.golpeMoneda > 0 ? P.monedaLuz : P.blanco });
+      this.barraAltura(g, W, H);
     }
     // los poderes que están andando, con su barrita
     let y = 18;
@@ -501,6 +581,22 @@ export class Juego {
       y += 12;
     }
     this.botones.dibujar(g);
+  }
+
+  // Una barrita vertical al costado: dónde está Lu entre la entrada y la salida.
+  barraAltura(g, W, H) {
+    const p = this.partida, nv = p.nv;
+    if (nv.alto * CELDA <= H) return;
+    const xl = Math.round(-p.camX + nv.ancho * CELDA + 5), x = xl + 3 < W ? xl : W - 3;
+    const y0 = 34, y1 = H - 10, largo = y1 - y0;
+    g.fillStyle = P.grisOsc;
+    for (let y = y0; y <= y1; y += 2) g.fillRect(x, y, 1, 1);
+    const alto = nv.inicio.y - (nv.salida?.y ?? 0);
+    const q = clamp((nv.inicio.y - p.posLu()[1]) / Math.max(1, alto), 0, 1);
+    g.fillStyle = ((this.t * 4) | 0) % 2 ? P.portalA : P.portalB; g.fillRect(x - 1, y0 - 3, 3, 3);
+    const ly = Math.round(y1 - q * largo);
+    g.fillStyle = P.negro; g.fillRect(x - 2, ly - 2, 5, 5);
+    g.fillStyle = S.PIELES[this.app.datos.piel]?.L || P.lu; g.fillRect(x - 1, ly - 1, 3, 3);
   }
 
   hudTorre(g, W, H) {
@@ -601,7 +697,8 @@ class Resultado {
     const w = Math.min(112, W - 24), x = Math.round(W / 2 - w / 2), y0 = Math.round(H / 2 + 38);
     const hay = j.indice + 1 < NIVELES.length;
     if (hay) b.agregar({ texto: tr('siguiente'), icono: S.ICONO.jugar, x, y: y0, w, h: 20, retraso: 1.6, accion: (bt) => this.app.ir(() => new Juego(this.app, { indice: j.indice + 1 }), bt) });
-    const y1 = y0 + (hay ? 26 : 0), mitad = Math.floor((w - 4) / 2);
+    else b.agregar({ texto: tr('torre'), icono: S.ICONO.mundo, x, y: y0, w, h: 20, retraso: 1.6, color: MUNDOS_COLOR[3].borde, accion: (bt) => this.app.ir(() => new Juego(this.app, { torre: true }), bt) });
+    const y1 = y0 + 26, mitad = Math.floor((w - 4) / 2);
     b.agregar({ texto: tr('reintentar'), icono: S.ICONO.reintentar, x, y: y1, w: mitad, h: 16, retraso: 1.7, color: P.gris, accion: () => { j.capa = null; j.muertes = 0; j.nueva(); } });
     b.agregar({ texto: tr('mapa'), icono: S.ICONO.mundo, x: x + w - mitad, y: y1, w: mitad, h: 16, retraso: 1.75, color: P.gris, accion: (bt) => this.app.ir(() => new Mapa(this.app, { enfocar: Math.min(NIVELES.length - 1, j.indice + 1) }), bt) });
   }
@@ -661,6 +758,7 @@ class Resultado {
     g.fillStyle = P.grisOsc; g.fillRect(px + 8, y + 33, pw - 16, 1);
     contador(g, S.ICONO.moneda, Math.floor(this.cuenta), W / 2, y + 37, { alinear: 'centro', color: P.moneda });
     if (this.nuevoMundo && this.t > 1.4 && ((this.t * 3) | 0) % 2) texto(g, tr('nuevoMundo'), W / 2, py - 12, P.chispa, { alinear: 'centro', borde: P.negro });
+    if (this.juego.indice === NIVELES.length - 1 && this.t > 1.2) texto(g, tr('finJuego'), W / 2, py - 12, ((this.t * 4) | 0) % 2 ? P.estrella : P.blanco, { alinear: 'centro', borde: P.negro });
     this.botones.dibujar(g);
   }
 }

@@ -48,7 +48,7 @@ function erizoEstado(e, tp) {
 // Una luz redonda en tres bandas (círculos de a píxel, sin degradé), para
 // sumar con 'lighter': el borde escalonado es lo que la hace pixel art.
 const cacheLuz = new Map();
-function luzRedonda(color, radio) {
+export function luzRedonda(color, radio) {
   radio = Math.round(radio);
   const k = color + radio;
   if (cacheLuz.has(k)) return cacheLuz.get(k);
@@ -170,6 +170,7 @@ export class Partida {
     this.pasarLava(dtp);
     this.pasarIman(dt);
     this.pasarPortales();
+    this.pasarAmbiente(dt);
     if (this.estado === 'jugando') this.peligros();
     this.animarLu(dt);
     this.pasarCamara(dt);
@@ -462,6 +463,20 @@ export class Partida {
     }
   }
 
+  // Lo que flota en el aire de cada mundo: polvo en las catacumbas, esporas
+  // en el jardín, brasas en el horno, bichitos de luz en la torre.
+  pasarAmbiente(dt) {
+    if (!this.H || this.camY === null) return;
+    const m = this.nv.mundo, ritmo = [2.5, 4, 6, 3][m] ?? 3;
+    if (Math.random() > ritmo * dt) return;
+    const x = this.camX + Math.random() * this.W, y = this.camY + Math.random() * this.H;
+    const a = (Math.random() - 0.5);
+    if (m === 0) this.fx.una({ x, y, vx: a * 4, vy: 2 + Math.random() * 3, vida: 3, col: Math.random() < 0.5 ? '#2c3a48' : '#3f4f5e' });
+    else if (m === 1) this.fx.una({ x, y, vx: a * 6, vy: -3 - Math.random() * 5, vida: 3.2, col: Math.random() < 0.5 ? '#b04ad0' : '#ff9af0' });
+    else if (m === 2) this.fx.una({ x, y: this.camY + this.H + 2, vx: a * 10, vy: -14 - Math.random() * 18, vida: 2.2, col: Math.random() < 0.6 ? P.fuego : P.lavaLuz });
+    else this.fx.una({ x, y, vx: a * 8, vy: a * 6, vida: 2.5, col: '#8ff08a' });
+  }
+
   pasarLava(dt) {
     const lv = this.lava;
     if (!lv) return;
@@ -587,6 +602,7 @@ export class Partida {
     g.restore();
     g.fillStyle = 'rgba(5,4,11,0.55)'; g.fillRect(0, 0, W, H);
 
+    this.dibujarMarco(g, -cx, cy, W, H);
     const visibles = this.pintor.dibujar(g, -cx, -cy, H);
     const y0 = Math.max(0, Math.floor(cy / CELDA) - 1), y1 = Math.min(nv.alto - 1, Math.ceil((cy + H) / CELDA) + 1);
     for (let y = y0; y <= y1; y++) for (let x = 0; x < nv.ancho; x++) this.dibujarCelda(g, x, y, x * CELDA - cx, y * CELDA - cy);
@@ -609,8 +625,34 @@ export class Partida {
     }
     this.fx.dibujar(g, cx, cy);
     if (this.lava) this.dibujarLava(g, cx, cy, W, H);
+    this.dibujarRumbo(g, cx, cy, W, H);
     if (this.poder.hielo > 0) this.dibujarEscarcha(g, W, H);
     this.fx.dibujarFlash(g, W, H);
+  }
+
+  // En una pantalla ancha sobra piedra a los costados: una columna con su
+  // línea de neón pegada al laberinto y antorchas más atrás (se mueven a
+  // 0,6 de la cámara: están lejos).
+  dibujarMarco(g, x0, cy, W, H) {
+    const x1 = x0 + this.nv.ancho * CELDA, c = this.colores;
+    if (x0 < 10) return;
+    g.fillStyle = c.sombra; g.fillRect(x0 - 6, 0, 6, H); g.fillRect(x1, 0, 6, H);
+    g.fillStyle = c.claro; g.fillRect(x0 - 3, 0, 1, H); g.fillRect(x1 + 2, 0, 1, H);
+    g.fillStyle = P.negro; g.fillRect(x0 - 7, 0, 1, H); g.fillRect(x1 + 6, 0, 1, H);
+    if (x0 < 34) return;
+    const par = cy * 0.6, paso = 88;
+    for (let k = Math.floor(par / paso) - 1; k <= Math.ceil((par + H) / paso) + 1; k++) {
+      const y = Math.round(k * paso - par), izq = k % 2 === 0;
+      const x = izq ? Math.round(x0 - 22) : Math.round(x1 + 18);
+      g.globalCompositeOperation = 'lighter';
+      g.drawImage(luzRedonda('#3a1c0a', 14), x + 2 - 14, y - 14);
+      g.globalCompositeOperation = 'source-over';
+      g.drawImage(S.ANTORCHA[((this.t * 9 + k * 5) | 0) % 3], x, y - 4);
+      // una cadena colgando entre antorcha y antorcha
+      g.fillStyle = '#2a2640';
+      const cxa = izq ? x0 - 14 : x1 + 12;
+      for (let q = 0; q < 30; q += 3) g.fillRect(cxa, y + 20 + q, 1, 2);
+    }
   }
 
   dibujarCelda(g, x, y, px, py) {
@@ -817,6 +859,21 @@ export class Partida {
         g.fillRect(x, y, 3, 1);
       }
     }
+  }
+
+  // Si la salida está arriba, fuera de la pantalla: una flechita con los
+  // colores del portal que marca para dónde queda.
+  dibujarRumbo(g, cx, cy, W, H) {
+    const s = this.nv.salida;
+    if (!s || this.torre || this.estado !== 'jugando') return;
+    const sy = s.y * CELDA + 4 - cy;
+    if (sy > 18) return;
+    if (((this.t * 3) | 0) % 3 === 0) return;
+    const x = Math.round(s.x * CELDA + 4 - cx), y = 19 + Math.round(Math.sin(this.t * 5));
+    g.fillStyle = P.negro; g.fillRect(x - 4, y - 1, 9, 6);
+    g.fillStyle = ((this.t * 6) | 0) % 2 ? P.portalA : P.portalB;
+    for (let k = 0; k < 3; k++) g.fillRect(x - k, y + k, 1 + 2 * k, 1);
+    g.fillRect(x - 3, y + 3, 7, 1);
   }
 
   dibujarEscarcha(g, W, H) {

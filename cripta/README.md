@@ -17,14 +17,14 @@ Enter elige, Escape o P pausa.
 ## Lo medido (30/09/2026)
 | qué | cuánto |
 |---|---|
-| Pruebas sin navegador (`pruebas/niveles.mjs`) | 3963 comprobaciones, todas bien |
+| Pruebas sin navegador (`pruebas/niveles.mjs`) | 4017 comprobaciones, todas bien |
 | Pruebas en Chromium (`pruebas/juego.mjs`) | 17 de 17 |
 | Archivo único desde `file://` sin red (`pruebas/un-archivo.mjs`) | abre y se gana el 1-1 |
-| Peso del archivo único | 245 KB (20 módulos, sin binarios) |
+| Peso del archivo único | 255 KB (20 módulos, sin binarios) |
 | Niveles | 30: 5 hechos a mano, 25 armados con la torre; todos se ganan, con las 3 estrellas, todas las monedas y todas las chispas alcanzables y sin lugares sin salida |
 | Torre | 300 semillas × 260 filas resueltas: 0 sin camino, 0 lugares sin salida |
-| Un paso de simulación | 0,012 ms (Chromium por procesador; del teléfono no dice nada) |
-| Un cuadro dibujado | 0,27 ms en SwiftShader (ídem) |
+| Un paso de simulación | 0,011 ms (Chromium por procesador; del teléfono no dice nada) |
+| Un cuadro dibujado | 0,32 ms en SwiftShader (ídem) |
 | Pantallas probadas | 412×892, 892×412, 360×640 y 1280×720, siempre a escala entera |
 
 ## Qué tiene
@@ -42,8 +42,14 @@ Enter elige, Escape o P pausa.
 - **Tienda**: ocho pieles para Lu (la reina lleva corona, la menta gorrito).
 - **Menús animados**: el cartel del título colgado de cadenas que se hamaca y
   titila como neón viejo, con una partida jugándose sola atrás; botones de
-  piedra que caen y se hunden; el mapa que serpentea; estrellas que caen con
-  rebote en el resultado; iris para pasar de pantalla.
+  piedra que caen y se hunden; el mapa que serpentea, con antorchas, hongos
+  que brillan, carteles en la entrada de cada mundo y nodos que brotan de a
+  uno; estrellas que caen con rebote en el resultado; iris para pasar de
+  pantalla.
+- **En la partida**: barrita de altura al costado, flecha que marca la salida
+  cuando queda arriba, partículas de ambiente por mundo (polvo, esporas,
+  brasas), carteles cada 50 m en la torre y marcos con antorchas cuando la
+  pantalla es ancha.
 - **Jugo**: estirar y aplastar, estela, polvo, sacudida, parada de golpe, el
   "blip" de las chispas subiendo por una escala pentatónica en cada racha.
 - **Tres idiomas** (castellano, inglés, portugués), guardado en el teléfono,

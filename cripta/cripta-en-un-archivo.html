@@ -350,6 +350,8 @@ function crearEntrada(lienzo, pantalla) {
   // que el navegador no haga zoom, ni scroll, ni el menú del dedo largo
   for (const t of ['touchstart', 'touchmove', 'touchend']) lienzo.addEventListener(t, (ev) => ev.preventDefault(), { passive: false });
   lienzo.addEventListener('contextmenu', (ev) => ev.preventDefault());
+  // la rueda del mouse (el mapa la usa para subir y bajar)
+  lienzo.addEventListener('wheel', (ev) => { ev.preventDefault(); empujar({ tipo: 'rueda', dy: ev.deltaY * (ev.deltaMode === 1 ? 16 : 1) }); }, { passive: false });
 
   window.addEventListener('keydown', (ev) => {
     if (ev.repeat) return;
@@ -505,6 +507,7 @@ const T = {
   nuevoMundo: ['¡MUNDO NUEVO!', 'NEW WORLD!', 'MUNDO NOVO!'],
   comprado: ['¡LISTO!', 'DONE!', 'PRONTO!'],
   total: ['TOTAL', 'TOTAL', 'TOTAL'],
+  finJuego: ['¡LA CRIPTA ES TUYA!', 'YOU BEAT THE CRYPT!', 'A CRIPTA É SUA!'],
   // los carteles del principio de cada nivel que trae algo nuevo
   aviso_deslizar: ['DESLIZÁ PARA VOLAR\nLU FRENA EN LA PARED', 'SWIPE TO FLY\nLU STOPS AT WALLS', 'DESLIZE PARA VOAR\nLU PARA NA PAREDE'],
   aviso_estrellas: ['BUSCÁ LAS 3 ESTRELLAS\nEN LOS RINCONES', 'FIND THE 3 STARS\nIN THE CORNERS', 'ACHE AS 3 ESTRELAS\nNOS CANTOS'],
@@ -1888,6 +1891,7 @@ class Partida {
     this.pasarLava(dtp);
     this.pasarIman(dt);
     this.pasarPortales();
+    this.pasarAmbiente(dt);
     if (this.estado === 'jugando') this.peligros();
     this.animarLu(dt);
     this.pasarCamara(dt);
@@ -2180,6 +2184,20 @@ class Partida {
     }
   }
 
+  // Lo que flota en el aire de cada mundo: polvo en las catacumbas, esporas
+  // en el jardín, brasas en el horno, bichitos de luz en la torre.
+  pasarAmbiente(dt) {
+    if (!this.H || this.camY === null) return;
+    const m = this.nv.mundo, ritmo = [2.5, 4, 6, 3][m] ?? 3;
+    if (Math.random() > ritmo * dt) return;
+    const x = this.camX + Math.random() * this.W, y = this.camY + Math.random() * this.H;
+    const a = (Math.random() - 0.5);
+    if (m === 0) this.fx.una({ x, y, vx: a * 4, vy: 2 + Math.random() * 3, vida: 3, col: Math.random() < 0.5 ? '#2c3a48' : '#3f4f5e' });
+    else if (m === 1) this.fx.una({ x, y, vx: a * 6, vy: -3 - Math.random() * 5, vida: 3.2, col: Math.random() < 0.5 ? '#b04ad0' : '#ff9af0' });
+    else if (m === 2) this.fx.una({ x, y: this.camY + this.H + 2, vx: a * 10, vy: -14 - Math.random() * 18, vida: 2.2, col: Math.random() < 0.6 ? P.fuego : P.lavaLuz });
+    else this.fx.una({ x, y, vx: a * 8, vy: a * 6, vida: 2.5, col: '#8ff08a' });
+  }
+
   pasarLava(dt) {
     const lv = this.lava;
     if (!lv) return;
@@ -2305,6 +2323,7 @@ class Partida {
     g.restore();
     g.fillStyle = 'rgba(5,4,11,0.55)'; g.fillRect(0, 0, W, H);
 
+    this.dibujarMarco(g, -cx, cy, W, H);
     const visibles = this.pintor.dibujar(g, -cx, -cy, H);
     const y0 = Math.max(0, Math.floor(cy / CELDA) - 1), y1 = Math.min(nv.alto - 1, Math.ceil((cy + H) / CELDA) + 1);
     for (let y = y0; y <= y1; y++) for (let x = 0; x < nv.ancho; x++) this.dibujarCelda(g, x, y, x * CELDA - cx, y * CELDA - cy);
@@ -2327,8 +2346,34 @@ class Partida {
     }
     this.fx.dibujar(g, cx, cy);
     if (this.lava) this.dibujarLava(g, cx, cy, W, H);
+    this.dibujarRumbo(g, cx, cy, W, H);
     if (this.poder.hielo > 0) this.dibujarEscarcha(g, W, H);
     this.fx.dibujarFlash(g, W, H);
+  }
+
+  // En una pantalla ancha sobra piedra a los costados: una columna con su
+  // línea de neón pegada al laberinto y antorchas más atrás (se mueven a
+  // 0,6 de la cámara: están lejos).
+  dibujarMarco(g, x0, cy, W, H) {
+    const x1 = x0 + this.nv.ancho * CELDA, c = this.colores;
+    if (x0 < 10) return;
+    g.fillStyle = c.sombra; g.fillRect(x0 - 6, 0, 6, H); g.fillRect(x1, 0, 6, H);
+    g.fillStyle = c.claro; g.fillRect(x0 - 3, 0, 1, H); g.fillRect(x1 + 2, 0, 1, H);
+    g.fillStyle = P.negro; g.fillRect(x0 - 7, 0, 1, H); g.fillRect(x1 + 6, 0, 1, H);
+    if (x0 < 34) return;
+    const par = cy * 0.6, paso = 88;
+    for (let k = Math.floor(par / paso) - 1; k <= Math.ceil((par + H) / paso) + 1; k++) {
+      const y = Math.round(k * paso - par), izq = k % 2 === 0;
+      const x = izq ? Math.round(x0 - 22) : Math.round(x1 + 18);
+      g.globalCompositeOperation = 'lighter';
+      g.drawImage(luzRedonda('#3a1c0a', 14), x + 2 - 14, y - 14);
+      g.globalCompositeOperation = 'source-over';
+      g.drawImage(S.ANTORCHA[((this.t * 9 + k * 5) | 0) % 3], x, y - 4);
+      // una cadena colgando entre antorcha y antorcha
+      g.fillStyle = '#2a2640';
+      const cxa = izq ? x0 - 14 : x1 + 12;
+      for (let q = 0; q < 30; q += 3) g.fillRect(cxa, y + 20 + q, 1, 2);
+    }
   }
 
   dibujarCelda(g, x, y, px, py) {
@@ -2537,6 +2582,21 @@ class Partida {
     }
   }
 
+  // Si la salida está arriba, fuera de la pantalla: una flechita con los
+  // colores del portal que marca para dónde queda.
+  dibujarRumbo(g, cx, cy, W, H) {
+    const s = this.nv.salida;
+    if (!s || this.torre || this.estado !== 'jugando') return;
+    const sy = s.y * CELDA + 4 - cy;
+    if (sy > 18) return;
+    if (((this.t * 3) | 0) % 3 === 0) return;
+    const x = Math.round(s.x * CELDA + 4 - cx), y = 19 + Math.round(Math.sin(this.t * 5));
+    g.fillStyle = P.negro; g.fillRect(x - 4, y - 1, 9, 6);
+    g.fillStyle = ((this.t * 6) | 0) % 2 ? P.portalA : P.portalB;
+    for (let k = 0; k < 3; k++) g.fillRect(x - k, y + k, 1 + 2 * k, 1);
+    g.fillRect(x - 3, y + 3, 7, 1);
+  }
+
   dibujarEscarcha(g, W, H) {
     // un marco de escarcha que titila cuando se está por acabar
     if (this.poder.hielo < 1.5 && ((this.t * 8) | 0) % 2) return;
@@ -2571,7 +2631,7 @@ function oscurecer(hex) {
   const f = (v) => Math.round(v * 0.28).toString(16).padStart(2, '0');
   return '#' + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
 }
-return { VEL, DURACION, pinchosArriba, Partida };
+return { VEL, DURACION, pinchosArriba, luzRedonda, Partida };
 })();
 
 /* ── niveles ── */
@@ -4604,7 +4664,8 @@ const { Partida } = M_juego;
 const { leer } = M_reglas;
 const { NIVELES } = M_niveles;
 const { Torre, dificultadTorre } = M_infinito;
-const { CELDA } = M_nivel;
+const { CELDA, patronRoca } = M_nivel;
+const { luzRedonda } = M_juego;
 const { PIELES_TIENDA, MEJORAS, NIVEL_MAX, PRECIO_MEJORA, REVIVIR, PREMIO } = M_catalogo;
 const { IDIOMAS } = M_idioma;
 const { salidaAtras, rebote, clamp, acercar } = M_util;
@@ -4749,7 +4810,7 @@ class Mapa {
   posNodo(i) {
     const { W } = this.app, def = NIVELES[i], k = i - NIVELES.findIndex((n) => n.mundo === def.mundo);
     const x = Math.round(W / 2 + Math.sin(k * 1.05 + def.mundo) * (this.ancho * 0.32));
-    return [x, this.fondoMundo(def.mundo) - 40 - k * PASO_NODO];
+    return [x, this.fondoMundo(def.mundo) - 62 - k * PASO_NODO];
   }
 
   enfocarNodo(i, suave = true) {
@@ -4776,6 +4837,7 @@ class Mapa {
         this.vel = (this.arrastre.ultimo - ev.y) * 60 * 0.5 + this.vel * 0.5;
         this.arrastre.ultimo = ev.y;
       } else if (ev.tipo === 'soltar') this.arrastre = null;
+      else if (ev.tipo === 'rueda') { this.scroll = clamp(this.scroll + ev.dy * 0.4 / app.pantalla.s, 0, max); this.vel = 0; this.objetivo = null; }
       else if (ev.tipo === 'tocar') this.tocar(ev.x, ev.y);
       else if (ev.tipo === 'deslizar' && ev.tecla) {
         const n = clamp(this.sel + (ev.dy < 0 || ev.dx > 0 ? 1 : -1), 0, NIVELES.length - 1);
@@ -4812,12 +4874,25 @@ class Mapa {
   dibujar(g, W, H) {
     const app = this.app, tr = app.tr, d = app.datos, s = Math.round(this.scroll);
     this.fondo.dibujar(g, W, H, 0);
-    // las franjas de cada mundo, con su piedra y su color
+    // las franjas de cada mundo, con su piedra y su color (la de un mundo
+    // cerrado, más apagada)
     for (let m = 0; m < MUNDOS; m++) {
       const yTop = this.fondoMundo(m) - ALTO_MUNDO - s, c = MUNDOS_COLOR[m];
       if (yTop > H || yTop + ALTO_MUNDO < 0) continue;
-      g.fillStyle = c.sombra; g.globalAlpha = 0.55; g.fillRect(0, yTop, W, ALTO_MUNDO); g.globalAlpha = 1;
+      g.save();
+      g.beginPath(); g.rect(0, yTop, W, ALTO_MUNDO); g.clip();
+      g.translate(0, -Math.round(s * 0.5) % 16);
+      g.fillStyle = patronRoca(g, m); g.fillRect(0, yTop - 16, W, ALTO_MUNDO + 32);
+      g.restore();
+      g.fillStyle = abierto(d, m * 10) ? 'rgba(5,4,11,0.45)' : 'rgba(5,4,11,0.72)';
+      g.fillRect(0, yTop, W, ALTO_MUNDO);
+      // el camino ancho por donde van los nodos, un poco más claro
+      g.fillStyle = 'rgba(5,4,11,0.35)';
+      const aw = Math.round(this.ancho * 0.8);
+      g.fillRect(Math.round(W / 2 - aw / 2), yTop, aw, ALTO_MUNDO);
       g.fillStyle = c.borde; g.fillRect(0, yTop, W, 1);
+      g.fillStyle = c.claro; g.fillRect(0, yTop + 1, W, 1);
+      this.antorchas(g, m, yTop, W);
     }
     // el camino entre nodos: puntitos que avanzan hacia el que sigue
     for (let i = 0; i < NIVELES.length - 1; i++) {
@@ -4832,21 +4907,22 @@ class Mapa {
         g.fillRect(Math.round(a[0] + (b[0] - a[0]) * q), Math.round(a[1] + (b[1] - a[1]) * q), 1, 1);
       }
     }
-    // los carteles de cada mundo, colgados y hamacándose
+    // el cartel de cada mundo, en la entrada (abajo del primer nivel), colgado y hamacándose
     for (let m = 0; m < MUNDOS; m++) {
-      const y = this.fondoMundo(m) - 40 - 9 * PASO_NODO - 38 - s;
-      if (y < -30 || y > H + 10) continue;
-      const nombre = tr('mundo_' + m), sub = tr('mundo', m + 1);
-      const w = Math.max(anchoTexto(nombre), anchoTexto(sub)) + 14, bx = Math.round(W / 2 - w / 2 + Math.sin(this.t * 1.2 + m) * 2);
-      g.fillStyle = '#4a4668';
-      for (let k = 0; k < 10; k += 3) { g.fillRect(bx + 6, y - 10 + k, 1, 2); g.fillRect(bx + w - 7, y - 10 + k, 1, 2); }
-      panel(g, bx, y, w, 24, { borde: MUNDOS_COLOR[m].borde, fondo: P.fondo2 });
-      texto(g, sub, bx + w / 2, y + 2, P.gris, { alinear: 'centro' });
-      texto(g, nombre, bx + w / 2, y + 12, MUNDOS_COLOR[m].borde, { alinear: 'centro', sombra: P.negro });
-      const ne = estrellasDe(d, m);
-      contador(g, S.ICONO.estrella, `${ne}/30`, bx + w + 6, y + 8);
+      const y = this.fondoMundo(m) - 40 - s;
+      if (y < -40 || y > H + 10) continue;
       const cerrado = !abierto(d, m * 10);
-      if (cerrado) { g.drawImage(S.ICONO.candado, bx - 12, y + 8); }
+      const nombre = tr('mundo_' + m), sub = cerrado ? tr('cerrado', m) : tr('mundo', m + 1);
+      const cuenta = `${estrellasDe(d, m)}/30`;
+      const w = Math.min(W - 8, Math.max(anchoTexto(nombre), anchoTexto(sub), anchoTexto(cuenta) + 10) + 14);
+      const bx = Math.round(W / 2 - w / 2 + Math.sin(this.t * 1.2 + m) * 2);
+      g.fillStyle = '#6a6690';
+      for (let k = 0; k < 8; k += 3) { g.fillRect(bx + 6, y - 8 + k, 1, 2); g.fillRect(bx + w - 7, y - 8 + k, 1, 2); }
+      panel(g, bx, y, w, 33, { borde: cerrado ? P.grisOsc : MUNDOS_COLOR[m].borde, fondo: P.fondo2 });
+      texto(g, sub, bx + w / 2, y + 2, cerrado ? P.rojoLuz : P.gris, { alinear: 'centro' });
+      texto(g, nombre, bx + w / 2, y + 12, cerrado ? P.gris : MUNDOS_COLOR[m].borde, { alinear: 'centro', sombra: P.negro });
+      if (cerrado) g.drawImage(S.ICONO.candado, Math.round(bx + w / 2 - 2), y + 23);
+      else contador(g, S.ICONO.estrella, cuenta, bx + w / 2, y + 21, { alinear: 'centro', color: P.estrella });
     }
     // los nodos
     let actual = -1;
@@ -4859,6 +4935,9 @@ class Mapa {
     // Lu flotando arriba del nivel que toca
     if (actual >= 0) {
       const [x, y0] = this.posNodo(actual), y = y0 - s;
+      g.globalCompositeOperation = 'lighter';
+      g.drawImage(luzRedonda('#2a3a0c', 16), x - 16, y - 33);
+      g.globalCompositeOperation = 'source-over';
       luVolando(g, d.piel, x, y - 17 + Math.round(Math.sin(this.t * 3) * 2), this.t);
     }
     // la barra de arriba
@@ -4869,6 +4948,30 @@ class Mapa {
     this.botones.dibujar(g);
   }
 
+  // Antorchas a los costados del camino (en el jardín, hongos que brillan;
+  // en el horno, grietas de brasa), fijas en el mapa y con su luz.
+  antorchas(g, m, yTop, W) {
+    const x0 = Math.round(W / 2 - this.ancho * 0.46), x1 = Math.round(W / 2 + this.ancho * 0.46);
+    for (let k = 0; k < 6; k++) {
+      const y = yTop + 30 + k * 52, x = k % 2 ? x1 : x0;
+      if (y < -20 || y > this.app.H + 20) continue;
+      const luz = ['#4a2a10', '#3a1450', '#5a2008'][m];
+      g.globalCompositeOperation = 'lighter';
+      g.drawImage(luzRedonda(luz, 16), x - 16, y - 14);
+      g.globalCompositeOperation = 'source-over';
+      if (m === 1) {
+        const late = ((this.t * 2 + k) | 0) % 2;
+        g.fillStyle = late ? '#ff9af0' : '#e66bff'; g.fillRect(x - 3, y, 7, 2); g.fillRect(x - 2, y - 1, 5, 1);
+        g.fillStyle = '#ffe0fb'; g.fillRect(x - 1, y, 1, 1); g.fillRect(x + 2, y + 1, 1, 1);
+        g.fillStyle = '#d7b6e8'; g.fillRect(x, y + 2, 1, 4);
+      } else if (m === 2) {
+        const f = ((this.t * 6 + k * 3) | 0) % 3;
+        g.fillStyle = P.lavaOsc; g.fillRect(x - 3, y + 2, 7, 1); g.fillRect(x - 1, y + 1, 3, 3);
+        g.fillStyle = f ? P.fuego : P.lavaLuz; g.fillRect(x, y + 1 - f, 1, 2 + f);
+      } else g.drawImage(S.ANTORCHA[((this.t * 9 + k * 5) | 0) % 3], x - 2, y - 3);
+    }
+  }
+
   nodo(g, i, x, y, esActual) {
     const d = this.app.datos, def = NIVELES[i], c = MUNDOS_COLOR[def.mundo];
     const abre = abierto(d, i), hecho = !!d.hechos[def.id];
@@ -4876,7 +4979,10 @@ class Mapa {
     let ox = 0;
     if (this.sacude && this.sacude.i === i && this.sacude.t > 0) { ox = Math.round(Math.sin(this.sacude.t * 70) * 2); this.sacude.t -= 1 / 60; }
     const late = esActual ? Math.round(Math.sin(this.t * 5) * 1) : 0;
-    const r = 9 + late, px = x + ox;
+    // al abrir el mapa los nodos brotan de a uno, desde el más cercano a Lu
+    const brota = salidaAtras(clamp((this.t - Math.abs(i - this.sel) * 0.035) / 0.3, 0, 1));
+    if (brota <= 0.05) return;
+    const r = Math.max(2, Math.round((9 + late) * Math.min(1.15, brota))), px = x + ox;
     // una piedra redonda de a píxel
     const borde = !abre ? P.grisOsc : hecho ? c.borde : P.blanco;
     for (let yy = -r - 1; yy <= r + 1; yy++) for (let xx = -r - 1; xx <= r + 1; xx++) {
@@ -4885,6 +4991,7 @@ class Mapa {
       g.fillStyle = dd > r ? P.negro : dd > r - 1 ? borde : yy < -r / 3 ? (abre ? c.relleno : '#1a1830') : (abre ? c.sombra : '#121024');
       g.fillRect(px + xx, y + yy, 1, 1);
     }
+    if (brota < 0.8) return;
     if (!abre) g.drawImage(S.ICONO.candado, px - 2, y - 3);
     else texto(g, String(k), px + 1, y - 5, hecho ? c.borde : P.blanco, { alinear: 'centro', sombra: P.negro });
     if (hecho) {
@@ -4929,6 +5036,7 @@ class Juego {
       this.partida = new Partida({ ...comun, nv: torre.nv, modo: 'torre', torre, lava: { y: (torre.nv.alto + 3) * CELDA, vel: 0.7, espera: 2.5 } });
       this.partida.cartel = { clave: 'aviso_torre', t: 0 };
       this.revivio = false; this.cobrado = 0;
+      this.hito = 0; this.pasoRecord = false; this.cartelHito = null;
       d.torre.partidas++;
     } else {
       const def = this.def, nv = leer(def);
@@ -4967,12 +5075,42 @@ class Juego {
     }
     p.medir(app.W, app.H);
     p.pasar(dt);
+    if (p.recogido.monedas > (this.monedasVistas || 0)) { this.golpeMoneda = 0.18; this.monedasVistas = p.recogido.monedas; }
+    if (this.golpeMoneda > 0) this.golpeMoneda -= dt;
+    if (this.esTorre) this.pasarHitos(dt);
     // el rumor de la lava cuando está cerca
     if (p.lava) {
       const lejos = p.lava.y / CELDA - p.posLu()[1];
       app.sonido.lava(p.estado === 'jugando' ? 1 - clamp((lejos - 4) / 22, 0, 1) : 0);
     }
     if (p.estado === 'terminado') this.terminar();
+  }
+
+  // En la torre, cada 50 m un cartel que cae, y otro al pasar el récord.
+  pasarHitos(dt) {
+    const p = this.partida, rec = this.app.datos.torre.record;
+    const hito = Math.floor(p.altoMax / 50);
+    if (hito > (this.hito || 0)) {
+      this.hito = hito;
+      this.cartelHito = { txt: this.app.tr('metros', hito * 50), t: 0, col: MUNDOS_COLOR[3].borde };
+      this.app.sonido.tocar('ganada', { n: Math.min(4, hito) });
+      this.app.vibrar(20);
+    }
+    if (rec > 0 && !this.pasoRecord && p.altoMax > rec) {
+      this.pasoRecord = true;
+      this.cartelHito = { txt: this.app.tr('nuevoRecord'), t: 0, col: P.estrella };
+      this.app.sonido.tocar('record');
+    }
+    if (this.cartelHito && (this.cartelHito.t += dt) > 1.8) this.cartelHito = null;
+  }
+
+  dibujarHito(g, W) {
+    const c = this.cartelHito;
+    if (!c) return;
+    const entra = clamp(c.t / 0.3, 0, 1), sale = clamp((c.t - 1.4) / 0.4, 0, 1);
+    if (sale > 0 && ((c.t * 20) | 0) % 2) return;
+    const y = Math.round(28 - (1 - rebote(entra)) * 30);
+    texto(g, c.txt, W / 2, y, c.col, { alinear: 'centro', esc: 2, borde: P.negro });
   }
 
   terminar() {
@@ -5034,6 +5172,7 @@ class Juego {
     if (p.cartel && app.tr.hay(p.cartel.clave)) p.dibujarCartel(g, W, H, app.tr(p.cartel.clave));
     this.dibujarIntro(g, W, H);
     this.dibujarPista(g);
+    if (this.esTorre) this.dibujarHito(g, W);
     if (this.capa) this.capa.dibujar(g, W, H);
     if (this.reinicio) {
       const r = this.reinicio, k = r.t < 0.28 ? 1 - r.t / 0.28 : (r.t - 0.28) / 0.34;
@@ -5080,7 +5219,8 @@ class Juego {
       // la barra de chispas, debajo de la línea
       const k = p.nv.chispas ? p.recogido.chispas / p.nv.chispas : 0;
       g.fillStyle = P.chispa; g.fillRect(0, 14, Math.round(W * k), 1);
-      if (p.recogido.monedas) contador(g, S.ICONO.moneda, p.recogido.monedas, W - 4, 17, { alinear: 'der' });
+      if (p.recogido.monedas) contador(g, S.ICONO.moneda, p.recogido.monedas, W - 4, 17 - (this.golpeMoneda > 0 ? 1 : 0), { alinear: 'der', color: this.golpeMoneda > 0 ? P.monedaLuz : P.blanco });
+      this.barraAltura(g, W, H);
     }
     // los poderes que están andando, con su barrita
     let y = 18;
@@ -5095,6 +5235,22 @@ class Juego {
       y += 12;
     }
     this.botones.dibujar(g);
+  }
+
+  // Una barrita vertical al costado: dónde está Lu entre la entrada y la salida.
+  barraAltura(g, W, H) {
+    const p = this.partida, nv = p.nv;
+    if (nv.alto * CELDA <= H) return;
+    const xl = Math.round(-p.camX + nv.ancho * CELDA + 5), x = xl + 3 < W ? xl : W - 3;
+    const y0 = 34, y1 = H - 10, largo = y1 - y0;
+    g.fillStyle = P.grisOsc;
+    for (let y = y0; y <= y1; y += 2) g.fillRect(x, y, 1, 1);
+    const alto = nv.inicio.y - (nv.salida?.y ?? 0);
+    const q = clamp((nv.inicio.y - p.posLu()[1]) / Math.max(1, alto), 0, 1);
+    g.fillStyle = ((this.t * 4) | 0) % 2 ? P.portalA : P.portalB; g.fillRect(x - 1, y0 - 3, 3, 3);
+    const ly = Math.round(y1 - q * largo);
+    g.fillStyle = P.negro; g.fillRect(x - 2, ly - 2, 5, 5);
+    g.fillStyle = S.PIELES[this.app.datos.piel]?.L || P.lu; g.fillRect(x - 1, ly - 1, 3, 3);
   }
 
   hudTorre(g, W, H) {
@@ -5195,7 +5351,8 @@ class Resultado {
     const w = Math.min(112, W - 24), x = Math.round(W / 2 - w / 2), y0 = Math.round(H / 2 + 38);
     const hay = j.indice + 1 < NIVELES.length;
     if (hay) b.agregar({ texto: tr('siguiente'), icono: S.ICONO.jugar, x, y: y0, w, h: 20, retraso: 1.6, accion: (bt) => this.app.ir(() => new Juego(this.app, { indice: j.indice + 1 }), bt) });
-    const y1 = y0 + (hay ? 26 : 0), mitad = Math.floor((w - 4) / 2);
+    else b.agregar({ texto: tr('torre'), icono: S.ICONO.mundo, x, y: y0, w, h: 20, retraso: 1.6, color: MUNDOS_COLOR[3].borde, accion: (bt) => this.app.ir(() => new Juego(this.app, { torre: true }), bt) });
+    const y1 = y0 + 26, mitad = Math.floor((w - 4) / 2);
     b.agregar({ texto: tr('reintentar'), icono: S.ICONO.reintentar, x, y: y1, w: mitad, h: 16, retraso: 1.7, color: P.gris, accion: () => { j.capa = null; j.muertes = 0; j.nueva(); } });
     b.agregar({ texto: tr('mapa'), icono: S.ICONO.mundo, x: x + w - mitad, y: y1, w: mitad, h: 16, retraso: 1.75, color: P.gris, accion: (bt) => this.app.ir(() => new Mapa(this.app, { enfocar: Math.min(NIVELES.length - 1, j.indice + 1) }), bt) });
   }
@@ -5255,6 +5412,7 @@ class Resultado {
     g.fillStyle = P.grisOsc; g.fillRect(px + 8, y + 33, pw - 16, 1);
     contador(g, S.ICONO.moneda, Math.floor(this.cuenta), W / 2, y + 37, { alinear: 'centro', color: P.moneda });
     if (this.nuevoMundo && this.t > 1.4 && ((this.t * 3) | 0) % 2) texto(g, tr('nuevoMundo'), W / 2, py - 12, P.chispa, { alinear: 'centro', borde: P.negro });
+    if (this.juego.indice === NIVELES.length - 1 && this.t > 1.2) texto(g, tr('finJuego'), W / 2, py - 12, ((this.t * 4) | 0) % 2 ? P.estrella : P.blanco, { alinear: 'centro', borde: P.negro });
     this.botones.dibujar(g);
   }
 }
@@ -5799,10 +5957,14 @@ function crearSonido(ajustes) {
   function programar() {
     if (!tema || !ctx) return;
     const c = CANCIONES[tema], dPaso = 60 / c.bpm / 4;
-    while (proximo < ctx.currentTime + 0.12) {
-      tocarPaso(c, pasoN, proximo, dPaso);
-      proximo += dPaso; pasoN++;
-    }
+    // si la pestaña estuvo dormida, no se recupera todo lo atrasado de golpe
+    if (proximo < ctx.currentTime - 0.3) proximo = ctx.currentTime + 0.05;
+    try {
+      while (proximo < ctx.currentTime + 0.12) {
+        tocarPaso(c, pasoN, proximo, dPaso);
+        proximo += dPaso; pasoN++;
+      }
+    } catch (e) { s.errores.push('música ' + tema + ': ' + e.message); tema = null; }
   }
   function tocarPaso(c, n, t, dPaso) {
     const p = n % 16, compas = Math.floor(n / 16) % c.acordes.length;
@@ -5839,9 +6001,12 @@ function crearSonido(ajustes) {
     if (ctx.state === 'suspended') ctx.resume();
     if (!reloj) reloj = setInterval(programar, 25);
   };
+  // Un sonido que falla no para el juego, pero se cuenta (la prueba lo mira).
+  s.errores = [];
   s.tocar = (nombre, op) => {
     if (!ctx || !ajustes.sonido || ctx.state !== 'running') return;
-    try { SFX[nombre]?.(op); } catch { /* un sonido que falla no para el juego */ }
+    if (!SFX[nombre]) { s.errores.push('no existe ' + nombre); return; }
+    try { SFX[nombre](op); } catch (e) { s.errores.push(nombre + ': ' + e.message); }
   };
   s.musica = (nombre) => {
     if (nombre === 'mundo') nombre = DE_MUNDO[0];

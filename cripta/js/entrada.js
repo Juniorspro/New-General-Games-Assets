@@ -57,6 +57,8 @@ export function crearEntrada(lienzo, pantalla) {
   // que el navegador no haga zoom, ni scroll, ni el menú del dedo largo
   for (const t of ['touchstart', 'touchmove', 'touchend']) lienzo.addEventListener(t, (ev) => ev.preventDefault(), { passive: false });
   lienzo.addEventListener('contextmenu', (ev) => ev.preventDefault());
+  // la rueda del mouse (el mapa la usa para subir y bajar)
+  lienzo.addEventListener('wheel', (ev) => { ev.preventDefault(); empujar({ tipo: 'rueda', dy: ev.deltaY * (ev.deltaMode === 1 ? 16 : 1) }); }, { passive: false });
 
   window.addEventListener('keydown', (ev) => {
     if (ev.repeat) return;
