@@ -51,7 +51,9 @@ class Pix {
       const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry, r2 = nx * nx + ny * ny;
       if (r2 > 1 || (o.filtro && !o.filtro(x, y))) continue;
       const nz = Math.sqrt(1 - r2);
-      let l = -nx * L[0] - ny * L[1] + nz * L[2];          // lambert
+      // lambert con L apuntando HACIA la luz (x<0 izquierda, y<0 arriba). Medido: con el signo cambiado
+      // las esferas quedaban iluminadas desde ABAJO a la derecha y las cabezas parecían dadas vuelta.
+      let l = nx * L[0] + ny * L[1] + nz * L[2];
       l = l * 0.5 + 0.5 - bajar * r2 * r2;                  // el borde, más oscuro (como el original)
       // degradé continuo entre los tonos de la rampa (se ve pintado, no escalonado); o.plano: a tonos
       if (o.plano) { const i = Math.floor(l * n + bayer(x, y) * trama); this.p(x, y, rampa[lim(i + (o.corrimiento || 0), 0, n - 1)]); continue; }

@@ -5,16 +5,22 @@ const { nav, pag, errores } = await abrir({ ancho: 360, alto: 800, dpr: 2, tacti
 const cdp = await pag.context().newCDPSession(pag);
 const toque = async (x, y) => { await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] }); await pag.waitForTimeout(60); await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); await pag.waitForTimeout(150); };
 // el centro (en px CSS) del botón n de la pantalla de ahora
+// espera a que la pantalla nueva ya se haya dibujado (si no, los botones son los de la anterior)
+const esperar = (pant) => pag.waitForFunction((p) => PANT === p && (p === "juego" || UI.pantallaFoco === p), pant, { timeout: 10000 });
 const boton = (n) => pag.evaluate((n) => { const b = UI.items[n < 0 ? UI.items.length + n : n], r = lienzo.getBoundingClientRect(); return [(OFX + (b.x + b.w / 2) * PX) / DPR + r.left, ((b.y + b.h / 2) * PX) / DPR + r.top]; }, n);
 await pag.evaluate(() => { if (IDIOMA !== "es") cambiarIdioma(); });
 await toque(180, 400);
+await esperar("menu");
 console.log("tras tocar la portada:", await pag.evaluate(() => PANT));
 await toque(...(await boton(0)));
+await esperar("personajes");
 console.log("tras EMPEZAR:", await pag.evaluate(() => PANT));
 await pag.screenshot({ path: salida("es-personajes.png") });
 await toque(...(await boton(-1)));
+await esperar("escenarios");
 console.log("tras ELEGIR:", await pag.evaluate(() => PANT));
 await toque(...(await boton(-1)));
+await esperar("juego");
 console.log("tras ¡A JUGAR!:", await pag.evaluate(() => PANT + " audio=" + (AU.ctx && AU.ctx.state)));
 // el joystick: apoyar, arrastrar a la derecha, mantener
 const x0 = await pag.evaluate(() => J.jug.x);

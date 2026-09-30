@@ -13,10 +13,12 @@ function fondoPortada() {
     const c = lienzoNuevo(W, H), q = c.getContext("2d");
     const gr = q.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, "#07050f"); gr.addColorStop(0.55, "#2a0a1e"); gr.addColorStop(1, "#4a0c14"); q.fillStyle = gr; q.fillRect(0, 0, W, H);
     const r = mulberry(7); q.fillStyle = "#e8e0ff"; for (let i = 0; i < 70; i++) q.fillRect(Math.floor(r() * W), Math.floor(r() * H * 0.6), 1, 1);
-    // la luna roja
-    const mx = W * 0.72, my = H * 0.2;
-    const gl = q.createRadialGradient(mx, my, 10, mx, my, 70); gl.addColorStop(0, "rgba(255,80,60,0.35)"); gl.addColorStop(1, "rgba(255,80,60,0)"); q.fillStyle = gl; q.fillRect(0, 0, W, H);
-    const pm = new Pix(40, 40); pm.bola(20, 20, 18, 18, ["#7a1010", "#b82020", "#e04a30", "#ff8a60"]); q.drawImage(pm.canvas(), Math.round(mx - 20), Math.round(my - 20));
+    // la luna de sangre, grande, detrás del título (con sus manchas)
+    const mx = Math.round(W * 0.76), my = 52, mr = 36;
+    const gl = q.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * 2.4); gl.addColorStop(0, "rgba(255,70,50,0.32)"); gl.addColorStop(1, "rgba(255,70,50,0)"); q.fillStyle = gl; q.fillRect(0, 0, W, H);
+    const pm = new Pix(mr * 2 + 2, mr * 2 + 2); pm.bola(mr + 1, mr + 1, mr, mr, ["#5a0a0e", "#8a1414", "#b82020", "#d8402c", "#f07050"]);
+    const rm = mulberry(99); for (let i = 0; i < 14; i++) { const a = rm() * TAU, d = rm() * mr * 0.75, rr = 2 + rm() * 5, cxm = mr + 1 + Math.cos(a) * d, cym = mr + 1 + Math.sin(a) * d; for (let yy = -rr; yy <= rr; yy++) for (let xx = -rr; xx <= rr; xx++) if (xx * xx + yy * yy <= rr * rr) { const c = pm.g(cxm + xx, cym + yy); if (c) pm.p(cxm + xx, cym + yy, mezclar(c, "#3a0408", 0.28)); } }
+    q.drawImage(pm.canvas(), Math.round(mx - mr - 1), Math.round(my - mr - 1));
     // el castillo, recortado contra la luna
     q.fillStyle = "#0c0610"; const bx = W * 0.5, by = H * 0.62;
     q.beginPath(); q.moveTo(0, by + 30); q.quadraticCurveTo(W * 0.3, by - 20, W * 0.55, by - 10); q.quadraticCurveTo(W * 0.8, by, W, by + 20); q.lineTo(W, H); q.lineTo(0, H); q.fill();
@@ -34,9 +36,15 @@ function dibujarFondoMenu(oscuro) {
   for (const m of _murcis) { m.x += m.v / 60; if (m.x > W + 20) { m.x = -20; m.y = 40 + V.f() * 160; } m.f += 0.15; g.drawImage(enemigoSpr("murcielago", Math.floor(m.f) % 2, false), Math.round(m.x), Math.round(m.y + Math.sin(m.f) * 3)); }
   if (oscuro) { g.fillStyle = `rgba(4,2,10,${oscuro})`; g.fillRect(0, 0, W, H); }
 }
-function titulo(y, esc = 3) {
-  textoPixel("NOCHE", W / 2, y, { escala: esc, grad: "rojo" });
-  textoPixel("CARMESÍ", W / 2, y + 11 * esc + 2, { escala: esc, grad: "oro" });
+/** El logo con su cinta de subtítulo; devuelve dónde termina. */
+function titulo(y) {
+  const fin = dibujarLogo(W / 2, y);
+  const sub = IDIOMA === "es" ? "SOBREVIVÍ HASTA EL AMANECER" : "SURVIVE UNTIL DAWN", w = Math.round(anchoTexto(sub) + 26), yy = fin + 8;
+  g.fillStyle = "rgba(10,2,6,0.78)"; g.fillRect(Math.round(W / 2 - w / 2), yy, w, 13);
+  g.fillStyle = "#b8161e"; g.fillRect(Math.round(W / 2 - w / 2), yy, w, 1); g.fillRect(Math.round(W / 2 - w / 2), yy + 12, w, 1);
+  g.fillStyle = "#ff6a5a"; g.fillRect(Math.round(W / 2 - w / 2) - 2, yy + 5, 3, 3); g.fillRect(Math.round(W / 2 + w / 2) - 1, yy + 5, 3, 3);
+  texto(sub, W / 2, yy + 1, { grad: "#f4e4d8" });
+  return yy + 13;
 }
 function oroArriba() {
   panel(W - 86, 4, 82, 18, "oscuro");
@@ -46,9 +54,8 @@ function oroArriba() {
 
 function pantallaPortada() {
   dibujarFondoMenu(0);
-  titulo(Math.round(H * 0.16));
-  texto(IDIOMA === "es" ? "Sobreviví hasta el amanecer" : "Survive until dawn", W / 2, Math.round(H * 0.16) + 76, { grad: "gris" });
-  if (Math.floor(performance.now() / 600) % 2) texto(L(matchMedia("(pointer: coarse)").matches ? TX.tocar : TX.tocarPC), W / 2, Math.round(H * 0.5), { grad: "blanco" });
+  const fin = titulo(Math.round(H * 0.09));
+  if (Math.floor(performance.now() / 600) % 2) texto(L(matchMedia("(pointer: coarse)").matches ? TX.tocar : TX.tocarPC), W / 2, Math.max(fin + 40, Math.round(H * 0.5)), { escala: 1.3 });
   texto("v1.0", W - 4, H - 12, { al: "der", grad: "gris", sombra: 0 });
   if (IN.toques.length || EDGE.size) { IN.toques.length = 0; irA("menu"); sfx("elegir"); tocarTema("titulo"); }
 }
@@ -56,10 +63,10 @@ function irA(p) { PANT = p; UI.pantallaFoco = null; MSJ = null; }
 
 function pantallaMenu() {
   dibujarFondoMenu(0.25);
-  titulo(Math.round(H * 0.1), 2);
+  const fin = titulo(26);
   oroArriba();
   uiEmpezar("menu");
-  const bw = 150, x = W / 2 - bw / 2; let y = Math.round(H * 0.42);
+  const bw = 150, x = W / 2 - bw / 2; let y = Math.max(fin + 22, Math.round(H * 0.42));
   boton(x, y, bw, 28, TX.empezar, () => irA("personajes"), { estilo: "rojo" }); y += 34;
   boton(x, y, bw, 26, TX.mejoras, () => irA("mejoras"), { estilo: "azul" }); y += 32;
   boton(x, y, bw, 26, TX.opciones, () => irA("opciones"), { estilo: "azul" }); y += 32;

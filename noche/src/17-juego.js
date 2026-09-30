@@ -14,7 +14,7 @@ function pasoJuego(dt) {
   const m = leerMovimiento(), v = VEL_JUG * st.velMov * J.E.velJug;
   j.moviendo = Math.hypot(m.x, m.y) > 0.1;
   if (j.moviendo) {
-    j.x += m.x * v * dt; j.y += m.y * v * dt; j.paso += dt * 7;
+    j.x += m.x * v * dt; j.y += m.y * v * dt; j.paso += dt * 9;
     const n = Math.hypot(m.x, m.y); j.mirX = m.x / n; j.mirY = m.y / n;
     if (Math.abs(m.x) > 0.2) j.izq = m.x < 0;
   }
@@ -109,7 +109,7 @@ function dibujarUIJuego() {
   else if (J.modal && J.modal.tipo === "cofre") dibujarModalCofre();
 }
 function dibujarCazador(cx, cy) {
-  const j = J.jug, s = cazadorSpr(J.pj, j.moviendo ? 1 + Math.floor(j.paso) % 2 : 0, j.izq);
+  const j = J.jug, s = cazadorSpr(J.pj, j.moviendo ? 1 + Math.floor(j.paso) % 4 : 0, j.izq);
   const X = Math.round(j.x - cx - s.width / 2), Y = Math.round(j.y - cy - s.height + 2);
   g.drawImage(sombra(5, 2), Math.round(j.x - cx - 5), Math.round(j.y - cy - 1));
   // parpadeo mientras es invulnerable (después de un golpe)

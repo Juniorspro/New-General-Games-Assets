@@ -542,7 +542,9 @@ class Pix {
       const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry, r2 = nx * nx + ny * ny;
       if (r2 > 1 || (o.filtro && !o.filtro(x, y))) continue;
       const nz = Math.sqrt(1 - r2);
-      let l = -nx * L[0] - ny * L[1] + nz * L[2];          // lambert
+      // lambert con L apuntando HACIA la luz (x<0 izquierda, y<0 arriba). Medido: con el signo cambiado
+      // las esferas quedaban iluminadas desde ABAJO a la derecha y las cabezas parecían dadas vuelta.
+      let l = nx * L[0] + ny * L[1] + nz * L[2];
       l = l * 0.5 + 0.5 - bajar * r2 * r2;                  // el borde, más oscuro (como el original)
       // degradé continuo entre los tonos de la rampa (se ve pintado, no escalonado); o.plano: a tonos
       if (o.plano) { const i = Math.floor(l * n + bayer(x, y) * trama); this.p(x, y, rampa[lim(i + (o.corrimiento || 0), 0, n - 1)]); continue; }
@@ -982,73 +984,102 @@ function tri(p, ax, ay, bx, by, cx, cy, col) {
   }
 }
 
-// ── la figura humana (22×32, pies en y=30) ──
+// ── la figura humana (22×32, pies en y=30), de TRES CUARTOS mirando a la derecha ──
+// Todo en la misma vista (antes el cuerpo iba de frente con la cabeza de costado y se leía torcido):
+// · la oreja y el pelo de atrás a la izquierda, los ojos y la boca hacia adelante (derecha);
+// · el brazo LEJANO casi escondido detrás del torso, el CERCANO por delante del torso;
+// · la hebilla del cinto y la punta de las botas hacia adelante;
+// · el paso en 4 cuadros: 1 y 3 apoyan las dos piernas abiertas (una vez adelante la cercana, otra
+//   la lejana), 2 y 4 pasa una pierna levantada y el cuerpo sube un píxel; los brazos, al revés.
 // o: {piel, pelo, peinado, ropa, pantalon, botas, capa, sombrero, barba, ojos, zombi, vendas, sotana, cinto}
+const LUZ_ARRIBA = [0.1, -0.8, 0.58];
 function humano(o, f) {
-  const p = new Pix(22, 32), Y = 2;          // Y: aire arriba para sombreros
-  const piel = R4(o.piel), ropa = R4(o.ropa), pant = R4(o.pantalon || "#3a2a24"), bota = R4(o.botas || "#2a1c16");
-  const paso = f === 1 ? 1 : f === 2 ? -1 : 0, bob = f ? 0 : 0, ag = o.encorvado ? 1 : 0;
-  // la capa, atrás de todo, con el ruedo que se mece al caminar
+  const p = new Pix(22, 32), Y = 2;
+  const piel = R4(o.piel), ropa = R4(o.ropa), ropaOsc = R4(mezclar(o.ropa, "#000000", 0.38));
+  const pant = R4(o.pantalon || "#3a2a24"), pantOsc = R4(mezclar(o.pantalon || "#3a2a24", "#000000", 0.35)), bota = R4(o.botas || "#2a1c16");
+  const sube = f === 2 || f === 4 ? -1 : 0, T = Y + sube, ag = o.encorvado ? 1 : 0;
+  // [x, alza] de la pierna LEJANA (oscura, primero) y de la CERCANA
+  const PIERNAS = [[[9, 0], [12, 0]], [[8, 0], [13, 0]], [[10, 2], [11, 0]], [[13, 0], [8, 0]], [[11, 0], [10, 2]]];
+  const [lej, cer] = PIERNAS[f] || PIERNAS[0];
+  // el balanceo de los brazos: contrario a la pierna del mismo lado (+ = adelante)
+  const bCer = f === 1 ? -1 : f === 3 ? 1 : 0, bLej = -bCer;
+  // 1) la capa, atrás de todo: cae de los hombros hacia atrás y el ruedo flamea al caminar
   if (o.capa) {
-    const cp = R4(o.capa), sway = paso;
-    tri(p, 6, Y + 12, 16, Y + 12, 3 - sway, Y + 26, cp[1]); tri(p, 16, Y + 12, 3 - sway, Y + 26, 15 - sway, Y + 26, cp[1]);
-    tri(p, 7, Y + 13, 5 - sway, Y + 25, 9, Y + 25, cp[0]);
-    for (let x = 3; x <= 15; x += 3) p.borrar(x - sway, Y + 26);
+    const cp = R4(o.capa), vuelo = f ? 1 : 0;
+    // cuelga detrás del cuerpo (de los hombros a las corvas) y se abre un poco hacia atrás
+    tri(p, 8, T + 13, 13, T + 13, 5 - vuelo, T + 26, cp[1]); tri(p, 13, T + 13, 5 - vuelo, T + 26, 13, T + 26, cp[1]);
+    tri(p, 8, T + 14, 6 - vuelo, T + 25, 9, T + 25, cp[0]);
+    for (let x = 6; x <= 12; x += 3) p.borrar(x - vuelo + (f % 2), T + 26);
   }
-  // piernas: la de atrás (más oscura) y la de adelante
-  const pierna = (x, alto, rampa, tono) => { p.caja(x, Y + 20, 3, alto, rampa, { vertical: 0.3 }); p.caja(x, Y + 20 + alto - 2, 4, 2, bota); if (tono) p.rect(x, Y + 20, 1, alto - 2, rampa[0]); };
-  if (!o.sotana) { pierna(8 - paso, f === 2 ? 7 : 8, pant, 1); pierna(12 + paso, f === 1 ? 7 : 8, pant, 0); }
-  else { p.caja(6, Y + 20, 11, 7, ropa, { vertical: 0.4 }); p.rect(8 - paso, Y + 27, 4, 2, bota[1]); p.rect(12 + paso, Y + 27, 4, 2, bota[2]); }
-  // brazo de atrás
-  const brazo = (x, y, rampa, adelante) => {
-    if (adelante) { p.caja(x, y, 6, 2, rampa, { vertical: 0.6 }); p.rect(x + 6, y, 2, 2, piel[2]); return; }
-    p.caja(x, y, 2, 6, rampa, { vertical: 0.2 }); p.rect(x, y + 6, 2, 2, piel[2]);
+  // 2) el brazo lejano (detrás del torso: se asoma atrás cuando va para atrás)
+  const brazoLejano = () => {
+    if (o.zombi) { p.caja(12 + ag, T + 15, 6, 2, ropaOsc, { vertical: 0.6 }); p.rect(18 + ag, T + 15, 2, 2, piel[1]); return; }
+    // el hombro queda tapado; se ve el brazo por detrás de la espalda (más cuando va para atrás)
+    const x = bLej < 0 ? 6 : bLej > 0 ? 8 : 7;
+    p.caja(x, T + 14, 2, 6, ropaOsc, { vertical: 0.4 }); p.rect(x, T + 20, 2, 2, piel[1]);
   };
-  if (o.zombi) brazo(13 + ag, Y + 16, R4(mezclar(o.ropa, "#000000", 0.35)), true);
-  else brazo(6 + paso, Y + 14, R4(mezclar(o.ropa, "#000000", 0.35)), false);
-  // torso, cinto y cuello
-  p.caja(7, Y + 13, 9, 8, ropa, { vertical: 0.55 });
-  p.rect(7, Y + 13, 9, 1, ropa[3]);
-  if (o.cinto !== 0) { p.rect(7, Y + 19, 9, 1, o.cinto || "#2a1a10"); p.p(11, Y + 19, "#e0b040"); }
-  if (o.vendas) for (let y = Y + 13; y < Y + 28; y += 2) for (let x = 6; x < 17; x++) if (p.g(x, y) && (x + y) % 5 === 0) p.p(x, y, mezclar(o.ropa, "#3a2a18", 0.45));
-  if (o.harapos) for (const x of [8, 11, 14]) { p.borrar(x, Y + 20); p.p(x + 1, Y + 20, ropa[0]); }
-  p.rect(10 + ag, Y + 12, 3, 1, piel[1]);
-  // cabeza (redonda, 9×10) con la luz arriba a la izquierda
-  const hx = 11.5 + ag, hy = Y + 7.5 + ag * 0.5;
-  p.bola(hx, hy, 4.6, 4.9, piel);
-  // pelo
+  brazoLejano();
+  // 3) las piernas (la lejana primero), con la bota apuntando adelante
+  const pierna = (x, alza, rampa) => {
+    const pie = Y + 26 - alza;                   // la fila de arriba de la bota
+    p.caja(x, T + 20, 3, pie - (T + 20), rampa, { vertical: 0.7 });
+    p.caja(x, pie, 4, 2, bota, { vertical: 0.8 });
+  };
+  if (!o.sotana) { pierna(lej[0], lej[1], pantOsc); pierna(cer[0], cer[1], pant); }
+  else { p.caja(7, T + 19, 9, Y + 27 - (T + 19), ropa, { vertical: 0.8 }); p.rect(lej[0], Y + 26 - lej[1], 4, 2, bota[1]); p.rect(cer[0], Y + 26 - cer[1], 4, 2, bota[2]); }
+  // 4) el torso (7 de ancho, hombros redondeados), el cinto con la hebilla adelante y el cuello
+  p.caja(8, T + 13, 7, 8, ropa, { vertical: 0.85 });
+  p.borrar(8, T + 13); p.borrar(14, T + 13);
+  p.rect(9, T + 13, 5, 1, ropa[3]);
+  p.rect(12, T + 14, 1, 3, ropa[3]);                     // el pecho, adelante, con luz
+  if (o.cinto !== 0) { p.rect(8, T + 19, 7, 1, o.cinto || "#2a1a10"); p.p(13, T + 19, "#e8c050"); }
+  if (o.vendas) for (let y = T + 13; y < Y + 28; y += 2) for (let x = 7; x < 17; x++) if (p.g(x, y) && (x + y) % 5 === 0) p.p(x, y, mezclar(o.ropa, "#3a2a18", 0.45));
+  if (o.harapos) for (const x of [9, 12]) { p.borrar(x, T + 20); p.p(x + 1, T + 20, ropa[0]); }
+  p.rect(11 + ag, T + 12, 2, 1, piel[1]);
+  // 5) la cabeza, iluminada de arriba: la tapa de pelo, el pelo de atrás, la oreja, flequillo y cara
+  const hx = 12 + ag, hy = T + 7 + ag * 0.5;
+  p.bola(hx, hy, 4.6, 4.8, piel, { luz: LUZ_ARRIBA, bajar: 0.08 });
+  const tope = Math.floor(hy - 2), conOreja = o.peinado !== "largo" && o.peinado !== "capucha";
   if (o.pelo && o.peinado !== "calvo") {
     const pe = R4(o.pelo);
     if (o.peinado === "capucha") {
       const cap = R4(o.capucha || o.pelo);
-      p.bola(hx - 0.5, hy - 0.5, 5.8, 6, cap);
-      for (let y = Math.floor(hy - 3); y <= hy + 3; y++) for (let x = Math.floor(hx); x <= hx + 5; x++) if ((x - hx - 1.2) ** 2 / 14 + (y - hy - 0.5) ** 2 / 12 < 1) p.p(x, y, piel[x > hx + 3 ? 2 : 1]);
+      p.bola(hx - 0.8, hy - 0.2, 5.8, 6, cap, { luz: LUZ_ARRIBA });
+      for (let y = Math.floor(hy - 3); y <= hy + 3; y++) for (let x = Math.floor(hx - 1); x <= hx + 5; x++) if ((x + 0.5 - hx - 1.6) ** 2 / 9 + (y + 0.5 - hy - 0.6) ** 2 / 11 < 1) p.p(x, y, piel[y < hy - 1 ? 1 : 2]);
     } else {
-      p.bola(hx - 0.7, hy - 2.2, 5, 3.4, pe, { filtro: (x, y) => y <= hy - 1 });
-      for (let x = Math.floor(hx) ; x <= hx + 3; x++) p.p(x, Math.floor(hy - 2), pe[1]);
-      p.caja(Math.floor(hx - 5), Math.floor(hy - 3), 3, 6, pe);
-      if (o.peinado === "largo") p.caja(Math.floor(hx - 5), Math.floor(hy - 1), 3, 10, pe, { vertical: 0.2 });
-      if (o.peinado === "cola") p.bola(hx - 6, hy + 2, 1.8, 3.6, pe);
-      if (o.peinado === "moño") p.bola(hx - 2, hy - 5.8, 2.4, 2, pe);
-      if (o.peinado === "pelado") for (const x of [0, 2, 4]) p.p(Math.floor(hx - 3 + x), Math.floor(hy - 5), pe[1]);
+      p.bola(hx - 0.6, hy - 2.3, 5.1, 3.3, pe, { luz: LUZ_ARRIBA, filtro: (x, y) => y <= tope });
+      const largo = o.peinado === "largo" ? 9 : 5;           // largo: hasta los hombros
+      p.caja(Math.floor(hx - 5), tope, 3, largo, pe, { vertical: 0.4 });        // atrás (izquierda)
+      for (let x = Math.floor(hx - 1); x <= hx + 4; x++) if ((x + 1) % 3) p.p(x, tope + 1, pe[2]);   // flequillo
+      if (o.peinado === "cola") { p.bola(hx - 6.3, hy + 1.5, 1.8, 3.4, pe); p.p(Math.floor(hx - 5), Math.floor(hy - 1), "#e0b040"); }
+      if (o.peinado === "moño") p.bola(hx - 2.5, hy - 5.8, 2.4, 2, pe);
+      if (o.peinado === "pelado") { p.borrar(Math.floor(hx), tope); p.borrar(Math.floor(hx + 2), tope - 1); }
     }
   }
-  // cara: ojos, boca, barba
+  if (conOreja) { const ox = Math.floor(hx - 2), oy = Math.floor(hy); p.rect(ox, oy, 2, 2, piel[2]); p.p(ox, oy + 1, piel[0]); }
   const ex = Math.floor(hx + 1), ey = Math.floor(hy);
   const ojo = o.ojos || "#1a1016";
-  p.p(ex, ey, ojo); p.p(ex, ey + 1, ojo); p.p(ex + 2, ey, ojo); p.p(ex + 2, ey + 1, ojo);
-  if (!o.ojos) { p.p(ex, ey - 1, piel[3]); }
-  p.p(ex + 2, ey + 3, piel[0]);
-  if (o.barba) { const b = R4(o.barba); p.caja(Math.floor(hx - 1), Math.floor(hy + 2), 6, 4, b); p.p(ex + 2, ey + 3, b[0]); }
+  p.rect(ex, ey, 1, 2, ojo); p.rect(ex + 2, ey, 1, 2, ojo);
+  if (!o.ojos) { p.p(ex, ey, "#5a3a4a"); p.p(ex + 2, ey, "#5a3a4a"); }
+  p.p(ex + 1, ey + 3, piel[0]);
+  // la barba: la línea de la mandíbula y el mentón (deja ver la boca), en dos tonos del color del pelo
+  if (o.barba) { const b = [mezclar(o.barba, "#000000", 0.3), o.barba, mezclar(o.barba, "#ffffff", 0.2)]; for (let x = Math.floor(hx - 1); x <= hx + 3; x++) p.p(x, Math.floor(hy + 3.5), b[x > hx + 1 ? 1 : 0]); p.rect(ex, ey + 4, 3, 1, b[1]); p.p(ex + 1, ey + 4, b[2]); p.p(Math.floor(hx - 1), Math.floor(hy + 2.5), b[0]); }
   // sombreros
-  if (o.sombrero === "bruja") { const s = R4(o.somCol || "#2a2a5a"); p.rect(4, Y + 2, 15, 2, s[1]); p.rect(4, Y + 3, 15, 1, s[0]); tri(p, 7, Y + 2, 16, Y + 2, 10, Y - 6, s[2]); tri(p, 10, Y - 6, 7, Y + 2, 9, Y + 2, s[1]); }
-  if (o.sombrero === "corona") { const c = ["#8a5a10", "#e0a020", "#ffe070"]; p.rect(8, Y + 2, 8, 2, c[1]); for (const x of [8, 11, 15]) { p.p(x, Y + 1, c[2]); p.p(x, Y, c[2]); } p.p(12, Y + 2, "#ff4050"); }
-  if (o.sombrero === "boina") { const s = R4(o.somCol || "#6a1a2a"); p.bola(11, Y + 3, 6, 2.4, s); }
-  if (o.sombrero === "tricornio") { const s = R4(o.somCol || "#2a1a14"); p.rect(4, Y + 3, 15, 2, s[1]); p.bola(11.5, Y + 2, 4.6, 2.6, s); p.p(4, Y + 2, s[2]); p.p(18, Y + 2, s[2]); }
-  // brazo de adelante (tapa el torso)
-  if (o.zombi) brazo(12 + ag, Y + 14, ropa, true);
-  else brazo(15 - paso, Y + 14, ropa, false);
-  if (o.arma === "baston") { p.linea(18 - paso, Y + 6, 18 - paso, Y + 29, "#6a4a2a"); p.p(18 - paso, Y + 5, "#ffe070"); }
+  const tY = Math.floor(hy - 5);
+  if (o.sombrero === "bruja") { const s2 = R4(o.somCol || "#2a2a5a"); p.rect(5, tY + 1, 15, 2, s2[1]); p.rect(5, tY + 2, 15, 1, s2[0]); tri(p, 8, tY + 1, 17, tY + 1, 10, tY - 8, s2[2]); tri(p, 10, tY - 8, 8, tY + 1, 10, tY + 1, s2[1]); p.rect(9, tY, 8, 1, "#e0b040"); }
+  if (o.sombrero === "corona") { const c = ["#8a5a10", "#e0a020", "#ffe070"]; p.rect(9, tY, 8, 2, c[1]); for (const x of [9, 12, 16]) { p.p(x, tY - 1, c[2]); p.p(x, tY - 2, c[2]); } p.p(13, tY, "#ff4050"); }
+  if (o.sombrero === "boina") { const s2 = R4(o.somCol || "#6a1a2a"); p.bola(hx - 0.3, tY + 1.5, 6, 2.4, s2, { luz: LUZ_ARRIBA }); p.p(Math.floor(hx), tY - 1, s2[1]); }
+  // 6) el brazo cercano, por delante del torso (con su borde oscuro para que se separe del pecho)
+  if (o.zombi) { p.caja(12 + ag, T + 16, 7, 2, ropa, { vertical: 0.6 }); p.rect(19 + ag, T + 16, 2, 2, piel[2]); }
+  else {
+    // cuelga en el borde de adelante del torso; el antebrazo y la mano se mecen
+    const x = 13 + (bCer > 0 ? 1 : bCer < 0 ? -1 : 0);
+    p.caja(13, T + 14, 2, 3, ropa, { vertical: 0.5 });
+    p.caja(x, T + 17, 2, 3, ropa, { vertical: 0.5 });
+    p.p(12, T + 15, ropa[0]); p.p(x - 1, T + 18, ropa[0]);       // el pliegue que lo separa del pecho
+    p.rect(x, T + 20, 2, 2, piel[2]);
+  }
+  if (o.arma === "baston") { const bx = 16 + bCer; p.linea(bx, T + 5, bx, Y + 27, "#6a4a2a"); p.p(bx, T + 4, "#ffe070"); p.p(bx, T + 3, "#fff6c0"); }
   p.contorno(AUTO, true);
   return p;
 }
@@ -1078,8 +1109,8 @@ function cazadorSpr(clave, cuadro, izq) {
 
 // ── los enemigos ──
 const CUERPOS = {
-  zombi: (f) => humano({ piel: "#8aa860", pelo: "#3a4a2a", peinado: "pelado", ropa: "#4e5e80", pantalon: "#343c54", botas: "#5a6a3a", ojos: "#ff3020", zombi: 1, encorvado: 1, harapos: 1, cinto: 0 }, f ? 1 + (f % 2) : 1),
-  momia: (f) => humano({ piel: "#dccca4", pelo: null, peinado: "calvo", ropa: "#d4c49a", pantalon: "#c8b88e", botas: "#b0a078", ojos: "#ffb020", zombi: 1, vendas: 1, cinto: 0 }, f ? 1 + (f % 2) : 1),
+  zombi: (f) => humano({ piel: "#8aa860", pelo: "#3a4a2a", peinado: "pelado", ropa: "#4e5e80", pantalon: "#343c54", botas: "#5a6a3a", ojos: "#ff3020", zombi: 1, encorvado: 1, harapos: 1, cinto: 0 }, f ? 3 : 1),
+  momia: (f) => humano({ piel: "#dccca4", pelo: null, peinado: "calvo", ropa: "#d4c49a", pantalon: "#c8b88e", botas: "#b0a078", ojos: "#ffb020", zombi: 1, vendas: 1, cinto: 0 }, f ? 3 : 1),
   esqueleto(f) {
     const p = new Pix(22, 32), Y = 2, hu = ["#6a6456", "#a8a290", "#dcd6c4", "#f6f2e6"], paso = f ? 1 : -1;
     // piernas (huesos finos) y pelvis
@@ -1097,7 +1128,7 @@ const CUERPOS = {
     return p;
   },
   lobizon(f) {
-    const p = humano({ piel: "#7a6a64", pelo: null, peinado: "calvo", ropa: "#6a5a54", pantalon: "#5a4a44", botas: "#3a2e2a", encorvado: 1, cinto: 0 }, f ? 1 + (f % 2) : 1), Y = 2;
+    const p = humano({ piel: "#7a6a64", pelo: null, peinado: "calvo", ropa: "#6a5a54", pantalon: "#5a4a44", botas: "#3a2e2a", encorvado: 1, cinto: 0 }, f ? 3 : 1), Y = 2;
     const pe = ["#2e2420", "#5a4a44", "#8a7a70", "#b8a898"];
     // la cabeza de lobo encima de la humana: hocico, orejas, ojo rojo, colmillo
     p.bola(12.5, Y + 8.5, 5, 4.6, pe);
@@ -2640,7 +2671,7 @@ function pasoJuego(dt) {
   const m = leerMovimiento(), v = VEL_JUG * st.velMov * J.E.velJug;
   j.moviendo = Math.hypot(m.x, m.y) > 0.1;
   if (j.moviendo) {
-    j.x += m.x * v * dt; j.y += m.y * v * dt; j.paso += dt * 7;
+    j.x += m.x * v * dt; j.y += m.y * v * dt; j.paso += dt * 9;
     const n = Math.hypot(m.x, m.y); j.mirX = m.x / n; j.mirY = m.y / n;
     if (Math.abs(m.x) > 0.2) j.izq = m.x < 0;
   }
@@ -2735,7 +2766,7 @@ function dibujarUIJuego() {
   else if (J.modal && J.modal.tipo === "cofre") dibujarModalCofre();
 }
 function dibujarCazador(cx, cy) {
-  const j = J.jug, s = cazadorSpr(J.pj, j.moviendo ? 1 + Math.floor(j.paso) % 2 : 0, j.izq);
+  const j = J.jug, s = cazadorSpr(J.pj, j.moviendo ? 1 + Math.floor(j.paso) % 4 : 0, j.izq);
   const X = Math.round(j.x - cx - s.width / 2), Y = Math.round(j.y - cy - s.height + 2);
   g.drawImage(sombra(5, 2), Math.round(j.x - cx - 5), Math.round(j.y - cy - 1));
   // parpadeo mientras es invulnerable (después de un golpe)
@@ -2778,10 +2809,12 @@ function fondoPortada() {
     const c = lienzoNuevo(W, H), q = c.getContext("2d");
     const gr = q.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, "#07050f"); gr.addColorStop(0.55, "#2a0a1e"); gr.addColorStop(1, "#4a0c14"); q.fillStyle = gr; q.fillRect(0, 0, W, H);
     const r = mulberry(7); q.fillStyle = "#e8e0ff"; for (let i = 0; i < 70; i++) q.fillRect(Math.floor(r() * W), Math.floor(r() * H * 0.6), 1, 1);
-    // la luna roja
-    const mx = W * 0.72, my = H * 0.2;
-    const gl = q.createRadialGradient(mx, my, 10, mx, my, 70); gl.addColorStop(0, "rgba(255,80,60,0.35)"); gl.addColorStop(1, "rgba(255,80,60,0)"); q.fillStyle = gl; q.fillRect(0, 0, W, H);
-    const pm = new Pix(40, 40); pm.bola(20, 20, 18, 18, ["#7a1010", "#b82020", "#e04a30", "#ff8a60"]); q.drawImage(pm.canvas(), Math.round(mx - 20), Math.round(my - 20));
+    // la luna de sangre, grande, detrás del título (con sus manchas)
+    const mx = Math.round(W * 0.76), my = 52, mr = 36;
+    const gl = q.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * 2.4); gl.addColorStop(0, "rgba(255,70,50,0.32)"); gl.addColorStop(1, "rgba(255,70,50,0)"); q.fillStyle = gl; q.fillRect(0, 0, W, H);
+    const pm = new Pix(mr * 2 + 2, mr * 2 + 2); pm.bola(mr + 1, mr + 1, mr, mr, ["#5a0a0e", "#8a1414", "#b82020", "#d8402c", "#f07050"]);
+    const rm = mulberry(99); for (let i = 0; i < 14; i++) { const a = rm() * TAU, d = rm() * mr * 0.75, rr = 2 + rm() * 5, cxm = mr + 1 + Math.cos(a) * d, cym = mr + 1 + Math.sin(a) * d; for (let yy = -rr; yy <= rr; yy++) for (let xx = -rr; xx <= rr; xx++) if (xx * xx + yy * yy <= rr * rr) { const c = pm.g(cxm + xx, cym + yy); if (c) pm.p(cxm + xx, cym + yy, mezclar(c, "#3a0408", 0.28)); } }
+    q.drawImage(pm.canvas(), Math.round(mx - mr - 1), Math.round(my - mr - 1));
     // el castillo, recortado contra la luna
     q.fillStyle = "#0c0610"; const bx = W * 0.5, by = H * 0.62;
     q.beginPath(); q.moveTo(0, by + 30); q.quadraticCurveTo(W * 0.3, by - 20, W * 0.55, by - 10); q.quadraticCurveTo(W * 0.8, by, W, by + 20); q.lineTo(W, H); q.lineTo(0, H); q.fill();
@@ -2799,9 +2832,15 @@ function dibujarFondoMenu(oscuro) {
   for (const m of _murcis) { m.x += m.v / 60; if (m.x > W + 20) { m.x = -20; m.y = 40 + V.f() * 160; } m.f += 0.15; g.drawImage(enemigoSpr("murcielago", Math.floor(m.f) % 2, false), Math.round(m.x), Math.round(m.y + Math.sin(m.f) * 3)); }
   if (oscuro) { g.fillStyle = `rgba(4,2,10,${oscuro})`; g.fillRect(0, 0, W, H); }
 }
-function titulo(y, esc = 3) {
-  textoPixel("NOCHE", W / 2, y, { escala: esc, grad: "rojo" });
-  textoPixel("CARMESÍ", W / 2, y + 11 * esc + 2, { escala: esc, grad: "oro" });
+/** El logo con su cinta de subtítulo; devuelve dónde termina. */
+function titulo(y) {
+  const fin = dibujarLogo(W / 2, y);
+  const sub = IDIOMA === "es" ? "SOBREVIVÍ HASTA EL AMANECER" : "SURVIVE UNTIL DAWN", w = Math.round(anchoTexto(sub) + 26), yy = fin + 8;
+  g.fillStyle = "rgba(10,2,6,0.78)"; g.fillRect(Math.round(W / 2 - w / 2), yy, w, 13);
+  g.fillStyle = "#b8161e"; g.fillRect(Math.round(W / 2 - w / 2), yy, w, 1); g.fillRect(Math.round(W / 2 - w / 2), yy + 12, w, 1);
+  g.fillStyle = "#ff6a5a"; g.fillRect(Math.round(W / 2 - w / 2) - 2, yy + 5, 3, 3); g.fillRect(Math.round(W / 2 + w / 2) - 1, yy + 5, 3, 3);
+  texto(sub, W / 2, yy + 1, { grad: "#f4e4d8" });
+  return yy + 13;
 }
 function oroArriba() {
   panel(W - 86, 4, 82, 18, "oscuro");
@@ -2811,9 +2850,8 @@ function oroArriba() {
 
 function pantallaPortada() {
   dibujarFondoMenu(0);
-  titulo(Math.round(H * 0.16));
-  texto(IDIOMA === "es" ? "Sobreviví hasta el amanecer" : "Survive until dawn", W / 2, Math.round(H * 0.16) + 76, { grad: "gris" });
-  if (Math.floor(performance.now() / 600) % 2) texto(L(matchMedia("(pointer: coarse)").matches ? TX.tocar : TX.tocarPC), W / 2, Math.round(H * 0.5), { grad: "blanco" });
+  const fin = titulo(Math.round(H * 0.09));
+  if (Math.floor(performance.now() / 600) % 2) texto(L(matchMedia("(pointer: coarse)").matches ? TX.tocar : TX.tocarPC), W / 2, Math.max(fin + 40, Math.round(H * 0.5)), { escala: 1.3 });
   texto("v1.0", W - 4, H - 12, { al: "der", grad: "gris", sombra: 0 });
   if (IN.toques.length || EDGE.size) { IN.toques.length = 0; irA("menu"); sfx("elegir"); tocarTema("titulo"); }
 }
@@ -2821,10 +2859,10 @@ function irA(p) { PANT = p; UI.pantallaFoco = null; MSJ = null; }
 
 function pantallaMenu() {
   dibujarFondoMenu(0.25);
-  titulo(Math.round(H * 0.1), 2);
+  const fin = titulo(26);
   oroArriba();
   uiEmpezar("menu");
-  const bw = 150, x = W / 2 - bw / 2; let y = Math.round(H * 0.42);
+  const bw = 150, x = W / 2 - bw / 2; let y = Math.max(fin + 22, Math.round(H * 0.42));
   boton(x, y, bw, 28, TX.empezar, () => irA("personajes"), { estilo: "rojo" }); y += 34;
   boton(x, y, bw, 26, TX.mejoras, () => irA("mejoras"), { estilo: "azul" }); y += 32;
   boton(x, y, bw, 26, TX.opciones, () => irA("opciones"), { estilo: "azul" }); y += 32;
@@ -2977,6 +3015,133 @@ function pantallaResultados() {
   uiEmpezar("resultados");
   boton(W / 2 - 60, Math.min(H - 32, y + 4), 120, 26, TX.listo, () => irA("menu"), { estilo: "azul" });
   uiProcesar(() => irA("menu"));
+}
+
+// ══════════ 18b-logo.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL LOGO. Como el de Shumio (letras de bloque dibujadas a mano, con relieve hondo y sangre), pero en
+// clave del género: góticas, con puntas en los palos y pies ensanchados, cara de hueso a sangre, un
+// murciélago de escudo arriba y "CARMESÍ" chorreando. Las dos palabras forman un bloque parejo:
+// "NOCHE" (más corta) va entre dos filetes con rombos. Se hornea una vez; al dibujarlo, un brillo
+// lo recorre de vez en cuando y un resplandor rojo late detrás.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// letras de 15 filas: palos de 3, puntas arriba, pies ensanchados (lo gótico, a escala de píxel)
+const LETRAS_LOGO = {
+  N: [".#.......#.", "###.....###", "####....###", "#####...###", "###.##..###", "###..##.###", "###...#####", "###....####", "###.....###", "###.....###", "###.....###", "###.....###", "###.....###", "###.....###", "####...####"],
+  O: ["...#####...", ".#########.", "####...####", "###.....###", "###.....###", "###.....###", "###.....###", "###.....###", "###.....###", "###.....###", "###.....###", "###.....###", "####...####", ".#########.", "...#####..."],
+  C: ["...#######", ".#########", "####....##", "###......#", "###.......", "###.......", "###.......", "###.......", "###.......", "###.......", "###.......", "###......#", "####....##", ".#########", "...#######"],
+  H: [".#.......#.", "###.....###", "###.....###", "###.....###", "###.....###", "###.....###", "###.....###", "###########", "###########", "###.....###", "###.....###", "###.....###", "###.....###", "###.....###", "####...####"],
+  E: ["##########", "##########", "###.....##", "###......#", "###.......", "###..#....", "#######...", "#######...", "###..#....", "###.......", "###.......", "###......#", "###.....##", "##########", "##########"],
+  A: ["....###....", "...#####...", "..###.###..", ".###...###.", "###.....###", "###.....###", "###.....###", "###########", "###########", "###.....###", "###.....###", "###.....###", "###.....###", "###.....###", "####...####"],
+  R: ["########...", "##########.", "###....####", "###.....###", "###.....###", "###....####", "##########.", "#########..", "###..###...", "###...###..", "###....###.", "###....###.", "###.....###", "###.....###", "####....###"],
+  M: [".#.........#.", "###.......###", "####.....####", "#####...#####", "###.##.##.###", "###..###..###", "###...#...###", "###.......###", "###.......###", "###.......###", "###.......###", "###.......###", "###.......###", "###.......###", "####.....####"],
+  S: ["..########", ".#########", "####....##", "###......#", "###.......", "####......", ".#######..", "..#######.", "......####", ".......###", ".......###", "#......###", "##....####", "#########.", "########.."],
+  I: ["#####", "#####", ".###.", ".###.", ".###.", ".###.", ".###.", ".###.", ".###.", ".###.", ".###.", ".###.", ".###.", "#####", "#####"],
+};
+const TILDE_LOGO = ["..###", ".###.", "###.."];
+const CARA_LOGO = ["#ffffff", "#ffeadc", "#ff9e8a", "#ee4436", "#b8161e", "#7a0c14"];
+
+function logoSpr() {
+  return hornear("logo-noche", () => {
+    const E = 2, GAP = 1, MX = 8, ALTO = 15 * E;
+    const base = (ch) => (ch === "Í" ? "I" : ch);
+    const anchoPal = (s) => { let w = 0; for (const ch of s) w += LETRAS_LOGO[base(ch)][0].length + GAP; return (w - GAP) * E; };
+    const w1 = anchoPal("NOCHE"), w2 = anchoPal("CARMESÍ");
+    const WL = Math.max(w1, w2) + MX * 2 + 6, y1 = 20, y2 = y1 + ALTO + 12, HL = y2 + ALTO + 22;
+    const x1 = Math.round((WL - w1) / 2), x2 = Math.round((WL - w2) / 2);
+    const masc = new Uint8Array(WL * HL), p = new Pix(WL, HL), r = mulberry(1313);
+    const en = (x, y) => x >= 0 && y >= 0 && x < WL && y < HL && masc[y * WL + x];
+    const marcar = (x, y, id) => { if (x >= 0 && y >= 0 && x < WL && y < HL) masc[y * WL + x] = id; };
+    const poner = (s, x0, y0, id) => {
+      let x = x0;
+      for (const ch of s) {
+        const f = LETRAS_LOGO[base(ch)], w = f[0].length;
+        f.forEach((fila, y) => { for (let i = 0; i < w; i++) if (fila[i] === "#") for (let a = 0; a < E; a++) for (let b = 0; b < E; b++) marcar(x + i * E + a, y0 + y * E + b, id); });
+        if (ch === "Í") TILDE_LOGO.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") for (let a = 0; a < E; a++) for (let b = 0; b < E; b++) marcar(x + i * E + a + 1, y0 - 9 + y * E + b, id); });
+        x += (w + GAP) * E;
+      }
+    };
+    poner("NOCHE", x1, y1, 1); poner("CARMESÍ", x2, y2, 2);
+    // 1) el relieve hondo: la letra empujada abajo y un poco a la derecha, en dos rojos muy oscuros
+    for (let k = 5; k >= 1; k--) for (let y = 0; y < HL; y++) for (let x = 0; x < WL; x++) {
+      if (en(x, y)) continue;
+      if (en(x - Math.ceil(k / 2), y - k)) p.p(x, y, k > 2 ? "#2e0408" : "#5c0a10");
+    }
+    // 2) la cara: bandas de hueso a sangre con el cambio en damero, filo de luz arriba, bisel abajo/derecha
+    for (let y = 0; y < HL; y++) for (let x = 0; x < WL; x++) {
+      const id = en(x, y); if (!id) continue;
+      const y0 = id === 1 ? y1 : y2, t = (y - y0) / ALTO, dam = (x + y) & 1;
+      let k = t < 0.2 ? 1 : t < 0.28 ? (dam ? 1 : 2) : t < 0.44 ? 2 : t < 0.52 ? (dam ? 2 : 3) : t < 0.7 ? 3 : t < 0.78 ? (dam ? 3 : 4) : 4;
+      if (!en(x, y - 1)) k = 0;                                        // el filo de arriba
+      else if (!en(x - 1, y)) k = Math.max(0, k - 1);                 // el costado con luz
+      else if (!en(x + 1, y) || !en(x, y + 1)) k = Math.min(5, k + 1); // el bisel en sombra
+      p.p(x, y, CARA_LOGO[k]);
+    }
+    // 3) la sangre que chorrea de "CARMESÍ" (y un poco de "NOCHE"): gotas de 2 px con la punta redonda
+    const chorrear = (y0, n, largoMax) => {
+      const cand = [];
+      for (let x = 0; x < WL - 1; x++) if (en(x, y0) && en(x + 1, y0) && !en(x, y0 + 1)) cand.push(x);
+      const usados = [];
+      for (let i = 0; i < 200 && usados.length < n; i++) {
+        const x = cand[Math.floor(r() * cand.length)];
+        if (x == null || usados.some((u) => Math.abs(u - x) < 7)) continue;
+        usados.push(x);
+        const L = 3 + Math.floor(r() * largoMax);
+        for (let y = 1; y <= L; y++) { p.p(x, y0 + y, "#d8202a"); p.p(x + 1, y0 + y, "#9a0c16"); }
+        for (let yy = -1; yy <= 1; yy++) for (let xx = -1; xx <= 2; xx++) if (Math.hypot(xx - 0.5, yy) <= 1.7) p.p(x + xx, y0 + L + 1 + yy, xx <= 0 ? "#e8303a" : "#a01018");
+        p.p(x, y0 + L + 1, "#ff8a80");
+      }
+    };
+    chorrear(y2 + ALTO - 1, 9, 11);
+    chorrear(y1 + ALTO - 1, 3, 3);
+    // 4) los filetes con rombos a los costados de "NOCHE" (emparejan el ancho de las dos palabras)
+    const my = y1 + Math.round(ALTO / 2) - 1, rombo = (cx, cy, rr) => { for (let yy = -rr; yy <= rr; yy++) for (let xx = -rr; xx <= rr; xx++) if (Math.abs(xx) + Math.abs(yy) <= rr) p.p(cx + xx, cy + yy, Math.abs(xx) + Math.abs(yy) === rr ? "#8a1018" : yy < 0 ? "#ff8a78" : "#d8283a"); };
+    for (const [a, b] of [[x2 + 2, x1 - 8], [x1 + w1 + 8, x2 + w2 - 2]]) {
+      for (let x = Math.min(a, b); x <= Math.max(a, b); x++) { p.p(x, my, "#ff7060"); p.p(x, my + 1, "#b8161e"); }
+      rombo(a, my, 3); rombo(b, my, 2);
+    }
+    // 5) el murciélago del escudo, arriba al centro, con las alas festoneadas
+    const cx = Math.round(WL / 2), cy = 9, neg = "#1c0a16", ala = "#2e1024";
+    tri(p, cx - 2, cy, cx - 24, cy - 6, cx - 14, cy + 6, ala); tri(p, cx - 2, cy, cx - 14, cy + 6, cx - 3, cy + 6, ala);
+    tri(p, cx + 2, cy, cx + 24, cy - 6, cx + 14, cy + 6, ala); tri(p, cx + 2, cy, cx + 14, cy + 6, cx + 3, cy + 6, ala);
+    for (const s of [-1, 1]) for (const [bx, br] of [[8, 2.6], [14, 2.8], [20, 2.4]]) for (let yy = -3; yy <= 3; yy++) for (let xx = -3; xx <= 3; xx++) if (Math.hypot(xx, yy) <= br) p.borrar(cx + s * bx + xx, cy + 7 + yy);
+    for (const s of [-1, 1]) { p.linea(cx + s * 3, cy, cx + s * 22, cy - 5, "#5a1a34"); p.linea(cx + s * 4, cy + 1, cx + s * 13, cy + 4, "#4a1428"); }
+    p.bola(cx, cy + 1, 3, 4, [neg, "#2e1024", "#4a1a34", "#6a2a4a"]);
+    tri(p, cx - 3, cy - 2, cx - 1, cy - 2, cx - 2.5, cy - 6, neg); tri(p, cx + 1, cy - 2, cx + 3, cy - 2, cx + 2.5, cy - 6, neg);
+    p.p(cx - 1, cy, "#ff3030"); p.p(cx + 1, cy, "#ff3030");
+    // 6) el contorno grueso, en dos pasadas (negro y rojo muy oscuro)
+    p.contorno("#0a0204", true); p.contorno("#2a0408", false);
+    const c = p.canvas();
+    // la máscara de la cara, para el brillo que la recorre
+    const m = lienzoNuevo(WL, HL), q = m.getContext("2d"), im = q.createImageData(WL, HL);
+    for (let i = 0; i < masc.length; i++) if (masc[i]) { im.data[i * 4] = im.data[i * 4 + 1] = im.data[i * 4 + 2] = 255; im.data[i * 4 + 3] = 255; }
+    q.putImageData(im, 0, 0);
+    c.mascara = m; c.yFin = y2 + ALTO;
+    return c;
+  });
+}
+let _brilloLogo = null;
+/** Dibuja el logo centrado en x con su resplandor rojo y, cada tanto, un brillo que lo cruza. */
+function dibujarLogo(cx, y) {
+  const s = logoSpr(), x = Math.round(cx - s.width / 2), t = performance.now() / 1000;
+  // el resplandor que late detrás
+  const R = s.width * 0.62, gy = y + s.height * 0.5;
+  const gr = g.createRadialGradient(cx, gy, 8, cx, gy, R);
+  gr.addColorStop(0, `rgba(200,20,30,${0.26 + 0.1 * Math.sin(t * 2)})`); gr.addColorStop(1, "rgba(200,20,30,0)");
+  g.fillStyle = gr; g.fillRect(cx - R, gy - R, R * 2, R * 2);        // el cuadrado cubre todo el radio: sin bordes
+  g.drawImage(s, x, y);
+  // el brillo: una franja diagonal que cruza la cara cada 4 s (sólo sobre las letras)
+  const fase = (t % 4) / 1.1;
+  if (fase < 1) {
+    if (!_brilloLogo || _brilloLogo.width !== s.width) _brilloLogo = lienzoNuevo(s.width, s.height);
+    const b = _brilloLogo.getContext("2d"), bx = -30 + fase * (s.width + 60);
+    b.globalCompositeOperation = "source-over"; b.clearRect(0, 0, s.width, s.height);
+    b.fillStyle = "rgba(255,255,255,0.55)"; b.beginPath(); b.moveTo(bx, 0); b.lineTo(bx + 10, 0); b.lineTo(bx - 20, s.height); b.lineTo(bx - 30, s.height); b.fill();
+    b.globalCompositeOperation = "destination-in"; b.drawImage(s.mascara, 0, 0);
+    g.drawImage(_brilloLogo, x, y);
+  }
+  return y + s.yFin;
 }
 
 // ══════════ 99-arranque.js ══════════
