@@ -153,7 +153,7 @@ const OBJETOS = {
 /** Las baratijas: se llevan de a una (la nueva deja la vieja en el piso). */
 const BARATIJAS = {
   gusanoOnda: { nombre: "GUSANO ONDULADO", lema: "LÁGRIMAS EN ONDA", st: { lag: 0.4 }, f: ["gusanoOnda"] },
-  gusanoAnillo: { nombre: "GUSANO ANILLADO", lema: "LÁGRIMAS EN ESPIRAL", st: { lag: 0.4 }, f: ["gusanoAnillo"] },
+  gusanoAnillo: { nombre: "GUSANO ANILLO", lema: "LÁGRIMAS EN ESPIRAL", st: { lag: 0.4 }, f: ["gusanoAnillo"] },
   gusanoGancho: { nombre: "GUSANO GANCHO", lema: "LÁGRIMAS EN ZIGZAG", st: { lag: 0.4, alc: 1.5 }, f: ["gusanoGancho"] },
   gusanoPulso: { nombre: "GUSANO PULSO", lema: "LÁGRIMAS QUE LATEN", f: ["gusanoPulso"] },
   gusanoChato: { nombre: "GUSANO CHATO", lema: "LÁGRIMAS ANCHAS", f: ["gusanoChato"] },

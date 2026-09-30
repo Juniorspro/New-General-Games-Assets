@@ -91,6 +91,147 @@ const opuesta = (d) => (d + 2) % 4;
 
 const CUADRO = 1000 / 60;
 
+// ══════════ 00b-idioma.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL IDIOMA: español o inglés. Todo el juego se escribe en español y se traduce AL DIBUJAR (con
+// tr()), así cambiar de idioma en el menú cambia todo al instante, hasta lo que ya está en
+// pantalla. Los lemas de los objetos, en inglés, van con el tono del original ("DMG UP",
+// "TEARS UP"…). Se recuerda la elección; la primera vez, se usa el idioma del teléfono.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let IDIOMA = "es";
+try { IDIOMA = localStorage.getItem("shumio-idioma") || ((navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en"); } catch (e) { /* sin guardar */ }
+function cambiarIdioma() {
+  IDIOMA = IDIOMA === "es" ? "en" : "es";
+  try { localStorage.setItem("shumio-idioma", IDIOMA); } catch (e) { /* sin guardar */ }
+}
+
+const EN = {
+  // ── los menús ──
+  "TOCÁ PARA EMPEZAR": "TAP TO START", "ENTER O CLIC": "PRESS ENTER OR CLICK", "NUEVA PARTIDA": "NEW RUN",
+  "PANTALLA COMPLETA": "FULL SCREEN", "SALIR DE PANTALLA COMPLETA": "EXIT FULL SCREEN", "CÓMO SE JUEGA": "HOW TO PLAY",
+  "VOLVER": "BACK", "SEGUIR": "RESUME", "SALIR": "QUIT", "OTRA VEZ": "TRY AGAIN", "AL MENÚ": "MAIN MENU", "PAUSA": "PAUSED",
+  "PULGAR IZQUIERDO: CAMINAR": "LEFT THUMB: WALK", "PULGAR DERECHO: LLORAR (4 LADOS)": "RIGHT THUMB: CRY (4 WAYS)",
+  "BOTÓN GRANDE: BOMBA": "BIG BUTTON: BOMB", "ARRIBA: OBJETO ACTIVO": "TOP: ACTIVE ITEM", "AL LADO: CÁPSULA": "NEXT TO IT: PILL",
+  "WASD: CAMINAR": "WASD: WALK", "FLECHAS: LLORAR": "ARROWS: CRY", "E: BOMBA   Q: CÁPSULA": "E: BOMB   Q: PILL",
+  "ESPACIO: OBJETO ACTIVO": "SPACE: ACTIVE ITEM", "ESC: PAUSA": "ESC: PAUSE",
+  "LIMPIÁ LAS SALAS, BAJÁ 4 PISOS Y": "CLEAR THE ROOMS, GO DOWN 4 FLOORS", "HACÉ QUE MICELIA DEJE DE LLORAR.": "AND MAKE MICELIA STOP CRYING.",
+  "MI ÚLTIMA VOLUNTAD": "MY LAST WILL", "POR CULPA DE:": "KILLED BY:", "LA HUMEDAD": "THE DAMP",
+  "Y LE DEJO MIS COSAS A MI HONGO:": "MY STUFF GOES TO MY MUSHROOM:", "(NO TENÍA NADA)": "(I HAD NOTHING)",
+  "¡LO LOGRASTE!": "YOU DID IT!", "MICELIA YA NO LLORA.": "MICELIA CRIES NO MORE.", "SHUMIO TAMPOCO.": "NEITHER DOES SHUMIO.",
+  "GIRÁ EL TELÉFONO": "TURN YOUR PHONE", "SHUMIO": "SHUMIO",
+  // el tutorial dibujado en el piso
+  "MOVERSE": "MOVE", "LLORAR": "CRY", "BOMBA": "BOMB", "OBJETO": "ITEM", "ESPACIO": "SPACE", "IZQUIERDA": "LEFT", "DERECHA": "RIGHT",
+  // mensajes del juego
+  "¡OTRA VIDA!": "EXTRA LIFE!", "¡MICELIA CAYÓ!": "MICELIA HAS FALLEN!", "Abrí el cofre": "Open the chest", "UNA CÁPSULA": "A PILL",
+  // ── los pisos, las maldiciones, los jefes y los bichos (también son "la causa" de la muerte) ──
+  "SÓTANO HÚMEDO I": "DAMP BASEMENT I", "SÓTANO HÚMEDO II": "DAMP BASEMENT II", "LAS RAÍCES I": "THE ROOTS I", "LAS RAÍCES II": "THE ROOTS II",
+  "¡Maldición del ciego!": "Curse of the Blind!", "¡Maldición de la oscuridad!": "Curse of Darkness!", "¡Maldición del extraviado!": "Curse of the Lost!", "¡Maldición de lo desconocido!": "Curse of the Unknown!",
+  "MADRE BABOSA": "MOTHER SLUG", "REY MOSQUÍN": "GNAT KING", "GUSANO ANILLADO": "RINGED WORM", "MICELIA": "MICELIA",
+  "LA MADRE BABOSA": "THE MOTHER SLUG", "EL REY MOSQUÍN": "THE GNAT KING", "EL GUSANO ANILLADO": "THE RINGED WORM",
+  "UN MOSQUÍN": "A GNAT", "UN MOSQUÍN ROJO": "A RED GNAT", "UN HONGÓN": "A FUNGOON", "UNA BABOSA": "A SLUG", "UN ESCUPIDOR": "A SPITTER",
+  "UN SALTARÍN": "A HOPPER", "UN GUSANO": "A WORM", "UN BULBO": "A BULB", "UNA ARAÑITA": "A LITTLE SPIDER", "UN GRUMO": "A CLOT",
+  "UNOS PINCHOS": "SOME SPIKES", "LA BABA": "THE SLIME", "EL FUEGO": "THE FIRE", "UNA BOMBA": "A BOMB", "UNA LÁGRIMA MALA": "AN EVIL TEAR",
+  "TU PROPIA EXPLOSIÓN": "YOUR OWN EXPLOSION", "UN COFRE CON PINCHOS": "A SPIKED CHEST",
+  // ── los objetos: nombre y lema ──
+  "SOMBRERO ROJO": "RED CAP", "DAÑO ARRIBA": "DMG UP", "SETA PICANTE": "HOT MUSHROOM", "CAFÉ DE RAÍZ": "ROOT COFFEE", "LÁGRIMAS ARRIBA": "TEARS UP",
+  "CEBOLLA TRISTE": "SAD ONION", "ZAPATILLAS": "SNEAKERS", "VELOCIDAD ARRIBA": "SPEED UP", "LUPA": "MAGNIFYING GLASS", "LÁGRIMAS GRANDES": "BIG TEARS",
+  "TRÉBOL": "CLOVER", "SUERTE ARRIBA": "LUCK UP", "CORAZÓN DE PIEDRA": "STONE HEART", "VIDA ARRIBA": "HP UP", "RAÍZ VIEJA": "OLD ROOT",
+  "OJO DE VIDRIO": "GLASS EYE", "ALCANCE ARRIBA": "RANGE UP", "LÁGRIMA DE PLOMO": "LEAD TEAR", "PESADA Y DOLOROSA": "HEAVY AND PAINFUL",
+  "LENTE DE SANGRE": "BLOOD LENS", "DAÑO Y ALCANCE": "DMG + RANGE UP", "CAPARAZÓN": "SHELL", "TODO UN POCO ARRIBA": "A LITTLE BIT OF EVERYTHING UP",
+  "MEDIA LUNA": "HALF MOON", "LÁGRIMAS Y SUERTE": "TEARS + LUCK UP", "HONGO GIGANTE": "GIANT MUSHROOM", "¡TODO ARRIBA!": "ALL STATS UP!",
+  "HONGO AZUL": "BLUE CAP", "VIDA Y LÁGRIMAS": "HP + TEARS UP", "HONGUITO": "TINY SHROOM", "CHIQUITO Y VELOZ": "SMALL AND FAST",
+  "HONGO RARO": "ODD MUSHROOM", "LÁGRIMAS ARRIBA, DAÑO ABAJO": "TEARS UP, DMG DOWN", "HONGO DE LA VIDA": "LIFE MUSHROOM", "UNA VIDA MÁS": "ONE MORE LIFE",
+  "HORMONAS": "HORMONES", "DAÑO Y VELOCIDAD": "DMG + SPEED UP", "BOLA VELOZ": "SPEED BALL", "CABEZA DE GRILLO": "CRICKET'S HEAD",
+  "DAÑO POR UNO Y MEDIO": "DMG TIMES 1.5", "PACTO DE SANGRE": "BLOOD PACT", "CUERNO": "HORN", "DAÑO MUCHO ARRIBA": "DMG WAY UP",
+  "PENTAGRAMA": "PENTAGRAM", "LA MARCA": "THE MARK", "EL PACTO": "THE PACT", "DAÑO Y LÁGRIMAS": "DMG + TEARS UP", "SANGRE DEL MÁRTIR": "MARTYR'S BLOOD",
+  "LA AUREOLA": "THE HALO", "TODO ARRIBA": "ALL STATS UP", "ROSARIO": "ROSARY", "FE Y LÁGRIMAS": "FAITH AND TEARS",
+  "CORAZÓN SAGRADO": "SACRED HEART", "LÁGRIMAS BENDITAS QUE BUSCAN": "BLESSED HOMING TEARS",
+  "LLANTO DE AZUFRE": "SULFUR SOBS", "¡RAYO DE SANGRE!": "BLOOD LASER!", "OJO MECÁNICO": "MECHANICAL EYE", "LÁGRIMAS LÁSER": "LASER TEARS",
+  "ARO DE LUZ": "RING OF LIGHT", "ANILLOS LÁSER QUE SE CARGAN": "CHARGED LASER RINGS", "EMBRIÓN DE PÓLVORA": "GUNPOWDER EMBRYO", "¡LLORÁS BOMBAS!": "YOU CRY BOMBS!",
+  "FETO DEL CIELO": "FETUS FROM ABOVE", "BOMBARDEO A DEMANDA": "ON-DEMAND AIRSTRIKE", "LÁGRIMA MANSA": "TAME TEAR", "UNA LÁGRIMA QUE OBEDECE": "A TEAR THAT OBEYS",
+  "CUCHILLO DE LA ABUELA": "GRANDMA'S KNIFE", "FILOSO Y FIEL": "SHARP AND LOYAL", "TERCER OJO": "THIRD EYE", "TRES LÁGRIMAS": "TRIPLE SHOT",
+  "ARAÑA MUTANTE": "MUTANT SPIDER", "CUATRO LÁGRIMAS": "QUAD SHOT", "LENTES BIFOCALES": "BIFOCALS", "LLANTO DOBLE": "DOUBLE SHOT",
+  "OJO DE CÍCLOPE": "CYCLOPS EYE", "UNA LÁGRIMA ENORME": "ONE HUGE TEAR", "LECHE DE SOJA": "SOY MILK", "LLANTO SIN FIN": "ENDLESS CRYING",
+  "LECHE DE ALMENDRA": "ALMOND MILK", "LLANTO SIN FIN, CON GUSANOS": "ENDLESS CRYING, WITH WORMS", "LECHE CHOCOLATADA": "CHOCOLATE MILK",
+  "LÁGRIMAS QUE SE CARGAN": "CHARGE SHOTS", "PULMÓN DE BABOSA": "SLUG LUNG", "RÁFAGA CARGADA": "CHARGED BURST", "JARABE AMARGO": "BITTER SYRUP",
+  "LÁGRIMAS QUE EXPLOTAN": "EXPLOSIVE TEARS", "COÁGULO": "CLOT", "REVIENTA EN PEDAZOS": "BURSTS TO PIECES", "OJOS SALTONES": "BULGING EYES",
+  "DE CERCA DUELE MÁS": "HURTS MORE UP CLOSE", "TROZO DE CARBÓN": "LUMP OF COAL", "DE LEJOS DUELE MÁS": "HURTS MORE FROM AFAR",
+  "OJO MUERTO": "DEAD EYE", "CADA ACIERTO SUMA": "EVERY HIT COUNTS", "OJO CAZADOR": "HUNTER EYE", "LÁGRIMAS QUE BUSCAN": "HOMING TEARS",
+  "VELO": "VEIL", "LÁGRIMAS FANTASMA": "SPECTRAL TEARS", "FLECHA DE AMOR": "LOVE ARROW", "ATRAVIESA TODO": "PIERCING SHOTS",
+  "GOMA ELÁSTICA": "RUBBER BAND", "LÁGRIMAS QUE REBOTAN": "BOUNCING TEARS", "PLANETITA": "TINY PLANET", "LÁGRIMAS EN ÓRBITA": "ORBITING TEARS",
+  "MI REFLEJO": "MY REFLECTION", "LÁGRIMAS QUE VUELVEN": "BOOMERANG TEARS", "BUCLE": "LOOP", "LÁGRIMAS QUE DAN LA VUELTA": "WRAP-AROUND TEARS",
+  "ANTIGRAVEDAD": "ANTI-GRAVITY", "LÁGRIMAS QUE ESPERAN": "TEARS THAT WAIT", "CUERPO DE GRILLO": "CRICKET'S BODY", "LÁGRIMAS QUE SE PARTEN": "SPLITTING TEARS",
+  "PARÁSITO": "PARASITE", "LÁGRIMAS QUE SE DIVIDEN": "DIVIDING TEARS", "FRACTURA EXPUESTA": "COMPOUND FRACTURE", "LÁGRIMAS DE HUESO": "BONE TEARS",
+  "ESPORA PEGAJOSA": "STICKY SPORE", "SE PEGA Y EXPLOTA": "STICKS AND EXPLODES", "RAÍZ ELÉCTRICA": "ELECTRIC ROOT", "LÁGRIMAS CON CHISPA": "SPARKING TEARS",
+  "LUZ SANTA": "HOLY LIGHT", "RAYOS DEL CIELO": "LIGHT FROM ABOVE", "AMOR DURO": "TOUGH LOVE", "LÁGRIMAS CON DIENTES": "TOOTH TEARS",
+  "EUTANASIA": "EUTHANASIA", "AGUJAS MORTALES": "DEADLY NEEDLES", "ESPORAS TÓXICAS": "TOXIC SPORES", "LÁGRIMAS VENENOSAS": "POISON TEARS",
+  "PICADURA DE ARAÑA": "SPIDER BITE", "LÁGRIMAS QUE FRENAN": "SLOWING TEARS", "ESCARCHA": "FROST", "LÁGRIMAS DE HIELO": "ICE TEARS",
+  "CHISPA": "SPARK", "LÁGRIMAS QUE QUEMAN": "BURNING TEARS", "MATERIA OSCURA": "DARK MATTER", "DAÑO Y MIEDO": "DMG UP + FEAR",
+  "LENTES DE LA ABUELA": "GRANDMA'S GLASSES", "MIRADA DE PIEDRA": "STONE GAZE", "PERFUME DE LA ABUELA": "GRANDMA'S PERFUME", "LÁGRIMAS Y MIEDO": "TEARS UP + FEAR",
+  "LABIAL DE LA ABUELA": "GRANDMA'S LIPSTICK", "ALCANCE Y AMOR": "RANGE AND LOVE", "TACOS DE LA ABUELA": "GRANDMA'S HEELS", "PISOTONES": "STOMP STOMP",
+  "LÍQUIDO MISTERIOSO": "MYSTERIOUS LIQUID", "LÁGRIMAS QUE DEJAN BABA": "SLIMY TEARS", "CABEZA DEL TENDERO": "SHOPKEEPER'S HEAD", "LÁGRIMAS DE PLATA": "MONEY TEARS",
+  "ATRACTOR EXTRAÑO": "STRANGE ATTRACTOR", "TODO VA A TUS LÁGRIMAS": "EVERYTHING COMES TO YOUR TEARS", "PISCIS": "PISCES", "LÁGRIMAS QUE EMPUJAN": "KNOCKBACK TEARS",
+  "OJO DE BELIAL": "EYE OF BELIAL", "ATRAVIESA Y SE ENOJA": "PIERCES AND GETS ANGRY", "CABEZA DIVINA": "DIVINE HEAD", "LÁGRIMAS DIVINAS": "DIVINE TEARS",
+  "EL VIRUS": "THE VIRUS", "TOCAR ES ENVENENAR": "TOUCH TO POISON", "ALAS DE POLILLA": "MOTH WINGS", "¡A VOLAR!": "YOU CAN FLY!",
+  "PALOMA MUERTA": "DEAD DOVE", "VUELO Y LÁGRIMAS FANTASMA": "FLIGHT + SPECTRAL TEARS", "ESPÍRITU NOCTURNO": "NIGHT SPIRIT",
+  "IMÁN": "MAGNET", "TODO VIENE A VOS": "EVERYTHING COMES TO YOU", "BRÚJULA": "COMPASS", "EL MAPA SE REVELA": "THE MAP IS REVEALED",
+  "CASCO DE ESPORAS": "SPORE HELMET", "DOS CORAZONES DE ESPORA": "TWO SPORE HEARTS", "BOMBA GORDA": "FAT BOMB", "CINCO BOMBAS GRANDES": "FIVE BIG BOMBS",
+  "MALDICIÓN PODRIDA": "ROTTEN CURSE", "BOMBAS VENENOSAS": "POISON BOMBS", "BOLSA DE MONEDAS": "BAG OF COINS", "VEINTICINCO MONEDAS": "TWENTY-FIVE COINS",
+  "LLAVERO": "KEY RING", "CUATRO LLAVES": "FOUR KEYS", "COLA DE GATO": "CAT TAIL", "MÁS COFRES": "MORE CHESTS", "GATO MUERTO": "DEAD CAT",
+  "NUEVE VIDAS": "NINE LIVES", "PÁJARO MUERTO": "DEAD BIRD", "VENGANZA ALADA": "WINGED REVENGE", "BEBÉ ARAÑA": "SPIDER BABY",
+  "LA VENGANZA DE LAS ARAÑAS": "SPIDER REVENGE", "MOSCA AMIGA": "FRIENDLY FLY", "TE CUIDA LAS ESPALDAS": "HAS YOUR BACK", "ADMIRADORA": "ADMIRER",
+  "UNA MOSCA QUE MUERDE": "A FLY THAT BITES", "CORONA DE MOSCAS": "CROWN OF FLIES", "ESCUDO ZUMBADOR": "BUZZING SHIELD", "ÁNGEL GUARDIÁN": "GUARDIAN ANGEL",
+  "TE PROTEGE": "WATCHES OVER YOU", "BOLA DE PELOS": "HAIRBALL", "GIRA Y PEGA": "SPINS AND HITS", "HERMANITO": "LITTLE BROTHER",
+  "UN AMIGUITO QUE LLORA": "A CRYING BUDDY", "HERMANITA": "LITTLE SISTER", "LLORA MÁS FUERTE": "CRIES HARDER", "BEBÉ DEMONIO": "DEMON BABY",
+  "DISPARA SOLO": "SHOOTS ON ITS OWN", "ROBO-BEBÉ": "ROBO-BABY", "UN AMIGUITO CON LÁSER": "A BUDDY WITH A LASER", "ÍNCUBO": "INCUBUS",
+  "COPIA TUS LÁGRIMAS": "COPIES YOUR TEARS", "GORDITO": "CHUBBY", "SE LANZA DE PANZA": "BELLY FLOP", "CEREBRO PODRIDO": "ROTTEN BRAIN",
+  "IDEAS EXPLOSIVAS": "EXPLOSIVE IDEAS", "SANGUIJUELA": "LEECH", "CHUPA Y CURA": "SUCKS AND HEALS", "BOLSA DE CENTAVOS": "SACK OF PENNIES",
+  "MONEDAS DE REGALO": "FREE MONEY", "LIBRO DE SETAS": "BOOK OF MUSHROOMS", "PODER PARA LA SALA": "POWER FOR THE ROOM", "DADO VIEJO": "OLD DIE",
+  "REHACE EL DESTINO": "REROLL YOUR DESTINY", "FRASCO DE MOSQUINES": "JAR OF GNATS", "MOSCAS DE TU LADO": "FLIES ON YOUR SIDE", "LINTERNA": "LANTERN",
+  "UNA LUZ QUE QUEMA": "A BURNING LIGHT", "MECHA ETERNA": "ETERNAL FUSE", "UNA BOMBA GRATIS": "A FREE BOMB", "GOTA DE ROCÍO": "DEWDROP",
+  "CURA UN CORAZÓN": "HEALS ONE HEART", "NECRONOMICÓN": "NECRONOMICON", "LA MUERTE PARA TODOS": "DEATH TO ALL", "LIBRO DE LA REVELACIÓN": "BOOK OF REVELATIONS",
+  "PROTECCIÓN REVELADA": "REVEALED PROTECTION", "LIBRO DE LAS SOMBRAS": "BOOK OF SHADOWS", "ESCUDO TEMPORAL": "TEMPORARY SHIELD", "LIBRO SANTO": "HOLY BOOK",
+  "VUELO POR UN RATO": "FLIGHT FOR A WHILE", "TELEPATÍA PARA TONTOS": "TELEPATHY FOR DUMMIES", "LÁGRIMAS QUE PIENSAN": "THINKING TEARS",
+  "MANUAL DEL ANARQUISTA": "ANARCHIST'S MANUAL", "BOMBAS PARA TODOS": "BOMBS FOR EVERYONE", "¡AAAAAH!": "AAAAAH!", "GRITO DE AZUFRE": "SULFUR SCREAM",
+  "CONTROL REMOTO": "REMOTE CONTROL", "UN MISIL A PEDIDO": "A MISSILE ON DEMAND", "¡KAMIKAZE!": "KAMIKAZE!", "BOOM (A VOS NO)": "BOOM, BUT NOT ON YOU",
+  "RELOJ DE ARENA": "HOURGLASS", "EL TIEMPO SE FRENA": "TIME SLOWS DOWN", "UNICORNIO CHIQUITO": "TINY UNICORN", "¡INVENCIBLE!": "INVINCIBLE!",
+  "CABEZA DE TAMMY": "TAMMY'S HEAD", "LLANTO EN REDONDO": "CRYING ALL AROUND", "CABEZA DE GATO": "CAT HEAD", "MOSCAS AMIGAS": "FRIENDLY FLIES",
+  "PATITA DE GATO": "CAT PAW", "CARNE POR ALMA": "FLESH FOR SOUL", "CABEZA PODRIDA": "ROTTEN HEAD", "TIRALA": "THROW IT",
+  "CAJA DE ARAÑAS": "BOX OF SPIDERS", "ARAÑITAS AMIGAS": "FRIENDLY SPIDERS",
+  // las baratijas
+  "GUSANO ONDULADO": "WIGGLE WORM", "LÁGRIMAS EN ONDA": "WAVY TEARS", "GUSANO ANILLO": "RING WORM", "LÁGRIMAS EN ESPIRAL": "SPIRAL TEARS",
+  "GUSANO GANCHO": "HOOK WORM", "LÁGRIMAS EN ZIGZAG": "ZIGZAG TEARS", "GUSANO PULSO": "PULSE WORM", "LÁGRIMAS QUE LATEN": "PULSING TEARS",
+  "GUSANO CHATO": "FLAT WORM", "LÁGRIMAS ANCHAS": "WIDE TEARS", "OJITO ROSA": "PINKY EYE", "CLIP": "PAPER CLIP", "ABRE COFRES DORADOS": "OPENS GOLDEN CHESTS",
+  "DEDO DE LA SUERTE": "LUCKY FINGER", "MÁS PREMIOS": "MORE REWARDS", "TENEDOR": "FORK", "COMÉ ALGO": "EAT SOMETHING", "GARRAPATA": "TICK",
+  "LOS JEFES, MÁS DÉBILES": "WEAKER BOSSES", "PÁGINA PERDIDA": "MISSING PAGE", "EL DOLOR SE CONTAGIA": "PAIN IS CONTAGIOUS", "MONEDA TRAGADA": "SWALLOWED COIN",
+  "DOLOR QUE PAGA": "PAIN THAT PAYS",
+  // las transformaciones
+  "¡HONGAZO!": "FUN GUY!", "Más hongo que nunca": "More mushroom than ever", "¡SERAFÍN!": "SERAPHIM!", "Alas y fe": "Wings and faith",
+  "¡LEVIATÁN!": "LEVIATHAN!", "Alas oscuras": "Dark wings", "¡MISHI!": "KITTY!", "Nueve vidas de moscas": "Nine lives of flies",
+  "¡BELCEBÚ!": "BEELZEBUB!", "El señor de las moscas": "Lord of the flies", "¡PODRIDO!": "ROTTEN!", "Dejás baba venenosa": "You leave poison slime",
+  "¡PINCHADO!": "SPUN!", "Daño y velocidad": "Damage and speed", "¿SÍ, ABUELA?": "YES, GRANDMA?", "Un cuchillo te sigue": "A knife follows you",
+  "¡SIAMÉS!": "CONJOINED!", "Lágrimas en diagonal": "Diagonal tears", "¡RATÓN DE BIBLIOTECA!": "BOOKWORM!", "A veces, doble": "Sometimes double",
+  "¡BEBÉ ARAÑA!": "SPIDER BABY!", "Una araña amiga": "A friendly spider",
+  // las cápsulas
+  "¡LÁGRIMAS ARRIBA!": "TEARS UP!", "LÁGRIMAS ABAJO": "TEARS DOWN", "¡VELOCIDAD ARRIBA!": "SPEED UP!", "VELOCIDAD ABAJO": "SPEED DOWN",
+  "¡ALCANCE ARRIBA!": "RANGE UP!", "ALCANCE ABAJO": "RANGE DOWN", "¡SALUD TOTAL!": "FULL HEALTH!", "MAL VIAJE": "BAD TRIP",
+  "¡SUERTE ARRIBA!": "LUCK UP!", "SUERTE ABAJO": "LUCK DOWN", "BOMBAS POR LLAVES": "BOMBS ARE KEYS", "¡ESPORAS DE VIDA!": "SPORES OF LIFE!", "¡DAÑO ARRIBA!": "DMG UP!",
+};
+/** Los que empiezan igual y siguen con un número o un nombre ("TIEMPO 1:23", "ME MORÍ EN SÓTANO…"). */
+const EN_PREFIJOS = [["MÚSICA ", "MUSIC "], ["EFECTOS ", "SOUND FX "], ["TIEMPO ", "TIME "], ["PARTIDAS ", "RUNS "], ["GANADAS ", "WINS "],
+  ["PISO ", "FLOOR "], ["ME MORÍ EN ", "I DIED IN "], ["Te quedan ", "Lives left: "]];
+const EN_SUFIJOS = [[" BICHOS", " CRITTERS"]];
+/** Traduce un texto del juego al idioma elegido (si no está en el diccionario, queda como está). */
+function tr(s) {
+  if (IDIOMA === "es" || s == null) return s;
+  s = String(s);
+  if (EN[s] != null) return EN[s];
+  for (const [a, b] of EN_PREFIJOS) if (s.startsWith(a)) return b + tr(s.slice(a.length));
+  for (const [a, b] of EN_SUFIJOS) if (s.endsWith(a)) return tr(s.slice(0, -a.length)) + b;
+  return s;
+}
+
 // ══════════ 01-pantalla.js ══════════
 // ─────────────────────────────────────────────────────────────────────────────
 // LA PANTALLA: el mundo se dibuja chico (en píxeles de juego) y se agranda con una
@@ -5725,7 +5866,7 @@ const OBJETOS = {
 /** Las baratijas: se llevan de a una (la nueva deja la vieja en el piso). */
 const BARATIJAS = {
   gusanoOnda: { nombre: "GUSANO ONDULADO", lema: "LÁGRIMAS EN ONDA", st: { lag: 0.4 }, f: ["gusanoOnda"] },
-  gusanoAnillo: { nombre: "GUSANO ANILLADO", lema: "LÁGRIMAS EN ESPIRAL", st: { lag: 0.4 }, f: ["gusanoAnillo"] },
+  gusanoAnillo: { nombre: "GUSANO ANILLO", lema: "LÁGRIMAS EN ESPIRAL", st: { lag: 0.4 }, f: ["gusanoAnillo"] },
   gusanoGancho: { nombre: "GUSANO GANCHO", lema: "LÁGRIMAS EN ZIGZAG", st: { lag: 0.4, alc: 1.5 }, f: ["gusanoGancho"] },
   gusanoPulso: { nombre: "GUSANO PULSO", lema: "LÁGRIMAS QUE LATEN", f: ["gusanoPulso"] },
   gusanoChato: { nombre: "GUSANO CHATO", lema: "LÁGRIMAS ANCHAS", f: ["gusanoChato"] },
@@ -6387,7 +6528,7 @@ function dibujarHud(g) {
   }
   // ── la cápsula: abajo a la derecha, con su nombre (como la carta/píldora del original) ──
   if (j.capsula != null && !IN.usaTactil) {
-    const s = capsulaSpr(j.capsula), n = textoSpr(nombreCapsula(j.capsula), { grad: "blanco" });
+    const s = capsulaSpr(j.capsula), n = textoSpr(tr(nombreCapsula(j.capsula)), { grad: "blanco" });
     g.drawImage(s, W - s.width - 4, H - s.height - 5);
     g.drawImage(n, W - s.width - 8 - n.width, H - n.height - 2);
   }
@@ -6482,7 +6623,8 @@ function dibujarRotulos(g) {
   const r = J.rotulos[J.rotulos.length - 1];
   if (!r) return;
   const t = r.t;
-  const s1 = rotuloSpr(r.titulo), s2 = r.sub ? subtituloSpr(comoFrase(r.sub)) : null, per = r.maldicion ? pergaminoSpr(r.maldicion) : null;
+  // se traduce al dibujar: si se cambia el idioma, cambia hasta el cartel que está en pantalla
+  const s1 = rotuloSpr(tr(r.titulo)), s2 = r.sub ? subtituloSpr(comoFrase(tr(r.sub))) : null, per = r.maldicion ? pergaminoSpr(tr(r.maldicion)) : null;
   const bw = Math.round(Math.min(W - 100, Math.max(s1.width + 120, 330))), banda = bandaSpr(bw), m = 8;   // 83 % en el original
   const y = PANT.salaY + 22, bx = Math.round(W / 2 - bw / 2);
   // la franja: crece desde la izquierda y, al irse, se come desde la izquierda hacia la derecha
@@ -6903,7 +7045,7 @@ function dibujarTutorial(g) {
   g.save(); g.globalAlpha = 0.62;
   const tactil = IN.usaTactil;
   const titulos = ["MOVERSE", "LLORAR", "BOMBA", "OBJETO"];
-  titulos.forEach((t, i) => { const s = etiquetaSpr(t, tinta); g.drawImage(s, cols[i] - Math.round(s.width / 2), yT); });
+  titulos.forEach((t, i) => { const s = etiquetaSpr(tr(t), tinta); g.drawImage(s, cols[i] - Math.round(s.width / 2), yT); });
   // los dibujitos: Shumio (a un píxel de trazo) con lo que hace
   // el trazo, engrosado un píxel a la derecha (como marcador), en la misma tinta que las letras
   const fig = tinte(dibujoShumioChico(), tinta);
@@ -6925,7 +7067,7 @@ function dibujarTutorial(g) {
   for (const [a, b] of [[-9, 10], [-8, 14], [8, 10], [7, 14]]) P(x3 + a, yT + b, 3, 1);
   // las teclas (PC) o los controles del teléfono
   const yK = yc + 34;
-  const tecla = (x, y, t, w = 11) => { g.strokeStyle = tinta; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, w, 11); const s = etiquetaSpr(t, tinta); g.drawImage(s, Math.round(x + w / 2 - s.width / 2 + 1), y - 2); };
+  const tecla = (x, y, t, w = 11) => { g.strokeStyle = tinta; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, w, 11); const s = etiquetaSpr(tr(t), tinta); g.drawImage(s, Math.round(x + w / 2 - s.width / 2 + 1), y - 2); };
   if (!tactil) {
     ["W", "A", "S", "D"].forEach((k, i) => tecla(x0 - 26 + i * 13, yK, k));
     ["↑", "←", "↓", "→"].forEach((k, i) => { const x = x1 - 26 + i * 13; g.strokeStyle = tinta; g.strokeRect(x + 0.5, yK + 0.5, 11, 11); flecha(x + 6, yK + 6, [0, 3, 2, 1][i]); });
@@ -6936,7 +7078,7 @@ function dibujarTutorial(g) {
     aroT(x0, yK + 6, 8); aroT(x0 + 3, yK + 4, 3);
     aroT(x1, yK + 6, 8); aroT(x1 - 3, yK + 6, 3);
     aroT(cols[2], yK + 6, 7); aroT(x3, yK + 6, 6);
-    const s = etiquetaSpr("IZQUIERDA", tinta), s2 = etiquetaSpr("DERECHA", tinta);
+    const s = etiquetaSpr(tr("IZQUIERDA"), tinta), s2 = etiquetaSpr(tr("DERECHA"), tinta);
     g.drawImage(s, x0 - Math.round(s.width / 2), yK + 16); g.drawImage(s2, x1 - Math.round(s2.width / 2), yK + 16);
   }
   g.restore();
@@ -6962,6 +7104,8 @@ const TINTA_MANO = "#2b2326";
 
 function abrirMenu(tipo) {
   const m = { tipo, sel: 0, t: 0, sobreJuego: tipo === "pausa" || tipo === "muerte", items: [], rects: [] };
+  // el idioma: se nombra en su propio idioma (así lo encuentra quien no entiende el otro)
+  const idioma = { texto: () => IDIOMA === "es" ? "IDIOMA: ESPAÑOL" : "LANGUAGE: ENGLISH", hacer: () => { cambiarIdioma(); SFX.clic(); } };
   const completa = { texto: () => enPantallaCompleta() ? "SALIR DE PANTALLA COMPLETA" : "PANTALLA COMPLETA", hacer: () => pantallaCompleta(!enPantallaCompleta()) };
   const vol = () => [
     { texto: () => "MÚSICA " + pct(volMusica), cambiar: (d) => { volMusica = lim(Math.round((volMusica + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); } },
@@ -6969,9 +7113,9 @@ function abrirMenu(tipo) {
   ];
   if (tipo === "titulo") { m.items = [{ texto: () => IN.usaTactil ? "TOCÁ PARA EMPEZAR" : "ENTER O CLIC", hacer: () => abrirMenu("principal") }]; Musica.poner("menu"); }
   if (tipo === "principal") Musica.poner("menu");
-  if (tipo === "principal") m.items = [{ texto: () => "NUEVA PARTIDA", hacer: () => { MENU.activo = null; nuevaPartida(); } }, ...vol(), completa, { texto: () => "CÓMO SE JUEGA", hacer: () => abrirMenu("ayuda") }];
+  if (tipo === "principal") m.items = [{ texto: () => "NUEVA PARTIDA", hacer: () => { MENU.activo = null; nuevaPartida(); } }, ...vol(), completa, idioma, { texto: () => "CÓMO SE JUEGA", hacer: () => abrirMenu("ayuda") }];
   if (tipo === "ayuda") m.items = [{ texto: () => "VOLVER", hacer: () => abrirMenu("principal") }];
-  if (tipo === "pausa") m.items = [{ texto: () => "SEGUIR", hacer: () => { MENU.activo = null; } }, ...vol(), completa, { texto: () => "SALIR", hacer: () => { J = null; abrirMenu("principal"); } }];
+  if (tipo === "pausa") m.items = [{ texto: () => "SEGUIR", hacer: () => { MENU.activo = null; } }, ...vol(), completa, idioma, { texto: () => "SALIR", hacer: () => { J = null; abrirMenu("principal"); } }];
   if (tipo === "muerte" || tipo === "victoria") m.items = [{ texto: () => "OTRA VEZ", hacer: () => { MENU.activo = null; nuevaPartida(); } }, { texto: () => "AL MENÚ", hacer: () => { J = null; abrirMenu("principal"); } }];
   if (tipo === "victoria") Musica.poner("menu");
   MENU.activo = m;
@@ -7004,7 +7148,7 @@ function activar(it, tactil) {
 }
 
 /** La hoja tiene que entrar la opción más larga (con la flechita y el margen). */
-function anchoOpciones(m, minimo) { return Math.max(minimo, ...m.items.map((it) => manoSpr(it.texto()).width + 34)); }
+function anchoOpciones(m, minimo) { return Math.max(minimo, ...m.items.map((it) => manoSpr(tr(it.texto())).width + 34)); }
 // ── piezas de papel ──
 /** Una hoja clavada: el papel (que se mece apenas) y sus dos chinches. Devuelve dónde quedó. */
 function hoja(g, x, y, w, h, semilla, tono = "blanco", mece = 0, chinches = 2) {
@@ -7017,7 +7161,7 @@ function hoja(g, x, y, w, h, semilla, tono = "blanco", mece = 0, chinches = 2) {
 }
 /** Escribe a mano; alinear: "izq" | "centro". Devuelve el rectángulo (para tocarlo). */
 function escribir(g, str, x, y, alinear = "izq", tinta = TINTA_MANO) {
-  const s = manoSpr(str, { tinta });
+  const s = manoSpr(tr(str), { tinta });   // todo lo escrito a mano pasa por acá: se traduce acá
   const X = alinear === "centro" ? Math.round(x - s.width / 2) : Math.round(x);
   g.drawImage(s, X, Math.round(y));
   return { x: X, y: Math.round(y), w: s.width, h: s.height };
@@ -7178,7 +7322,7 @@ function dibujarVs(g) {
   g.drawImage(vs, Math.round(W / 2 - vs.width), cy0 - 18, vs.width * 2, vs.height * 2);
   if (t > 12) {
     for (const [nombre, x, s] of [["SHUMIO", W * 0.25, 21], [NOMBRE_JEFE[J.vs.tipo], W * 0.73, 23]]) {
-      const txt = manoSpr(nombre), pw = txt.width + 16;
+      const txt = manoSpr(tr(nombre)), pw = txt.width + 16;
       hoja(g, Math.round(x - pw / 2), H - 44, pw, 24, s, "blanco", t * 0.05, 0);
       g.drawImage(txt, Math.round(x - txt.width / 2), H - 40);
     }

@@ -362,7 +362,7 @@ function dibujarTutorial(g) {
   g.save(); g.globalAlpha = 0.62;
   const tactil = IN.usaTactil;
   const titulos = ["MOVERSE", "LLORAR", "BOMBA", "OBJETO"];
-  titulos.forEach((t, i) => { const s = etiquetaSpr(t, tinta); g.drawImage(s, cols[i] - Math.round(s.width / 2), yT); });
+  titulos.forEach((t, i) => { const s = etiquetaSpr(tr(t), tinta); g.drawImage(s, cols[i] - Math.round(s.width / 2), yT); });
   // los dibujitos: Shumio (a un píxel de trazo) con lo que hace
   // el trazo, engrosado un píxel a la derecha (como marcador), en la misma tinta que las letras
   const fig = tinte(dibujoShumioChico(), tinta);
@@ -384,7 +384,7 @@ function dibujarTutorial(g) {
   for (const [a, b] of [[-9, 10], [-8, 14], [8, 10], [7, 14]]) P(x3 + a, yT + b, 3, 1);
   // las teclas (PC) o los controles del teléfono
   const yK = yc + 34;
-  const tecla = (x, y, t, w = 11) => { g.strokeStyle = tinta; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, w, 11); const s = etiquetaSpr(t, tinta); g.drawImage(s, Math.round(x + w / 2 - s.width / 2 + 1), y - 2); };
+  const tecla = (x, y, t, w = 11) => { g.strokeStyle = tinta; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, w, 11); const s = etiquetaSpr(tr(t), tinta); g.drawImage(s, Math.round(x + w / 2 - s.width / 2 + 1), y - 2); };
   if (!tactil) {
     ["W", "A", "S", "D"].forEach((k, i) => tecla(x0 - 26 + i * 13, yK, k));
     ["↑", "←", "↓", "→"].forEach((k, i) => { const x = x1 - 26 + i * 13; g.strokeStyle = tinta; g.strokeRect(x + 0.5, yK + 0.5, 11, 11); flecha(x + 6, yK + 6, [0, 3, 2, 1][i]); });
@@ -395,7 +395,7 @@ function dibujarTutorial(g) {
     aroT(x0, yK + 6, 8); aroT(x0 + 3, yK + 4, 3);
     aroT(x1, yK + 6, 8); aroT(x1 - 3, yK + 6, 3);
     aroT(cols[2], yK + 6, 7); aroT(x3, yK + 6, 6);
-    const s = etiquetaSpr("IZQUIERDA", tinta), s2 = etiquetaSpr("DERECHA", tinta);
+    const s = etiquetaSpr(tr("IZQUIERDA"), tinta), s2 = etiquetaSpr(tr("DERECHA"), tinta);
     g.drawImage(s, x0 - Math.round(s.width / 2), yK + 16); g.drawImage(s2, x1 - Math.round(s2.width / 2), yK + 16);
   }
   g.restore();

@@ -97,7 +97,7 @@ function dibujarHud(g) {
   }
   // ── la cápsula: abajo a la derecha, con su nombre (como la carta/píldora del original) ──
   if (j.capsula != null && !IN.usaTactil) {
-    const s = capsulaSpr(j.capsula), n = textoSpr(nombreCapsula(j.capsula), { grad: "blanco" });
+    const s = capsulaSpr(j.capsula), n = textoSpr(tr(nombreCapsula(j.capsula)), { grad: "blanco" });
     g.drawImage(s, W - s.width - 4, H - s.height - 5);
     g.drawImage(n, W - s.width - 8 - n.width, H - n.height - 2);
   }
@@ -192,7 +192,8 @@ function dibujarRotulos(g) {
   const r = J.rotulos[J.rotulos.length - 1];
   if (!r) return;
   const t = r.t;
-  const s1 = rotuloSpr(r.titulo), s2 = r.sub ? subtituloSpr(comoFrase(r.sub)) : null, per = r.maldicion ? pergaminoSpr(r.maldicion) : null;
+  // se traduce al dibujar: si se cambia el idioma, cambia hasta el cartel que está en pantalla
+  const s1 = rotuloSpr(tr(r.titulo)), s2 = r.sub ? subtituloSpr(comoFrase(tr(r.sub))) : null, per = r.maldicion ? pergaminoSpr(tr(r.maldicion)) : null;
   const bw = Math.round(Math.min(W - 100, Math.max(s1.width + 120, 330))), banda = bandaSpr(bw), m = 8;   // 83 % en el original
   const y = PANT.salaY + 22, bx = Math.round(W / 2 - bw / 2);
   // la franja: crece desde la izquierda y, al irse, se come desde la izquierda hacia la derecha

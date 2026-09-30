@@ -17,6 +17,8 @@ const TINTA_MANO = "#2b2326";
 
 function abrirMenu(tipo) {
   const m = { tipo, sel: 0, t: 0, sobreJuego: tipo === "pausa" || tipo === "muerte", items: [], rects: [] };
+  // el idioma: se nombra en su propio idioma (así lo encuentra quien no entiende el otro)
+  const idioma = { texto: () => IDIOMA === "es" ? "IDIOMA: ESPAÑOL" : "LANGUAGE: ENGLISH", hacer: () => { cambiarIdioma(); SFX.clic(); } };
   const completa = { texto: () => enPantallaCompleta() ? "SALIR DE PANTALLA COMPLETA" : "PANTALLA COMPLETA", hacer: () => pantallaCompleta(!enPantallaCompleta()) };
   const vol = () => [
     { texto: () => "MÚSICA " + pct(volMusica), cambiar: (d) => { volMusica = lim(Math.round((volMusica + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); } },
@@ -24,9 +26,9 @@ function abrirMenu(tipo) {
   ];
   if (tipo === "titulo") { m.items = [{ texto: () => IN.usaTactil ? "TOCÁ PARA EMPEZAR" : "ENTER O CLIC", hacer: () => abrirMenu("principal") }]; Musica.poner("menu"); }
   if (tipo === "principal") Musica.poner("menu");
-  if (tipo === "principal") m.items = [{ texto: () => "NUEVA PARTIDA", hacer: () => { MENU.activo = null; nuevaPartida(); } }, ...vol(), completa, { texto: () => "CÓMO SE JUEGA", hacer: () => abrirMenu("ayuda") }];
+  if (tipo === "principal") m.items = [{ texto: () => "NUEVA PARTIDA", hacer: () => { MENU.activo = null; nuevaPartida(); } }, ...vol(), completa, idioma, { texto: () => "CÓMO SE JUEGA", hacer: () => abrirMenu("ayuda") }];
   if (tipo === "ayuda") m.items = [{ texto: () => "VOLVER", hacer: () => abrirMenu("principal") }];
-  if (tipo === "pausa") m.items = [{ texto: () => "SEGUIR", hacer: () => { MENU.activo = null; } }, ...vol(), completa, { texto: () => "SALIR", hacer: () => { J = null; abrirMenu("principal"); } }];
+  if (tipo === "pausa") m.items = [{ texto: () => "SEGUIR", hacer: () => { MENU.activo = null; } }, ...vol(), completa, idioma, { texto: () => "SALIR", hacer: () => { J = null; abrirMenu("principal"); } }];
   if (tipo === "muerte" || tipo === "victoria") m.items = [{ texto: () => "OTRA VEZ", hacer: () => { MENU.activo = null; nuevaPartida(); } }, { texto: () => "AL MENÚ", hacer: () => { J = null; abrirMenu("principal"); } }];
   if (tipo === "victoria") Musica.poner("menu");
   MENU.activo = m;
@@ -59,7 +61,7 @@ function activar(it, tactil) {
 }
 
 /** La hoja tiene que entrar la opción más larga (con la flechita y el margen). */
-function anchoOpciones(m, minimo) { return Math.max(minimo, ...m.items.map((it) => manoSpr(it.texto()).width + 34)); }
+function anchoOpciones(m, minimo) { return Math.max(minimo, ...m.items.map((it) => manoSpr(tr(it.texto())).width + 34)); }
 // ── piezas de papel ──
 /** Una hoja clavada: el papel (que se mece apenas) y sus dos chinches. Devuelve dónde quedó. */
 function hoja(g, x, y, w, h, semilla, tono = "blanco", mece = 0, chinches = 2) {
@@ -72,7 +74,7 @@ function hoja(g, x, y, w, h, semilla, tono = "blanco", mece = 0, chinches = 2) {
 }
 /** Escribe a mano; alinear: "izq" | "centro". Devuelve el rectángulo (para tocarlo). */
 function escribir(g, str, x, y, alinear = "izq", tinta = TINTA_MANO) {
-  const s = manoSpr(str, { tinta });
+  const s = manoSpr(tr(str), { tinta });   // todo lo escrito a mano pasa por acá: se traduce acá
   const X = alinear === "centro" ? Math.round(x - s.width / 2) : Math.round(x);
   g.drawImage(s, X, Math.round(y));
   return { x: X, y: Math.round(y), w: s.width, h: s.height };
@@ -233,7 +235,7 @@ function dibujarVs(g) {
   g.drawImage(vs, Math.round(W / 2 - vs.width), cy0 - 18, vs.width * 2, vs.height * 2);
   if (t > 12) {
     for (const [nombre, x, s] of [["SHUMIO", W * 0.25, 21], [NOMBRE_JEFE[J.vs.tipo], W * 0.73, 23]]) {
-      const txt = manoSpr(nombre), pw = txt.width + 16;
+      const txt = manoSpr(tr(nombre)), pw = txt.width + 16;
       hoja(g, Math.round(x - pw / 2), H - 44, pw, 24, s, "blanco", t * 0.05, 0);
       g.drawImage(txt, Math.round(x - txt.width / 2), H - 40);
     }
