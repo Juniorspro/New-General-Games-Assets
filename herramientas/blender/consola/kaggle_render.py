@@ -10,6 +10,7 @@ import json, os, sys
 
 aqui = os.path.dirname(os.path.abspath(__file__))
 trabajo, usuario = sys.argv[1], sys.argv[2]
+RAPIDO = len(sys.argv) > 3 and sys.argv[3] == 'rapido'   # 720x1280, limpiador en la CPU, sin foto
 os.makedirs(trabajo, exist_ok=True)
 fuentes = {n: open(os.path.join(aqui, n)).read() for n in ('pantalla.py', 'escena.py')}
 
@@ -65,10 +66,17 @@ for f in sorted(os.listdir('/kaggle/working')):
     print(f, os.path.getsize('/kaggle/working/' + f), flush=True)
 print(f'TOTAL {time.time()-T0:.0f} s', flush=True)
 '''
+if RAPIDO:
+    ini = NOTEBOOK.index('# primero un cuadro chico'); fin = NOTEBOOK.index("print('limpiador elegido:'")
+    NOTEBOOK = NOTEBOOK[:ini] + "elegido = 'cpu'\nos.environ['JX_LIMPIEZA'] = elegido\n" + NOTEBOOK[fin:]
+    NOTEBOOK = NOTEBOOK.replace('-- final lcd cuadros 1,312', '-- rapido lcd cuadros 1,312')
+    NOTEBOOK = NOTEBOOK.replace("sh(f'{B} -b --factory-startup -P escena.py -- foto lcd foto 300')\n", '')
+    NOTEBOOK = NOTEBOOK.replace("shutil.copy('foto/jx1_foto.png', '/kaggle/working/jx1_foto.png')\n", '')
+    NOTEBOOK = NOTEBOOK.replace("shutil.copy('foto/jx1.blend', 'blend/jx1.blend')", "shutil.copy('cuadros/jx1.blend', 'blend/jx1.blend')")
 codigo = 'FUENTES = ' + repr(fuentes) + '\n' + NOTEBOOK
 open(os.path.join(trabajo, 'jx1_render.py'), 'w').write(codigo)
 json.dump({
-    'id': f'{usuario}/jx1-render', 'title': 'jx1 render', 'code_file': 'jx1_render.py',
+    'id': f'{usuario}/jx1-render' + ('-rapido' if RAPIDO else ''), 'title': 'jx1 render' + (' rapido' if RAPIDO else ''), 'code_file': 'jx1_render.py',
     'language': 'python', 'kernel_type': 'script', 'is_private': True,
     'enable_gpu': True, 'enable_tpu': False, 'enable_internet': True,
     'dataset_sources': [], 'kernel_sources': [], 'competition_sources': [], 'model_sources': [],

@@ -2,7 +2,7 @@
 # con su pantallita animada y la cámara de 13 segundos.
 #
 #   blender -b --factory-startup -P escena.py -- <modo> <lcd> <salida> [cuadros]
-#     modo: vista (chiquito, CPU, para mirar) · final (1080x1920, GPU) ·
+#     modo: vista (chiquito, CPU, para mirar) · final (1080x1920, GPU) · rapido (720x1280) ·
 #           foto (un cuadro grande) · blend (solo guarda el .blend)
 #     lcd: la carpeta de pantalla.py (lcd_0001.png… y eventos.json)
 #
@@ -183,6 +183,14 @@ bo = cuerpo.modifiers.new('parlante', 'BOOLEAN'); bo.operation = 'DIFFERENCE'
 bo.operand_type = 'COLLECTION'; bo.collection = cortes; bo.solver = 'EXACT'
 # los agujeros van después del bisel: con el bisel encima se deformaban
 cuerpo.modifiers.move(cuerpo.modifiers.find('parlante'), 1)
+# y se cortan UNA vez: como modificador se recalculaba en cada cuadro (y varias
+# veces por cuadro con el desenfoque de movimiento), porque los cortes se mueven
+# con la consola. En Kaggle la animación pasó la hora y media por eso.
+dg = bpy.context.evaluated_depsgraph_get()
+malla = bpy.data.meshes.new_from_object(cuerpo.evaluated_get(dg))
+cuerpo.modifiers.clear(); cuerpo.data = malla
+for c in list(cortes.objects): bpy.data.objects.remove(c)
+bpy.data.collections.remove(cortes)
 
 # el marco de la pantalla y la pantalla
 marco = prisma('marco', contorno(8.0, 6.5, (1.2, 1.2, 0.55, 0.55)), 0.08, FRENTE - 0.06, CARBON, 0.03, 3, loc=(0, 0, 3.72))
@@ -430,9 +438,10 @@ elif MODO == 'prueba':
     esc.frame_set(CUADROS[0] if CUADROS else 175)
     esc.render.filepath = os.path.join(SALIDA, 'prueba.png')
     bpy.ops.render.render(write_still=True)
-elif MODO == 'final':
-    esc.render.resolution_x, esc.render.resolution_y = 1080, 1920
-    cy.samples = 128
+elif MODO in ('final', 'rapido'):
+    # rapido: 720x1280 y la mitad de muestras, para cuando hay apuro
+    esc.render.resolution_x, esc.render.resolution_y = (1080, 1920) if MODO == 'final' else (720, 1280)
+    cy.samples = 128 if MODO == 'final' else 64
     usar_gpu(); limpieza(); resplandor()
     esc.render.image_settings.file_format = 'PNG'
     esc.render.filepath = os.path.join(SALIDA, 'cuadro_')
