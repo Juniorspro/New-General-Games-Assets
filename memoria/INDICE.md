@@ -30,6 +30,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 - **No instalar nada aparte sin que lo pida.** El 22/09 se deshizo una red
   neuronal instalada para esta memoria: quería notas, no un programa.
 - **Cuida los tokens:** nada de leer `.md` del repo "por las dudas".
+- **Lo simple, rápido** (01/10): "te pedí en vertical simple y después en zip nomás, ¿pa' qué tardás tanto?". Arreglar lo que hace falta, mandar enseguida y probar en segundo plano; nada de rondas largas de pruebas antes de entregar.
 - **Sin ayudantes (subagentes):** "hacelo vos, gastás muchos tokens" (30/09). Todo en la misma sesión, de a una cosa.
 - Quiere calidad visual alta ("goty", "AAA"), con números detrás.
 - **En todo juego, antes del menú, se elige idioma: español, inglés o
