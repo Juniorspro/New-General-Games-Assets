@@ -4728,13 +4728,15 @@ function cuadro(ahora) {
 }
 
 textos();
-const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
+// Sin la intro de JXSTUDIOS (se pidió así el 01/10): arranca directo; ?intro la muestra.
+const conIntro = q.has('intro');
 // La intro arranca apenas abre, sin tocar nada. Si el navegador deja sonar
 // sin un toque, el audio nace andando y la música va en fase; si no (lo
 // normal), la intro va muda y el primer toque la saltea y prende el sonido.
 if (conIntro) { mostrar(null); entrar(); }
 else {
-  aMenu();
+  // sin la intro, la primera vez igual se elige el idioma antes del menú
+  if (datos.ajustes.idioma || q.has('directo') || q.has('pausa')) aMenu(); else elegirIdioma();
   const d = q.get('directo') || '';
   if (d.startsWith('nivel:')) { const i = NIVELES.findIndex((n) => n.id === d.slice(6)); jugar(i >= 0 ? i : 0); }
 }

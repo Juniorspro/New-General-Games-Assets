@@ -6587,11 +6587,13 @@ function escenaDirecta() {
 }
 // Primero la intro de JXSTUDIOS, desde el primer cuadro (el audio se crea
 // ya: si el navegador deja sonar, nace andando y la intro trae su música).
-const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
+// Sin la intro de JXSTUDIOS (se pidió así el 01/10): arranca directo; ?intro la muestra.
+const conIntro = q.has('intro');
 if (conIntro) sonido.despertar();
 // después del logo, la primera vez, elegir el idioma (?idioma= ya lo trae elegido)
 const despuesDelLogo = () => (datos.ajustes.idioma ? escenaDirecta() : new ElegirIdioma(app, escenaDirecta));
-app.escena = conIntro ? new IntroJXS(app, despuesDelLogo) : escenaDirecta();
+// sin la intro, la primera vez igual se elige el idioma (despuesDelLogo)
+app.escena = conIntro ? new IntroJXS(app, despuesDelLogo) : q.has('directo') || q.has('pausa') ? escenaDirecta() : despuesDelLogo();
 
 // si la pestaña se esconde: pausa y silencio
 document.addEventListener('visibilitychange', () => {

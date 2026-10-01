@@ -2317,13 +2317,18 @@ function cuadro(ahora) {
 }
 
 textos();
-const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
+// Sin la intro de JXSTUDIOS (se pidió así el 01/10): arranca directo; ?intro la muestra.
+const conIntro = q.has('intro');
 // La intro arranca apenas abre, sin tocar nada. El sonido se decide en el
 // acto: si el navegador deja sonar sin un toque, el audio nace andando y la
 // música va en fase; si no (lo normal), nace suspendido y la intro va muda:
 // el primer toque la saltea y prende el sonido.
 if (conIntro) { mostrar(null); entrar(); }
-else { aMenu(); if (q.get('directo') === 'juego') jugar(); }
+else {
+  // sin la intro, la primera vez igual se elige el idioma antes del menú
+  if (datos.ajustes.idioma || q.has('directo') || q.has('pausa')) aMenu(); else elegirIdioma();
+  if (q.get('directo') === 'juego') jugar();
+}
 requestAnimationFrame(cuadro);
 
 // Las sondas para las pruebas (pruebas/juego.mjs).

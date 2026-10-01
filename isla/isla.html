@@ -10070,7 +10070,8 @@ medir();
 const son = new Sonido();
 let directo = url.has('directo');
 try { if (sessionStorage.getItem('isla_directo')) { directo = true; sessionStorage.removeItem('isla_directo'); } } catch { /* nada */ }
-const conIntro = !directo && (url.has('intro') || !(url.has('pausa') || url.has('cam') || url.has('sinintro')));
+// Sin la intro de JXSTUDIOS (se pidió así el 01/10): arranca directo; ?intro la muestra.
+const conIntro = !directo && url.has('intro');
 if (conIntro) await correrIntro();
 
 // ── el mundo ────────────────────────────────────────────────────────────────

@@ -44,3 +44,11 @@ RUTA 40. Ninguno trae audio ni imágenes ajenas (todo sintetizado o dibujado).
   un tiempo fijo; si no, parece que la cámara "se mete en la choza".
 - Los botones de los carteles 3D se tocan proyectando el punto del lienzo del
   cartel con la cámara (`cara.localToWorld` + `project`).
+
+## Sin la intro de JXSTUDIOS (01/10)
+
+Pidió los seis sin la intro del logo. En cada uno `conIntro = q.has('intro')`
+(LA ISLA: `!directo && url.has('intro')`): arrancan en la elección de idioma
+(la primera vez) o en el menú. Ojo: el camino sin intro iba directo a
+`aMenu()`; ahora pasa por `elegirIdioma()` si no hay idioma guardado, porque
+la intro era la que lo llamaba al terminar. `?intro` la vuelve a mostrar.
