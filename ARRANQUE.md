@@ -17,7 +17,11 @@ clonado y **se borra cuando termina la sesión**.
   instante.
 - **No hay SDK de Android** (pesa 2-3 GB): acá no se compila un APK.
 - **Roblox Studio no corre acá.** Lo de Roblox se hace en la laptop de quien
-  pide; desde acá se escribe el código (Luau) y se sube al repo.
+  pide; desde acá se escribe el código (Luau) y se sube al repo. Medido el
+  01/10/2026: el instalador (`roblox.com/download/studio`) es un `.exe` de
+  Windows; la máquina es Linux sin placa de video (no hay `/dev/dri`) ni Wine,
+  y Studio además pide entrar con la cuenta de Roblox. Las herramientas de
+  Roblox que viven en GitHub (Rojo, Luau) dan 403 sin `add_repo`.
 
 | cosa | dónde / cómo |
 |---|---|
