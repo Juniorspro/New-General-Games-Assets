@@ -12,7 +12,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 ## Quién pide
 - Escribe en castellano rioplatense, corto e informal.
 - Quiere juegos con buenos gráficos, buenas animaciones y buenas mecánicas (29/09/2026).
-- Está haciendo un juego en **Roblox Studio** en su laptop (30/09/2026): lo de Roblox se queda en el repo. Roblox Studio no corre en esta máquina.
+- Está haciendo un juego en **Roblox Studio** en su laptop (30/09/2026): lo de Roblox se queda en el repo. Desde el 01/10/2026 Studio también corre acá con Wine 11 + DXVK (receta en `ARRANQUE.md § 1`).
 - Sus juegos HTML se entregaban en UN archivo que abre sin red, pensados para el celular, en tres idiomas (es, en, pt).
 - Pidió limpiar el repo porque "come tokens" (30/09/2026): no volver a llenarlo de builds, binarios ni proyectos que no use.
 - Sus juegos son de **JXSTUDIOS** y arrancan con su intro (30/09/2026): sola, sin tocar nada; **en el estilo de cada juego** (la de pixel art en el juego pixel le gustó; no siempre negro y cromo); y después del logo, **elegir el idioma** (la primera vez). → [cripta](cripta.md), [vibora](vibora.md), [isla](isla.md), [globo](globo.md), [morfi](morfi.md)

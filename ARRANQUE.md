@@ -16,12 +16,26 @@ clonado y **se borra cuando termina la sesión**.
   quiere decir que se acabó la cuota. Borrar archivos grandes libera al
   instante.
 - **No hay SDK de Android** (pesa 2-3 GB): acá no se compila un APK.
-- **Roblox Studio no corre acá.** Lo de Roblox se hace en la laptop de quien
-  pide; desde acá se escribe el código (Luau) y se sube al repo. Medido el
-  01/10/2026: el instalador (`roblox.com/download/studio`) es un `.exe` de
-  Windows; la máquina es Linux sin placa de video (no hay `/dev/dri`) ni Wine,
-  y Studio además pide entrar con la cuenta de Roblox. Las herramientas de
-  Roblox que viven en GitHub (Rojo, Luau) dan 403 sin `add_repo`.
+- **Roblox Studio corre acá con Wine 11 (01/10/2026)**, lento (dibuja la CPU,
+  ~250 %). La receta que anduvo:
+  1. `Xvfb :99 -screen 0 1280x800x24`. El Wine 9.0 de Ubuntu no sirve: no
+     dibuja con Vulkan en ventanas hijas y Studio queda negro.
+  2. Wine 11 de WinehQ sin la parte de 32 bits: `apt-get install
+     ./wine-stable-amd64_11.0.0.0~noble-1_amd64.deb` y `dpkg-deb -x` del
+     `wine-stable_…deb` en `/` (de `dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/`).
+  3. DXVK de Debian (`dxvk-wine64_2.7.1-4`, deb.debian.org): los `.dll.so` de
+     d3d11, dxgi y d3d10core van a `system32` como `.dll`, con
+     `WINEDLLOVERRIDES="mscoree,mshtml=;d3d11,dxgi,d3d10core=n"`.
+  4. El instalador es `setup.rbxcdn.com/RobloxStudioInstaller.exe`; el error
+     de WebView2 se acepta y sigue.
+  5. Studio va adentro de `wine explorer /desktop=studio,1280x800 …`: sin
+     escritorio virtual, DXVK divide por cero (la pantalla de Xvfb dice 0 Hz).
+  6. El inicio de sesión viejo pide WebView2. El nuevo, con código de 6 letras
+     o QR para aprobar desde el celu, sale para la mitad de las máquinas: se
+     cambia `RobloxStudioMachineGuid` (HKCU `Software\\Roblox\\RobloxStudio\\
+     RobloxStudioLaunchTrackingGuid\\https:\\www.roblox.com`) hasta que el log diga
+     `inTreatment=true`.
+  El prefijo (2,5 GB) vive en el scratchpad y se pierde con el contenedor.
 
 | cosa | dónde / cómo |
 |---|---|
