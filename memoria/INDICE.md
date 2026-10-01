@@ -18,6 +18,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 - Sus juegos son de **JXSTUDIOS** y arrancan con su intro (30/09/2026): sola, sin tocar nada; **en el estilo de cada juego** (la de pixel art en el juego pixel le gustó; no siempre negro y cromo); y después del logo, **elegir el idioma** (la primera vez). → [cripta](cripta.md), [vibora](vibora.md), [isla](isla.md), [globo](globo.md), [morfi](morfi.md)
 - Cuando pasa capturas de un juego ajeno, se hace uno original del mismo género, de JXSTUDIOS, y se le dice (30/09/2026).
 - Con sus llaves decide él: si una pasó por el chat se le avisa una vez y, si dice que se use, se usa, siempre fuera del repo (01/10/2026, Kaggle).
+- No banca esperas largas: con la animación de la JX-1 cortó a la hora y media de render ("ya fue", 01/10/2026). Primero algo rápido que se pueda ver; después, si quiere, la versión pesada. Antes de un render largo se mide un cuadro.
 - Quiere juegos **simples y terminados**, rápido: con Grumo se quejó "te pedí un juego simple" porque se validaba cada nivel durante horas (30/09/2026). Alcanza con que cada nivel se pueda ganar y una prueba de humo; el ajuste fino, si lo pide. → [grumo](grumo.md)
 
 ## Las notas
