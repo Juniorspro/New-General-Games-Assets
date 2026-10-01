@@ -47,6 +47,12 @@ Lo que junta las tres guías de `guias/` y lo que se ve en los juegos de este re
 - La ilustración la hace Rezona Lab sin texto; el título y el logo JXS se dibujan encima con el código del juego (el cartel del menú de Morfi, Globo y Cripta; el logo de Víbora) y el logo en su estilo: recortes de papel, píxel con neón, cromo, plano con borde, calcomanía. Los generadores deforman los logos. → `herramientas/portadas/` (`generar.py`, `componer.mjs`, `pedidos.json`)
 - El Morfi que salió en 9:16 tenía la boca en el frente (en el juego la boca son las tapas): se usó el de 3:4, fiel, con el cartel colgado desde arriba del cuadro para no tapar el caramelo.
 
+## Animaciones 3D con Blender en la GPU de Kaggle (01/10/2026)
+- Se arma todo por código (`herramientas/blender/consola/`): la escena, una pantallita hecha con PIL, el sonido sintetizado, y un notebook de Kaggle que lleva los scripts adentro y renderiza con las dos T4.
+- Se mira antes en la CPU de acá: 270x480 a 24 muestras tarda ~8 s por cuadro y alcanza para encuadre, luz y color. La primera vista salió quemada: bajar luces y emisión antes de gastar GPU.
+- En Kaggle el limpiador OptiX no arranca ("Failed to create OptiX denoiser") y deja los cuadros NEGROS sin cortar el render: OpenImageDenoise, y antes de la animación un cuadro de prueba que se mide (brillo) para elegir el limpiador.
+- Una consola "como la Game Boy": se hizo una propia de JXSTUDIOS (JX-1), sin nombre, logos ni sonido de Nintendo, y se le dijo.
+
 ## Niveles con física (Morfi, 30/09/2026)
 - Si la física no depende del personaje, se lo pone donde más perdona: se juegan cientos de tiempos al azar y se cuenta por dónde pasa el caramelo. Después, los tiempos de mayor margen y las estrellas donde pasan los caminos vecinos. → [morfi](morfi.md)
 - Cada nivel se prueba con su solución guardada, sin tocar, sin cada acción y mirando que use todo lo del tablero. → `morfi/pruebas/logica.mjs`
