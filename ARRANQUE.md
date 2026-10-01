@@ -102,6 +102,17 @@ viene instalado: `pip install kaggle` (la 2.2.4 lee `KAGGLE_API_TOKEN`). El
 sesión del 01/10 quedó en `~/.kaggle/access_token` (600, fuera del repo): se
 pierde con el contenedor; la variable del entorno no.
 
+Lo que da Kaggle (medido el 01/10/2026 con un notebook privado,
+`nijulax/prueba-gpu-studio`): `kaggle kernels push -p <carpeta> --accelerator
+NvidiaTeslaT4` da **2 Tesla T4** (15 GB cada una, driver 580.159.04), 4 CPU,
+31 GB de RAM, Ubuntu 22.04. `NVIDIA_DRIVER_CAPABILITIES=compute,utility`:
+las librerías de gráficos de NVIDIA están (`libGLX_nvidia`, `libEGL_nvidia`,
+`libnvidia-glcore`), pero no hay `nvidia_icd.json` de Vulkan ni pantalla
+donde la placa dibuje. Sale a internet desde Google LLC, Carolina del Sur,
+EE. UU. Cada corrida es un trabajo por lotes; `kaggle kernels logs -f` sigue
+el log en vivo y `kaggle kernels output` baja lo que quedó en
+`/kaggle/working`.
+
 ---
 
 ## 4. Rezona Lab (generar assets)
