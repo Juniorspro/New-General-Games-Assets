@@ -70,7 +70,7 @@ permisos 600 (por ejemplo `~/.rezona/credentials.json`).
 **Después de cada commit:**
 
 ```bash
-git grep -nI "cfat_\|sk-\|-----BEGIN"    # que no devuelva nada
+git grep -nI "cfat_\|sk-\|KGAT_[0-9a-f]\|-----BEGIN"    # que no devuelva nada
 ```
 
 Si un secreto pasó por el chat alguna vez, **hay que rotarlo**.
@@ -80,7 +80,9 @@ Si un secreto pasó por el chat alguna vez, **hay que rotarlo**.
 nube (menú del entorno en la barra de la sesión → Edit): `KAGGLE_API_TOKEN`.
 La toma una sesión nueva. `kaggle.com` responde por el proxy (200); el CLI no
 viene instalado: `pip install kaggle` (la 2.2.4 lee `KAGGLE_API_TOKEN`). El
-`kaggle.json` con `KAGGLE_USERNAME` y `KAGGLE_KEY` es la forma vieja.
+`kaggle.json` con `KAGGLE_USERNAME` y `KAGGLE_KEY` es la forma vieja. En la
+sesión del 01/10 quedó en `~/.kaggle/access_token` (600, fuera del repo): se
+pierde con el contenedor; la variable del entorno no.
 
 ---
 

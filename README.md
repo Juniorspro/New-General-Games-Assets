@@ -33,7 +33,7 @@ día, para ponerle la intro de JXSTUDIOS.
 ## Las reglas
 
 - **Ningún secreto entra al repo.** Después de cada commit,
-  `git grep -nI "cfat_\|-----BEGIN"` tiene que volver vacío.
+  `git grep -nI "cfat_\|KGAT_[0-9a-f]\|-----BEGIN"` tiene que volver vacío.
 - **Los comentarios explican POR QUÉ, no qué.**
 - **Medí antes de afirmar.** "Anda" sin un número al lado no vale.
 - **Decir lo que no se sabe.**

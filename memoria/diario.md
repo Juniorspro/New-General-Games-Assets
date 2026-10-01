@@ -79,5 +79,5 @@
 ## 01/10/2026 (Kaggle) · rama `ccr-6f24de5d-v3vxtu`
 - Pidió los 6 HTML (Grumo, Morfi, Globo, Víbora, Cripta, la isla): se mandaron los archivos únicos, todos al día con sus fuentes.
 - Quiere darle acceso a Kaggle. No hay conector: va como `KAGGLE_API_TOKEN` en el entorno (→ `ARRANQUE.md § 3`).
-- Mandó una captura con el token entero a la vista: pasó por el chat, así que se le pidió revocarlo y hacer otro, y no se usó.
+- Mandó una captura con el token entero a la vista. Se le avisó que pasó por el chat y que convenía rotarlo; dijo "simplemente usá la key que te pasé": quedó en `~/.kaggle/access_token` (600, fuera del repo) y autentica (`kaggle kernels list --mine` lista su notebook).
 
