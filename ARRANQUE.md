@@ -75,6 +75,12 @@ git grep -nI "cfat_\|sk-\|-----BEGIN"    # que no devuelva nada
 
 Si un secreto pasó por el chat alguna vez, **hay que rotarlo**.
 
+**Kaggle (01/10/2026):** no hay conector. Se da con dos variables del entorno
+de la nube (menú del entorno en la barra de la sesión → Edit):
+`KAGGLE_USERNAME` y `KAGGLE_KEY` (las de `kaggle.json`, en kaggle.com →
+Settings → API → Create New Token). Las toma una sesión nueva. `kaggle.com`
+responde por el proxy (200); el CLI no viene instalado: `pip install kaggle`.
+
 ---
 
 ## 4. Rezona Lab (generar assets)
