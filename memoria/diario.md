@@ -75,3 +75,9 @@
 - Se quejó de que tardaba ("te pedí un juego simple"): se cortó en 20 escenas en vez de 30 y se entregó.
 - Medido: las 20 se pueden ganar (resolvedor); prueba de humo en Chromium 9/9 sin errores con servidor y con el archivo único de 258 KB sin red. Página: `claude.ai/artifact/JqKib3w9uS1tR6JSxJJYZe`.
 - Falta: jugarlo en un teléfono de verdad; el set de noche tiene fondo y música pero no escenas. Siguen sin respuesta: rehacer las intros de Víbora y la isla en su estilo, y borrar la página vieja repetida de Cripta.
+
+## 01/10/2026 (Kaggle) · rama `ccr-6f24de5d-v3vxtu`
+- Pidió los 6 HTML (Grumo, Morfi, Globo, Víbora, Cripta, la isla): se mandaron los archivos únicos, todos al día con sus fuentes.
+- Quiere darle acceso a Kaggle. No hay conector: va como `KAGGLE_API_TOKEN` en el entorno (→ `ARRANQUE.md § 3`).
+- Mandó una captura con el token entero a la vista: pasó por el chat, así que se le pidió revocarlo y hacer otro, y no se usó.
+
