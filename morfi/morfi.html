@@ -1,0 +1,3340 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#c99a5f">
+<meta name="description" content="Morfi, de JXSTUDIOS: cortá el hilo y que el caramelo caiga en la boca de Morfi, la caja de cartón con hambre.">
+<title>Morfi</title>
+<style>
+/* El juego se dibuja en el lienzo; los menús son HTML encima. De papel, como
+   el juego: botones que son etiquetas de papel de colores con una costura
+   de puntos, un poco torcidas y con sombra suave (pegadas arriba del
+   cartón), sin bordes negros ni brillos de vidrio. */
+:root {
+  --tinta: #3b2a1a;
+  --blanco: #ffffff;
+  --crema: #fbf8f1;
+  --kraft: #c99a5f; --kraft-osc: #9d7243;
+  --rojo: #e8423a; --rojo-osc: #b8322b;
+  --azul: #3f7fd1; --azul-osc: #2f62a6;
+  --verde: #58b368; --verde-osc: #3f8a4d;
+  --amarillo: #f5c542; --amarillo-osc: #c99a1c;
+  --rosa: #ff6f9a; --oro: #ffd84a;
+  --sombra: 0 3px 0 rgba(59, 42, 26, 0.35), 0 8px 14px rgba(59, 42, 26, 0.28);
+  color-scheme: light;
+}
+html, body { margin: 0; height: 100%; background: #c99a5f; overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; inset: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--tinta); }
+#juego { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+#sonda { position: absolute; top: env(safe-area-inset-top, 0px); left: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; }
+#ui { position: absolute; inset: 0; pointer-events: none; }
+.pantalla {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 1.6vh, 14px);
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); box-sizing: border-box;
+  pointer-events: auto; text-align: center;
+}
+/* en el menú, lo que no es botón deja pasar el dedo al lienzo (ahí se corta el caramelo del menú) */
+.pantalla.pasante { pointer-events: none; }
+.pantalla.pasante button, .pantalla.pasante .bolsa { pointer-events: auto; }
+.pantalla.oculto, .oculto { display: none !important; }
+.velo { background: rgba(59, 42, 26, 0.42); }
+h2 { margin: 0; font-size: clamp(24px, 4.4vh, 34px); font-weight: 900; color: var(--blanco); letter-spacing: 0.02em; text-shadow: 0 3px 0 var(--tinta); }
+h2.grande { font-size: clamp(30px, 6vh, 46px); }
+/* un título en una tira de papel con cinta */
+h2.tira {
+  color: var(--tinta); text-shadow: none; background: var(--crema); padding: 8px 26px 10px; transform: rotate(-1.5deg); box-shadow: var(--sombra); position: relative;
+}
+h2.tira::before { content: ""; position: absolute; top: -9px; left: 50%; width: 64px; height: 18px; margin-left: -32px; background: rgba(250, 240, 200, 0.8); transform: rotate(3deg); }
+
+.boton {
+  all: unset; cursor: pointer; box-sizing: border-box; border-radius: 10px; font-weight: 900; letter-spacing: 0.03em; text-align: center;
+  color: #fff; text-shadow: 0 2px 0 rgba(59, 42, 26, 0.45); position: relative;
+  outline: 2px dashed rgba(255, 255, 255, 0.55); outline-offset: -7px;
+  background-image: linear-gradient(170deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.06));
+  box-shadow: var(--sombra); transform: rotate(-1deg);
+  transition: transform 0.06s ease, box-shadow 0.06s ease; -webkit-tap-highlight-color: transparent; display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.boton:nth-child(even) { transform: rotate(1deg); }
+.boton:active { transform: translateY(3px) rotate(-1deg); box-shadow: 0 1px 0 rgba(59, 42, 26, 0.35), 0 3px 6px rgba(59, 42, 26, 0.25); }
+.boton:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.boton.principal { min-width: min(72vw, 290px); padding: 13px 28px 14px; font-size: clamp(22px, 3.8vh, 30px); background-color: var(--rojo); }
+.boton.principal small { font-size: 0.48em; font-weight: 800; opacity: 0.95; letter-spacing: 0.04em; margin-top: 2px; }
+.boton.chico { min-width: min(34vw, 138px); padding: 11px 14px; font-size: clamp(14px, 2.3vh, 18px); background-color: var(--kraft-osc); }
+.boton.azul { background-color: var(--azul); }
+.boton.verde { background-color: var(--verde); }
+.boton.amarillo { background-color: var(--amarillo); color: var(--tinta); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5); outline-color: rgba(59, 42, 26, 0.3); }
+.boton.kraft { background-color: var(--kraft-osc); }
+.boton.apagado { filter: grayscale(0.7) brightness(0.92); }
+.fila { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+.titulo-idioma { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 6px; }
+.titulo-idioma small { font-size: clamp(13px, 2vh, 16px); font-weight: 800; color: var(--blanco); opacity: 0.92; text-shadow: 0 2px 0 var(--tinta); letter-spacing: 0.01em; }
+
+/* el menú y la elección de idioma: el cartel y Morfi los dibuja el lienzo arriba; los botones van abajo */
+#menu, #idiomas { justify-content: flex-end; padding-bottom: max(40px, env(safe-area-inset-bottom)); }
+.botonera { display: flex; flex-direction: column; align-items: center; gap: clamp(9px, 1.5vh, 14px); }
+.bolsa {
+  position: absolute; top: max(12px, env(safe-area-inset-top)); right: 14px; display: flex; align-items: center; gap: 6px;
+  background: var(--crema); border-radius: 8px; padding: 5px 12px 5px 7px; font-weight: 900; font-size: 18px; box-shadow: var(--sombra); transform: rotate(2deg);
+}
+.bolsa.izq { right: auto; left: 14px; transform: rotate(-2deg); }
+.estrellita { color: var(--amarillo); font-size: 20px; line-height: 1; text-shadow: 0 1px 0 var(--amarillo-osc); }
+.moneda { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 50% 50%, #ffe98a 0 40%, #f5c542 42% 100%); box-shadow: inset 0 -3px 0 #c99a1c; display: inline-block; }
+.dato { margin: 0; font-weight: 900; color: var(--tinta); font-size: clamp(15px, 2.4vh, 19px); }
+.dato:empty { display: none; }
+.dato.oro { color: #b07a0a; }
+.dato.nuevo { color: var(--verde-osc); }
+.firma { position: absolute; bottom: max(12px, env(safe-area-inset-bottom)); margin: 0; font-size: 12px; letter-spacing: 0.2em; color: var(--crema); font-weight: 900; text-shadow: 0 2px 0 rgba(59, 42, 26, 0.5); }
+
+/* las tres cajas */
+.lista-cajas { display: flex; flex-direction: column; gap: 14px; width: min(88vw, 380px); }
+.caja {
+  all: unset; cursor: pointer; box-sizing: border-box; border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; text-align: left;
+  color: #fff; box-shadow: var(--sombra); outline: 2px dashed rgba(255, 255, 255, 0.55); outline-offset: -8px; position: relative;
+  background-image: linear-gradient(170deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.08));
+}
+.caja:nth-child(1) { transform: rotate(-1.2deg); } .caja:nth-child(2) { transform: rotate(1deg); } .caja:nth-child(3) { transform: rotate(-0.6deg); }
+.caja:active { transform: translateY(3px); }
+.caja-carton { background-color: #b7864f; }
+.caja-cuaderno { background-color: #5f96cf; }
+.caja-regalo { background-color: #d95f7a; }
+.caja.cerrada { filter: grayscale(0.55) brightness(0.85); cursor: default; }
+.nombre-caja { font-size: clamp(20px, 3.2vh, 26px); font-weight: 900; text-shadow: 0 2px 0 rgba(59, 42, 26, 0.45); }
+.dato-caja { font-size: 15px; font-weight: 800; opacity: 0.95; }
+
+/* los diez niveles de una caja: papelitos cuadrados */
+.grilla { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; width: min(92vw, 420px); padding: 6px; box-sizing: border-box; }
+.nivelB {
+  all: unset; cursor: pointer; aspect-ratio: 1; border-radius: 6px; background: var(--crema); box-shadow: var(--sombra); position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--tinta);
+}
+.nivelB:nth-child(odd) { transform: rotate(-2deg); } .nivelB:nth-child(even) { transform: rotate(1.5deg); }
+.nivelB::before { content: ""; position: absolute; top: -6px; left: 50%; width: 26px; height: 11px; margin-left: -13px; background: rgba(250, 240, 200, 0.85); transform: rotate(-4deg); }
+.nivelB .num { font-weight: 900; font-size: clamp(18px, 3vh, 24px); }
+.nivelB .est { font-size: 12px; letter-spacing: 1px; color: #d49a0c; min-height: 14px; }
+.nivelB.cerrado { background: #e8dcc4; color: #a08f78; cursor: default; }
+.nivelB:active { transform: translateY(2px); }
+.nivelB:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.grilla.caja-cuaderno .nivelB:not(.cerrado) { background: repeating-linear-gradient(#fbf8f1 0 14px, #d7e6f5 14px 15px); }
+.grilla.caja-regalo .nivelB:not(.cerrado) { background: #ffe3ec; }
+
+/* la tienda */
+#tienda { justify-content: space-between; padding-top: max(62px, env(safe-area-inset-top)); }
+.pestanas { display: flex; gap: 6px; background: var(--crema); border-radius: 10px; padding: 5px; box-shadow: var(--sombra); transform: rotate(-1deg); }
+.pestana { all: unset; cursor: pointer; padding: 8px 16px; border-radius: 7px; font-weight: 900; font-size: clamp(14px, 2.2vh, 17px); color: var(--tinta); }
+.pestana.elegida { background: var(--azul); color: #fff; text-shadow: 0 2px 0 rgba(59, 42, 26, 0.35); }
+.flechas { display: flex; align-items: center; justify-content: space-between; width: min(96vw, 520px); flex: 1; }
+.flechas .hueco { flex: 1; }
+.flecha {
+  all: unset; cursor: pointer; width: 56px; height: 56px; border-radius: 50%; font-size: 40px; line-height: 50px; text-align: center; font-weight: 900; color: #fff;
+  background: var(--azul); box-shadow: var(--sombra); box-sizing: border-box; outline: 2px dashed rgba(255, 255, 255, 0.5); outline-offset: -6px;
+}
+.flecha:active { transform: translateY(3px); }
+.nombre { margin: 0; font-size: clamp(22px, 3.6vh, 28px); font-weight: 900; color: var(--blanco); text-shadow: 0 3px 0 var(--tinta); }
+.aviso { margin: 0; min-height: 1.2em; font-weight: 800; color: var(--blanco); text-shadow: 0 2px 0 var(--tinta); }
+
+.lista { display: grid; gap: 8px; width: min(92vw, 440px); background: var(--crema); box-shadow: var(--sombra); padding: 14px; border-radius: 6px; box-sizing: border-box; transform: rotate(0.6deg); }
+.lista .item { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
+.lista .ops { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.opcion { all: unset; cursor: pointer; padding: 6px 11px; border-radius: 7px; font-weight: 900; font-size: 13px; color: var(--tinta); }
+.opcion.elegida { background: var(--azul); color: #fff; }
+.opcion.peligro { color: var(--rojo); }
+
+/* la tarjeta de la pausa y del final: papel blanco con cinta */
+.tarjeta {
+  display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.5vh, 13px); background: var(--crema); padding: 26px 22px 22px; border-radius: 4px;
+  box-shadow: 0 4px 0 rgba(59, 42, 26, 0.3), 0 16px 30px rgba(59, 42, 26, 0.35); transform: rotate(-1.2deg); position: relative; width: min(86vw, 360px); box-sizing: border-box;
+  animation: cae 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.tarjeta::before { content: ""; position: absolute; top: -12px; left: 50%; width: 90px; height: 24px; margin-left: -45px; background: rgba(250, 240, 200, 0.85); transform: rotate(-3deg); }
+.tarjeta h2 { color: var(--rojo); text-shadow: 0 3px 0 rgba(59, 42, 26, 0.25); }
+/* adentro de la tarjeta (que ya está torcida) los botones van derechos: torcidos dos veces se pisaban */
+.tarjeta .boton, .tarjeta .boton:nth-child(even) { transform: none; }
+.tarjeta .boton:active { transform: translateY(3px); }
+@keyframes cae { from { transform: translateY(-40px) rotate(-6deg); opacity: 0; } }
+.estrellas-gano { display: flex; gap: 6px; font-size: clamp(48px, 9vh, 64px); line-height: 1; }
+.estrellas-gano span { color: rgba(59, 42, 26, 0.16); display: inline-block; }
+.estrellas-gano span:nth-child(2) { transform: translateY(-10px); }
+.estrellas-gano span.llena { color: var(--amarillo); text-shadow: 0 3px 0 var(--amarillo-osc), 0 6px 10px rgba(59, 42, 26, 0.25); }
+.estrellas-gano span.pega { animation: pega 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.estrellas-gano span.pega:nth-child(1) { animation-delay: 0.35s; }
+.estrellas-gano span.pega:nth-child(2) { animation-delay: 0.65s; }
+.estrellas-gano span.pega:nth-child(3) { animation-delay: 0.95s; }
+@keyframes pega { from { transform: scale(2.4) rotate(-40deg); opacity: 0; } }
+.estrellas-gano span.pega:nth-child(2) { animation-name: pega2; }
+@keyframes pega2 { from { transform: translateY(-10px) scale(2.4) rotate(40deg); opacity: 0; } to { transform: translateY(-10px); } }
+
+/* pausa y reiniciar, arriba a la izquierda mientras se juega: botones redondos de papel */
+.redondo {
+  all: unset; position: absolute; top: max(10px, env(safe-area-inset-top)); width: 44px; height: 44px; border-radius: 50%; pointer-events: auto; cursor: pointer;
+  background: var(--crema); box-shadow: var(--sombra); display: flex; align-items: center; justify-content: center; box-sizing: border-box; color: var(--tinta);
+}
+.arriba-izq { left: 12px; }
+.arriba-izq2 { left: 64px; }
+.redondo .barras { display: flex; gap: 5px; }
+.redondo .barras span { width: 6px; height: 16px; background: var(--tinta); border-radius: 2px; }
+.redondo .vuelta { font-size: 26px; font-weight: 900; line-height: 1; }
+.redondo:active { transform: translateY(2px); }
+
+/* más ancha que alta (el teléfono acostado, la compu): los botones abajo a la
+   derecha; arriba de ellos cuelga el cartel y a la izquierda está Morfi (los
+   dibuja el lienzo). Es la misma cuenta que main.js › acostado (W > H × 1,2). */
+@media (min-aspect-ratio: 6/5) {
+  #menu, #idiomas { align-items: flex-end; justify-content: flex-end; padding-right: max(24px, env(safe-area-inset-right)); padding-bottom: max(26px, env(safe-area-inset-bottom)); }
+  .botonera { width: min(44vw, 520px); }
+  #idiomas .boton.principal { min-width: 0; width: 100%; }
+  .firma { right: max(24px, env(safe-area-inset-right)); width: min(44vw, 520px); }
+}
+/* acostado y bajo: todo más apretado */
+@media (orientation: landscape) and (max-height: 560px) {
+  .boton.principal { min-width: min(40vw, 280px); padding: 9px 20px; }
+  .grilla { grid-template-columns: repeat(10, 1fr); width: min(86vw, 720px); gap: 8px; }
+  .lista-cajas { flex-direction: row; width: min(94vw, 760px); }
+  .caja { flex: 1; }
+  #tienda { padding-top: max(12px, env(safe-area-inset-top)); gap: 6px; }
+  .flechas { width: min(70vw, 520px); }
+  .boton.chico { padding: 7px 12px; }
+  .tarjeta { padding: 16px 20px; gap: 6px; }
+  .estrellas-gano { font-size: 44px; }
+}
+@media (max-width: 360px) { .boton.chico { min-width: 40vw; padding: 10px 8px; } }
+@media (prefers-reduced-motion: reduce) { .boton, .tarjeta, .estrellas-gano span.pega { transition: none; animation: none; } }
+
+</style>
+</head>
+<body>
+<canvas id="juego" aria-label="Morfi"></canvas>
+<!-- la sonda mide la muesca del teléfono (main.js › medirTodo) -->
+<div id="sonda" aria-hidden="true"></div>
+<div id="ui">
+  <!-- la primera vez, después del logo: el idioma (el título va en los tres) -->
+  <section id="idiomas" class="pantalla pasante oculto">
+    <div id="idiomasBotones" class="botonera">
+      <h2 class="titulo-idioma">Elegí tu idioma<small lang="en">Choose your language</small><small lang="pt">Escolha seu idioma</small></h2>
+      <button id="bIdioma_es" class="boton principal" lang="es">Español</button>
+      <button id="bIdioma_en" class="boton principal azul" lang="en">English</button>
+      <button id="bIdioma_pt" class="boton principal verde" lang="pt">Português</button>
+    </div>
+  </section>
+
+  <section id="menu" class="pantalla pasante oculto">
+    <div class="bolsa"><span class="moneda" aria-hidden="true"></span><span id="tMonedas">0</span></div>
+    <div class="bolsa izq"><span class="estrellita" aria-hidden="true">★</span><span id="tEstrellasMenu">0</span></div>
+    <div id="botonera" class="botonera">
+      <button id="bJugar" class="boton principal"><span id="tJugar"></span><small id="tNivelJugar"></small></button>
+      <div class="fila">
+        <button id="bCajas" class="boton chico azul"></button>
+        <button id="bTienda" class="boton chico amarillo"></button>
+      </div>
+      <button id="bAjustes" class="boton chico kraft"></button>
+    </div>
+    <p id="tFirma" class="firma"></p>
+  </section>
+
+  <section id="cajas" class="pantalla oculto">
+    <div class="bolsa"><span class="moneda" aria-hidden="true"></span><span id="tMonedasCajas">0</span></div>
+    <h2 id="tCajas" class="tira"></h2>
+    <div id="listaCajas" class="lista-cajas"></div>
+    <button id="bVolverCajas" class="boton chico kraft"></button>
+  </section>
+
+  <section id="niveles" class="pantalla oculto">
+    <h2 id="tNiveles" class="tira"></h2>
+    <div id="grillaNiveles" class="grilla"></div>
+    <button id="bVolverNiveles" class="boton chico kraft"></button>
+  </section>
+
+  <section id="tienda" class="pantalla oculto">
+    <div class="bolsa"><span class="moneda" aria-hidden="true"></span><span id="tMonedasTienda">0</span></div>
+    <div class="pestanas" role="tablist">
+      <button id="bPestMorfis" class="pestana" role="tab"></button>
+      <button id="bPestDulces" class="pestana" role="tab"></button>
+    </div>
+    <div class="flechas">
+      <button id="bAnterior" class="flecha" aria-label="anterior">‹</button>
+      <div class="hueco"></div>
+      <button id="bSiguiente" class="flecha" aria-label="siguiente">›</button>
+    </div>
+    <p id="tNombre" class="nombre"></p>
+    <p id="tAviso" class="aviso"></p>
+    <button id="bComprar" class="boton principal"></button>
+    <button id="bVolverTienda" class="boton chico kraft"></button>
+  </section>
+
+  <section id="ajustes" class="pantalla oculto">
+    <h2 id="tAjustes" class="tira"></h2>
+    <div id="listaAjustes" class="lista"></div>
+    <button id="bCerrarAjustes" class="boton principal"></button>
+  </section>
+
+  <button id="bPausa" class="redondo arriba-izq oculto" aria-label="pausa"><span class="barras"><span></span><span></span></span></button>
+  <button id="bReiniciar" class="redondo arriba-izq2 oculto" aria-label="reiniciar"><span class="vuelta">↻</span></button>
+
+  <section id="pausa" class="pantalla velo oculto">
+    <div class="tarjeta">
+      <h2 id="tPausa"></h2>
+      <button id="bSeguir" class="boton principal"></button>
+      <button id="bOtraVezPausa" class="boton chico azul"></button>
+      <button id="bSalirPausa" class="boton chico kraft"></button>
+    </div>
+  </section>
+
+  <section id="gano" class="pantalla velo oculto">
+    <div class="tarjeta">
+      <h2 id="tGano" class="grande"></h2>
+      <div id="ganoEstrellas" class="estrellas-gano" aria-hidden="true"><span>★</span><span>★</span><span>★</span></div>
+      <p id="tGanoMonedas" class="dato oro"></p>
+      <p id="tGanoAviso" class="dato nuevo"></p>
+      <p id="tGanoFalta" class="dato"></p>
+      <button id="bSiguienteNivel" class="boton principal"></button>
+      <div class="fila">
+        <button id="bOtraVez" class="boton chico azul"></button>
+        <button id="bMenuGano" class="boton chico kraft"></button>
+      </div>
+    </div>
+  </section>
+</div>
+<script>
+/* ── cuerdas ── */
+const M_cuerdas = (() => {
+// La física de Morfi: hilos hechos de partículas (Verlet) y un caramelo que
+// cuelga de ellos.
+//
+// Cada partícula guarda dónde está y dónde estaba un paso antes: la
+// velocidad es la diferencia (así el hilo no se "explota" como con
+// velocidades explícitas). Un hilo es una fila de partículas unidas de a dos
+// por un largo fijo; en cada paso se corrigen esos largos varias vueltas. La
+// punta de un hilo es un alfiler (masa infinita: no se mueve, o lo mueve el
+// nivel) y la otra, el caramelo, que pesa más que un pedazo de hilo.
+//
+// El paso es fijo (1/120 s): con el mismo corte en el mismo paso, el
+// caramelo cae siempre igual, y las soluciones de los niveles se pueden
+// guardar y comprobar.
+const PASO = 1 / 120;
+const GRAVEDAD = 1150;
+const VUELTAS = 20;          // vueltas de corrección de largos por paso
+const TRAMO = 11;            // largo de cada pedacito de hilo
+const AIRE_HILO = 0.992;     // cuánto frena el aire (por paso)
+// un pedacito de hilo pesa 1/IM_HILO; el caramelo, 6 (partida.js): el hilo
+// es de algodón, liviano, y un globo levanta al caramelo con hilo y todo
+const IM_HILO = 12;
+
+class Mundo {
+  constructor(cap = 1024) {
+    this.cap = cap; this.n = 0;
+    this.x = new Float64Array(cap); this.y = new Float64Array(cap);
+    this.px = new Float64Array(cap); this.py = new Float64Array(cap);
+    this.im = new Float64Array(cap);          // 1 / masa (0: fijo)
+    this.ax = new Float64Array(cap); this.ay = new Float64Array(cap);   // aceleración de más (el globo)
+    this.aire = new Float64Array(cap);
+    this.activa = new Uint8Array(cap);
+    this.hilos = [];
+    this.siguienteId = 1;
+    this.g = GRAVEDAD;
+  }
+
+  particula(x, y, im = IM_HILO, aire = AIRE_HILO) {
+    if (this.n >= this.cap) this.crecer();
+    const i = this.n++;
+    this.x[i] = this.px[i] = x; this.y[i] = this.py[i] = y;
+    this.im[i] = im; this.ax[i] = 0; this.ay[i] = 0; this.aire[i] = aire; this.activa[i] = 1;
+    return i;
+  }
+  crecer() {
+    const cap = this.cap * 2;
+    for (const k of ['x', 'y', 'px', 'py', 'im', 'ax', 'ay', 'aire']) { const a = new Float64Array(cap); a.set(this[k]); this[k] = a; }
+    const a = new Uint8Array(cap); a.set(this.activa); this.activa = a;
+    this.cap = cap;
+  }
+
+  // Un hilo de `a` (el alfiler) a `b` (el caramelo), de largo `largo`. Si es
+  // más largo que la distancia, nace colgando en panza (una parábola que
+  // mide más o menos lo mismo que el hilo).
+  hilo(a, b, largo, datos = {}) {
+    const ax = this.x[a], ay = this.y[a], bx = this.x[b], by = this.y[b];
+    const D = Math.hypot(bx - ax, by - ay) || 1;
+    largo = Math.max(largo, 8);
+    const n = Math.max(2, Math.ceil(largo / TRAMO));
+    const panza = largo > D ? Math.sqrt((3 * D * (largo - D)) / 8) : 0;
+    // la panza hacia abajo (del lado de la gravedad)
+    let nx = -(by - ay) / D, ny = (bx - ax) / D;
+    if (ny < 0) { nx = -nx; ny = -ny; }
+    const p = [a];
+    for (let k = 1; k < n; k++) {
+      const t = k / n, s = 4 * t * (1 - t) * panza;
+      p.push(this.particula(ax + (bx - ax) * t + nx * s, ay + (by - ay) * t + ny * s));
+    }
+    p.push(b);
+    const h = { id: this.siguienteId++, p, d: largo / n, vivo: true, alfa: 1, suelto: false, cortado: false, ...datos };
+    this.hilos.push(h);
+    return h;
+  }
+
+  // Los hilos que todavía sostienen a la partícula `b` (el caramelo).
+  sostienen(b) { return this.hilos.filter((h) => h.vivo && !h.suelto && h.p[h.p.length - 1] === b); }
+  // Soltar todo lo que cuelga de `b`: los hilos se cortan del lado de `b` y
+  // los pedazos sueltos se borran ya (al pasar por un sobre, el caramelo
+  // aparece en otro lado y los pedazos lo tiraban para atrás).
+  soltarDe(b) {
+    for (const h of [...this.hilos]) {
+      if (!h.vivo || h.p[h.p.length - 1] !== b) continue;
+      if (h.suelto) { this.matar(h); continue; }
+      const c = this.cortarEn(h, h.p.length - 2);
+      if (c && c.caramelo.vivo) this.matar(c.caramelo);
+    }
+  }
+
+  paso(dt = PASO) {
+    const { x, y, px, py, im, ax, ay, aire, activa } = this, dt2 = dt * dt, g = this.g;
+    for (let i = 0; i < this.n; i++) {
+      if (!activa[i] || im[i] === 0) continue;
+      const vx = (x[i] - px[i]) * aire[i], vy = (y[i] - py[i]) * aire[i];
+      px[i] = x[i]; py[i] = y[i];
+      x[i] += vx + ax[i] * dt2; y[i] += vy + (g + ay[i]) * dt2;
+    }
+    for (let v = 0; v < VUELTAS; v++) {
+      for (const h of this.hilos) {
+        if (!h.vivo) continue;
+        const p = h.p, d = h.d, ult = p.length - 2;
+        for (let k = 0; k < p.length - 1; k++) {
+          // el pedazo que quedó colgando del caramelo cuelga de él como de un
+          // alfiler: el caramelo lo arrastra, pero el pedazo no tira del
+          // caramelo (si no, un corte lo volvía más pesado y cambiaba el vuelo)
+          const a = p[k], b = p[k + 1], ia = im[a], ib = h.suelto && k === ult ? 0 : im[b], w = ia + ib;
+          if (w === 0) continue;
+          const dx = x[b] - x[a], dy = y[b] - y[a], L = Math.sqrt(dx * dx + dy * dy) || 1e-9;
+          const f = (L - d) / (L * w);
+          x[a] += dx * f * ia; y[a] += dy * f * ia;
+          x[b] -= dx * f * ib; y[b] -= dy * f * ib;
+        }
+        // la correa: la punta no se aleja del alfiler más que el largo del
+        // hilo. Con el caramelo 70 veces más pesado que un pedacito, las
+        // vueltas solas dejaban que el hilo se estirara como un elástico.
+        if (h.suelto) continue;
+        const a = p[0], b = p[p.length - 1];
+        if (im[a] !== 0 || im[b] === 0) continue;
+        const dx = x[b] - x[a], dy = y[b] - y[a], L = Math.sqrt(dx * dx + dy * dy), tope = d * (p.length - 1);
+        if (L > tope) { const f = (L - tope) / L; x[b] -= dx * f; y[b] -= dy * f; }
+      }
+    }
+    // los pedazos que quedaron colgando del caramelo se borran de a poco
+    for (const h of this.hilos) if (h.vivo && h.suelto && (h.alfa -= dt * 1.2) <= 0) this.matar(h);
+  }
+
+  matar(h) {
+    h.vivo = false;
+    // sus partículas del medio dejan de simularse (las puntas son de otros)
+    for (let k = 1; k < h.p.length - 1; k++) this.activa[h.p[k]] = 0;
+    if (h.suelto) this.activa[h.p[0]] = 0;
+  }
+
+  // Cortar el hilo `h` en el tramo `k` (entre p[k] y p[k+1]): queda el pedazo
+  // del alfiler, colgando, y el del caramelo, que se borra en un segundo.
+  cortarEn(h, k) {
+    if (!h.vivo) return null;
+    k = Math.max(0, Math.min(h.p.length - 2, k));
+    h.vivo = false;
+    const a = { ...h, id: this.siguienteId++, p: h.p.slice(0, k + 1), vivo: h.p.slice(0, k + 1).length > 1, cortado: true, suelto: false, alfa: 1 };
+    const b = { ...h, id: this.siguienteId++, p: h.p.slice(k + 1), vivo: h.p.slice(k + 1).length > 1, cortado: true, suelto: true, alfa: 1 };
+    // el pedazo del caramelo: su primera partícula queda libre
+    if (b.p.length) { const q = b.p[0]; if (this.im[q] === 0) this.im[q] = IM_HILO; }
+    this.hilos.push(a, b);
+    return { original: h, pin: a, caramelo: b, x: (this.x[h.p[k]] + this.x[h.p[k + 1]]) / 2, y: (this.y[h.p[k]] + this.y[h.p[k + 1]]) / 2 };
+  }
+
+  // El dedo pasó de (x1, y1) a (x2, y2): corta todo hilo que cruce ese tramo.
+  cortar(x1, y1, x2, y2) {
+    const cortes = [];
+    for (const h of [...this.hilos]) {
+      if (!h.vivo || h.suelto) continue;
+      for (let k = 0; k < h.p.length - 1; k++) {
+        const a = h.p[k], b = h.p[k + 1];
+        if (cruzan(x1, y1, x2, y2, this.x[a], this.y[a], this.x[b], this.y[b])) {
+          const c = this.cortarEn(h, k);
+          if (c) cortes.push(c);
+          break;
+        }
+      }
+    }
+    return cortes;
+  }
+
+  // La velocidad de una partícula, por segundo.
+  vel(i, dt = PASO) { return [(this.x[i] - this.px[i]) / dt, (this.y[i] - this.py[i]) / dt]; }
+  ponerVel(i, vx, vy, dt = PASO) { this.px[i] = this.x[i] - vx * dt; this.py[i] = this.y[i] - vy * dt; }
+  // mover una partícula a otro lado sin cambiarle la velocidad
+  llevar(i, x, y) { const dx = x - this.x[i], dy = y - this.y[i]; this.x[i] += dx; this.y[i] += dy; this.px[i] += dx; this.py[i] += dy; }
+}
+
+// ¿Se cruzan los tramos AB y CD? Cada tramo cuenta con su punta del final y
+// sin la del principio: un tajo que termina justo arriba del hilo (con el
+// mouse y un hilo parado pasa seguido) corta, y el tajo siguiente, que
+// arranca ahí, no lo vuelve a contar. Con los dos extremos afuera, ese tajo
+// no cortaba nada.
+function cruzan(ax, ay, bx, by, cx, cy, dx, dy) {
+  const d1 = (dx - cx) * (ay - cy) - (dy - cy) * (ax - cx);
+  const d2 = (dx - cx) * (by - cy) - (dy - cy) * (bx - cx);
+  const d3 = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+  const d4 = (bx - ax) * (dy - ay) - (by - ay) * (dx - ax);
+  return ((d1 > 0 && d2 <= 0) || (d1 < 0 && d2 >= 0)) && ((d3 > 0 && d4 <= 0) || (d3 < 0 && d4 >= 0));
+}
+
+// La distancia de un punto a un tramo (y el punto más cercano).
+function aTramo(px, py, ax, ay, bx, by) {
+  const vx = bx - ax, vy = by - ay, l2 = vx * vx + vy * vy || 1e-9;
+  let t = ((px - ax) * vx + (py - ay) * vy) / l2;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const cx = ax + vx * t, cy = ay + vy * t;
+  return [Math.hypot(px - cx, py - cy), cx, cy, t];
+}
+return { PASO, GRAVEDAD, IM_HILO, Mundo, cruzan, aTramo };
+})();
+
+/* ── util ── */
+const M_util = (() => {
+// Lo chico: azar con semilla, límites, curvas y el paso del cuadro.
+
+// mulberry32: el azar de los niveles va con semilla, así el nivel 7 es
+// siempre el mismo nivel 7 (y una prueba se puede repetir igual).
+function azar(semilla) {
+  let a = semilla >>> 0;
+  const r = () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  r.entre = (a, b) => a + (b - a) * r();
+  r.entero = (a, b) => Math.floor(a + (b - a + 1) * r());
+  r.uno = (lista) => lista[Math.floor(r() * lista.length)];
+  return r;
+}
+const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
+const lerp = (a, b, t) => a + (b - a) * t;
+const tramo = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+const salida = (t) => 1 - (1 - t) ** 3;
+const suave = (t) => t * t * (3 - 2 * t);
+const salidaAtras = (t) => 1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2;
+// un rebote elástico que se pasa y vuelve (para lo que "salta" a la vista)
+const elastico = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : 2 ** (-10 * t) * Math.sin((t * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1);
+const acercar = (x, obj, vel, dt) => x + (obj - x) * (1 - Math.exp(-vel * dt));
+
+// El tiempo real de un cuadro partido en pasos de a lo sumo `max`: [cuántos,
+// de cuánto]. Con pasos fijos y una pantalla de 90 o 120 Hz, algunos cuadros
+// quedan sin moverse y se ve a tirones (pasó en Víbora).
+function trozos(dtReal, max) {
+  const n = Math.max(1, Math.ceil(dtReal / max - 1e-9));
+  return [n, dtReal / n];
+}
+
+// Un color más claro o más oscuro (f entre -1 y 1), para las sombras planas.
+function tono(hex, f) {
+  const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255];
+  const m = c.map((v) => Math.round(f >= 0 ? v + (255 - v) * f : v * (1 + f)));
+  return '#' + m.map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+return { azar, clamp, lerp, tramo, salida, suave, salidaAtras, elastico, acercar, trozos, tono };
+})();
+
+/* ── papel ── */
+const M_papel = (() => {
+// El kit de papel: lo que hace que todo parezca recortado de cartón y
+// papel. Texturas (el grano del papel, el cartón corrugado, la hoja de
+// cuaderno, el papel de regalo), recortes con su sombra suave (como si
+// estuvieran pegados un poco por encima del fondo), cinta de papel, bordes
+// rotos y garabatos de lápiz.
+//
+// Lo caro (texturas, sombras borrosas) se arma una vez y se guarda: por
+// cuadro solo hay `drawImage`. El azar de las texturas va con semilla, así
+// el cartón es siempre el mismo.
+const { azar, tono } = M_util;
+const P = {
+  kraft: '#c99a5f', kraftOsc: '#9d7243', kraftClaro: '#e3bf88', kraftBorde: '#7a5530',
+  tinta: '#3b2a1a', lapiz: '#6b5e52', blanco: '#fbf8f1', crema: '#f3ead6',
+  azulHoja: '#8fb9e0', rojoMargen: '#e39292', rojo: '#e04a3a', amarillo: '#f5c542', verde: '#58b368', azul: '#3f7fd1', rosa: '#f08fb0',
+  sombra: 'rgba(40,25,10,0.28)',
+};
+
+const cache = new Map();
+function lienzo(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; }
+
+// El grano: puntitos claros y oscuros apenas visibles, en un patrón que se repite.
+function grano() {
+  if (cache.has('grano')) return cache.get('grano');
+  const c = lienzo(160, 160), g = c.getContext('2d'), r = azar(11), img = g.createImageData(160, 160);
+  for (let i = 0; i < 160 * 160; i++) {
+    const v = r(), k = i * 4;
+    if (v < 0.5) { img.data[k] = img.data[k + 1] = img.data[k + 2] = 0; img.data[k + 3] = Math.round(r() * 22); }
+    else { img.data[k] = 255; img.data[k + 1] = 250; img.data[k + 2] = 235; img.data[k + 3] = Math.round(r() * 18); }
+  }
+  g.putImageData(img, 0, 0);
+  // algunas fibras largas
+  g.strokeStyle = 'rgba(80,50,20,0.06)'; g.lineWidth = 1;
+  for (let k = 0; k < 40; k++) { const x = r() * 160, y = r() * 160, a = r() * Math.PI; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 8, y + Math.sin(a) * 8); g.stroke(); }
+  cache.set('grano', c);
+  return c;
+}
+let patronGrano = null;
+function pintarGrano(g, W, H, alfa = 1) {
+  if (!patronGrano) patronGrano = g.createPattern(grano(), 'repeat');
+  g.globalAlpha = alfa; g.fillStyle = patronGrano; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
+}
+
+// ── los fondos, uno por caja ────────────────────────────────────────────────
+// El adentro de una caja de cartón: kraft con las canaletas del corrugado
+// que se ven apenas, las esquinas dobladas, cinta y sellos.
+function fondoCarton(w, h, esc) {
+  const c = lienzo(w, h), g = c.getContext('2d'), r = azar(3);
+  g.fillStyle = P.kraft; g.fillRect(0, 0, w, h);
+  // manchas suaves de color (el cartón nunca es parejo)
+  for (let k = 0; k < 18; k++) {
+    const x = r() * w, y = r() * h, rr = (60 + r() * 160) * esc, gr = g.createRadialGradient(x, y, 0, x, y, rr);
+    gr.addColorStop(0, r() < 0.5 ? 'rgba(255,230,190,0.14)' : 'rgba(110,70,30,0.12)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  }
+  // las canaletas: franjas verticales finitas
+  for (let x = 0; x < w; x += 7 * esc) { g.fillStyle = 'rgba(90,55,20,0.07)'; g.fillRect(x, 0, 2.2 * esc, h); g.fillStyle = 'rgba(255,235,200,0.06)'; g.fillRect(x + 3.2 * esc, 0, 1.4 * esc, h); }
+  // los pliegues de las esquinas de la caja (el fondo y las paredes)
+  const m = Math.min(w, h) * 0.07;
+  g.fillStyle = 'rgba(80,50,20,0.16)';
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(m, m); g.lineTo(m, h - m); g.lineTo(0, h); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(w, 0); g.lineTo(w - m, m); g.lineTo(w - m, h - m); g.lineTo(w, h); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(255,235,200,0.10)';
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(w, 0); g.lineTo(w - m, m); g.lineTo(m, m); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(60,35,10,0.18)';
+  g.beginPath(); g.moveTo(0, h); g.lineTo(w, h); g.lineTo(w - m, h - m); g.lineTo(m, h - m); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(60,35,10,0.25)'; g.lineWidth = 1.5 * esc;
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(m, m); g.lineTo(w - m, m); g.lineTo(w, 0); g.moveTo(m, m); g.lineTo(m, h - m); g.lineTo(0, h); g.moveTo(w - m, m); g.lineTo(w - m, h - m); g.lineTo(w, h); g.moveTo(m, h - m); g.lineTo(w - m, h - m); g.stroke();
+  // sellos de tinta y flechas de "este lado arriba"
+  sello(g, w * 0.78, h * 0.18, 'FRÁGIL', 22 * esc, -0.18, 'rgba(190,40,30,0.32)');
+  flechas(g, w * 0.16, h * 0.82, 26 * esc, 'rgba(60,35,10,0.28)');
+  sello(g, w * 0.3, h * 0.55, '↑ ↑', 20 * esc, 0.08, 'rgba(60,35,10,0.18)');
+  // un pedazo de cinta de embalar en una pared
+  cinta(g, w * 0.5, m * 0.5, w * 0.35, 18 * esc, 0.02, 'rgba(214,178,120,0.75)');
+  return c;
+}
+// Una hoja de cuaderno sobre la mesa: renglones celestes, margen rojo, los
+// agujeros del anillado y garabatos.
+function fondoCuaderno(w, h, esc) {
+  const c = lienzo(w, h), g = c.getContext('2d'), r = azar(8);
+  g.fillStyle = '#8a6a48'; g.fillRect(0, 0, w, h);                     // la mesa de madera, abajo de la hoja
+  for (let y = 0; y < h; y += 26 * esc) { g.fillStyle = r() < 0.5 ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.04)'; g.fillRect(0, y, w, 13 * esc); }
+  const m = Math.min(w, h) * 0.04, hx = m, hy = m * 0.6, hw = w - 2 * m, hh = h - m * 1.2;
+  g.save(); g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 14 * esc; g.shadowOffsetY = 4 * esc;
+  g.fillStyle = '#fdfbf4'; g.fillRect(hx, hy, hw, hh); g.restore();
+  g.strokeStyle = P.azulHoja; g.lineWidth = 1.2 * esc;
+  for (let y = hy + 60 * esc; y < hy + hh; y += 24 * esc) { g.beginPath(); g.moveTo(hx, y); g.lineTo(hx + hw, y); g.stroke(); }
+  g.strokeStyle = P.rojoMargen; g.lineWidth = 1.6 * esc; g.beginPath(); g.moveTo(hx + 44 * esc, hy); g.lineTo(hx + 44 * esc, hy + hh); g.stroke();
+  g.fillStyle = '#8a6a48';
+  for (let y = hy + 40 * esc; y < hy + hh - 20 * esc; y += 70 * esc) { g.beginPath(); g.arc(hx + 18 * esc, y, 7 * esc, 0, Math.PI * 2); g.fill(); }
+  // garabatos de lápiz
+  g.strokeStyle = 'rgba(80,70,60,0.35)'; g.lineWidth = 1.6 * esc; g.lineCap = 'round';
+  garabatoEspiral(g, hx + hw * 0.82, hy + hh * 0.12, 16 * esc);
+  garabatoCorazon(g, hx + hw * 0.2, hy + hh * 0.9, 12 * esc);
+  garabatoEstrella(g, hx + hw * 0.86, hy + hh * 0.72, 12 * esc);
+  // una nota adhesiva amarilla, torcida
+  g.save(); g.translate(hx + hw * 0.18, hy + hh * 0.2); g.rotate(-0.12);
+  g.shadowColor = 'rgba(0,0,0,0.2)'; g.shadowBlur = 6 * esc; g.shadowOffsetY = 3 * esc;
+  g.fillStyle = '#fbe57a'; g.fillRect(-26 * esc, -26 * esc, 52 * esc, 52 * esc); g.restore();
+  return c;
+}
+// Papel de regalo: lunares y corazoncitos, con los dobleces del envoltorio.
+// Sin estrellas en el dibujo (se confundían con las del nivel) y sin la
+// cinta que lo cruzaba (parecía una pared).
+function fondoRegalo(w, h, esc) {
+  const c = lienzo(w, h), g = c.getContext('2d'), r = azar(21);
+  g.fillStyle = '#d95f7a'; g.fillRect(0, 0, w, h);
+  const paso = 34 * esc;
+  for (let y = 0, f = 0; y < h + paso; y += paso, f++) for (let x = (f % 2) * paso / 2; x < w + paso; x += paso) {
+    if ((f + Math.round(x / paso)) % 3 === 0) { g.fillStyle = 'rgba(255,240,245,0.3)'; corazon(g, x, y, 5 * esc); }
+    else { g.fillStyle = 'rgba(255,255,255,0.3)'; g.beginPath(); g.arc(x, y, 3.2 * esc, 0, Math.PI * 2); g.fill(); }
+  }
+  // los dobleces: bandas diagonales más claras y más oscuras
+  for (let k = -2; k < 5; k++) {
+    const x0 = k * w * 0.32 + r() * 40;
+    const gr = g.createLinearGradient(x0, 0, x0 + w * 0.2, h * 0.2);
+    gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, r() < 0.5 ? 'rgba(255,255,255,0.12)' : 'rgba(80,0,30,0.12)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  }
+  return c;
+}
+function corazon(g, x, y, r) {
+  g.beginPath(); g.moveTo(x, y + r * 0.9);
+  g.bezierCurveTo(x - r * 1.4, y - r * 0.1, x - r * 0.7, y - r * 1.2, x, y - r * 0.45);
+  g.bezierCurveTo(x + r * 0.7, y - r * 1.2, x + r * 1.4, y - r * 0.1, x, y + r * 0.9);
+  g.fill();
+}
+const FONDOS = { carton: fondoCarton, cuaderno: fondoCuaderno, regalo: fondoRegalo };
+function fondo(id, w, h, esc) {
+  const k = `fondo:${id}:${w}x${h}`;
+  if (cache.has(k)) return cache.get(k);
+  for (const kk of [...cache.keys()]) if (kk.startsWith(`fondo:${id}:`)) cache.delete(kk);
+  const c = (FONDOS[id] || fondoCarton)(w, h, esc);
+  // el grano de papel, horneado encima
+  const g = c.getContext('2d'); g.fillStyle = g.createPattern(grano(), 'repeat'); g.fillRect(0, 0, w, h);
+  cache.set(k, c);
+  return c;
+}
+
+// ── recortes: un dibujo con su sombra suave, hecho una vez ──────────────────
+// `dibujar(g)` dibuja centrado en (0, 0) dentro de un cuadro de w × h.
+// Devuelve { img, sombra, w, h } en píxeles; se pinta con `pegar`.
+function recorte(clave, w, h, dibujar, { sombra = 0.3, borroso = 3 } = {}) {
+  if (cache.has(clave)) return cache.get(clave);
+  const m = Math.ceil(borroso * 3 + 4), c = lienzo(w + 2 * m, h + 2 * m), g = c.getContext('2d');
+  g.translate(c.width / 2, c.height / 2); dibujar(g);
+  // la sombra: la misma figura en marrón oscuro, borrosa. Con shadowBlur y
+  // la figura corrida afuera del lienzo (así queda solo la sombra): el
+  // `filter` de canvas no está en todos los teléfonos.
+  const s = lienzo(c.width, c.height), gs = s.getContext('2d');
+  gs.shadowColor = `rgba(45,28,10,${sombra})`; gs.shadowBlur = borroso * 2; gs.shadowOffsetX = 4000;
+  gs.drawImage(c, -4000, 0);
+  const r = { img: c, sombra: s, w: c.width, h: c.height };
+  cache.set(clave, r);
+  return r;
+}
+// Pegar un recorte en (x, y), girado `ang`, con la sombra corrida hacia abajo
+// a la derecha (la luz viene de arriba a la izquierda, siempre la misma).
+function pegar(g, r, x, y, { ang = 0, esc = 1, alto = 3, alfa = 1, sx = 1, sy = 1 } = {}) {
+  g.globalAlpha = alfa;
+  if (alto > 0) {
+    g.save(); g.translate(x + alto * 0.6, y + alto); g.rotate(ang); g.scale(esc * sx, esc * sy);
+    g.drawImage(r.sombra, -r.w / 2, -r.h / 2); g.restore();
+  }
+  g.save(); g.translate(x, y); g.rotate(ang); g.scale(esc * sx, esc * sy);
+  g.drawImage(r.img, -r.w / 2, -r.h / 2); g.restore();
+  g.globalAlpha = 1;
+}
+
+// ── detalles ──────────────────────────────────────────────────────────────
+// Cinta de papel: medio transparente, con las puntas cortadas en zigzag.
+function cinta(g, x, y, w, h, ang = 0, color = 'rgba(245,230,190,0.72)') {
+  g.save(); g.translate(x, y); g.rotate(ang);
+  g.fillStyle = color;
+  g.beginPath();
+  const dz = h / 4;
+  g.moveTo(-w / 2, -h / 2);
+  g.lineTo(w / 2, -h / 2);
+  for (let k = 0; k <= 4; k++) g.lineTo(w / 2 + (k % 2 ? -dz * 0.6 : 0), -h / 2 + (k * h) / 4);
+  g.lineTo(-w / 2, h / 2);
+  for (let k = 4; k >= 0; k--) g.lineTo(-w / 2 + (k % 2 ? dz * 0.6 : 0), -h / 2 + (k * h) / 4);
+  g.closePath(); g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(-w / 2 + 2, -h / 2 + 2, w - 4, h * 0.25);
+  g.restore();
+}
+// Un rectángulo de papel con el borde roto (etiquetas, carteles).
+function papelRoto(g, x, y, w, h, color, semilla = 1, { dientes = 10, hondo = 3 } = {}) {
+  const r = azar(semilla);
+  g.beginPath();
+  g.moveTo(x, y + r() * hondo);
+  for (let k = 1; k <= dientes; k++) g.lineTo(x + (w * k) / dientes, y + r() * hondo);
+  for (let k = 1; k <= 4; k++) g.lineTo(x + w - r() * hondo, y + (h * k) / 4);
+  for (let k = dientes - 1; k >= 0; k--) g.lineTo(x + (w * k) / dientes, y + h - r() * hondo);
+  for (let k = 3; k >= 1; k--) g.lineTo(x + r() * hondo, y + (h * k) / 4);
+  g.closePath();
+  g.fillStyle = color; g.fill();
+}
+function sello(g, x, y, texto, px, ang, color) {
+  g.save(); g.translate(x, y); g.rotate(ang);
+  g.font = `900 ${Math.round(px)}px "Arial Black", system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const w = g.measureText(texto).width + px * 0.8;
+  g.strokeStyle = color; g.lineWidth = px * 0.12; g.strokeRect(-w / 2, -px * 0.75, w, px * 1.5);
+  g.fillStyle = color; g.fillText(texto, 0, px * 0.05);
+  g.restore();
+}
+function flechas(g, x, y, s, color) {
+  g.fillStyle = color;
+  for (const dx of [-s * 0.45, s * 0.45]) {
+    g.beginPath(); g.moveTo(x + dx, y - s); g.lineTo(x + dx + s * 0.3, y - s * 0.55); g.lineTo(x + dx + s * 0.1, y - s * 0.55);
+    g.lineTo(x + dx + s * 0.1, y); g.lineTo(x + dx - s * 0.1, y); g.lineTo(x + dx - s * 0.1, y - s * 0.55); g.lineTo(x + dx - s * 0.3, y - s * 0.55); g.closePath(); g.fill();
+  }
+  g.fillRect(x - s * 0.8, y + s * 0.15, s * 1.6, s * 0.12);
+}
+function garabatoEspiral(g, x, y, r) { g.beginPath(); for (let a = 0; a < Math.PI * 6; a += 0.2) { const rr = (a / (Math.PI * 6)) * r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.stroke(); }
+function garabatoCorazon(g, x, y, s) { g.beginPath(); g.moveTo(x, y + s * 0.6); g.bezierCurveTo(x - s * 1.4, y - s * 0.2, x - s * 0.4, y - s * 1.1, x, y - s * 0.3); g.bezierCurveTo(x + s * 0.4, y - s * 1.1, x + s * 1.4, y - s * 0.2, x, y + s * 0.6); g.stroke(); }
+function garabatoEstrella(g, x, y, s) { g.beginPath(); for (let k = 0; k <= 5; k++) { const a = -Math.PI / 2 + (k * 4 * Math.PI) / 5; g.lineTo(x + Math.cos(a) * s, y + Math.sin(a) * s); } g.stroke(); }
+function estrellaDe(g, x, y, r, puntas = 5, adentro = 0.45) {
+  g.beginPath();
+  for (let i = 0; i < puntas * 2; i++) { const a = -Math.PI / 2 + (i * Math.PI) / puntas, rr = i % 2 ? r * adentro : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+  g.closePath(); g.fill();
+}
+function redondo(g, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  g.beginPath();
+  g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
+  g.lineTo(x + w, y + h - r); g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  g.lineTo(x + r, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r);
+  g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.closePath();
+}
+return { P, lienzo, grano, pintarGrano, fondo, recorte, pegar, cinta, papelRoto, sello, estrellaDe, redondo, tono };
+})();
+
+/* ── partida ── */
+const M_partida = (() => {
+// Un nivel en juego: el caramelo colgado de sus hilos, las estrellas, Morfi
+// esperando con la boca abierta y lo que hay en el medio:
+//   clips      alfileres con un radio: si el caramelo entra, le sale un hilo
+//   globos     globos de papel: el caramelo que entra sube; un toque lo revienta
+//   abanicos   un toque y soplan hacia donde miran
+//   chinches   una fila de chinches: el caramelo que las toca se rompe
+//   sobres     de a dos: el caramelo que entra en uno sale por el otro
+//   elasticos  una gomita entre dos alfileres: rebota
+//   pines que se mueven (el alfiler de un hilo va y viene)
+// Todo en unidades del tablero: 320 de ancho por 480 de alto, y abajo es +y.
+const { Mundo, PASO, aTramo } = M_cuerdas;
+const ANCHO = 320;
+const ALTO = 480;
+const R_CARAMELO = 15;
+const R_ESTRELLA = 13, R_BOCA = 30, R_GLOBO = 24, R_SOBRE = 17;
+const BOCA_Y = -70;                 // la boca de Morfi (el hueco de arriba de la caja), desde sus pies: morfi.js › BOCA_MORFI
+const ABRE = 135;                   // a esta distancia Morfi abre la boca
+const SOPLO = { alcance: 240, cono: 0.62, fuerza: 780 };
+const SUBE_GLOBO = 1.32;            // el globo tira para arriba 1,32 veces la gravedad (sube a 0,32 g)
+// en el globo, el soplido rinde menos: el aire lo frena pero nada lo tira
+// para abajo, y con el soplido entero cruzaba el tablero (medido: 420 px)
+const VELA_GLOBO = 0.6;
+
+class Partida {
+  constructor(def) {
+    this.def = def;
+    const m = (this.mundo = new Mundo());
+    this.t = 0; this.pasos = 0;
+    this.estado = 'juego';            // juego → comido | roto | perdido
+    this.tFin = 0;
+    this.eventos = [];
+    this.estrellas = def.estrellas.map(([x, y], i) => ({ x, y, i, tomada: false, t: i * 0.7 }));
+    this.tomadas = 0;
+    this.morfi = { x: def.morfi[0], y: def.morfi[1] };
+    const [cx, cy] = def.caramelo;
+    this.c = m.particula(cx, cy, 1 / 6, 0.9985);
+    this.enGlobo = null;
+    this.giro = 0;                    // el caramelo gira: colgado, sigue al hilo; suelto, rueda
+    // los hilos del principio, cada uno con su alfiler
+    this.pines = [];
+    (def.hilos || []).forEach((h, i) => {
+      // el alfiler que se mueve arranca en la punta `a` de su riel (si no, al primer paso pega un tirón)
+      const [px, py] = h.mueve ? h.mueve.a : h.pin;
+      const pin = { x: px, y: py, mueve: h.mueve || null, ref: i };
+      pin.p = m.particula(pin.x, pin.y, 0);
+      this.pines.push(pin);
+      const largo = h.largo ?? Math.hypot(cx - pin.x, cy - pin.y);
+      m.hilo(pin.p, this.c, largo, { ref: i });
+    });
+    this.clips = (def.clips || []).map(([x, y, r], i) => ({ x, y, r, i, usado: false, t: 0 }));
+    this.globos = (def.globos || []).map(([x, y], i) => ({ x, y, i, usado: false, t: i }));
+    this.abanicos = (def.abanicos || []).map(([x, y, ang], i) => ({ x, y, ang, i, soplo: 0 }));
+    this.chinches = (def.chinches || []).map(([ax, ay, bx, by], i) => ({ ax, ay, bx, by, i }));
+    this.sobres = (def.sobres || []).map(([a, b], i) => ({ a: { x: a[0], y: a[1], ang: a[2] }, b: { x: b[0], y: b[1], ang: b[2] }, i, espera: 0 }));
+    this.elasticos = (def.elasticos || []).map(([ax, ay, bx, by], i) => ({ ax, ay, bx, by, i, vibra: 0 }));
+    this.acumulado = 0;
+  }
+
+  get x() { return this.mundo.x[this.c]; }
+  get y() { return this.mundo.y[this.c]; }
+  boca() { return [this.morfi.x, this.morfi.y + BOCA_Y]; }
+  // 0 (lejos) a 1 (en la boca): cuánto abre Morfi
+  apetito() { const [bx, by] = this.boca(); return this.estado !== 'juego' ? 0 : Math.max(0, Math.min(1, 1 - (Math.hypot(this.x - bx, this.y - by) - R_BOCA) / ABRE)); }
+
+  // ── lo que hace quien juega ──
+  cortar(x1, y1, x2, y2) {
+    if (this.estado !== 'juego') return 0;
+    const cortes = this.mundo.cortar(x1, y1, x2, y2);
+    for (const c of cortes) this.eventos.push({ tipo: 'corte', x: c.x, y: c.y });
+    return cortes.length;
+  }
+  // un toque: revienta el globo (si toca cerca del caramelo) o hace soplar un abanico
+  tocar(x, y) {
+    if (this.estado !== 'juego') return false;
+    if (this.enGlobo && Math.hypot(x - this.x, y - this.y) < R_GLOBO + 22) { this.reventar(); return true; }
+    for (const a of this.abanicos) if (Math.hypot(x - a.x, y - a.y) < 34) { this.soplar(a); return true; }
+    return false;
+  }
+  reventar() {
+    const m = this.mundo;
+    this.eventos.push({ tipo: 'pop', x: this.x, y: this.y });
+    this.enGlobo = null; m.ay[this.c] = 0; m.aire[this.c] = 0.9985;
+  }
+  soplar(a) {
+    a.soplo = 0.35;
+    this.eventos.push({ tipo: 'soplo', x: a.x, y: a.y, ang: a.ang });
+    const dx = this.x - a.x, dy = this.y - a.y, d = Math.hypot(dx, dy);
+    if (d > SOPLO.alcance || d < 1) return;
+    const ux = Math.cos(a.ang), uy = Math.sin(a.ang), cos = (dx * ux + dy * uy) / d;
+    if (cos < Math.cos(SOPLO.cono)) return;
+    const f = SOPLO.fuerza * Math.sqrt(1 - d / SOPLO.alcance) * (0.6 + 0.4 * cos) * (this.enGlobo ? VELA_GLOBO : 1);
+    const [vx, vy] = this.mundo.vel(this.c);
+    this.mundo.ponerVel(this.c, vx + ux * f, vy + uy * f);
+  }
+
+  // Las acciones de una solución guardada: ['c', i] corta el hilo i del
+  // nivel por el medio; ['g'] revienta el globo; ['a', i] hace soplar el abanico i.
+  accion(a) {
+    if (a[0] === 'c') {
+      const h = this.mundo.hilos.find((h) => h.vivo && !h.suelto && h.ref === a[1] && h.p[h.p.length - 1] === this.c);
+      if (h) { const c = this.mundo.cortarEn(h, Math.floor((h.p.length - 1) / 2)); if (c) this.eventos.push({ tipo: 'corte', x: c.x, y: c.y }); }
+    } else if (a[0] === 'g') { if (this.enGlobo) this.reventar(); }
+    else if (a[0] === 'a') this.soplar(this.abanicos[a[1]]);
+  }
+
+  // ── el tiempo ──
+  // avanza el tiempo real en pasos fijos; devuelve cuánto del paso que viene
+  // ya pasó (para dibujar entre un paso y el otro)
+  avanzar(dtReal) {
+    this.acumulado += Math.min(dtReal, 0.1);
+    while (this.acumulado >= PASO) { this.paso(); this.acumulado -= PASO; }
+    return this.acumulado / PASO;
+  }
+
+  paso() {
+    const m = this.mundo, dt = PASO;
+    this.t += dt; this.pasos++;
+    // los alfileres que se mueven van y vienen, suave
+    for (const pin of this.pines) {
+      if (!pin.mueve) continue;
+      const { a, b, periodo } = pin.mueve, k = 0.5 - 0.5 * Math.cos((2 * Math.PI * this.t) / periodo);
+      pin.x = a[0] + (b[0] - a[0]) * k; pin.y = a[1] + (b[1] - a[1]) * k;
+      m.px[pin.p] = m.x[pin.p]; m.py[pin.p] = m.y[pin.p];
+      m.x[pin.p] = pin.x; m.y[pin.p] = pin.y;
+    }
+    if (this.estado === 'juego') m.paso(dt);
+    else if (this.estado !== 'roto') m.paso(dt);
+    for (const e of this.estrellas) e.t += dt;
+    for (const a of this.abanicos) a.soplo = Math.max(0, a.soplo - dt);
+    for (const e of this.elasticos) e.vibra = Math.max(0, e.vibra - dt);
+    for (const s of this.sobres) s.espera = Math.max(0, s.espera - dt);
+    if (this.estado !== 'juego') { this.tFin += dt; return; }
+    const x = this.x, y = this.y;
+    // el giro del caramelo: colgado, el envoltorio queda de través al hilo
+    const sost = m.sostienen(this.c);
+    if (sost.length) {
+      const h = sost[0], q = h.p[h.p.length - 2], obj = Math.atan2(m.y[q] - y, m.x[q] - x) + Math.PI / 2;
+      let d = obj - this.giro; d = Math.atan2(Math.sin(d), Math.cos(d));
+      this.giro += d * Math.min(1, dt * 10);
+    } else this.giro += (m.vel(this.c)[0] / R_CARAMELO) * dt * 0.4;
+    // las estrellas
+    for (const e of this.estrellas) {
+      if (e.tomada || Math.hypot(x - e.x, y - e.y) > R_CARAMELO + R_ESTRELLA) continue;
+      e.tomada = true; this.tomadas++;
+      this.eventos.push({ tipo: 'estrella', n: this.tomadas, x: e.x, y: e.y, i: e.i });
+    }
+    // los clips: al entrar en su radio, sale un hilo tenso
+    for (const cl of this.clips) {
+      if (cl.usado || Math.hypot(x - cl.x, y - cl.y) > cl.r) continue;
+      cl.usado = true;
+      cl.p = m.particula(cl.x, cl.y, 0);
+      m.hilo(cl.p, this.c, Math.max(24, Math.hypot(x - cl.x, y - cl.y)), { ref: 100 + cl.i, clip: cl.i });
+      this.eventos.push({ tipo: 'clip', x: cl.x, y: cl.y });
+    }
+    // los globos
+    for (const gl of this.globos) {
+      if (gl.usado || this.enGlobo || Math.hypot(x - gl.x, y - gl.y) > R_GLOBO + 4) continue;
+      gl.usado = true; this.enGlobo = gl;
+      m.ay[this.c] = -m.g * SUBE_GLOBO; m.aire[this.c] = 0.975;
+      // entra frenando: el globo lo ataja
+      const [vx, vy] = m.vel(this.c); m.ponerVel(this.c, vx * 0.35, vy * 0.35);
+      this.eventos.push({ tipo: 'globo', x: gl.x, y: gl.y });
+    }
+    // los sobres: entra por uno, sale por el otro para donde mira
+    for (const s of this.sobres) {
+      if (s.espera > 0) continue;
+      for (const [de, a] of [[s.a, s.b], [s.b, s.a]]) {
+        if (Math.hypot(x - de.x, y - de.y) > R_SOBRE) continue;
+        const [vx, vy] = m.vel(this.c), v = Math.max(160, Math.hypot(vx, vy));
+        // los hilos se cortan del lado del caramelo (el alfiler queda con su pedazo)
+        m.soltarDe(this.c);
+        m.llevar(this.c, a.x + Math.cos(a.ang) * (R_SOBRE + R_CARAMELO + 2), a.y + Math.sin(a.ang) * (R_SOBRE + R_CARAMELO + 2));
+        m.ponerVel(this.c, Math.cos(a.ang) * v, Math.sin(a.ang) * v);
+        s.espera = 0.4;
+        this.eventos.push({ tipo: 'sobre', x: de.x, y: de.y, x2: a.x, y2: a.y });
+        break;
+      }
+    }
+    // las gomitas: rebotan con un poco más de lo que llega
+    for (const e of this.elasticos) {
+      const [d, qx, qy] = aTramo(this.x, this.y, e.ax, e.ay, e.bx, e.by);
+      if (d > R_CARAMELO + 3) continue;
+      let nx = this.x - qx, ny = this.y - qy; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+      const [vx, vy] = m.vel(this.c), vn = vx * nx + vy * ny;
+      if (vn >= 0) continue;
+      const k = 1 + 1.15;
+      m.llevar(this.c, qx + nx * (R_CARAMELO + 3.5), qy + ny * (R_CARAMELO + 3.5));
+      m.ponerVel(this.c, vx - k * vn * nx, vy - k * vn * ny);
+      e.vibra = 0.5;
+      this.eventos.push({ tipo: 'boing', x: qx, y: qy, fuerza: -vn });
+    }
+    // ¿llegó a la boca? La caja abre arriba: lo que viene subiendo (en un
+    // globo, desde abajo) choca con el fondo y no entra; lo que cae o llega
+    // de costado, sí. (Probado: con "más arriba que el medio de la boca" en
+    // vez de la velocidad, el globo que subía por adentro de Morfi se comía.)
+    const [bx, by] = this.boca();
+    if (Math.hypot(this.x - bx, this.y - by) < R_BOCA && m.vel(this.c)[1] > -30) { this.terminar('comido'); return; }
+    // las chinches lo rompen
+    for (const ch of this.chinches) {
+      if (aTramo(this.x, this.y, ch.ax, ch.ay, ch.bx, ch.by)[0] < R_CARAMELO + 3) { this.terminar('roto'); return; }
+    }
+    // se fue del tablero
+    if (this.y > ALTO + 70 || this.x < -70 || this.x > ANCHO + 70 || this.y < -110) this.terminar('perdido');
+  }
+
+  terminar(como) {
+    this.estado = como; this.tFin = 0;
+    const m = this.mundo;
+    if (como === 'comido' || como === 'roto') {
+      // el caramelo deja de existir: sus hilos se sueltan
+      m.soltarDe(this.c);
+      m.activa[this.c] = 0;
+    }
+    if (this.enGlobo && como !== 'perdido') this.enGlobo = null;
+    this.eventos.push({ tipo: como, x: this.x, y: this.y });
+  }
+
+  sacarEventos() { const e = this.eventos; this.eventos = []; return e; }
+}
+
+// Jugar una solución guardada sin dibujar: [[segundos, acción...], ...].
+// Devuelve cómo terminó, cuántas estrellas y en cuánto tiempo.
+function jugarSolucion(def, sol = def.sol, tope = 14) {
+  const p = new Partida(def);
+  const acciones = [...(sol || [])].sort((a, b) => a[0] - b[0]);
+  let k = 0;
+  while (p.estado === 'juego' && p.t < tope) {
+    while (k < acciones.length && acciones[k][0] <= p.t + 1e-9) p.accion(acciones[k++].slice(1));
+    p.paso();
+  }
+  return { estado: p.estado, estrellas: p.tomadas, t: p.t, p };
+}
+return { ANCHO, ALTO, R_CARAMELO, Partida, jugarSolucion };
+})();
+
+/* ── dibujo ── */
+const M_dibujo = (() => {
+// El dibujo de un nivel: el fondo de la caja, lo que hay en el tablero
+// (alfileres, estrellas de origami, globos de papel, abanicos, chinches,
+// sobres, gomitas), los hilos de algodón, el caramelo y Morfi.
+//
+// Todo lo que no se mueve por dentro se arma una vez como recorte con su
+// sombra (papel.js › recorte) y se pega girado; los hilos se trazan cada
+// cuadro entre la posición de antes y la de ahora (`alfa`), así se ven
+// suaves a 60, 90 o 120 Hz aunque la física vaya a pasos fijos.
+const { fondo, recorte, pegar, estrellaDe, redondo, pintarGrano, tono, P } = M_papel;
+const { ANCHO, ALTO, R_CARAMELO } = M_partida;
+const { azar, clamp, lerp } = M_util;
+// ── los sprites (en unidades del tablero × la escala de pantalla) ──────────
+function spr(clave, esc, w, h, dib, op) { return recorte(`${clave}@${esc.toFixed(2)}`, w * esc, h * esc, (g) => { g.scale(esc, esc); dib(g); }, op); }
+
+const CARAMELOS = {
+  rojo: { a: '#e8423a', b: '#fbf3ea', papel: '#f06a5f' },
+  frutilla: { a: '#ff6f9a', b: '#ffe3ec', papel: '#ff93b3' },
+  menta: { a: '#2fbf8a', b: '#e9fff5', papel: '#62d8ad' },
+  uva: { a: '#8a55d6', b: '#f1e8ff', papel: '#a67ce6' },
+  dulce: { a: '#b8742e', b: '#f7e3c4', papel: '#d8a060' },
+  limon: { a: '#f0c419', b: '#fffbe0', papel: '#f7d85a' },
+  arcoiris: { a: '#e8423a', b: '#3f7fd1', papel: '#f5c542', arco: true },
+};
+
+function caramelo(esc, piel) {
+  const c = CARAMELOS[piel] || CARAMELOS.rojo;
+  return spr('caramelo:' + piel, esc, 64, 36, (g) => {
+    const r = R_CARAMELO;
+    // el papel del envoltorio, retorcido a los costados (como un moño)
+    for (const lado of [-1, 1]) {
+      g.save(); g.scale(lado, 1);
+      g.fillStyle = c.papel;
+      g.beginPath(); g.moveTo(r * 0.7, -3); g.lineTo(r + 13, -10); g.lineTo(r + 15, -3); g.lineTo(r + 13, 2); g.lineTo(r + 15, 8); g.lineTo(r + 12, 10); g.lineTo(r * 0.7, 3); g.closePath(); g.fill();
+      g.strokeStyle = tono(c.papel, -0.25); g.lineWidth = 0.8;
+      for (const k of [-6, -1, 4]) { g.beginPath(); g.moveTo(r + 2, k * 0.4); g.lineTo(r + 12, k); g.stroke(); }
+      g.fillStyle = tono(c.papel, -0.2); g.fillRect(r * 0.62, -3.5, 4, 7);
+      g.restore();
+    }
+    // el caramelo: una espiral de dos colores con brillo
+    g.save(); g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.clip();
+    g.fillStyle = c.b; g.fillRect(-r, -r, 2 * r, 2 * r);
+    const cols = c.arco ? ['#e8423a', '#f5a623', '#f5c542', '#58b368', '#3f7fd1', '#8a55d6'] : [c.a];
+    for (let k = 0; k < 6; k++) {
+      g.fillStyle = cols[k % cols.length];
+      g.beginPath(); g.moveTo(0, 0);
+      for (let t = 0; t <= 1.001; t += 0.1) { const a = (k / 6) * Math.PI * 2 + t * 1.5, rr = t * r * 1.05; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+      for (let t = 1; t >= 0; t -= 0.1) { const a = (k / 6) * Math.PI * 2 + 0.55 + t * 1.5, rr = t * r * 1.05; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+      g.closePath(); g.fill();
+    }
+    g.restore();
+    g.strokeStyle = tono(c.a, -0.35); g.lineWidth = 1.2; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.75)'; g.beginPath(); g.ellipse(-r * 0.38, -r * 0.42, r * 0.34, r * 0.2, -0.6, 0, Math.PI * 2); g.fill();
+  }, { sombra: 0.32, borroso: 2.5 });
+}
+
+// Una estrella de origami: cada punta en dos mitades, una clara y una
+// oscura, como el papel doblado por la mitad.
+function estrella(esc) {
+  return spr('estrella', esc, 34, 34, (g) => {
+    const R = 14, r = 6.2;
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5, a1 = a - Math.PI / 5, a2 = a + Math.PI / 5;
+      const p = [Math.cos(a) * R, Math.sin(a) * R], q1 = [Math.cos(a1) * r, Math.sin(a1) * r], q2 = [Math.cos(a2) * r, Math.sin(a2) * r];
+      g.fillStyle = '#ffd84a'; g.beginPath(); g.moveTo(0, 0); g.lineTo(...q1); g.lineTo(...p); g.closePath(); g.fill();
+      g.fillStyle = '#f0b21c'; g.beginPath(); g.moveTo(0, 0); g.lineTo(...p); g.lineTo(...q2); g.closePath(); g.fill();
+    }
+    g.strokeStyle = '#c98a10'; g.lineWidth = 0.9; g.lineJoin = 'round';
+    g.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r : R; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    g.closePath(); g.stroke();
+  }, { sombra: 0.3, borroso: 2 });
+}
+// El contorno vacío de la estrella (en el HUD, las que faltan)
+function estrellaVacia(g, x, y, r) {
+  g.fillStyle = 'rgba(60,40,20,0.22)'; estrellaDe(g, x + 1, y + 1.5, r);
+  g.fillStyle = 'rgba(255,248,230,0.55)'; estrellaDe(g, x, y, r);
+}
+
+// Un alfiler de cabeza de plástico, visto de arriba.
+function alfiler(esc, color = '#e04a3a') {
+  return spr('alfiler:' + color, esc, 22, 22, (g) => {
+    g.fillStyle = tono(color, -0.3); g.beginPath(); g.arc(0.6, 0.8, 7, 0, Math.PI * 2); g.fill();
+    g.fillStyle = color; g.beginPath(); g.arc(0, 0, 6.4, 0, Math.PI * 2); g.fill();
+    g.fillStyle = tono(color, 0.35); g.beginPath(); g.arc(-1.6, -1.8, 3, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.arc(-2.2, -2.4, 1.2, 0, Math.PI * 2); g.fill();
+  }, { sombra: 0.4, borroso: 1.6 });
+}
+// El globo de papel (el que se infla soplando por el agujerito): seis caras
+// con los pliegues marcados.
+function globo(esc) {
+  return spr('globo', esc, 60, 60, (g) => {
+    const R = 24;
+    const cols = ['#9ad0f5', '#7dbbea', '#b8def8', '#6aaee0'];
+    for (let k = 0; k < 8; k++) {
+      const a0 = (k / 8) * Math.PI * 2 + Math.PI / 8, a1 = ((k + 1) / 8) * Math.PI * 2 + Math.PI / 8;
+      g.fillStyle = cols[k % cols.length];
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a0) * R, Math.sin(a0) * R); g.lineTo(Math.cos(a1) * R, Math.sin(a1) * R); g.closePath(); g.fill();
+    }
+    g.globalAlpha = 0.85; g.strokeStyle = '#4f8fc2'; g.lineWidth = 0.9;
+    g.beginPath(); for (let k = 0; k <= 8; k++) { const a = (k / 8) * Math.PI * 2 + Math.PI / 8; g.lineTo(Math.cos(a) * R, Math.sin(a) * R); } g.stroke();
+    g.beginPath(); g.moveTo(-R * 0.9, 0); g.lineTo(R * 0.9, 0); g.moveTo(0, -R * 0.9); g.lineTo(0, R * 0.9); g.stroke();
+    g.globalAlpha = 1;
+    g.fillStyle = '#4f8fc2'; g.beginPath(); g.arc(0, 0, 2.2, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.ellipse(-R * 0.4, -R * 0.45, R * 0.26, R * 0.12, -0.7, 0, Math.PI * 2); g.fill();
+  }, { sombra: 0.25, borroso: 3 });
+}
+// El abanico de papel plegado, mirando a la derecha (se gira al dibujarlo).
+function abanico(esc) {
+  return spr('abanico', esc, 56, 56, (g) => {
+    const R = 22, n = 9;
+    g.fillStyle = '#8a5a2b'; redondo(g, -22, -3, 16, 6, 2); g.fill();
+    for (let k = 0; k < n; k++) {
+      const a0 = -1 + (k / n) * 2, a1 = -1 + ((k + 1) / n) * 2;
+      g.fillStyle = k % 2 ? '#f5c542' : '#f7d875';
+      g.beginPath(); g.moveTo(-10, 0); g.lineTo(-10 + Math.cos(a0) * R * 1.4, Math.sin(a0) * R); g.lineTo(-10 + Math.cos(a1) * R * 1.4, Math.sin(a1) * R); g.closePath(); g.fill();
+    }
+    g.strokeStyle = '#c98a10'; g.lineWidth = 0.8;
+    for (let k = 0; k <= n; k++) { const a = -1 + (k / n) * 2; g.beginPath(); g.moveTo(-10, 0); g.lineTo(-10 + Math.cos(a) * R * 1.4, Math.sin(a) * R); g.stroke(); }
+    g.fillStyle = '#e04a3a'; g.beginPath(); g.arc(-10, 0, 3.2, 0, Math.PI * 2); g.fill();
+  }, { sombra: 0.3, borroso: 2 });
+}
+// Una chinche vista de costado: la cabeza redonda y la punta de metal.
+function chinche(esc) {
+  return spr('chinche', esc, 18, 24, (g) => {
+    g.fillStyle = '#b9bec7'; g.beginPath(); g.moveTo(-1.6, 1); g.lineTo(0, 10); g.lineTo(1.6, 1); g.closePath(); g.fill();
+    g.fillStyle = '#e8ecf1'; g.fillRect(-0.5, 1, 0.8, 7);
+    g.fillStyle = '#4a4f59'; redondo(g, -7, -4, 14, 5, 2); g.fill();
+    g.fillStyle = '#e04a3a'; g.beginPath(); g.ellipse(0, -5, 6, 4.2, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.ellipse(-2, -6.5, 2.2, 1.2, 0, 0, Math.PI * 2); g.fill();
+  }, { sombra: 0.35, borroso: 1.5 });
+}
+// El sobre (con su estampilla del color de la pareja), con la boca hacia +x.
+function sobre(esc, color) {
+  return spr('sobre:' + color, esc, 44, 36, (g) => {
+    g.fillStyle = '#f7f1e3'; redondo(g, -16, -12, 32, 24, 2.5); g.fill();
+    g.strokeStyle = '#cfc3a8'; g.lineWidth = 1; redondo(g, -16, -12, 32, 24, 2.5); g.stroke();
+    // la solapa abierta hacia la derecha y el hueco oscuro
+    g.fillStyle = '#3b2a1a'; g.beginPath(); g.moveTo(16, -10); g.lineTo(4, 0); g.lineTo(16, 10); g.closePath(); g.fill();
+    g.strokeStyle = '#d9ccb0'; g.beginPath(); g.moveTo(-16, -12); g.lineTo(2, 1); g.moveTo(-16, 12); g.lineTo(2, -1); g.stroke();
+    g.fillStyle = color; g.fillRect(-13, -9, 9, 8);
+    g.strokeStyle = 'rgba(255,255,255,0.8)'; g.setLineDash([1.5, 1.2]); g.strokeRect(-12.3, -8.3, 7.6, 6.6); g.setLineDash([]);
+  }, { sombra: 0.3, borroso: 2 });
+}
+// El estante de cartón donde se sienta Morfi
+function estante(esc) {
+  return spr('estante', esc, 96, 22, (g) => {
+    g.fillStyle = P.kraftOsc; redondo(g, -44, -2, 88, 12, 3); g.fill();
+    g.fillStyle = P.kraftClaro; redondo(g, -44, -6, 88, 8, 3); g.fill();
+    g.strokeStyle = P.kraftBorde; g.lineWidth = 1; redondo(g, -44, -6, 88, 16, 3); g.stroke();
+    g.fillStyle = 'rgba(90,55,20,0.18)'; for (let x = -40; x < 44; x += 5) g.fillRect(x, 3, 1.5, 6);
+  }, { sombra: 0.35, borroso: 3 });
+}
+
+// ── la cámara del tablero ───────────────────────────────────────────────────
+function camaraTablero(W, H, { margenArriba = 0 } = {}) {
+  const esc = Math.min(W / ANCHO, (H - margenArriba) / ALTO) * 0.98;
+  return { esc, ox: (W - ANCHO * esc) / 2, oy: margenArriba + (H - margenArriba - ALTO * esc) / 2 };
+}
+const aP = (cam, x, y) => [cam.ox + x * cam.esc, cam.oy + y * cam.esc];
+
+// ── los hilos ──────────────────────────────────────────────────────────────
+// Algodón retorcido: una sombra, el hilo claro y el retorcido en rayitas.
+function hilo(g, m, h, cam, alfa) {
+  const n = h.p.length;
+  if (n < 2) return;
+  const pts = new Float64Array(n * 2);
+  for (let k = 0; k < n; k++) {
+    const i = h.p[k], x = m.px[i] + (m.x[i] - m.px[i]) * alfa, y = m.py[i] + (m.y[i] - m.py[i]) * alfa;
+    pts[k * 2] = cam.ox + x * cam.esc; pts[k * 2 + 1] = cam.oy + y * cam.esc;
+  }
+  const traza = () => { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let k = 1; k < n; k++) g.lineTo(pts[k * 2], pts[k * 2 + 1]); };
+  const e = cam.esc;
+  g.globalAlpha = h.alfa;
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  g.save(); g.translate(1.6 * e, 2.4 * e); traza(); g.strokeStyle = 'rgba(40,24,8,0.22)'; g.lineWidth = 3.4 * e; g.stroke(); g.restore();
+  traza(); g.strokeStyle = '#e2c48f'; g.lineWidth = 3.2 * e; g.stroke();
+  g.setLineDash([2.4 * e, 2.6 * e]); g.strokeStyle = '#b68e55'; g.lineWidth = 3.2 * e; g.stroke(); g.setLineDash([]);
+  g.strokeStyle = 'rgba(255,245,220,0.7)'; g.lineWidth = 0.9 * e; g.stroke();
+  g.globalAlpha = 1;
+}
+
+// ── el tablero entero ──────────────────────────────────────────────────────
+// `sinFondo`: para el caramelo del menú, que va sobre el fondo del menú
+function dibujarNivel(g, W, H, p, cam, { t, alfa = 1, morfi, pielCaramelo = 'rojo', efectos, mundo = 'carton', dpr = 1, sinFondo = false }) {
+  const e = cam.esc, m = p.mundo;
+  if (!sinFondo) g.drawImage(fondo(mundo, W, H, dpr), 0, 0);
+  // las gomitas (atrás de todo)
+  for (const el of p.elasticos) {
+    const [ax, ay] = aP(cam, el.ax, el.ay), [bx, by] = aP(cam, el.bx, el.by), mx = (ax + bx) / 2, my = (ay + by) / 2;
+    const l = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / l, ny = (bx - ax) / l, v = Math.sin(el.vibra * 40) * el.vibra * 10 * e;
+    g.strokeStyle = 'rgba(40,24,8,0.2)'; g.lineWidth = 5 * e; g.beginPath(); g.moveTo(ax + 2 * e, ay + 3 * e); g.quadraticCurveTo(mx + nx * v + 2 * e, my + ny * v + 3 * e, bx + 2 * e, by + 3 * e); g.stroke();
+    g.strokeStyle = '#e8836b'; g.lineWidth = 4.5 * e; g.beginPath(); g.moveTo(ax, ay); g.quadraticCurveTo(mx + nx * v, my + ny * v, bx, by); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1.2 * e; g.stroke();
+    for (const [x, y] of [[ax, ay], [bx, by]]) pegar(g, alfiler(e, '#6a7383'), x, y, { alto: 2 * e });
+  }
+  // las chinches, en fila, con la punta para afuera
+  for (const ch of p.chinches) {
+    const l = Math.hypot(ch.bx - ch.ax, ch.by - ch.ay), n = Math.max(1, Math.round(l / 13)), ang = Math.atan2(ch.by - ch.ay, ch.bx - ch.ax) + Math.PI / 2;
+    const sp = chinche(e);
+    for (let k = 0; k <= n; k++) {
+      const [x, y] = aP(cam, ch.ax + ((ch.bx - ch.ax) * k) / n, ch.ay + ((ch.by - ch.ay) * k) / n);
+      pegar(g, sp, x, y, { ang: ang + (k % 2 ? 0.08 : -0.08) + Math.PI, alto: 2 * e });
+    }
+  }
+  // los sobres
+  const colSobres = ['#58b368', '#3f7fd1', '#e0566c', '#8a55d6'];
+  p.sobres.forEach((s, i) => {
+    for (const q of [s.a, s.b]) { const [x, y] = aP(cam, q.x, q.y); pegar(g, sobre(e, colSobres[i % 4]), x, y, { ang: q.ang, alto: 3 * e, esc: 1 + (s.espera > 0 ? Math.sin(s.espera * 20) * 0.06 : 0) }); }
+  });
+  // los clips (alfiler con su radio de lápiz) y los alfileres de los hilos
+  for (const cl of p.clips) {
+    const [x, y] = aP(cam, cl.x, cl.y);
+    if (!cl.usado) {
+      g.strokeStyle = 'rgba(70,55,40,0.5)'; g.lineWidth = 1.4 * e; g.setLineDash([5 * e, 4 * e]); g.lineDashOffset = -t * 12 * e;
+      g.beginPath(); g.arc(x, y, cl.r * e, 0, Math.PI * 2); g.stroke(); g.setLineDash([]); g.lineDashOffset = 0;
+    }
+    pegar(g, alfiler(e, '#3f7fd1'), x, y, { alto: 2.5 * e });
+  }
+  // los hilos
+  for (const h of m.hilos) if (h.vivo) hilo(g, m, h, cam, alfa);
+  for (const pin of p.pines) { const [x, y] = aP(cam, pin.x, pin.y); pegar(g, alfiler(e, pin.mueve ? '#8a55d6' : '#e04a3a'), x, y, { alto: 2.5 * e }); }
+  // los rieles de los alfileres que se mueven
+  for (const pin of p.pines) if (pin.mueve) {
+    const [ax, ay] = aP(cam, ...pin.mueve.a), [bx, by] = aP(cam, ...pin.mueve.b);
+    g.strokeStyle = 'rgba(70,55,40,0.35)'; g.lineWidth = 3 * e; g.setLineDash([2 * e, 5 * e]); g.lineCap = 'round';
+    g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); g.setLineDash([]);
+  }
+  // los globos de papel que esperan, flotando
+  for (const gl of p.globos) if (!gl.usado) { const [x, y] = aP(cam, gl.x, gl.y + Math.sin(t * 2 + gl.t) * 2.5); pegar(g, globo(e), x, y, { alto: 5 * e, ang: Math.sin(t * 1.3 + gl.t) * 0.06 }); }
+  // los abanicos
+  for (const a of p.abanicos) {
+    const [x, y] = aP(cam, a.x, a.y), aleteo = a.soplo > 0 ? Math.sin(a.soplo * 50) * 0.18 : 0;
+    pegar(g, abanico(e), x, y, { ang: a.ang + aleteo, alto: 3 * e, sy: 1 - (a.soplo > 0 ? Math.abs(Math.sin(a.soplo * 50)) * 0.15 : 0) });
+  }
+  // las estrellas que faltan: flotan y se hamacan
+  for (const s of p.estrellas) if (!s.tomada) {
+    const [x, y] = aP(cam, s.x, s.y + Math.sin(t * 2.2 + s.t) * 2.2);
+    pegar(g, estrella(e), x, y, { ang: Math.sin(t * 1.4 + s.t) * 0.18, alto: 4 * e, esc: 1 + Math.sin(t * 3 + s.t) * 0.04 });
+  }
+  // el estante y Morfi
+  const [mx, my] = aP(cam, p.morfi.x, p.morfi.y);
+  pegar(g, estante(e), mx, my + 6 * e, { alto: 4 * e });
+  morfi.dibujar(g, mx, my, e);
+  // el caramelo (y su globo, si está en uno)
+  if (p.estado === 'juego' || p.estado === 'perdido' || (p.estado === 'comido' && p.tFin < 0.05)) {
+    const c = p.c, x = m.px[c] + (m.x[c] - m.px[c]) * alfa, y = m.py[c] + (m.y[c] - m.py[c]) * alfa;
+    const [sx, sy] = aP(cam, x, y);
+    pegar(g, caramelo(e, pielCaramelo), sx, sy, { ang: p.giro || 0, alto: 4 * e });
+    if (p.enGlobo) {
+      const b = Math.sin(t * 5) * 0.03;
+      g.globalAlpha = 0.72; pegar(g, globo(e), sx, sy - 2 * e, { alto: 0, esc: 1.25 + b, ang: Math.sin(t * 2) * 0.08 }); g.globalAlpha = 1;
+    }
+  }
+  efectos?.dibujar(g, cam, e);
+  if (!sinFondo) pintarGrano(g, W, H, 0.6);
+}
+
+// ── las partículas de papel ─────────────────────────────────────────────────
+class Efectos {
+  constructor() { this.q = []; this.r = azar(99); }
+  // pedacitos de papel que saltan (al cortar, al romperse, al comer)
+  papelitos(x, y, n, colores, { vel = 160, arriba = 60, vida = 0.9, tam = 3 } = {}) {
+    const r = this.r;
+    for (let k = 0; k < n; k++) {
+      const a = r() * Math.PI * 2, v = vel * (0.4 + r() * 0.8);
+      this.q.push({ tipo: 'papel', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - arriba, t: 0, vida: vida * (0.6 + r() * 0.6), a: r() * 6, giro: (r() - 0.5) * 18, tam: tam * (0.6 + r() * 0.8), color: colores[k % colores.length] });
+    }
+  }
+  brillos(x, y, n = 8, color = '#ffd84a') {
+    for (let k = 0; k < n; k++) { const a = (k / n) * Math.PI * 2; this.q.push({ tipo: 'brillo', x, y, vx: Math.cos(a) * 110, vy: Math.sin(a) * 110, t: 0, vida: 0.45, tam: 4, color }); }
+  }
+  aire(x, y, ang) {
+    const r = this.r;
+    for (let k = 0; k < 7; k++) {
+      const a = ang + (r() - 0.5) * 0.7, v = 260 + r() * 160;
+      this.q.push({ tipo: 'aire', x: x + Math.cos(ang) * 14, y: y + Math.sin(ang) * 14, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, vida: 0.4 + r() * 0.2, a: a, tam: 8 + r() * 6 });
+    }
+  }
+  pasar(dt) {
+    for (const q of this.q) {
+      q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt;
+      if (q.tipo === 'papel') { q.vx *= 1 - dt * 1.5; q.vy += 420 * dt; q.a += q.giro * dt; }
+      else { q.vx *= 1 - dt * 4; q.vy *= 1 - dt * 4; }
+    }
+    this.q = this.q.filter((q) => q.t < q.vida);
+  }
+  dibujar(g, cam, e) {
+    for (const q of this.q) {
+      const [x, y] = aP(cam, q.x, q.y), k = 1 - q.t / q.vida;
+      if (q.tipo === 'papel') {
+        g.globalAlpha = Math.min(1, k * 2.5);
+        g.save(); g.translate(x, y); g.rotate(q.a); g.scale(1, Math.abs(Math.cos(q.a * 1.7)) * 0.8 + 0.2);
+        g.fillStyle = q.color; g.fillRect(-q.tam * e, -q.tam * 0.6 * e, q.tam * 2 * e, q.tam * 1.2 * e);
+        g.restore();
+      } else if (q.tipo === 'brillo') {
+        g.globalAlpha = k; g.fillStyle = q.color; estrellaDe(g, x, y, q.tam * e * (0.5 + k * 0.6), 4, 0.35);
+      } else {
+        g.globalAlpha = k * 0.7; g.strokeStyle = '#fdf6e6'; g.lineWidth = 2.2 * e; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x, y); g.lineTo(x - Math.cos(q.a) * q.tam * e, y - Math.sin(q.a) * q.tam * e); g.stroke();
+      }
+    }
+    g.globalAlpha = 1;
+  }
+}
+return { CARAMELOS, estrellaVacia, camaraTablero, dibujarNivel, Efectos, aP, caramelo, estrella, alfiler, globo, abanico, sobre, estante };
+})();
+
+/* ── entrada ── */
+const M_entrada = (() => {
+// El dedo corta: cada dedo apoyado deja un tramo (de dónde estaba a dónde
+// está) y main.js corta los hilos que ese tramo cruce. Andan varios dedos a
+// la vez (con dos se cortan dos hilos juntos). Apoyar el dedo también es un
+// toque: revienta el globo o hace soplar el abanico que esté abajo.
+//  - Mouse: arrastrar con el botón apretado.
+// Todo en píxeles de CSS; main.js lo pasa al tablero.
+const VIDA_RASTRO = 0.22;      // cuánto dura el rastro blanco del dedo, en segundos
+
+function crearEntrada(lienzo) {
+  const e = { activo: false, dedos: new Map(), cortes: [], toques: [], rastros: new Map(), usos: 0 };
+  const ahora = () => performance.now() / 1000;
+
+  lienzo.addEventListener('pointerdown', (ev) => {
+    if (!e.activo) return;
+    ev.preventDefault();
+    lienzo.setPointerCapture?.(ev.pointerId);
+    e.usos++;
+    e.dedos.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    e.toques.push([ev.clientX, ev.clientY]);
+    e.rastros.set(ev.pointerId, [{ x: ev.clientX, y: ev.clientY, t: ahora() }]);
+  }, { passive: false });
+  lienzo.addEventListener('pointermove', (ev) => {
+    const d = e.dedos.get(ev.pointerId);
+    if (!e.activo || !d) return;
+    // los movimientos juntados por el navegador entre cuadro y cuadro: un
+    // tajo rápido no se come un hilo por pasar entre dos cuadros
+    const lista = ev.getCoalescedEvents?.() || [];
+    const rastro = e.rastros.get(ev.pointerId) || [];
+    for (const p of lista.length ? lista : [ev]) {
+      if (p.clientX === d.x && p.clientY === d.y) continue;
+      e.cortes.push([d.x, d.y, p.clientX, p.clientY]);
+      d.x = p.clientX; d.y = p.clientY;
+      rastro.push({ x: d.x, y: d.y, t: ahora() });
+    }
+    e.rastros.set(ev.pointerId, rastro);
+  });
+  const soltar = (ev) => { e.dedos.delete(ev.pointerId); };
+  lienzo.addEventListener('pointerup', soltar);
+  lienzo.addEventListener('pointercancel', soltar);
+  lienzo.addEventListener('lostpointercapture', soltar);
+  lienzo.addEventListener('contextmenu', (ev) => ev.preventDefault());
+  for (const t of ['touchstart', 'touchmove', 'touchend']) lienzo.addEventListener(t, (ev) => { if (e.activo) ev.preventDefault(); }, { passive: false });
+  window.addEventListener('blur', () => e.dedos.clear());
+
+  // los tramos y los toques desde la última vez (y se vacían)
+  e.sacarCortes = () => { const r = e.cortes; e.cortes = []; return r; };
+  e.sacarToques = () => { const r = e.toques; e.toques = []; return r; };
+  // los rastros vivos, para dibujarlos: listas de puntos con su edad (0 a 1)
+  e.rastrosVivos = () => {
+    const t = ahora(), out = [];
+    for (const [id, r] of e.rastros) {
+      const vivos = r.filter((p) => t - p.t < VIDA_RASTRO);
+      if (vivos.length) { e.rastros.set(id, vivos); out.push(vivos.map((p) => ({ x: p.x, y: p.y, edad: (t - p.t) / VIDA_RASTRO }))); }
+      else e.rastros.delete(id);
+    }
+    return out;
+  };
+  e.soltarTodo = () => { e.dedos.clear(); e.cortes = []; e.toques = []; e.rastros.clear(); };
+  return e;
+}
+return { crearEntrada };
+})();
+
+/* ── niveles ── */
+const M_niveles = (() => {
+// Los niveles de Morfi: tres cajas de diez. Cada uno es una lista de cosas
+// en el tablero de 320 × 480 (arriba es y = 0) y su solución: los cortes y
+// toques que lo resuelven con las tres estrellas, en segundos desde que
+// arranca. La prueba juega cada solución y revisa que Morfi coma con las
+// tres estrellas: si un cambio en la física rompe un nivel, se entera.
+//
+//   caramelo  [x, y]                 dónde arranca
+//   morfi     [x, y]                 sus pies (la boca queda 70 más arriba)
+//   estrellas [[x, y] × 3]
+//   hilos     [{ pin: [x, y], largo?, mueve?: { a, b, periodo } }]
+//   clips     [[x, y, radio]]        alfiler con radio: al entrar, sale un hilo
+//   globos    [[x, y]]
+//   abanicos  [[x, y, ángulo]]       soplan hacia el ángulo (0 = derecha)
+//   chinches  [[ax, ay, bx, by]]     una fila de chinches
+//   sobres    [[[x, y, ang], [x, y, ang]]]  de a dos; se sale para donde mira
+//   elasticos [[ax, ay, bx, by]]
+//   sol       [[segundos, 'c', hilo] | [segundos, 'g'] | [segundos, 'a', abanico]]
+//   ayuda     texto de ayuda la primera vez (clave de idioma.js)
+
+const PI = Math.PI;
+
+const CAJAS = [
+  { id: 'carton', color: '#c99a5f', estrellas: 0 },
+  { id: 'cuaderno', color: '#8fb9e0', estrellas: 12 },
+  { id: 'regalo', color: '#d95f7a', estrellas: 30 },
+];
+
+const NIVELES = [
+  // ── caja 1: cartón (hilos y clips) ────────────────────────────────────────
+  { id: '1-1', ayuda: 'ayudaCortar', caramelo: [160, 175], morfi: [160, 445], estrellas: [[160, 250], [160, 300], [160, 350]], hilos: [{ pin: [160, 70] }], sol: [[0.5, 'c', 0]] },
+  { id: '1-2', ayuda: 'ayudaHamaca', caramelo: [90, 200], morfi: [250, 445], estrellas: [[172, 240], [258, 232], [262, 291]], hilos: [{ pin: [50, 84] }, { pin: [200, 78] }], sol: [[0.77, 'c', 0], [2.13, 'c', 1]] },
+  { id: '1-3', caramelo: [160, 150], morfi: [100, 445], estrellas: [[160, 195], [135, 246], [118, 305]], hilos: [{ pin: [60, 90], largo: 160 }, { pin: [260, 90], largo: 160 }, { pin: [160, 60] }], sol: [[0.79, 'c', 2], [1.23, 'c', 1], [1.44, 'c', 0]] },
+  { id: '1-4', caramelo: [40, 200], morfi: [255, 445], estrellas: [[150, 239], [258, 252], [256, 312]], hilos: [{ pin: [150, 64] }], sol: [[1.16, 'c', 0]] },
+  { id: '1-5', ayuda: 'ayudaClip', caramelo: [84, 140], morfi: [240, 445], estrellas: [[84, 280], [172, 326], [228, 255]], hilos: [{ pin: [84, 60] }], clips: [[150, 250, 80]], sol: [[0.5, 'c', 0], [1.56, 'c', 100]] },
+  { id: '1-6', caramelo: [60, 120], morfi: [262, 445], estrellas: [[77, 277], [193, 222], [222, 332]], hilos: [{ pin: [60, 50] }], clips: [[122, 222, 72], [232, 262, 74]], sol: [[0.53, 'c', 0], [1.57, 'c', 100], [2.69, 'c', 101]] },
+  { id: '1-7', caramelo: [220, 140], morfi: [96, 445], estrellas: [[216, 221], [214, 298], [150, 333]], hilos: [{ pin: [220, 84] }, { pin: [96, 100], largo: 236 }], sol: [[0.58, 'c', 0], [1.25, 'c', 1]] },
+  { id: '1-8', caramelo: [280, 150], morfi: [120, 445], estrellas: [[87, 210], [60, 261], [106, 312]], hilos: [{ pin: [190, 60] }], clips: [[90, 210, 60]], sol: [[0.72, 'c', 0], [1.35, 'c', 100]] },
+  { id: '1-9', caramelo: [160, 214], morfi: [70, 445], estrellas: [[102, 221], [60, 257], [58, 316]], hilos: [{ pin: [40, 124] }, { pin: [280, 124] }, { pin: [112, 62] }, { pin: [208, 62] }], sol: [[0.84, 'c', 1], [1.32, 'c', 3], [2.39, 'c', 2], [2.63, 'c', 0]] },
+  { id: '1-10', caramelo: [70, 130], morfi: [90, 445], estrellas: [[148, 232], [252, 270], [145, 299]], hilos: [{ pin: [36, 52] }, { pin: [150, 60] }], clips: [[196, 232, 70]], sol: [[0.61, 'c', 0], [0.9, 'c', 1], [2.29, 'c', 100]] },
+  // ── caja 2: cuaderno (globos, abanicos y chinches) ────────────────────────
+  { id: '2-1', ayuda: 'ayudaGlobo', caramelo: [160, 140], morfi: [160, 445], estrellas: [[160, 205], [160, 92], [160, 322]], hilos: [{ pin: [160, 40] }], globos: [[160, 262]], sol: [[0.53, 'c', 0], [2.68, 'g']] },
+  { id: '2-2', ayuda: 'ayudaAbanico', caramelo: [90, 150], morfi: [210, 445], estrellas: [[111, 178], [157, 229], [187, 294]], hilos: [{ pin: [90, 60] }], abanicos: [[30, 360, -0.85]], sol: [[0.53, 'c', 0], [0.73, 'a', 0]] },
+  { id: '2-3', ayuda: 'ayudaChinches', caramelo: [160, 170], morfi: [60, 445], estrellas: [[89, 186], [49, 222], [50, 308]], hilos: [{ pin: [100, 70] }, { pin: [250, 60] }], chinches: [[90, 330, 230, 330]], sol: [[0.52, 'c', 1], [1.54, 'c', 0]] },
+  { id: '2-4', caramelo: [70, 140], morfi: [215, 445], estrellas: [[70, 303], [170, 162], [210, 241]], hilos: [{ pin: [70, 60] }], globos: [[70, 320]], abanicos: [[26, 200, 0]], sol: [[0.58, 'c', 0], [2.58, 'a', 0], [3.32, 'g']] },
+  { id: '2-5', caramelo: [70, 150], morfi: [265, 445], estrellas: [[70, 211], [198, 282], [151, 251]], hilos: [{ pin: [70, 60] }], abanicos: [[30, 300, -0.6]], chinches: [[0, 340, 170, 340]], sol: [[0.53, 'c', 0], [0.89, 'a', 0]] },
+  { id: '2-6', caramelo: [110, 120], morfi: [250, 445], estrellas: [[193, 151], [245, 186], [247, 275]], hilos: [{ pin: [40, 60] }, { pin: [180, 60] }], clips: [[220, 230, 76]], chinches: [[60, 300, 170, 300]], sol: [[1.74, 'c', 0], [2.64, 'c', 1], [3.09, 'c', 100]] },
+  { id: '2-7', caramelo: [250, 380], morfi: [70, 445], estrellas: [[250, 260], [145, 181], [104, 296]], hilos: [{ pin: [250, 440] }], clips: [[140, 170, 74]], globos: [[250, 380]], abanicos: [[296, 250, PI]], sol: [[0.73, 'c', 0], [2.19, 'a', 0], [2.77, 'g'], [2.98, 'c', 100]] },
+  { id: '2-8', caramelo: [160, 250], morfi: [245, 445], estrellas: [[47, 185], [273, 185], [250, 305]], hilos: [{ pin: [160, 120] }], abanicos: [[20, 270, 0], [300, 270, PI]], sol: [[0.56, 'a', 0], [1.6, 'a', 1], [2.56, 'c', 0]] },
+  { id: '2-9', caramelo: [160, 420], morfi: [260, 445], estrellas: [[160, 282], [220, 181], [252, 298]], hilos: [{ pin: [160, 470] }], globos: [[160, 420]], abanicos: [[30, 120, 0.3]], chinches: [[100, 380, 100, 180], [220, 380, 220, 250]], sol: [[0.91, 'c', 0], [2.88, 'a', 0], [3.34, 'g']] },
+  { id: '2-10', caramelo: [80, 150], morfi: [220, 445], estrellas: [[80, 260], [180, 117], [227, 285]], hilos: [{ pin: [80, 60] }], globos: [[80, 300]], abanicos: [[30, 250, -0.5]], chinches: [[170, 210, 170, 470]], sol: [[0.57, 'c', 0], [2.18, 'a', 0], [2.63, 'g']] },
+  // ── caja 3: papel de regalo (sobres, gomitas y alfileres que se mueven) ───
+  { id: '3-1', ayuda: 'ayudaSobre', caramelo: [80, 150], morfi: [240, 445], estrellas: [[80, 187], [240, 282], [80, 242]], hilos: [{ pin: [80, 70] }], sobres: [[[80, 260, -PI / 2], [240, 240, PI / 2]]], sol: [[0.5, 'c', 0]] },
+  { id: '3-2', ayuda: 'ayudaGomita', caramelo: [90, 150], morfi: [255, 445], estrellas: [[90, 278], [153, 157], [245, 241]], hilos: [{ pin: [90, 70] }], elasticos: [[40, 330, 150, 345]], sol: [[0.5, 'c', 0]] },
+  { id: '3-3', ayuda: 'ayudaMueve', caramelo: [60, 170], morfi: [262, 445], estrellas: [[193, 208], [223, 275], [153, 170]], hilos: [{ pin: [60, 70], mueve: { a: [60, 70], b: [260, 70], periodo: 5 } }], sol: [[1.24, 'c', 0]] },
+  { id: '3-4', caramelo: [230, 150], morfi: [140, 445], estrellas: [[230, 292], [167, 157], [140, 240]], hilos: [{ pin: [230, 70] }], sobres: [[[100, 176, PI], [140, 90, PI / 2]]], elasticos: [[170, 345, 280, 330]], sol: [[0.5, 'c', 0]] },
+  { id: '3-5', caramelo: [60, 160], morfi: [230, 445], estrellas: [[178, 157], [203, 238], [218, 310]], hilos: [{ pin: [60, 70] }, { pin: [120, 60], mueve: { a: [120, 60], b: [260, 60], periodo: 2.6 } }], sol: [[0.92, 'c', 0], [1.12, 'c', 1]] },
+  { id: '3-6', caramelo: [60, 120], morfi: [60, 355], estrellas: [[261, 214], [218, 252], [126, 248]], hilos: [{ pin: [160, 60] }], chinches: [[20, 470, 300, 470]], elasticos: [[210, 330, 290, 270]], sol: [[0.99, 'c', 0]] },
+  { id: '3-7', caramelo: [70, 120], morfi: [250, 445], estrellas: [[70, 306], [158, 207], [228, 234]], hilos: [{ pin: [70, 50] }], clips: [[170, 230, 70]], sobres: [[[260, 200, PI], [80, 330, 0.2]]], sol: [[0.55, 'c', 0], [1.95, 'c', 100]] },
+  { id: '3-8', caramelo: [80, 160], morfi: [215, 445], estrellas: [[172, 116], [180, 250], [188, 312]], hilos: [{ pin: [80, 250], mueve: { a: [80, 250], b: [240, 250], periodo: 2.6 } }], globos: [[80, 160]], chinches: [[20, 40, 300, 40]], sol: [[1.16, 'c', 0], [2.06, 'g']] },
+  { id: '3-9', caramelo: [60, 150], morfi: [245, 445], estrellas: [[125, 254], [133, 192], [118, 317]], hilos: [{ pin: [60, 60], mueve: { a: [60, 60], b: [240, 60], periodo: 3.2 } }], chinches: [[20, 470, 190, 470]], elasticos: [[100, 360, 200, 360]], sol: [[0.5, 'c', 0]] },
+  { id: '3-10', caramelo: [160, 120], morfi: [260, 285], estrellas: [[76, 150], [234, 346], [130, 145]], hilos: [{ pin: [100, 50] }, { pin: [200, 50], mueve: { a: [200, 50], b: [290, 50], periodo: 2.4 } }], sobres: [[[260, 150, PI / 2], [40, 150, 0]]], elasticos: [[180, 400, 290, 360]], sol: [[1.21, 'c', 0], [2.03, 'c', 1]] },
+];
+
+const nivelPorId = (id) => NIVELES.find((n) => n.id === id);
+const cajaDe = (id) => CAJAS[+id.split('-')[0] - 1];
+return { CAJAS, NIVELES, nivelPorId, cajaDe };
+})();
+
+/* ── pieles ── */
+const M_pieles = (() => {
+// Lo que se compra en la tienda: cómo se ve Morfi (morfi.js › PIELES_MORFI)
+// y el caramelo (dibujo.js › CARAMELOS), con su precio en monedas. Pasar las
+// tres cajas con todas las estrellas da 900: alcanza para casi todo, y lo
+// que falta se junta jugando de nuevo (cada nivel ganado otra vez da 2).
+const MORFIS = [
+  { id: 'kraft', precio: 0 }, { id: 'regalo', precio: 50 }, { id: 'zapatos', precio: 70 }, { id: 'pizza', precio: 90 },
+  { id: 'mudanza', precio: 110 }, { id: 'menta', precio: 140 }, { id: 'noche', precio: 170 }, { id: 'jx', precio: 240 },
+];
+const DULCES = [
+  { id: 'rojo', precio: 0 }, { id: 'frutilla', precio: 25 }, { id: 'menta', precio: 35 }, { id: 'uva', precio: 45 },
+  { id: 'limon', precio: 60 }, { id: 'dulce', precio: 75 }, { id: 'arcoiris', precio: 120 },
+];
+// las monedas de un nivel ganado: la primera vez 10 y 5 por estrella; después, 5 por cada estrella nueva y 2 por ganar
+function premio(antes, estrellas) {
+  if (antes < 0) return 10 + 5 * estrellas;
+  return 2 + 5 * Math.max(0, estrellas - antes);
+}
+const BONO_CAJA = 50;          // todas las estrellas de una caja
+return { MORFIS, DULCES, premio, BONO_CAJA };
+})();
+
+/* ── guardado ── */
+const M_guardado = (() => {
+// Lo que se guarda en el teléfono (en try: sin localStorage, el juego anda
+// igual sin guardar). Lo leído se valida campo por campo.
+const { MORFIS, DULCES } = M_pieles;
+const { NIVELES, CAJAS } = M_niveles;
+const CLAVE = 'morfi-1';
+
+function base() {
+  return {
+    mejor: NIVELES.map(() => -1),   // las estrellas de cada nivel (-1: todavía no se ganó)
+    monedas: 0, morfi: 'kraft', dulce: 'rojo',
+    morfis: ['kraft'], dulces: ['rojo'],
+    ayudas: [],                     // las ayudas ya vistas
+    bonos: [],                      // las cajas que ya dieron el premio de todas las estrellas
+    partidas: 0,
+    ajustes: { musica: true, sonido: true, vibrar: true, calidad: 'auto', idioma: null },
+  };
+}
+
+const num = (v, a, b, d) => (Number.isFinite(v) ? Math.max(a, Math.min(b, Math.floor(v))) : d);
+const lista = (v, validos, siempre) => [...new Set([...(siempre ? [siempre] : []), ...(Array.isArray(v) ? v.filter((x) => validos.includes(x)) : [])])];
+
+function validar(d) {
+  const b = base();
+  if (!d || typeof d !== 'object') return b;
+  if (Array.isArray(d.mejor)) b.mejor = NIVELES.map((_, i) => num(d.mejor[i], -1, 3, -1));
+  b.monedas = num(d.monedas, 0, 1e9, 0);
+  b.morfis = lista(d.morfis, MORFIS.map((p) => p.id), 'kraft');
+  b.dulces = lista(d.dulces, DULCES.map((p) => p.id), 'rojo');
+  if (b.morfis.includes(d.morfi)) b.morfi = d.morfi;
+  if (b.dulces.includes(d.dulce)) b.dulce = d.dulce;
+  b.ayudas = lista(d.ayudas, NIVELES.map((n) => n.ayuda).filter(Boolean));
+  b.bonos = lista(d.bonos, CAJAS.map((c) => c.id));
+  b.partidas = num(d.partidas, 0, 1e9, 0);
+  const a = d.ajustes || {};
+  for (const k of ['musica', 'sonido', 'vibrar']) if (typeof a[k] === 'boolean') b.ajustes[k] = a[k];
+  if (['auto', 'alta', 'baja'].includes(a.calidad)) b.ajustes.calidad = a.calidad;
+  if (['es', 'en', 'pt'].includes(a.idioma)) b.ajustes.idioma = a.idioma;
+  return b;
+}
+
+// cuántas estrellas hay en total y en una caja
+const estrellasTotal = (d) => d.mejor.reduce((a, e) => a + Math.max(0, e), 0);
+const estrellasCaja = (d, c) => d.mejor.slice(c * 10, c * 10 + 10).reduce((a, e) => a + Math.max(0, e), 0);
+// ¿se puede jugar? La caja se abre con estrellas; adentro, de a uno
+const cajaAbierta = (d, c) => estrellasTotal(d) >= CAJAS[c].estrellas;
+const nivelAbierto = (d, i) => cajaAbierta(d, Math.floor(i / 10)) && (i % 10 === 0 || d.mejor[i - 1] >= 0);
+
+function cargar() { try { return validar(JSON.parse(localStorage.getItem(CLAVE))); } catch { return base(); } }
+function guardar(d) { try { localStorage.setItem(CLAVE, JSON.stringify(d)); return true; } catch { return false; } }
+return { base, validar, estrellasTotal, estrellasCaja, cajaAbierta, nivelAbierto, cargar, guardar };
+})();
+
+/* ── hud ── */
+const M_hud = (() => {
+// Lo que se dibuja arriba del tablero mientras se juega: la etiqueta del
+// nivel en una tira de papel roto, las tres estrellas (las que faltan son un
+// hueco; la que se junta salta a su lugar), la nota de ayuda de los niveles
+// que enseñan algo, el rastro blanco del dedo y el cartelito de "¡se cayó!".
+const { papelRoto, cinta, estrellaDe, pegar } = M_papel;
+const { estrella, estrellaVacia } = M_dibujo;
+const { clamp, elastico } = M_util;
+// `hud`: { tomadas: [t de cada estrella o null] } (lo lleva main.js)
+// `arriba`: dónde empieza lo usable (debajo de la muesca del teléfono), en píxeles del lienzo
+function dibujarHud(g, W, H, { p, u, t, hud, arriba = 10 * u, ayuda = null, aviso = null, nombreCaja = '' }) {
+  // la etiqueta: "1-4" grande y la caja chiquita, en papel blanco roto con cinta
+  const w = 118 * u, h = 44 * u, x = W / 2 - w / 2, y = arriba;
+  g.save();
+  g.fillStyle = 'rgba(40,20,5,0.25)'; papelRoto(g, x + 2 * u, y + 3 * u, w, h, 'rgba(40,20,5,0.25)', 3, { dientes: 12, hondo: 3 * u });
+  papelRoto(g, x, y, w, h, '#fbf8f1', 3, { dientes: 12, hondo: 3 * u });
+  cinta(g, x + w / 2, y + 1 * u, 34 * u, 11 * u, -0.05);
+  g.fillStyle = '#3b2a1a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `900 ${Math.round(19 * u)}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  g.fillText(p.def.id, W / 2, y + h * 0.42);
+  g.font = `700 ${Math.round(9.5 * u)}px system-ui, sans-serif`; g.fillStyle = '#7a6552';
+  g.fillText(nombreCaja.toUpperCase(), W / 2, y + h * 0.78);
+  g.restore();
+  // las estrellas, arriba a la derecha
+  const r = 15 * u;
+  for (let i = 0; i < 3; i++) {
+    const sx = W - (22 + (2 - i) * 34) * u - r * 0.3, sy = arriba + 22 * u;
+    estrellaVacia(g, sx, sy, r * 0.9);
+    const tt = hud.tomadas[i];
+    if (tt !== null && tt !== undefined) {
+      const k = clamp((t - tt) / 0.45, 0, 1), e = elastico(k);
+      pegar(g, estrella(u * 1.05), sx, sy, { alto: 2 * u, esc: 0.3 + e * 0.7, ang: (1 - k) * 1.2 });
+    }
+  }
+  // la nota de ayuda (papelito amarillo abajo, con cinta)
+  if (ayuda && ayuda.alfa > 0.01) {
+    g.save(); g.globalAlpha = ayuda.alfa;
+    const fs = Math.round(15 * u);
+    g.font = `700 ${fs}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+    const lineas = partir(g, ayuda.texto, Math.min(W * 0.8, 300 * u));
+    const aw = Math.max(...lineas.map((l) => g.measureText(l).width)) + 30 * u, ah = lineas.length * fs * 1.3 + 22 * u;
+    const ax = W / 2, ay = H - ah / 2 - Math.max(22 * u, H * 0.05);
+    g.translate(ax, ay + (1 - ayuda.alfa) * 20 * u); g.rotate(-0.025);
+    g.fillStyle = 'rgba(40,20,5,0.25)'; g.fillRect(-aw / 2 + 3 * u, -ah / 2 + 4 * u, aw, ah);
+    g.fillStyle = '#fbe57a'; g.fillRect(-aw / 2, -ah / 2, aw, ah);
+    g.fillStyle = 'rgba(0,0,0,0.05)'; g.fillRect(-aw / 2, ah / 2 - 6 * u, aw, 6 * u);
+    cinta(g, 0, -ah / 2, 44 * u, 13 * u, 0.04);
+    g.fillStyle = '#3b2a1a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    lineas.forEach((l, k) => g.fillText(l, 0, -ah / 2 + 11 * u + fs * 1.3 * (k + 0.5)));
+    g.restore();
+  }
+  // "¡se cayó!" / "¡se rompió!", en un papel rojo que se estampa
+  if (aviso) {
+    const k = clamp(aviso.t / 0.25, 0, 1), e = k < 1 ? 1.6 - 0.6 * k * k : 1;
+    g.save(); g.translate(W / 2, H * 0.42); g.rotate(-0.06); g.scale(e, e); g.globalAlpha = clamp(aviso.t / 0.08, 0, 1);
+    const fs = Math.round(30 * u);
+    g.font = `900 ${fs}px system-ui, -apple-system, "Segoe UI", Roboto, "Arial Black", sans-serif`;
+    const tw = g.measureText(aviso.texto).width + 36 * u;
+    g.fillStyle = 'rgba(40,20,5,0.3)'; g.fillRect(-tw / 2 + 4 * u, -fs * 0.8 + 5 * u, tw, fs * 1.6);
+    g.fillStyle = '#e04a3a'; g.fillRect(-tw / 2, -fs * 0.8, tw, fs * 1.6);
+    g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 2 * u; g.setLineDash([6 * u, 4 * u]); g.strokeRect(-tw / 2 + 6 * u, -fs * 0.8 + 6 * u, tw - 12 * u, fs * 1.6 - 12 * u); g.setLineDash([]);
+    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(aviso.texto, 0, fs * 0.05);
+    g.restore();
+  }
+}
+
+// El rastro del dedo: una estela blanca que se afina y se apaga (en píxeles del lienzo)
+function dibujarRastros(g, rastros, u) {
+  g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+  for (const r of rastros) {
+    for (let k = 1; k < r.length; k++) {
+      const a = r[k - 1], b = r[k], vida = 1 - b.edad;
+      if (vida <= 0) continue;
+      g.strokeStyle = `rgba(60,40,90,${0.18 * vida})`; g.lineWidth = (5 + 5 * vida) * u;
+      g.beginPath(); g.moveTo(a.x + 1.5 * u, a.y + 2.5 * u); g.lineTo(b.x + 1.5 * u, b.y + 2.5 * u); g.stroke();
+      g.strokeStyle = `rgba(255,255,255,${0.9 * vida})`; g.lineWidth = (2 + 4.5 * vida) * u;
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+    }
+    // una chispita en la punta
+    const p = r[r.length - 1];
+    if (p && p.edad < 0.5) { g.fillStyle = `rgba(255,255,255,${1 - p.edad * 2})`; estrellaDe(g, p.x, p.y, 6 * u * (1 - p.edad), 4, 0.35); }
+  }
+  g.restore();
+}
+
+// partir un texto en renglones que entren en `ancho`
+function partir(g, texto, ancho) {
+  const out = []; let linea = '';
+  for (const pal of texto.split(' ')) {
+    const prueba = linea ? linea + ' ' + pal : pal;
+    if (g.measureText(prueba).width > ancho && linea) { out.push(linea); linea = pal; } else linea = prueba;
+  }
+  if (linea) out.push(linea);
+  return out;
+}
+return { dibujarHud, dibujarRastros };
+})();
+
+/* ── idioma ── */
+const M_idioma = (() => {
+// Los textos en castellano, inglés y portugués. {n} se reemplaza.
+// El nombre del juego, MORFI, es el mismo en los tres (es una marca).
+const T = {
+  jugar: ['JUGAR', 'PLAY', 'JOGAR'],
+  subtitulo: ['Cortá el hilo', 'Snip the string', 'Corte o fio'],
+  cajas: ['CAJAS', 'BOXES', 'CAIXAS'],
+  tienda: ['TIENDA', 'SHOP', 'LOJA'],
+  ajustes: ['AJUSTES', 'SETTINGS', 'AJUSTES'],
+  volver: ['VOLVER', 'BACK', 'VOLTAR'],
+  nivel: ['Nivel {n}', 'Level {n}', 'Nível {n}'],
+  caja_carton: ['Caja de cartón', 'Cardboard box', 'Caixa de papelão'],
+  caja_cuaderno: ['Cuaderno', 'Notebook', 'Caderno'],
+  caja_regalo: ['Papel de regalo', 'Gift wrap', 'Papel de presente'],
+  juntaEstrellas: ['Juntá {n} ★ para abrirla', 'Collect {n} ★ to open', 'Junte {n} ★ para abrir'],
+  superado: ['¡Morfi comió!', 'Morfi ate it!', 'Morfi comeu!'],
+  perfecto: ['¡Perfecto!', 'Perfect!', 'Perfeito!'],
+  ganaste: ['+{n} monedas', '+{n} coins', '+{n} moedas'],
+  siguiente: ['SIGUIENTE', 'NEXT', 'PRÓXIMO'],
+  otraVez: ['OTRA VEZ', 'RETRY', 'DE NOVO'],
+  menu: ['MENÚ', 'MENU', 'MENU'],
+  pausa: ['PAUSA', 'PAUSED', 'PAUSA'],
+  seguir: ['SEGUIR', 'RESUME', 'CONTINUAR'],
+  todos: ['¡Pasaste las tres cajas!', 'You beat all three boxes!', 'Você passou as três caixas!'],
+  cajaNueva: ['¡Caja nueva abierta!', 'New box unlocked!', 'Caixa nova aberta!'],
+  perdido: ['¡Se cayó!', 'It fell!', 'Caiu!'],
+  roto: ['¡Se rompió!', 'It broke!', 'Quebrou!'],
+  consejoPc: ['Arrastrá con el mouse para cortar', 'Drag with the mouse to cut', 'Arraste com o mouse para cortar'],
+  ayudaCortar: ['Deslizá el dedo por el hilo para cortarlo', 'Swipe across the string to cut it', 'Deslize o dedo no fio para cortá-lo'],
+  ayudaHamaca: ['Cortá cuando la hamaca lo lleve hacia Morfi', 'Cut when the swing takes it towards Morfi', 'Corte quando o balanço levar até o Morfi'],
+  ayudaClip: ['El alfiler azul le ata un hilo nuevo', 'The blue pin ties a new string on it', 'O alfinete azul amarra um fio novo'],
+  ayudaGlobo: ['El globo lo sube: tocalo para reventarlo', 'The balloon lifts it: tap to pop it', 'O balão levanta: toque para estourar'],
+  ayudaAbanico: ['Tocá el abanico y sopla', 'Tap the fan to blow', 'Toque o leque para soprar'],
+  ayudaChinches: ['¡Ojo con las chinches!', 'Watch out for the tacks!', 'Cuidado com as tachinhas!'],
+  ayudaSobre: ['Lo que entra en un sobre sale por el otro', 'In one envelope, out the other', 'Entra num envelope e sai no outro'],
+  ayudaGomita: ['La gomita lo hace rebotar', 'The rubber band bounces it', 'O elástico faz quicar'],
+  ayudaMueve: ['El alfiler violeta va y viene', 'The purple pin slides back and forth', 'O alfinete roxo vai e volta'],
+  morfis: ['MORFIS', 'MORFIS', 'MORFIS'],
+  caramelos: ['CARAMELOS', 'CANDIES', 'BALAS'],
+  usar: ['USAR', 'USE', 'USAR'],
+  enUso: ['EN USO', 'EQUIPPED', 'EM USO'],
+  comprar: ['COMPRAR · {n}', 'BUY · {n}', 'COMPRAR · {n}'],
+  faltan: ['Te faltan {n} monedas', 'You need {n} more coins', 'Faltam {n} moedas'],
+  musica: ['Música', 'Music', 'Música'],
+  sonido: ['Sonido', 'Sound', 'Som'],
+  vibrar: ['Vibración', 'Vibration', 'Vibração'],
+  calidad: ['Calidad', 'Quality', 'Qualidade'],
+  idioma: ['Idioma', 'Language', 'Idioma'],
+  si: ['Sí', 'On', 'Sim'],
+  no: ['No', 'Off', 'Não'],
+  auto: ['Auto', 'Auto', 'Auto'],
+  alta: ['Alta', 'High', 'Alta'],
+  baja: ['Baja', 'Low', 'Baixa'],
+  borrar: ['Borrar progreso', 'Reset progress', 'Apagar progresso'],
+  borrarSeguro: ['¿Seguro? Toca otra vez', 'Sure? Tap again', 'Certeza? Toque de novo'],
+  presenta: ['presenta', 'presents', 'apresenta'],
+  creditos: ['Un juego de JXSTUDIOS', 'A JXSTUDIOS game', 'Um jogo da JXSTUDIOS'],
+  morfi_kraft: ['Cartón', 'Cardboard', 'Papelão'], morfi_regalo: ['De regalo', 'Gift', 'Presente'],
+  morfi_zapatos: ['Caja de zapatos', 'Shoebox', 'Caixa de sapatos'], morfi_pizza: ['Pizza', 'Pizza', 'Pizza'],
+  morfi_mudanza: ['Mudanza', 'Moving box', 'Mudança'], morfi_menta: ['Menta', 'Mint', 'Hortelã'],
+  morfi_noche: ['De noche', 'Night', 'Noite'], morfi_jx: ['JXSTUDIOS', 'JXSTUDIOS', 'JXSTUDIOS'],
+  caramelo_rojo: ['Clásico', 'Classic', 'Clássica'], caramelo_frutilla: ['Frutilla', 'Strawberry', 'Morango'],
+  caramelo_menta: ['Menta', 'Mint', 'Hortelã'], caramelo_uva: ['Uva', 'Grape', 'Uva'],
+  caramelo_dulce: ['Dulce de leche', 'Caramel', 'Doce de leite'], caramelo_limon: ['Limón', 'Lemon', 'Limão'],
+  caramelo_arcoiris: ['Arcoíris', 'Rainbow', 'Arco-íris'],
+};
+
+const IDIOMAS = ['es', 'en', 'pt'];
+const TABLA = T;
+
+function crearIdioma(inicial) {
+  const nav = (navigator.language || 'es').slice(0, 2).toLowerCase();
+  let actual = IDIOMAS.includes(inicial) ? inicial : IDIOMAS.includes(nav) ? nav : 'en';
+  const tr = (clave, n) => {
+    const fila = T[clave];
+    if (!fila) return clave;
+    const s = fila[IDIOMAS.indexOf(actual)] ?? fila[0];
+    return n === undefined ? s : s.replace('{n}', n);
+  };
+  tr.poner = (l) => { if (IDIOMAS.includes(l)) actual = l; };
+  tr.actual = () => actual;
+  return tr;
+}
+return { IDIOMAS, TABLA, crearIdioma };
+})();
+
+/* ── logojxs ── */
+const M_logojxs = (() => {
+// El logo de JXSTUDIOS, calcado de la imagen que mandó quien pide
+// (30/09/2026): el monograma JXS son cuatro trazos de metal del mismo
+// ancho, en paralelo de a dos (entre línea y línea, el doble del grosor):
+//   - la J de adentro (barra, palo y gancho);
+//   - la S de adentro;
+//   - A: la barra de arriba de la J que baja en diagonal (el "\" de la X) y
+//     abraza la S por abajo;
+//   - B: el gancho de abajo de la J que sube en diagonal (el "/" de la X,
+//     que pasa POR ENCIMA del "\") y abraza la S por arriba.
+// Coordenadas en una caja de 350 × 172. El mismo dibujo sirve para la
+// versión de píxeles (se rasteriza chico), la 2D suave (se traza) y la 3D
+// (se muestrea la línea y se engorda a los costados).
+const CAJA = { w: 350, h: 172 };
+const GROSOR = 14.5;
+
+const TRAZOS = [
+  // A va abajo en el cruce: se dibuja primero
+  { id: 'A', capa: 0, d: [['M', 40, 19], ['L', 114, 19], ['L', 176, 101], ['C', 194, 128, 222, 168, 268, 169], ['C', 310, 170, 342, 152, 342, 122]] },
+  { id: 'J', capa: 0, d: [['M', 40, 43], ['L', 98, 43], ['L', 98, 116], ['C', 98, 148, 44, 158, 36, 124]] },
+  { id: 'S', capa: 0, d: [['M', 312, 66], ['C', 306, 46, 288, 36, 266, 36], ['C', 242, 36, 226, 48, 226, 63], ['C', 226, 80, 248, 86, 272, 92], ['C', 302, 99, 320, 108, 320, 126], ['C', 320, 142, 300, 148, 272, 148], ['C', 246, 148, 226, 138, 216, 118]] },
+  { id: 'B', capa: 1, d: [['M', 10, 130], ['C', 18, 158, 50, 168, 86, 166], ['C', 108, 165, 122, 158, 134, 142], ['L', 200, 46], ['C', 216, 24, 244, 12, 272, 12], ['C', 310, 12, 340, 30, 340, 62]] },
+];
+
+// Un trazo como Path2D, escalado y corrido.
+function camino2d(t, esc = 1, ox = 0, oy = 0) {
+  const p = new Path2D();
+  for (const [op, ...n] of t.d) {
+    const q = n.map((v, i) => (i % 2 ? oy + v * esc : ox + v * esc));
+    if (op === 'M') p.moveTo(q[0], q[1]);
+    else if (op === 'L') p.lineTo(q[0], q[1]);
+    else p.bezierCurveTo(q[0], q[1], q[2], q[3], q[4], q[5]);
+  }
+  return p;
+}
+
+// Puntos a lo largo del trazo, más o menos parejos (para la 3D, para animar
+// el dibujo de la línea y para medir el largo).
+function muestrear(t, cada = 3) {
+  const pts = [];
+  let x = 0, y = 0;
+  for (const [op, ...n] of t.d) {
+    if (op === 'M') { x = n[0]; y = n[1]; pts.push([x, y]); continue; }
+    if (op === 'L') {
+      const [x1, y1] = n, largo = Math.hypot(x1 - x, y1 - y), k = Math.max(1, Math.ceil(largo / cada));
+      for (let i = 1; i <= k; i++) pts.push([x + ((x1 - x) * i) / k, y + ((y1 - y) * i) / k]);
+      x = x1; y = y1; continue;
+    }
+    const [c1x, c1y, c2x, c2y, x1, y1] = n;
+    const aprox = Math.hypot(c1x - x, c1y - y) + Math.hypot(c2x - c1x, c2y - c1y) + Math.hypot(x1 - c2x, y1 - c2y);
+    const k = Math.max(2, Math.ceil(aprox / cada));
+    for (let i = 1; i <= k; i++) {
+      const s = i / k, r = 1 - s;
+      pts.push([r * r * r * x + 3 * r * r * s * c1x + 3 * r * s * s * c2x + s * s * s * x1, r * r * r * y + 3 * r * r * s * c1y + 3 * r * s * s * c2y + s * s * s * y1]);
+    }
+    x = x1; y = y1;
+  }
+  return pts;
+}
+
+function largo(t) {
+  const p = muestrear(t, 2);
+  let l = 0;
+  for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+  return l;
+}
+
+// El monograma dibujado en 2D con su metal, en un lienzo aparte (así el
+// reflejo, que se pinta "arriba de lo dibujado", toca solo el metal):
+// sombra, borde oscuro (que en el cruce hace de hueco y deja ver que B pasa
+// por encima), el cuerpo con un degradé de cromo y el filo de luz.
+// `avance` (0 a 1) dibuja cada trazo hasta ahí: el metal "se escribe".
+// `brillo` (0 a 1) pasa una franja de luz de izquierda a derecha.
+function monograma(ancho, { avance = 1, brillo = -1, sombra = true, lienzo = null } = {}) {
+  const esc = ancho / CAJA.w, gro = GROSOR * esc, alto = Math.ceil(CAJA.h * esc);
+  const m = Math.ceil(10 * esc) + 2;
+  const c = lienzo || document.createElement('canvas');
+  c.width = Math.ceil(ancho) + 2 * m; c.height = alto + 2 * m;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  const crom = g.createLinearGradient(0, m, 0, m + alto);
+  crom.addColorStop(0, '#fbfbfd'); crom.addColorStop(0.35, '#c9ccd4'); crom.addColorStop(0.55, '#8a8f99');
+  crom.addColorStop(0.7, '#d9dce3'); crom.addColorStop(1, '#6f747e');
+  g.lineCap = 'butt'; g.lineJoin = 'round';
+  for (const capa of [0, 1]) for (const t of TRAZOS) {
+    if (t.capa !== capa) continue;
+    const p = camino2d(t, esc, m, m), l = largo(t) * esc;
+    const trazo = (a, estilo, dx = 0, dy = 0) => {
+      g.save();
+      g.translate(dx, dy);
+      if (avance < 1) g.setLineDash([Math.max(0.01, l * avance), l + 10]);
+      g.lineWidth = a; g.strokeStyle = estilo; g.stroke(p);
+      g.restore();
+    };
+    // cara plana con bisel (como el logo): el borde que abre el hueco del
+    // cruce, el bisel gris y la cara de cromo
+    if (sombra) trazo(gro + 2 * esc, 'rgba(0,0,0,0.6)', 3 * esc, 5 * esc);
+    trazo(gro + 5 * esc, '#050607');
+    trazo(gro, '#5b5f68');
+    trazo(gro * 0.74, crom);
+  }
+  if (brillo >= 0 && brillo <= 1) {
+    g.globalCompositeOperation = 'source-atop';
+    const bx = m + (brillo * 1.6 - 0.3) * ancho;
+    const f = g.createLinearGradient(bx - ancho * 0.12, 0, bx + ancho * 0.12, 0);
+    f.addColorStop(0, 'rgba(255,255,255,0)'); f.addColorStop(0.5, 'rgba(255,255,255,0.85)'); f.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = f; g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = 'source-over';
+  }
+  c.margen = m;
+  return c;
+}
+
+// La palabra "JXStudios" en metal, con la letra del sistema (sans gruesa):
+// se mide y se escala para que ocupe justo `ancho`.
+function palabra(ancho, { color = null } = {}) {
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  const fuente = (px) => `600 ${px}px "Montserrat", "Poppins", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+  g.font = fuente(100);
+  const w100 = g.measureText('JXStudios').width || 400;
+  const px = Math.max(8, (ancho / w100) * 100);
+  c.width = Math.ceil(ancho + px * 0.2); c.height = Math.ceil(px * 1.35);
+  g.font = fuente(px); g.textBaseline = 'alphabetic';
+  const base = Math.round(px * 1.02), x = Math.round(px * 0.1);
+  g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillText('JXStudios', x + px * 0.03, base + px * 0.05);
+  const crom = g.createLinearGradient(0, base - px * 0.75, 0, base);
+  crom.addColorStop(0, '#ffffff'); crom.addColorStop(0.5, '#d2d5dc'); crom.addColorStop(0.62, '#9aa0aa'); crom.addColorStop(1, '#e7e9ee');
+  g.fillStyle = color || crom; g.fillText('JXStudios', x, base);
+  return c;
+}
+
+// El monograma en píxeles: se traza chico (con el hueco del cruce), se
+// separa metal de borde por color y se vuelve a pintar a mano en escalones
+// de cromo (claro arriba, oscuro al medio, claro abajo) con bisel.
+function monogramaPixel(anchoPx, { avance = 1 } = {}) {
+  const esc = anchoPx / CAJA.w, alto = Math.ceil(CAJA.h * esc) + 4, ancho = Math.ceil(anchoPx) + 4;
+  const c = document.createElement('canvas');
+  c.width = ancho; c.height = alto;
+  const g = c.getContext('2d');
+  for (const capa of [0, 1]) for (const t of TRAZOS) {
+    if (t.capa !== capa) continue;
+    const p = camino2d(t, esc, 2, 2), l = largo(t) * esc;
+    g.save();
+    if (avance < 1) g.setLineDash([Math.max(0.01, l * avance), l + 10]);
+    g.lineCap = 'butt';
+    g.lineWidth = GROSOR * esc + 2.2; g.strokeStyle = '#ff0000'; g.stroke(p);
+    g.lineWidth = GROSOR * esc; g.strokeStyle = '#00ff00'; g.stroke(p);
+    g.restore();
+  }
+  const img = g.getImageData(0, 0, ancho, alto), d = img.data;
+  const metal = new Uint8Array(ancho * alto), borde = new Uint8Array(ancho * alto);
+  for (let i = 0; i < ancho * alto; i++) {
+    if (d[i * 4 + 3] < 90) continue;
+    if (d[i * 4 + 1] > 110) metal[i] = 1; else if (d[i * 4] > 110) borde[i] = 1;
+  }
+  const ESCALON = ['#f4f5f8', '#d9dbe1', '#b7bbc4', '#8d929c', '#a9adb6', '#d3d6dc', '#9ea3ad', '#767b85'];
+  for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
+    const i = y * ancho + x, k = i * 4;
+    if (metal[i]) {
+      const arriba = y > 0 && metal[i - ancho], abajo = y < alto - 1 && metal[i + ancho];
+      const izq = x > 0 && metal[i - 1], der = x < ancho - 1 && metal[i + 1];
+      let col = ESCALON[Math.min(ESCALON.length - 1, Math.floor(((y - 2) / (alto - 4)) * ESCALON.length))];
+      if (!arriba || !izq) col = '#ffffff';            // el filo que da a la luz
+      else if (!abajo || !der) col = '#5b5f68';        // el bisel en sombra
+      const n = parseInt(col.slice(1), 16);
+      d[k] = n >> 16; d[k + 1] = (n >> 8) & 255; d[k + 2] = n & 255; d[k + 3] = 255;
+    } else if (borde[i]) { d[k] = 5; d[k + 1] = 6; d[k + 2] = 8; d[k + 3] = 255; }
+    else d[k + 3] = 0;
+  }
+  g.putImageData(img, 0, 0);
+  c.mascara = metal;       // para pasarle el brillo solo por el metal
+  c.esc = esc;             // para ubicar puntas de trazo en pantalla
+  return c;
+}
+
+// Dónde va la punta de cada trazo cuando está escrito hasta `avance`
+// (coordenadas de la caja del logo).
+const cacheMuestras = new Map();
+function puntas(avance) {
+  const out = [];
+  for (const t of TRAZOS) {
+    if (!cacheMuestras.has(t.id)) {
+      const p = muestrear(t, 2), acum = [0];
+      for (let i = 1; i < p.length; i++) acum.push(acum[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+      cacheMuestras.set(t.id, { p, acum });
+    }
+    const { p, acum } = cacheMuestras.get(t.id), meta = acum[acum.length - 1] * avance;
+    let i = 1;
+    while (i < acum.length - 1 && acum[i] < meta) i++;
+    out.push(p[i]);
+  }
+  return out;
+}
+return { CAJA, GROSOR, TRAZOS, camino2d, muestrear, largo, monograma, palabra, monogramaPixel, puntas };
+})();
+
+/* ── intro ── */
+const M_intro = (() => {
+// La intro de JXSTUDIOS con el estilo de Morfi: de papel (la de Cripta es de
+// píxeles, la de Víbora de metal y la de Globo plana de colores; cada juego
+// la suya). Sobre un corcho entra una hoja y la sujetan dos cintas; una
+// tijera recorta el monograma JXS en papeles de colores, trazo por trazo; el
+// recorte salta (se despega de la hoja) y larga papelitos; JXStudios se pega
+// letra por letra como una nota de recortes de revista, "presenta" se
+// escribe con birome y la hoja se va volando para dar paso al menú. Dura
+// menos de tres segundos y medio y arranca sola (main.js); la música sale de
+// sonido.js › jingleJXS con el mismo reloj.
+const { TRAZOS, CAJA, GROSOR, camino2d, muestrear } = M_logojxs;
+const { clamp, salida, suave, elastico, salidaAtras, azar } = M_util;
+const { redondo } = M_papel;
+const T = { entra: 0.34, traza: [0.36, 1.3], golpe: 1.36, letras: 1.5, cadaLetra: 0.07, presenta: 2.2, fin: 2.72, cierre: 0.4, salto: 0.3 };
+const CORCHO = '#b7864f', CARTON = '#c99a5f', HOJA = '#f6ecd6';
+const PAPELES = { A: '#e8423a', J: '#f5c542', S: '#3f7fd1', B: '#58b368' };
+const CONFETI = ['#e8423a', '#f5c542', '#3f7fd1', '#58b368', '#ff93b3', '#ffffff'];
+// los recortes de revista de JXStudios: fondo, letra y tipo de letra de cada uno
+const RECORTES = [
+  ['#1f2126', '#ffffff', 'serif'], ['#f5c542', '#1f2126', 'sans'], ['#ffffff', '#e8423a', 'serif'], ['#3f7fd1', '#ffffff', 'sans'],
+  ['#f7d6e0', '#1f2126', 'serif'], ['#58b368', '#ffffff', 'sans'], ['#ffffff', '#1f2126', 'sans'], ['#e8423a', '#ffffff', 'serif'], ['#f5c542', '#3f7fd1', 'sans'],
+];
+
+const MUESTRAS = TRAZOS.map((tr) => {
+  const p = muestrear(tr, 2), acum = [0];
+  for (let i = 1; i < p.length; i++) acum.push(acum[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+  return { p, acum, largo: acum[acum.length - 1] };
+});
+const ORDEN = [0, 1, 2, 3];
+const TOTAL = MUESTRAS.reduce((a, m) => a + m.largo, 0);
+// dónde está la tijera en el trazo i (y para dónde va)
+function punta(i, avance) {
+  const { p, acum, largo } = MUESTRAS[i], meta = largo * avance;
+  let k = 1;
+  while (k < acum.length - 1 && acum[k] < meta) k++;
+  return [p[k][0], p[k][1], Math.atan2(p[k][1] - p[k - 1][1], p[k][0] - p[k - 1][0])];
+}
+
+// el corcho, una vez por tamaño
+let corchoC = null;
+function corcho(W, H) {
+  if (corchoC && corchoC.width === W && corchoC.height === H) return corchoC;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'), r = azar(5), u = Math.min(W, H) / 400;
+  g.fillStyle = CORCHO; g.fillRect(0, 0, W, H);
+  for (let k = 0; k < (W * H) / (120 * u * u); k++) {
+    g.fillStyle = r() < 0.5 ? 'rgba(90,55,20,0.25)' : 'rgba(240,200,140,0.22)';
+    g.beginPath(); g.arc(r() * W, r() * H, (0.6 + r() * 1.8) * u, 0, Math.PI * 2); g.fill();
+  }
+  const v = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.hypot(W, H) * 0.6);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(40,20,5,0.4)');
+  g.fillStyle = v; g.fillRect(0, 0, W, H);
+  corchoC = c;
+  return c;
+}
+
+// una tijera abierta `abre` (0 a 1), con la punta en (0, 0) mirando a +x
+function tijera(g, s, abre) {
+  const a = 0.08 + abre * 0.32;
+  for (const lado of [-1, 1]) {
+    g.save(); g.rotate(lado * a);
+    // la hoja de metal
+    g.fillStyle = lado < 0 ? '#c9ced6' : '#e4e8ee';
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(-26 * s, -3.2 * s * lado); g.lineTo(-30 * s, 0); g.lineTo(-26 * s, 1.2 * s * lado); g.closePath(); g.fill();
+    g.strokeStyle = '#7d8591'; g.lineWidth = 0.8 * s; g.stroke();
+    // el mango de plástico (un anillo)
+    g.strokeStyle = lado < 0 ? '#e8423a' : '#d23a31'; g.lineWidth = 3.4 * s;
+    g.beginPath(); g.ellipse(-40 * s, 5 * s * lado, 7.5 * s, 5 * s, 0.3 * lado, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = lado < 0 ? '#e8423a' : '#d23a31'; redondo(g, -34 * s, -1.8 * s, 6 * s, 3.6 * s, 1.5 * s); g.fill();
+    g.restore();
+  }
+  g.fillStyle = '#5b626d'; g.beginPath(); g.arc(-30 * s, 0, 2 * s, 0, Math.PI * 2); g.fill();
+}
+
+class IntroJXS {
+  constructor({ sonido, vibrar = () => {}, alTerminar }) {
+    this.t = 0; this.terminado = false; this.golpeado = false; this.pegadas = 0;
+    this.alTerminar = alTerminar; this.vibrar = vibrar;
+    this.musica = sonido.jingleJXS?.() || null;
+    this.papeles = []; this.virutas = [];
+    this.r = azar(2026);
+  }
+  saltear() {
+    if (this.t < T.salto || this.terminado) return;
+    this.musica?.cortar();
+    this.t = Math.max(this.t, T.fin);
+  }
+  avances() {
+    const k = clamp((this.t - T.traza[0]) / (T.traza[1] - T.traza[0]), 0, 1), hecho = suave(k) * TOTAL;
+    let antes = 0;
+    return ORDEN.map((i) => { const l = MUESTRAS[i].largo, a = clamp((hecho - antes) / l, 0, 1); antes += l; return a; });
+  }
+  // la hoja: dónde está y cuánto está girada (entra de abajo, se asienta y al final se va para arriba)
+  hoja(W, H) {
+    const w = Math.min(W * 0.88, H * 1.05, 700), h = w * 0.74, t = this.t;
+    let y = H * 0.47, ang = -0.025;
+    if (t < T.entra) { const k = salidaAtras(clamp(t / T.entra, 0, 1)); y = H + h * 0.7 - (H + h * 0.7 - H * 0.47) * k; ang = 0.14 * (1 - k) - 0.025 * k; }
+    if (t > T.fin) { const k = clamp((t - T.fin) / T.cierre, 0, 1) ** 2; y -= k * (H * 0.47 + h * 1.2); ang -= k * 0.35; }
+    return { x: W / 2, y, w, h, ang };
+  }
+  medidas(W, H) {
+    const hj = this.hoja(W, H), ancho = hj.w * 0.7, esc = ancho / CAJA.w;
+    return { hj, ancho, esc, x0: -ancho / 2, y0: -hj.h * 0.36 };
+  }
+  pasar(dt, W, H) {
+    this.t += dt;
+    const { hj, esc, x0, y0 } = this.medidas(W, H), r = this.r;
+    // lo que va largando la tijera: virutas de papel
+    const av = this.avances(), i = av.findIndex((a) => a > 0 && a < 1);
+    if (i >= 0 && r() < 0.7) {
+      const [px, py] = punta(ORDEN[i], av[i]);
+      this.virutas.push({ x: x0 + px * esc, y: y0 + py * esc, vx: (r() - 0.5) * 90 * esc, vy: -40 * esc - r() * 60 * esc, t: 0, a: r() * 6, color: PAPELES[TRAZOS[ORDEN[i]].id], w: (2 + r() * 3) * esc * 1.6 });
+    }
+    for (const v of this.virutas) { v.t += dt; v.x += v.vx * dt; v.y += v.vy * dt; v.vy += 400 * esc * dt; v.a += dt * 9; }
+    this.virutas = this.virutas.filter((v) => v.t < 0.6);
+    if (!this.golpeado && this.t >= T.golpe) {
+      this.golpeado = true;
+      this.vibrar([20, 30, 20]);
+      for (let k = 0; k < 90; k++) {
+        const a = -Math.PI / 2 + (r() - 0.5) * 3, v = (180 + r() * 480) * (hj.w / 500);
+        this.papeles.push({ x: (r() - 0.5) * hj.w * 0.5, y: y0 + CAJA.h * esc * 0.5, vx: Math.cos(a) * v, vy: Math.sin(a) * v, a: r() * 6, giro: (r() - 0.5) * 14, t: 0, vida: 1.1 + r() * 0.9, color: CONFETI[k % CONFETI.length], w: (5 + r() * 6) * (hj.w / 500), tri: r() < 0.35 });
+      }
+    }
+    for (const p of this.papeles) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 1 - dt * 1.8; p.vy = p.vy * (1 - dt * 1.8) + 480 * (hj.w / 500) * dt; p.a += p.giro * dt; }
+    this.papeles = this.papeles.filter((p) => p.t < p.vida);
+    // cada letra que se pega, un golpecito
+    const pegadas = clamp(Math.floor((this.t - T.letras) / T.cadaLetra) + 1, 0, 9);
+    if (pegadas > this.pegadas) { this.pegadas = pegadas; if (pegadas === 9) this.vibrar(10); }
+    if (this.t >= T.fin + T.cierre && !this.terminado) { this.terminado = true; this.alTerminar?.(); }
+  }
+
+  dibujar(g, W, H) {
+    const t = this.t, { hj, ancho, esc, x0, y0 } = this.medidas(W, H), u = hj.w / 500;
+    g.save();
+    g.drawImage(corcho(W, H), 0, 0);
+    // al final el corcho se va volviendo el cartón del menú
+    if (t > T.fin) { g.globalAlpha = clamp((t - T.fin) / T.cierre, 0, 1); g.fillStyle = CARTON; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+    // 1) la hoja, con su sombra, y las dos cintas
+    g.save();
+    g.translate(hj.x, hj.y); g.rotate(hj.ang);
+    g.save(); g.shadowColor = 'rgba(30,15,0,0.45)'; g.shadowBlur = 18 * u; g.shadowOffsetY = 8 * u;
+    g.fillStyle = HOJA; g.fillRect(-hj.w / 2, -hj.h / 2, hj.w, hj.h); g.restore();
+    // renglones muy suaves: es una hoja de verdad
+    g.strokeStyle = 'rgba(120,150,190,0.16)'; g.lineWidth = 1.2 * u;
+    for (let y = -hj.h / 2 + 34 * u; y < hj.h / 2; y += 26 * u) { g.beginPath(); g.moveTo(-hj.w / 2, y); g.lineTo(hj.w / 2, y); g.stroke(); }
+    if (t > T.entra * 0.8) {
+      g.globalAlpha = clamp((t - T.entra * 0.8) / 0.12, 0, 1);
+      for (const lado of [-1, 1]) {
+        g.save(); g.translate(lado * hj.w * 0.42, -hj.h / 2); g.rotate(lado * 0.5);
+        g.fillStyle = 'rgba(250,240,200,0.78)'; g.fillRect(-34 * u, -11 * u, 68 * u, 22 * u);
+        g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillRect(-34 * u, -11 * u, 68 * u, 5 * u);
+        g.restore();
+      }
+      g.globalAlpha = 1;
+    }
+    // 2) el monograma: primero el dibujo en lápiz (línea de puntos), después el recorte de color
+    const av = this.avances();
+    const golpe = t >= T.golpe ? clamp((t - T.golpe) / 0.55, 0, 1) : 0;
+    const salta = golpe > 0 ? 1 + (1 - elastico(golpe)) * 0.1 + Math.sin(golpe * Math.PI) * 0.04 : 1;
+    const alto = golpe > 0 ? 3 + 7 * Math.sin(Math.min(1, golpe * 1.6) * Math.PI * 0.5) : 3;
+    g.save();
+    const cy = y0 + (CAJA.h * esc) / 2;
+    g.translate(0, cy); g.scale(salta, salta); g.translate(0, -cy);
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    if (t > T.entra * 0.7 && golpe < 1) {
+      g.globalAlpha = clamp((t - T.entra * 0.7) / 0.15, 0, 1) * (1 - golpe) * 0.5;
+      g.setLineDash([5 * esc, 5 * esc]); g.strokeStyle = '#6b6258'; g.lineWidth = 1.4 * esc;
+      for (const tr of TRAZOS) g.stroke(camino2d(tr, esc, x0, y0));
+      g.setLineDash([]); g.globalAlpha = 1;
+    }
+    for (const capa of [0, 1]) TRAZOS.forEach((tr, i) => {
+      if (tr.capa !== capa || av[i] <= 0) return;
+      const p = camino2d(tr, esc, x0, y0), l = MUESTRAS[i].largo * esc;
+      g.setLineDash(av[i] < 1 ? [Math.max(0.01, l * av[i]), l + 10] : []);
+      // la sombra (crece cuando salta), el borde blanco del recorte y el papel de color
+      g.save(); g.translate(alto * 0.5 * esc, alto * esc); g.lineWidth = GROSOR * esc + 5 * esc; g.strokeStyle = 'rgba(40,20,5,0.28)'; g.stroke(p); g.restore();
+      g.lineWidth = GROSOR * esc + 5 * esc; g.strokeStyle = '#ffffff'; g.stroke(p);
+      g.lineWidth = GROSOR * esc; g.strokeStyle = PAPELES[tr.id]; g.stroke(p);
+      // un brillo fino de papel satinado
+      g.lineWidth = GROSOR * esc * 0.22; g.strokeStyle = 'rgba(255,255,255,0.28)'; g.save(); g.translate(-GROSOR * esc * 0.18, -GROSOR * esc * 0.18); g.stroke(p); g.restore();
+    });
+    g.setLineDash([]);
+    g.restore();
+    // las virutas y la tijera
+    for (const v of this.virutas) { g.globalAlpha = 1 - v.t / 0.6; g.fillStyle = v.color; g.save(); g.translate(v.x, v.y); g.rotate(v.a); g.fillRect(-v.w / 2, -v.w / 4, v.w, v.w / 2); g.restore(); }
+    g.globalAlpha = 1;
+    const i = av.findIndex((a) => a > 0 && a < 1);
+    const corta = t > T.traza[0] - 0.1 && t < T.traza[1] + 0.3;
+    if (corta) {
+      const k = i >= 0 ? ORDEN[i] : t < T.traza[0] ? 0 : 3;
+      const [px, py, ang] = punta(k, i >= 0 ? av[k] : t < T.traza[0] ? 0.02 : 1);
+      const aparece = clamp((t - (T.traza[0] - 0.1)) / 0.1, 0, 1), seVa = clamp((t - T.traza[1]) / 0.3, 0, 1);
+      g.globalAlpha = aparece * (1 - seVa);
+      g.save(); g.translate(x0 + px * esc + seVa * 60 * esc, y0 + py * esc - seVa * 50 * esc); g.rotate(ang + seVa * 0.8);
+      g.save(); g.translate(3 * esc, 5 * esc); g.globalAlpha *= 0.3; tijeraSombra(g, esc * 1.3); g.restore();
+      tijera(g, esc * 1.3, Math.abs(Math.sin(t * 38)));
+      g.restore();
+      g.globalAlpha = 1;
+    }
+    // 3) JXStudios en recortes de revista, pegados de a uno
+    if (t > T.letras) {
+      const txt = 'JXStudios', px = ancho * 0.125, yl = y0 + CAJA.h * esc + hj.h * 0.15;
+      const anchos = [...txt].map((ch) => px * (ch === 'i' ? 0.52 : 0.84));
+      const total = anchos.reduce((a, b) => a + b, 0) + px * 0.06 * (txt.length - 1);
+      let x = -total / 2;
+      [...txt].forEach((ch, k) => {
+        const tk = t - T.letras - k * T.cadaLetra;
+        if (tk <= 0) { x += anchos[k] + px * 0.06; return; }
+        const [fondoC, letraC, tipo] = RECORTES[k], rr = azar(40 + k);
+        const giro = (rr() - 0.5) * 0.3, tam = px * (0.92 + rr() * 0.2);
+        const cae = clamp(tk / 0.11, 0, 1), e = cae < 1 ? 1.7 - 0.7 * cae * cae : 1 - Math.sin(clamp((tk - 0.11) / 0.12, 0, 1) * Math.PI) * 0.06;
+        g.save(); g.translate(x + anchos[k] / 2, yl + (rr() - 0.5) * px * 0.12); g.rotate(giro); g.scale(e, e);
+        g.globalAlpha = clamp(tk / 0.05, 0, 1);
+        const w = anchos[k] * 1.02, h = tam * 1.18;
+        g.fillStyle = 'rgba(40,20,5,0.25)'; g.fillRect(-w / 2 + 2 * u, -h / 2 + 3 * u, w, h);
+        g.fillStyle = fondoC; g.beginPath();
+        // el recorte con las esquinas un poco torcidas (cortado a mano)
+        g.moveTo(-w / 2 + rr() * 3 * u, -h / 2); g.lineTo(w / 2, -h / 2 + rr() * 3 * u); g.lineTo(w / 2 - rr() * 3 * u, h / 2); g.lineTo(-w / 2, h / 2 - rr() * 3 * u); g.closePath(); g.fill();
+        g.fillStyle = letraC; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.font = tipo === 'serif' ? `italic 700 ${Math.round(tam)}px Georgia, "Times New Roman", serif` : `900 ${Math.round(tam)}px system-ui, -apple-system, "Segoe UI", Roboto, "Arial Black", sans-serif`;
+        g.fillText(ch, 0, tam * 0.04);
+        g.restore();
+        x += anchos[k] + px * 0.06;
+      });
+      g.globalAlpha = 1;
+      // 4) "presenta", escrito con birome de izquierda a derecha
+      if (t > T.presenta && this.textoPresenta) {
+        const k = clamp((t - T.presenta) / 0.38, 0, 1), fs = Math.round(px * 0.62);
+        g.font = `italic 400 ${fs}px "Segoe Script", "Bradley Hand", "Brush Script MT", Georgia, cursive`;
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        const tw = g.measureText(this.textoPresenta).width, yp = yl + px * 0.95;
+        g.save(); g.beginPath(); g.rect(-tw / 2 - 4 * u, yp - fs, (tw + 8 * u) * k, fs * 2); g.clip();
+        g.fillStyle = '#27408b'; g.fillText(this.textoPresenta, 0, yp);
+        g.restore();
+        if (k < 1) { g.fillStyle = '#1f2126'; g.save(); g.translate(-tw / 2 + tw * k, yp + fs * 0.1); g.rotate(-0.7); g.fillRect(0, -1.5 * u, 26 * u, 3 * u); g.fillStyle = '#3f7fd1'; g.fillRect(8 * u, -2.2 * u, 18 * u, 4.4 * u); g.restore(); }
+      }
+    }
+    g.restore();
+    // el papel picado, arriba de todo (sale de la hoja)
+    for (const p of this.papeles) {
+      g.globalAlpha = Math.min(1, (p.vida - p.t) * 3);
+      g.save(); g.translate(hj.x + p.x, hj.y + p.y); g.rotate(p.a); g.scale(1, Math.abs(Math.cos(p.a * 1.3)) * 0.8 + 0.2); g.fillStyle = p.color;
+      if (p.tri) { g.beginPath(); g.moveTo(0, -p.w * 0.6); g.lineTo(p.w * 0.55, p.w * 0.4); g.lineTo(-p.w * 0.55, p.w * 0.4); g.closePath(); g.fill(); }
+      else g.fillRect(-p.w / 2, -p.w * 0.32, p.w, p.w * 0.64);
+      g.restore();
+    }
+    g.globalAlpha = 1;
+    g.restore();
+  }
+}
+// la sombra de la tijera: la misma silueta, oscura
+function tijeraSombra(g, s) {
+  g.fillStyle = 'rgb(40,20,5)'; g.strokeStyle = 'rgb(40,20,5)';
+  for (const lado of [-1, 1]) {
+    g.save(); g.rotate(lado * 0.25);
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(-26 * s, -3.2 * s * lado); g.lineTo(-30 * s, 0); g.closePath(); g.fill();
+    g.lineWidth = 3.4 * s; g.beginPath(); g.ellipse(-40 * s, 5 * s * lado, 7.5 * s, 5 * s, 0.3 * lado, 0, Math.PI * 2); g.stroke();
+    g.restore();
+  }
+}
+return { T, IntroJXS };
+})();
+
+/* ── morfi ── */
+const M_morfi = (() => {
+// Morfi: una caja de cartón con hambre de caramelos. Se dibuja entera con
+// código, como un títere de papel: la caja se ve un poco desde arriba (en
+// perspectiva), las dos tapas de arriba son su boca y se abren a medida que
+// el caramelo se acerca, los ojos son dos círculos de papel pegados que lo
+// siguen, y tiene bracitos y patitas de cartón.
+//
+// Estados de ánimo: esperando (respira, parpadea, mira alrededor y a veces
+// bosteza), con ganas (el caramelo cerca: abre la boca, saca la lengua,
+// levanta los brazos), feliz (comió: cierra de golpe, se aplasta, salta y
+// baila) y triste (se perdió el caramelo).
+const { clamp, lerp, azar, elastico } = M_util;
+const { redondo, tono } = M_papel;
+const W = 62, H = 46, D = 30;           // la caja: ancho, alto y fondo
+const TAM_MORFI = 1.3;            // se dibuja un 30 % más grande que su caja de base (chico se perdía en el tablero)
+const FUGA = 0.22, SUBE = 0.5;          // la perspectiva: atrás se angosta y sube
+
+// de 3D (X a la derecha, Y arriba, Z hacia el fondo) a la pantalla, sin girar
+function pr(X, Y, Z) { const f = 1 - (FUGA * Z) / D; return [X * f, -Y - Z * SUBE]; }
+
+const PIELES_MORFI = {
+  kraft: { frente: '#c99a5f', lado: '#a97a44', tapa: '#d9ad72', adentro: '#4a2e16', borde: '#7a5530' },
+  regalo: { frente: '#e0566c', lado: '#b93d52', tapa: '#ea7488', adentro: '#5a1422', borde: '#8e2438', cinta: '#f5c542' },
+  zapatos: { frente: '#6d8fa8', lado: '#56768e', tapa: '#8aa9c0', adentro: '#23303c', borde: '#3b5063', franja: '#e8edf1' },
+  pizza: { frente: '#f1ece2', lado: '#d8d0bf', tapa: '#fbf8f1', adentro: '#6b4a2a', borde: '#b8ae98', letras: '#d7432f' },
+  mudanza: { frente: '#b88a50', lado: '#95693a', tapa: '#c9a068', adentro: '#40260f', borde: '#6d4a25', cintas: true },
+  menta: { frente: '#7fcfb0', lado: '#5fb294', tapa: '#9fe0c6', adentro: '#1c4a3b', borde: '#3e8a6f' },
+  noche: { frente: '#3f4a8a', lado: '#2f386e', tapa: '#55619f', adentro: '#12162e', borde: '#1d2350', estrellas: true },
+  jx: { frente: '#1f2126', lado: '#15161a', tapa: '#2c2f36', adentro: '#060607', borde: '#060607', jx: true },
+};
+
+class Morfi {
+  constructor(piel = 'kraft', semilla = 7) {
+    this.piel = PIELES_MORFI[piel] ? piel : 'kraft';
+    this.t = 0; this.r = azar(semilla);
+    this.boca = 0;                  // cuánto abren las tapas (0 a 1)
+    this.mira = [0, -1];            // hacia dónde miran los ojos (unitario)
+    this.parpado = 0; this.proxParpadeo = 1.5;
+    this.animo = 'espera'; this.tAnimo = 0;
+    this.salto = 0; this.vy = 0;
+    this.aplasta = 0;               // 1 = recién aplastado (el mordiscón)
+    this.brazos = 0;                // 0 abajo, 1 arriba
+    this.lengua = 0;
+    this.bostezo = 0; this.quieto = 0;
+    this.miraDistraida = null; this.tDistraida = 2;
+  }
+
+  // `blanco`: [x, y] adonde mirar (el caramelo, relativo a los pies de Morfi) o null
+  // `ganas`: 0 a 1, qué tan cerca está el caramelo de la boca
+  pasar(dt, { blanco = null, ganas = 0 } = {}) {
+    this.t += dt; this.tAnimo += dt;
+    const r = this.r;
+    // hacia dónde mira: al caramelo; si no hay, de vez en cuando a otro lado
+    let ox = 0, oy = -1;
+    if (blanco && this.animo !== 'feliz') {
+      const dx = blanco[0], dy = blanco[1] + H * 0.58, l = Math.hypot(dx, dy) || 1;
+      ox = dx / l; oy = dy / l;
+    } else if (this.animo === 'espera' || !blanco) {
+      if ((this.tDistraida -= dt) <= 0) { this.miraDistraida = r() < 0.6 ? [r() * 2 - 1, r() * 1.4 - 0.9] : null; this.tDistraida = 1.2 + r() * 2.5; }
+      if (this.miraDistraida) [ox, oy] = this.miraDistraida;
+    }
+    this.mira[0] += (ox - this.mira[0]) * Math.min(1, dt * 10);
+    this.mira[1] += (oy - this.mira[1]) * Math.min(1, dt * 10);
+    // parpadear (no con los ojos de feliz, que ya están cerrados)
+    if ((this.proxParpadeo -= dt) <= 0) { this.parpado = 1; this.proxParpadeo = 1.8 + r() * 3.2; }
+    this.parpado = Math.max(0, this.parpado - dt * 7);
+    // la boca (las tapas)
+    let boca = 0;
+    if (this.animo === 'espera') {
+      boca = ganas > 0 ? 0.25 + ganas * 0.85 : 0;
+      // bostezo si nada pasa por un rato
+      this.quieto = ganas > 0.05 ? 0 : this.quieto + dt;
+      if (this.quieto > 9 && this.bostezo === 0) this.bostezo = 0.0001;
+      if (this.bostezo > 0) { this.bostezo += dt; boca = Math.max(boca, Math.sin(Math.min(1, this.bostezo / 1.6) * Math.PI) * 0.75); if (this.bostezo > 1.6) { this.bostezo = 0; this.quieto = 0; } }
+      else if (Math.sin(this.t * 0.7) > 0.995) boca = Math.max(boca, 0.12);   // un tic de las tapas
+    } else if (this.animo === 'feliz') boca = this.tAnimo < 0.12 ? 0 : Math.max(0, Math.sin(this.tAnimo * 9) * 0.1);
+    else if (this.animo === 'triste') boca = 0.18 + Math.sin(this.tAnimo * 3) * 0.05;
+    const vel = boca > this.boca ? 9 : this.animo === 'feliz' ? 40 : 7;
+    this.boca += (boca - this.boca) * Math.min(1, dt * vel);
+    this.lengua += ((this.animo === 'espera' && ganas > 0.55 ? 1 : 0) - this.lengua) * Math.min(1, dt * 8);
+    this.brazos += ((this.animo === 'feliz' ? 1 : this.animo === 'triste' ? -0.3 : ganas * 0.9) - this.brazos) * Math.min(1, dt * 6);
+    // saltos y aplastones
+    this.vy -= 900 * dt; this.salto = Math.max(0, this.salto + this.vy * dt);
+    if (this.salto === 0 && this.vy < 0) this.vy = 0;
+    this.aplasta = Math.max(0, this.aplasta - dt * 2.2);
+    if (this.animo === 'feliz' && this.tAnimo > 0.45 && this.salto === 0 && this.tAnimo < 3.2 && ((this.tAnimo * 10) | 0) % 7 === 0) this.vy = 150;
+    if (this.animo !== 'espera' && this.tAnimo > 3.5 && this.animo !== 'feliz') this.animar('espera');
+  }
+
+  animar(animo) {
+    this.animo = animo; this.tAnimo = 0;
+    if (animo === 'feliz') { this.aplasta = 1; this.vy = 210; this.boca = Math.min(this.boca, 1); }
+    if (animo === 'espera') { this.quieto = 0; }
+  }
+  comer() { this.animar('feliz'); }
+  llorar() { this.animar('triste'); }
+
+  // Dibuja con los pies en (x, y); `s` = píxeles por unidad del tablero.
+  dibujar(g, x, y, s, { sombra = true } = {}) {
+    const c = PIELES_MORFI[this.piel], t = this.t;
+    // la respiración y el aplastón (se aplasta en alto y se ensancha)
+    const resp = Math.sin(t * 2.3) * 0.018;
+    const ap = this.aplasta > 0 ? Math.sin(this.aplasta * Math.PI) * (this.aplasta > 0.5 ? 1 : 0.4) : 0;
+    const sy = 1 + resp - ap * 0.2, sx = 1 - resp * 0.5 + ap * 0.14;
+    const baile = this.animo === 'feliz' && this.tAnimo > 0.4 ? Math.sin(this.tAnimo * 11) * 0.07 * Math.max(0, 1 - (this.tAnimo - 2.5) / 1.5) : this.animo === 'triste' ? Math.sin(this.tAnimo * 2.5) * 0.03 : 0;
+    g.save();
+    g.translate(x, y);
+    g.scale(s * TAM_MORFI, s * TAM_MORFI);
+    // la sombra en el piso (más chica cuando salta)
+    if (sombra) {
+      const k = 1 - Math.min(0.5, this.salto / 60);
+      g.fillStyle = 'rgba(40,24,8,0.28)';
+      g.beginPath(); g.ellipse(4, 3, W * 0.62 * k * sx, 7 * k, 0, 0, Math.PI * 2); g.fill();
+    }
+    g.translate(0, -this.salto);
+    g.rotate(baile);
+    g.scale(sx, sy);
+    // las patitas
+    g.fillStyle = c.borde;
+    for (const lado of [-1, 1]) {
+      const paso = this.animo === 'feliz' ? Math.max(0, Math.sin(this.tAnimo * 11 + lado)) * 3 : 0;
+      redondo(g, lado * 15 - 7, -3 - paso, 14, 8, 3.5); g.fill();
+    }
+    // los bracitos (atrás de la caja cuando están abajo)
+    const brazo = (lado) => {
+      const a = lerp(0.35, -2.2, clamp(this.brazos, -0.4, 1)) + Math.sin(t * 3 + lado) * 0.06 + (this.animo === 'feliz' ? Math.sin(this.tAnimo * 14) * 0.25 : 0);
+      g.save(); g.translate(lado * (W / 2 - 2), -H * 0.55); g.scale(lado, 1); g.rotate(-a);
+      g.fillStyle = c.lado; redondo(g, -3, 0, 7, 20, 3.5); g.fill();
+      g.fillStyle = c.frente; g.beginPath(); g.arc(0.5, 20, 5, 0, Math.PI * 2); g.fill();
+      g.restore();
+    };
+    brazo(-1); brazo(1);
+    this.caja(g, c);
+    g.restore();
+  }
+
+  caja(g, c) {
+    const boca = this.boca, A = W / 2;
+    // ── el lado de arriba: el hueco (la boca) y las tapas ──
+    const tl = pr(-A, H, 0), tr = pr(A, H, 0), br = pr(A, H, D), bl = pr(-A, H, D);
+    if (boca > 0.02) {
+      g.fillStyle = c.adentro;
+      g.beginPath(); g.moveTo(...tl); g.lineTo(...tr); g.lineTo(...br); g.lineTo(...bl); g.closePath(); g.fill();
+      // la pared de atrás, adentro, un poco más clara: da hondura
+      g.fillStyle = tono(c.adentro, 0.12);
+      const f = pr(-A * 0.9, H - 6, D), f2 = pr(A * 0.9, H - 6, D);
+      g.beginPath(); g.moveTo(...bl); g.lineTo(...br); g.lineTo(...f2); g.lineTo(...f); g.closePath(); g.fill();
+      // la lengua de papel rosa: con ganas asoma apenas detrás de los dientes
+      // y se relame de un lado a otro (más alta parecía un globo rosa)
+      if (this.lengua > 0.05) {
+        const l = this.lengua, [lx, ly] = pr(Math.sin(this.t * 5) * 5 * l, H - 3 + l * 4 + Math.sin(this.t * 12) * 0.8 * l, D * 0.32);
+        g.fillStyle = '#e8799f'; g.beginPath(); g.ellipse(lx, ly, 8.5, 3.5 + l * 2.5, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#c95c82'; g.fillRect(lx - 0.6, ly - 2 - l, 1.2, 4 + l * 2);
+        g.fillStyle = 'rgba(255,255,255,0.3)'; g.beginPath(); g.ellipse(lx - 3.5, ly - 1.2, 2.4, 1.2, -0.3, 0, Math.PI * 2); g.fill();
+      }
+      // los dientes de cartón en el borde de adelante
+      g.fillStyle = '#fbf8f1';
+      for (let k = 0; k < 6; k++) {
+        const x0 = -A + 6 + k * ((W - 12) / 6), [px, py] = pr(x0, H, 0), [qx, qy] = pr(x0 + (W - 12) / 6, H, 0), [mx, my] = pr(x0 + (W - 12) / 12, H + 5, 2.5);
+        g.beginPath(); g.moveTo(px, py); g.lineTo(mx, my); g.lineTo(qx, qy); g.closePath(); g.fill();
+      }
+    } else {
+      g.fillStyle = c.tapa;
+      g.beginPath(); g.moveTo(...tl); g.lineTo(...tr); g.lineTo(...br); g.lineTo(...bl); g.closePath(); g.fill();
+    }
+    // ── el frente ──
+    const [fx0, fy0] = pr(-A, 0, 0), [fx1, fy1] = pr(A, H, 0);
+    g.fillStyle = c.frente;
+    redondo(g, fx0, fy1, fx1 - fx0, fy0 - fy1, 3); g.fill();
+    // el corrugado que asoma en el borde de arriba y una sombra suave abajo
+    g.fillStyle = tono(c.frente, -0.12); g.fillRect(fx0, fy0 - 5, fx1 - fx0, 5);
+    g.strokeStyle = c.borde; g.lineWidth = 1.4; redondo(g, fx0, fy1, fx1 - fx0, fy0 - fy1, 3); g.stroke();
+    this.adornos(g, c, fx0, fy1, fx1 - fx0, fy0 - fy1);
+    this.cara(g, c);
+    // ── las tapas: giran desde los bordes de arriba, izquierdo y derecho ──
+    const tapa = (lado) => {
+      // abierta hasta ~2,1 rad (se pasan de parado, como mandíbulas); temblando con ganas
+      const th = boca * 2.1 + (boca > 0.3 ? Math.sin(this.t * 22 + lado) * 0.06 * boca : 0);
+      const pts = [], u = A * 0.98;
+      for (const [uu, z] of [[0, 0], [u, 0], [u, D], [0, D]]) pts.push(pr(lado * (A - uu * Math.cos(th)), H + uu * Math.sin(th), z));
+      const cae = th > Math.PI / 2;
+      // la cara de adentro de la tapa (más oscura) si ya pasó de parada
+      g.fillStyle = cae ? tono(c.tapa, -0.28) : th > 0.9 ? tono(c.tapa, -0.1) : c.tapa;
+      g.beginPath(); g.moveTo(...pts[0]); for (const p of pts.slice(1)) g.lineTo(...p); g.closePath(); g.fill();
+      g.strokeStyle = c.borde; g.lineWidth = 1.2; g.stroke();
+      // el pliegue marcado cerca de la bisagra
+      g.strokeStyle = tono(c.tapa, -0.2); g.lineWidth = 0.8;
+      const a = pr(lado * (A - 3 * Math.cos(th)), H + 3 * Math.sin(th), 0), b = pr(lado * (A - 3 * Math.cos(th)), H + 3 * Math.sin(th), D);
+      g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke();
+      // la cinta de regalo cruza también las tapas
+      if (c.cinta) {
+        g.fillStyle = c.cinta;
+        const m0 = pr(lado * (A - u * 0.95 * Math.cos(th)), H + u * 0.95 * Math.sin(th), D * 0.42), m1 = pr(lado * (A - u * 0.95 * Math.cos(th)), H + u * 0.95 * Math.sin(th), D * 0.58);
+        const h0 = pr(lado * A, H, D * 0.42), h1 = pr(lado * A, H, D * 0.58);
+        g.beginPath(); g.moveTo(...h0); g.lineTo(...m0); g.lineTo(...m1); g.lineTo(...h1); g.closePath(); g.fill();
+      }
+    };
+    // primero la que queda atrás según hacia dónde mira: las dos se ven parejas
+    tapa(-1); tapa(1);
+    // el moño del regalo, arriba de todo, cuando está cerrada
+    if (c.cinta && boca < 0.3) {
+      const [mx, my] = pr(0, H + 1, D * 0.5);
+      g.fillStyle = c.cinta;
+      for (const lado of [-1, 1]) { g.beginPath(); g.ellipse(mx + lado * 7, my - 3, 7, 4.5, lado * 0.5, 0, Math.PI * 2); g.fill(); }
+      g.fillStyle = tono(c.cinta, -0.2); g.beginPath(); g.arc(mx, my - 2, 3, 0, Math.PI * 2); g.fill();
+    }
+  }
+
+  adornos(g, c, x, y, w, h) {
+    if (c.cinta) { g.fillStyle = c.cinta; g.fillRect(x + w / 2 - 4, y, 8, h); }
+    if (c.franja) { g.fillStyle = c.franja; g.fillRect(x, y + h * 0.18, w, 5); }
+    if (c.letras) { g.fillStyle = c.letras; g.font = '900 9px "Arial Black", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('PIZZA', x + w / 2, y + h * 0.86); }
+    if (c.cintas) {
+      g.fillStyle = 'rgba(214,178,120,0.85)'; g.fillRect(x, y + h * 0.78, w, 6);
+      g.fillStyle = 'rgba(190,40,30,0.65)'; g.font = '900 6px "Arial Black", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('FRÁGIL', x + w / 2, y + h * 0.78 + 3.2);
+    }
+    if (c.estrellas) { g.fillStyle = 'rgba(255,240,170,0.8)'; for (const [a, b] of [[0.12, 0.2], [0.85, 0.3], [0.7, 0.85], [0.2, 0.8]]) { g.beginPath(); g.arc(x + w * a, y + h * b, 1.3, 0, Math.PI * 2); g.fill(); } }
+    if (c.jx) { g.fillStyle = '#c9ccd4'; g.font = '900 8px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('JXS', x + w / 2, y + h * 0.86); }
+  }
+
+  cara(g, c) {
+    const ey = -H * 0.6, ex = W * 0.21, r = 9.2 * (1 + (this.animo === 'espera' ? this.boca * 0.12 : 0));
+    const [mx, my] = this.mira;
+    for (const lado of [-1, 1]) {
+      const cx = lado * ex, cy = ey;
+      // el ojo es un círculo de papel pegado: con su sombrita
+      g.fillStyle = 'rgba(40,24,8,0.25)'; g.beginPath(); g.arc(cx + 0.8, cy + 1.2, r, 0, Math.PI * 2); g.fill();
+      if (this.animo === 'feliz' && this.tAnimo > 0.1) {
+        // feliz: ojitos cerrados como ^ ^
+        g.strokeStyle = '#2a1c10'; g.lineWidth = 2.6; g.lineCap = 'round';
+        g.beginPath(); g.arc(cx, cy + 3, r * 0.62, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
+        continue;
+      }
+      g.fillStyle = '#fbf8f1'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(60,40,20,0.35)'; g.lineWidth = 0.8; g.stroke();
+      const triste = this.animo === 'triste';
+      const px = cx + mx * r * 0.42, py = cy + (triste ? r * 0.3 : my * r * 0.42);
+      g.fillStyle = '#1d140c'; g.beginPath(); g.arc(px, py, r * 0.47, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(px - r * 0.16, py - r * 0.18, r * 0.15, 0, Math.PI * 2); g.fill();
+      // el párpado: parpadeo, sueño en el bostezo, pena en triste
+      const cierre = Math.max(this.parpado > 0.5 ? 1 - (this.parpado - 0.5) * 2 : this.parpado * 2, this.bostezo > 0 ? 0.6 : 0, triste ? 0.4 : 0);
+      if (cierre > 0.02) {
+        g.save(); g.beginPath(); g.arc(cx, cy, r + 0.5, 0, Math.PI * 2); g.clip();
+        g.fillStyle = c.frente; g.fillRect(cx - r - 1, cy - r - 1, 2 * r + 2, (2 * r + 2) * cierre);
+        g.strokeStyle = c.borde; g.lineWidth = 1; g.beginPath(); g.moveTo(cx - r, cy - r + (2 * r + 2) * cierre - 1); g.lineTo(cx + r, cy - r + (2 * r + 2) * cierre - 1); g.stroke();
+        g.restore();
+      }
+      // las cejas: tiras de papel oscuro que dicen el ánimo
+      const ceja = triste ? 0.35 * lado : this.boca > 0.4 ? -0.25 * lado : 0;
+      g.save(); g.translate(cx, cy - r - 4 - (this.boca > 0.4 ? 2 : 0)); g.rotate(ceja);
+      g.fillStyle = tono(c.borde, -0.25); redondo(g, -6, -1.3, 12, 2.6, 1.3); g.fill(); g.restore();
+    }
+    // los cachetes
+    g.fillStyle = this.animo === 'feliz' ? 'rgba(240,110,140,0.55)' : 'rgba(240,110,140,0.3)';
+    for (const lado of [-1, 1]) { g.beginPath(); g.ellipse(lado * W * 0.36, ey + 11, 5, 3, 0, 0, Math.PI * 2); g.fill(); }
+    // la boquita del frente: sonrisa, "o" con ganas, o puchero triste
+    g.strokeStyle = '#2a1c10'; g.lineWidth = 2; g.lineCap = 'round';
+    const by = ey + 13;
+    if (this.animo === 'feliz') { g.fillStyle = '#5a2b16'; g.beginPath(); g.arc(0, by - 1, 5.5, 0.1, Math.PI - 0.1); g.closePath(); g.fill(); }
+    else if (this.animo === 'triste') { g.beginPath(); g.arc(0, by + 4, 4.5, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); }
+    else if (this.boca > 0.35) { g.fillStyle = '#5a2b16'; g.beginPath(); g.ellipse(0, by, 3 + this.boca * 1.5, 2.5 + this.boca * 2.5, 0, 0, Math.PI * 2); g.fill(); }
+    else { g.beginPath(); g.arc(0, by - 3, 4.5, 0.3, Math.PI - 0.3); g.stroke(); }
+  }
+}
+
+// Dónde queda la boca (el hueco de arriba), desde los pies: para el juego.
+const BOCA_MORFI = [0, -(H + D * SUBE * 0.5) * TAM_MORFI];
+return { TAM_MORFI, PIELES_MORFI, Morfi, BOCA_MORFI, elastico };
+})();
+
+/* ── menu ── */
+const M_menu = (() => {
+// El fondo de los menús: la caja de cartón, el cartel MORFI de cartón
+// corrugado colgado de dos hilos que se hamaca (un péndulo con resorte que
+// el dedo empuja, como en Cripta y Globo) y, abajo del cartel, Morfi con un
+// caramelo colgado que se puede cortar ahí mismo: lo come, festeja y baja
+// otro. Los botones son HTML, encima.
+const { fondo, pegar, pintarGrano, tono, P } = M_papel;
+const { Partida } = M_partida;
+const { dibujarNivel, alfiler, Efectos } = M_dibujo;
+const { Morfi } = M_morfi;
+const { clamp, azar } = M_util;
+const LETRAS = [['M', '#e8423a'], ['O', '#f5c542'], ['R', '#3f7fd1'], ['F', '#58b368'], ['I', '#ff6f9a']];
+// la escena del caramelo del menú, en su propio tablero de 200 × 240 (angosto:
+// acostado va en una columna y parado entre el cartel y los botones)
+const ESCENA = { w: 200, h: 240 };
+const DEF_MENU = { caramelo: [100, 78], morfi: [100, 232], estrellas: [], hilos: [{ pin: [100, 8] }] };
+
+// el cartel se arma una vez por tamaño y por idioma (el subtítulo cambia)
+let cartelC = null;
+function cartel(ancho, subtitulo) {
+  ancho = Math.round(ancho);
+  if (cartelC && cartelC.ancho === ancho && cartelC.sub === subtitulo) return cartelC;
+  const alto = Math.round(ancho * 0.44), m = Math.round(ancho * 0.07);
+  const c = document.createElement('canvas'); c.width = ancho + m * 2; c.height = alto + m * 2 + Math.round(ancho * 0.12);
+  const g = c.getContext('2d'), r = azar(8), u = ancho / 400;
+  // la tabla de cartón con los bordes rotos (a mano)
+  const borde = [];
+  const n = 26;
+  for (let k = 0; k <= n; k++) borde.push([m + (ancho * k) / n, m + (r() - 0.5) * 5 * u]);
+  for (let k = 0; k <= 8; k++) borde.push([m + ancho + (r() - 0.5) * 4 * u, m + (alto * k) / 8]);
+  for (let k = n; k >= 0; k--) borde.push([m + (ancho * k) / n, m + alto + (r() - 0.5) * 6 * u]);
+  for (let k = 8; k >= 0; k--) borde.push([m + (r() - 0.5) * 4 * u, m + (alto * k) / 8]);
+  const forma = () => { g.beginPath(); borde.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); };
+  g.save(); g.shadowColor = 'rgba(40,20,5,0.4)'; g.shadowBlur = 14 * u; g.shadowOffsetY = 8 * u; forma(); g.fillStyle = P.kraft || '#c99a5f'; g.fill(); g.restore();
+  g.save(); forma(); g.clip();
+  const gr = g.createLinearGradient(0, m, 0, m + alto); gr.addColorStop(0, '#d8ab70'); gr.addColorStop(1, '#bb8b50');
+  g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
+  // las canaletas del corrugado, suaves
+  g.strokeStyle = 'rgba(110,70,30,0.12)'; g.lineWidth = 3 * u;
+  for (let x = m; x < m + ancho; x += 9 * u) { g.beginPath(); g.moveTo(x, m); g.lineTo(x, m + alto); g.stroke(); }
+  // el borde de abajo, roto, muestra la onda del corrugado
+  g.strokeStyle = 'rgba(120,80,35,0.55)'; g.lineWidth = 2 * u; g.beginPath();
+  for (let x = m; x <= m + ancho; x += 2) g.lineTo(x, m + alto - 6 * u + Math.sin(x / (4 * u)) * 2.5 * u);
+  g.stroke();
+  g.restore();
+  // los agujeros de los hilos, arriba
+  for (const k of [0.16, 0.84]) { g.fillStyle = '#3b2410'; g.beginPath(); g.arc(m + ancho * k, m + alto * 0.12, 4 * u, 0, Math.PI * 2); g.fill(); }
+  // MORFI: letras recortadas de papel de colores, con su borde blanco y su sombra
+  const px = alto * 0.62;
+  g.font = `900 ${Math.round(px)}px system-ui, -apple-system, "Segoe UI", Roboto, "Arial Black", sans-serif`;
+  g.textBaseline = 'middle'; g.textAlign = 'center'; g.lineJoin = 'round';
+  const anchos = LETRAS.map(([l]) => g.measureText(l).width), sep = px * 0.02;
+  const total = anchos.reduce((a, b) => a + b, 0) + sep * (LETRAS.length - 1);
+  let x = m + ancho / 2 - total / 2;
+  LETRAS.forEach(([l, col], i) => {
+    const cx = x + anchos[i] / 2, cy = m + alto * 0.5 + (i % 2 ? -1 : 1) * alto * 0.025, ang = (r() - 0.5) * 0.16;
+    g.save(); g.translate(cx, cy); g.rotate(ang);
+    g.lineWidth = px * 0.2; g.strokeStyle = 'rgba(40,20,5,0.35)'; g.strokeText(l, 3 * u, 6 * u);
+    g.strokeStyle = '#ffffff'; g.strokeText(l, 0, 0);
+    g.fillStyle = tono(col, -0.18); g.fillText(l, 0, 2 * u);
+    g.fillStyle = col; g.fillText(l, 0, 0);
+    // un doblez de papel: la mitad de arriba un poco más clara
+    g.save(); g.beginPath(); g.rect(-anchos[i], -px, anchos[i] * 2, px * 0.9); g.clip(); g.fillStyle = 'rgba(255,255,255,0.14)'; g.fillText(l, 0, 0); g.restore();
+    g.restore();
+    x += anchos[i] + sep;
+  });
+  // el subtítulo en una tira de papel blanco pegada con cinta, torcida
+  if (subtitulo) {
+    const fs = Math.round(alto * 0.17);
+    g.font = `italic 700 ${fs}px Georgia, "Times New Roman", serif`;
+    const tw = g.measureText(subtitulo).width + fs * 1.2, tx = m + ancho * 0.62, ty = m + alto + fs * 0.35;
+    g.save(); g.translate(tx, ty); g.rotate(-0.05);
+    g.fillStyle = 'rgba(40,20,5,0.25)'; g.fillRect(-tw / 2 + 2 * u, -fs * 0.75 + 3 * u, tw, fs * 1.5);
+    g.fillStyle = '#fbf7ee'; g.fillRect(-tw / 2, -fs * 0.75, tw, fs * 1.5);
+    g.fillStyle = '#27408b'; g.fillText(subtitulo, 0, fs * 0.05);
+    g.fillStyle = 'rgba(250,240,200,0.75)'; g.save(); g.translate(-tw / 2, -fs * 0.6); g.rotate(-0.6); g.fillRect(-fs * 0.6, -fs * 0.25, fs * 1.2, fs * 0.5); g.restore();
+    g.restore();
+  }
+  c.ancho = ancho; c.margen = m; c.alto = alto; c.sub = subtitulo;
+  cartelC = c;
+  return c;
+}
+
+class FondoMenu {
+  constructor({ alEvento = () => {} } = {}) {
+    this.t = 0; this.balanceo = 0; this.vel = 0;
+    this.alEvento = alEvento;
+    this.morfi = new Morfi('kraft', 11);
+    this.efectos = new Efectos();
+    this.nueva(); this.espera = 0;
+    this.cam = null;
+  }
+  nueva() { this.partida = new Partida(DEF_MENU); this.aparece = 0; }
+  // el dedo sobre el fondo empuja el cartel
+  mover(dx) { this.vel += dx * 0.004; }
+  empujar(fuerza) { this.vel += fuerza; }
+  // un tajo sobre el caramelo del menú (en píxeles del lienzo)
+  cortar(x1, y1, x2, y2) {
+    const c = this.cam;
+    if (!c || this.partida.estado !== 'juego') return 0;
+    const a = (x, y) => [(x - c.ox) / c.esc, (y - c.oy) / c.esc];
+    return this.partida.cortar(...a(x1, y1), ...a(x2, y2));
+  }
+  pasar(dt) {
+    this.t += dt; this.aparece += dt;
+    this.vel += (-this.balanceo * 7 - this.vel * 1.4) * dt;
+    this.balanceo = clamp(this.balanceo + this.vel * dt, -0.5, 0.5);
+    const p = this.partida;
+    p.avanzar(dt);
+    for (const ev of p.sacarEventos()) {
+      if (ev.tipo === 'comido') { this.morfi.comer(); this.efectos.papelitos(ev.x, ev.y, 16, ['#e8423a', '#f5c542', '#3f7fd1', '#58b368']); }
+      if (ev.tipo === 'corte') this.efectos.papelitos(ev.x, ev.y, 5, ['#e2c48f', '#fff4dc'], { vel: 80, arriba: 20, tam: 2 });
+      this.alEvento(ev);
+    }
+    // comido o caído: al rato baja otro caramelo
+    if (p.estado !== 'juego' && p.tFin > 1.5) this.nueva();
+    this.morfi.pasar(dt, { blanco: p.estado === 'juego' ? [p.x - p.morfi.x, p.y - p.morfi.y] : null, ganas: p.apetito() });
+    this.efectos.pasar(dt);
+  }
+
+  // `zona`: dónde va el cartel {cx, y, ancho}; `escena`: el rectángulo del caramelo {x, y, w, h} (o null)
+  dibujar(g, W, H, u, { zona, escena = null, pielMorfi = 'kraft', pielDulce = 'rojo', subtitulo = '' } = {}) {
+    g.drawImage(fondo('carton', W, H, u), 0, 0);
+    if (escena) {
+      // con tope: en una pantalla grande, Morfi gigante tapaba medio menú
+      const esc = Math.min(escena.w / ESCENA.w, escena.h / ESCENA.h, 2.4 * u);
+      this.cam = { esc, ox: escena.x + (escena.w - ESCENA.w * esc) / 2, oy: escena.y + (escena.h - ESCENA.h * esc) / 2 };
+      this.morfi.piel = pielMorfi;
+      // el caramelo nuevo baja con un saltito
+      const k = clamp(this.aparece / 0.35, 0, 1);
+      g.save();
+      if (k < 1) { g.globalAlpha = k; }
+      dibujarNivel(g, W, H, this.partida, this.cam, { t: this.t, alfa: 1, morfi: this.morfi, pielCaramelo: pielDulce, efectos: this.efectos, dpr: u, sinFondo: true });
+      g.restore();
+    } else this.cam = null;
+    if (zona) this.dibujarCartel(g, zona.cx, zona.y, zona.ancho, u, subtitulo);
+    pintarGrano(g, W, H, 0.35);
+  }
+
+  dibujarCartel(g, cx, y, ancho, u, subtitulo) {
+    const c = cartel(ancho, subtitulo), ang = this.balanceo + Math.sin(this.t * 1.1) * 0.025;
+    const cuelga = ancho * 0.26;                 // de los alfileres al cartel
+    const px = cx, py = y - cuelga;              // el punto de donde cuelga todo
+    const e = ancho / 400;
+    // los dos hilos, de los alfileres a los agujeros del cartel (girados con él)
+    const puntas = [-0.34, 0.34].map((k) => {
+      const lx = k * ancho, ly = cuelga + c.alto * 0.12;
+      return { ax: px + Math.cos(ang) * lx - Math.sin(ang) * ly, ay: py + Math.sin(ang) * lx + Math.cos(ang) * ly, gx: px + k * ancho * 0.8, gy: py };
+    });
+    g.lineCap = 'round';
+    for (const p of puntas) {
+      g.strokeStyle = 'rgba(40,24,8,0.25)'; g.lineWidth = 3.4 * e; g.beginPath(); g.moveTo(p.gx + 2 * e, p.gy + 3 * e); g.lineTo(p.ax + 2 * e, p.ay + 3 * e); g.stroke();
+      g.strokeStyle = '#e2c48f'; g.lineWidth = 3.2 * e; g.beginPath(); g.moveTo(p.gx, p.gy); g.lineTo(p.ax, p.ay); g.stroke();
+      g.setLineDash([2.4 * e, 2.6 * e]); g.strokeStyle = '#b68e55'; g.stroke(); g.setLineDash([]);
+    }
+    g.save();
+    g.translate(px, py); g.rotate(ang);
+    g.drawImage(c, -c.width / 2, cuelga - c.margen);
+    g.restore();
+    for (const p of puntas) pegar(g, alfiler(e * 1.6, '#e04a3a'), p.gx, p.gy, { alto: 3 * e });
+  }
+}
+return { ESCENA, FondoMenu };
+})();
+
+/* ── sonido ── */
+const M_sonido = (() => {
+// El sonido, sintetizado con WebAudio (nada de archivos): una kalimba con
+// pizzicato para el menú y otra más saltarina para jugar (progresiones
+// fijas: una al azar suena a nada), el tijeretazo del corte, la estrella que
+// sube de nota (la segunda más aguda que la primera), el mordiscón de Morfi
+// con su "ñam", el pop del globo, el soplido del abanico, el ¡boing! de la
+// gomita y el papel del sobre. El audio se crea al abrir: si el navegador
+// deja sonar, nace andando; si no, arranca con el primer toque (main.js ›
+// despertar).
+const { T: TI } = M_intro;
+const NOTA = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11, Bb: 10, Eb: 3 };
+const midi = (n) => { const m = /^([A-G][#b]?)(\d)$/.exec(n); return 12 * (+m[2] + 1) + NOTA[m[1]]; };
+const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+const f = (n) => hz(midi(n));
+
+// acordes (raíz y tipo); bajo en pizzicato, kalimba, bombo, "tic" de lápiz y shaker en 16 pasos
+const CANCIONES = {
+  menu: {
+    bpm: 96, acordes: [['C3', 'M'], ['A2', 'm7'], ['F2', 'M7'], ['G2', 'M']],
+    bajo: 'R.....5.R.....5.', kalimba: '0.2.1.3.2...1.2.', bombo: 'x.......x.......', tic: '....x.......x...', shaker: '..x...x...x...x.',
+  },
+  juego: {
+    bpm: 108, acordes: [['F2', 'M'], ['D2', 'm'], ['A#2', 'M'], ['C3', 'M']],
+    bajo: 'R..R..5.R..R..O.', kalimba: '0.1.2.3.2.1.3.2.', bombo: 'x.....x...x.....', tic: '....x.......x..x', shaker: 'x.x.x.x.x.x.x.x.',
+  },
+};
+const TIPOS = { m: [0, 3, 7, 12], M: [0, 4, 7, 12], m7: [0, 3, 7, 10], M7: [0, 4, 7, 11] };
+
+function crearSonido(ajustes) {
+  let ctx = null, maestro, busSfx, busMus, ruido;
+  const s = { ajustes, errores: [] };
+  let tema = null, proximo = 0, pasoN = 0, reloj = null, ultimoCorte = 0;
+
+  function iniciar() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    ctx = new AC();
+    maestro = ctx.createGain(); maestro.gain.value = 0.9;
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+    maestro.connect(comp); comp.connect(ctx.destination);
+    busSfx = ctx.createGain(); busSfx.connect(maestro);
+    busMus = ctx.createGain(); busMus.connect(maestro);
+    // un eco corto en la música: le da aire
+    const eco = ctx.createDelay(1), vuelta = ctx.createGain(), sal = ctx.createGain();
+    eco.delayTime.value = 0.31; vuelta.gain.value = 0.22; sal.gain.value = 0.2;
+    busMus.connect(eco); eco.connect(vuelta); vuelta.connect(eco); eco.connect(sal); sal.connect(maestro);
+    const b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    ruido = b;
+    s.aplicar();
+    return true;
+  }
+
+  function tono({ onda = 'sine', f0, f1 = f0, dur = 0.1, vol = 0.1, t = ctx.currentTime, ataque = 0.005, destino = busSfx }) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = onda;
+    o.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + ataque);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(destino);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function soplo({ dur = 0.1, vol = 0.1, tipo = 'bandpass', f0 = 1000, f1 = f0, q = 1, t = ctx.currentTime, destino = busSfx }) {
+    const n = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
+    n.buffer = ruido; n.loop = true;
+    fl.type = tipo; fl.Q.value = q;
+    fl.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) fl.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    n.connect(fl); fl.connect(g); g.connect(destino);
+    n.start(t, Math.random() * 0.5); n.stop(t + dur + 0.02);
+  }
+  // una tecla de kalimba: el seno que se apaga y el "tin" metálico de la lengüeta (5,4 veces más agudo)
+  function kalimba(fr, t, vol, destino = busMus, dur = 0.7) {
+    tono({ onda: 'sine', f0: fr, dur, vol, t, destino, ataque: 0.004 });
+    tono({ onda: 'sine', f0: fr * 5.4, dur: 0.08, vol: vol * 0.3, t, destino });
+    tono({ onda: 'triangle', f0: fr * 2, dur: dur * 0.35, vol: vol * 0.18, t, destino });
+  }
+  // la tijera: dos hojas que se cruzan (un chasquido agudo y el roce)
+  function tijera(t, vol = 1, destino = busSfx) {
+    soplo({ dur: 0.05, vol: 0.2 * vol, tipo: 'highpass', f0: 4200, t, destino });
+    tono({ onda: 'triangle', f0: 2400, f1: 1100, dur: 0.035, vol: 0.07 * vol, t, destino });
+    soplo({ dur: 0.07, vol: 0.06 * vol, f0: 2500, f1: 6000, q: 2, t: t + 0.015, destino });
+  }
+
+  const SFX = {
+    boton: () => { tono({ onda: 'sine', f0: 620, f1: 980, dur: 0.07, vol: 0.08 }); soplo({ dur: 0.04, vol: 0.04, f0: 3000, tipo: 'highpass' }); },
+    corte: () => {
+      const t = ctx.currentTime;
+      if (t - ultimoCorte < 0.04) return;     // dos hilos en el mismo tajo: un solo tijeretazo
+      ultimoCorte = t; tijera(t);
+    },
+    // la estrella: 1, 2 y 3 suben
+    estrella: ({ n = 1 } = {}) => {
+      const t = ctx.currentTime, base = [f('E6'), f('G6'), f('C7')][Math.min(2, n - 1)];
+      tono({ onda: 'sine', f0: base, dur: 0.18, vol: 0.1, t });
+      tono({ onda: 'sine', f0: base * 1.5, dur: 0.3, vol: 0.07, t: t + 0.05 });
+      tono({ onda: 'triangle', f0: base * 3, dur: 0.1, vol: 0.02, t: t + 0.05 });
+      for (let k = 0; k < 3; k++) tono({ onda: 'sine', f0: base * (2 + k * 0.25), dur: 0.05, vol: 0.02, t: t + 0.1 + k * 0.04 });
+    },
+    // el mordiscón: el golpe de las tapas, el crujido y el "ñam ñam"
+    comer: () => {
+      const t = ctx.currentTime;
+      tono({ onda: 'sine', f0: 190, f1: 60, dur: 0.16, vol: 0.4, t });
+      soplo({ dur: 0.1, vol: 0.2, f0: 900, q: 0.8, t });
+      for (const [k, d] of [[0, 0.16], [1, 0.34]]) {
+        tono({ onda: 'square', f0: 330 - k * 30, f1: 220 - k * 20, dur: 0.1, vol: 0.035, t: t + d });
+        tono({ onda: 'sine', f0: 660 - k * 60, f1: 440, dur: 0.1, vol: 0.05, t: t + d });
+      }
+    },
+    gana: () => {
+      const t = ctx.currentTime + 0.35;
+      ['C5', 'E5', 'G5', 'C6'].forEach((n, k) => kalimba(f(n), t + k * 0.085, 0.12, busSfx, 0.8));
+      for (const n of ['C4', 'E4', 'G4', 'B4']) tono({ onda: 'triangle', f0: f(n), dur: 1.3, vol: 0.035, t: t + 0.34, ataque: 0.05 });
+    },
+    // en la tarjeta del final, cada estrella que se pega
+    pega: ({ n = 1 } = {}) => {
+      const t = ctx.currentTime, base = [f('C6'), f('E6'), f('G6')][Math.min(2, n - 1)];
+      tono({ onda: 'sine', f0: 180, f1: 70, dur: 0.1, vol: 0.18, t });
+      tono({ onda: 'sine', f0: base, dur: 0.25, vol: 0.09, t: t + 0.02 });
+      tono({ onda: 'sine', f0: base * 2, dur: 0.12, vol: 0.03, t: t + 0.06 });
+    },
+    pop: () => {
+      soplo({ dur: 0.07, vol: 0.4, tipo: 'highpass', f0: 1500 });
+      soplo({ dur: 0.25, vol: 0.12, tipo: 'lowpass', f0: 3000, f1: 400 });
+      tono({ onda: 'sine', f0: 220, f1: 70, dur: 0.18, vol: 0.2 });
+    },
+    // el caramelo entra al globo: un "blup" que sube
+    globo: () => { tono({ onda: 'sine', f0: 260, f1: 620, dur: 0.18, vol: 0.12 }); tono({ onda: 'sine', f0: 520, f1: 1240, dur: 0.12, vol: 0.03, t: ctx.currentTime + 0.03 }); },
+    soplo: () => { soplo({ dur: 0.4, vol: 0.2, f0: 500, f1: 1800, q: 0.9 }); soplo({ dur: 0.25, vol: 0.06, tipo: 'highpass', f0: 5000 }); },
+    sobre: () => {
+      const t = ctx.currentTime;
+      soplo({ dur: 0.18, vol: 0.12, tipo: 'highpass', f0: 2500, f1: 7000, t });
+      tono({ onda: 'sine', f0: 900, f1: 280, dur: 0.16, vol: 0.07, t });
+      tono({ onda: 'sine', f0: 300, f1: 900, dur: 0.16, vol: 0.06, t: t + 0.12 });
+    },
+    boing: ({ fuerza = 400 } = {}) => {
+      const t = ctx.currentTime, k = Math.min(1, fuerza / 700);
+      const o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(180, t); o.frequency.exponentialRampToValueAtTime(420 + k * 120, t + 0.06); o.frequency.exponentialRampToValueAtTime(240, t + 0.35);
+      lfo.frequency.value = 28; lg.gain.value = 30; lfo.connect(lg); lg.connect(o.frequency);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.14 + k * 0.08, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      o.connect(g); g.connect(busSfx); o.start(t); lfo.start(t); o.stop(t + 0.42); lfo.stop(t + 0.42);
+    },
+    clip: () => { tono({ onda: 'square', f0: 2200, dur: 0.02, vol: 0.04 }); soplo({ dur: 0.03, vol: 0.08, tipo: 'highpass', f0: 3500 }); tono({ onda: 'sine', f0: 1300, f1: 900, dur: 0.07, vol: 0.05 }); },
+    // se rompe en las chinches: un crujido de caramelo
+    roto: () => {
+      const t = ctx.currentTime;
+      for (let k = 0; k < 4; k++) soplo({ dur: 0.05, vol: 0.18 - k * 0.03, f0: 2200 - k * 300, q: 1.5, t: t + k * 0.03 });
+      tono({ onda: 'triangle', f0: 400, f1: 120, dur: 0.25, vol: 0.1, t });
+    },
+    // se cayó: una trompetita triste
+    perdido: () => {
+      const t = ctx.currentTime;
+      ['G4', 'F#4', 'F4', 'E4'].forEach((n, k) => tono({ onda: 'triangle', f0: f(n), f1: f(n) * (k === 3 ? 0.94 : 1), dur: k === 3 ? 0.45 : 0.16, vol: 0.07, t: t + k * 0.17, ataque: 0.02 }));
+    },
+    compra: () => { const t = ctx.currentTime; kalimba(f('E6'), t, 0.1, busSfx, 0.3); kalimba(f('A6'), t + 0.08, 0.1, busSfx, 0.5); soplo({ dur: 0.2, vol: 0.05, f0: 6000, tipo: 'highpass', t: t + 0.08 }); },
+    error: () => { tono({ onda: 'triangle', f0: 190, dur: 0.1, vol: 0.1 }); tono({ onda: 'triangle', f0: 150, dur: 0.14, vol: 0.1, t: ctx.currentTime + 0.1 }); },
+    cambia: () => { soplo({ dur: 0.12, vol: 0.06, tipo: 'highpass', f0: 2000, f1: 5000 }); tono({ onda: 'sine', f0: 660, f1: 990, dur: 0.1, vol: 0.05 }); },
+  };
+
+  function programar() {
+    if (!tema || !ctx) return;
+    const c = CANCIONES[tema], d = 60 / c.bpm / 4;
+    if (proximo < ctx.currentTime - 0.3) proximo = ctx.currentTime + 0.05;
+    try {
+      while (proximo < ctx.currentTime + 0.12) { paso(c, pasoN, proximo, d); proximo += d; pasoN++; }
+    } catch (e) { s.errores.push('música ' + tema + ': ' + e.message); tema = null; }
+  }
+  function paso(c, n, t, d) {
+    const p = n % 16, compas = Math.floor(n / 16) % c.acordes.length;
+    const [raizN, tipo] = c.acordes[compas], raiz = midi(raizN), ac = TIPOS[tipo];
+    const b = c.bajo[p];
+    // el bajo en pizzicato: corto, con el golpe de la cuerda
+    if (b !== '.') {
+      const nota = raiz + (b === 'O' ? 12 : b === '5' ? 7 : 0);
+      tono({ onda: 'triangle', f0: hz(nota), dur: d * 1.6, vol: 0.2, t, destino: busMus, ataque: 0.004 });
+      tono({ onda: 'sine', f0: hz(nota + 12), dur: 0.05, vol: 0.05, t, destino: busMus });
+    }
+    const k = c.kalimba[p];
+    if (k !== '.') kalimba(hz(raiz + 24 + ac[+k]), t, 0.055);
+    if (p === 0) for (const x of ac.slice(0, 3)) tono({ onda: 'sine', f0: hz(raiz + 12 + x), dur: d * 15, vol: 0.014, t, ataque: 0.4, destino: busMus });
+    if (c.bombo[p] === 'x') tono({ onda: 'sine', f0: 110, f1: 45, dur: 0.14, vol: 0.2, t, destino: busMus });
+    if (c.tic[p] === 'x') { tono({ onda: 'square', f0: 1800, dur: 0.015, vol: 0.012, t, destino: busMus }); soplo({ dur: 0.04, vol: 0.03, f0: 2400, q: 3, t, destino: busMus }); }
+    if (c.shaker[p] === 'x') soplo({ dur: 0.035, vol: 0.012, tipo: 'highpass', f0: 7000, t, destino: busMus });
+  }
+
+  s.despertar = () => {
+    if (!ctx && !iniciar()) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    if (!reloj) reloj = setInterval(programar, 25);
+  };
+  s.tocar = (nombre, op) => {
+    if (!ctx || !ajustes.sonido || ctx.state !== 'running') return;
+    if (!SFX[nombre]) { s.errores.push('no existe ' + nombre); return; }
+    try { SFX[nombre](op); } catch (e) { s.errores.push(nombre + ': ' + e.message); }
+  };
+  s.musica = (nombre) => {
+    if (s.cancion === nombre) return;
+    s.cancion = nombre; tema = CANCIONES[nombre] ? nombre : null; pasoN = 0;
+    if (ctx) proximo = ctx.currentTime + 0.05;
+  };
+  s.aplicar = () => {
+    if (!ctx) return;
+    busSfx.gain.setTargetAtTime(ajustes.sonido ? 0.9 : 0, ctx.currentTime, 0.02);
+    busMus.gain.setTargetAtTime(ajustes.musica ? 0.5 : 0, ctx.currentTime, 0.05);
+  };
+  s.lava = (v) => { if (ctx) maestro.gain.setTargetAtTime(v, ctx.currentTime, 0.05); };
+  // La música de la intro de papel, con los tiempos de intro.js › T: el
+  // papel que entra (un roce), la tijera que recorta el monograma (tijeretazos
+  // y una kalimba que sube), el ¡fum! del recorte que salta con un acorde,
+  // un sello por letra y la birome de "presenta"; el papel que se va, con un
+  // acorde tibio.
+  s.jingleJXS = () => {
+    // con el audio suspendido (sin un toque) se agendaría y sonaría tarde, fuera de fase
+    if (!ctx || ctx.state !== 'running' || !(ajustes.sonido || ajustes.musica)) return null;
+    const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(maestro);
+    const t0 = ctx.currentTime + 0.03;
+    soplo({ dur: 0.35, vol: 0.12, tipo: 'bandpass', f0: 700, f1: 3000, q: 0.8, t: t0, destino: bus });
+    const [a, b] = TI.traza, n = 9;
+    for (let k = 0; k < n; k++) tijera(t0 + a + (k * (b - a)) / n, 0.8, bus);
+    ['C5', 'D5', 'E5', 'G5', 'A5', 'C6', 'D6', 'E6', 'G6'].forEach((nn, k) => kalimba(f(nn), t0 + a + (k * (b - a)) / n + 0.02, 0.06, bus, 0.45));
+    const tg = t0 + TI.golpe;
+    tono({ onda: 'sine', f0: 140, f1: 50, dur: 0.25, vol: 0.35, t: tg, destino: bus });
+    soplo({ dur: 0.3, vol: 0.12, tipo: 'lowpass', f0: 2500, f1: 500, t: tg, destino: bus });
+    ['C5', 'E5', 'G5', 'C6', 'E6'].forEach((nn, k) => kalimba(f(nn), tg + 0.03 + k * 0.03, 0.07, bus, 0.8));
+    for (let k = 0; k < 9; k++) {
+      const tl = t0 + TI.letras + k * TI.cadaLetra + 0.12;
+      tono({ onda: 'sine', f0: 160 + (k % 3) * 20, f1: 70, dur: 0.07, vol: 0.14, t: tl, destino: bus });
+      soplo({ dur: 0.04, vol: 0.06, f0: 1400, q: 1, t: tl, destino: bus });
+    }
+    for (let k = 0; k < 6; k++) soplo({ dur: 0.06, vol: 0.03, f0: 3000 + (k % 2) * 800, q: 4, t: t0 + TI.presenta + k * 0.06, destino: bus });
+    soplo({ dur: 0.3, vol: 0.12, tipo: 'bandpass', f0: 3000, f1: 800, q: 0.8, t: t0 + TI.fin, destino: bus });
+    for (const nn of ['C4', 'E4', 'G4', 'B4', 'D5']) tono({ onda: 'triangle', f0: f(nn), dur: 1.4, vol: 0.035, t: t0 + TI.fin, ataque: 0.06, destino: bus });
+    return { cortar: () => bus.gain.setTargetAtTime(0, ctx.currentTime, 0.06) };
+  };
+  s.activo = () => !!ctx && ctx.state === 'running';
+  return s;
+}
+return { crearSonido, CANCIONES };
+})();
+
+/* ── main ── */
+(() => {
+// Morfi, de JXSTUDIOS: el arranque, las pantallas y el bucle.
+//
+// Cada cuadro la partida avanza lo que tardó el cuadro (adentro, la física
+// va en pasos fijos de 1/120 s y el dibujo se interpola entre paso y paso),
+// y se dibuja una vez. Los menús son HTML arriba del lienzo; el lienzo
+// dibuja detrás la caja de cartón, el cartel que se hamaca y el caramelo del
+// menú (que se puede cortar ahí mismo).
+//
+// Para probar: ?sinintro (directo al menú), ?directo=nivel:2-4, ?pausa (no
+// avanza solo: __G.pasos(n); también saltea la intro, salvo con ?intro),
+// ?limpio (sin lo guardado), ?idioma=en, ?todo (todo abierto).
+const { Partida } = M_partida;
+const { NIVELES, CAJAS } = M_niveles;
+const { dibujarNivel, camaraTablero, Efectos, CARAMELOS, caramelo: spriteCaramelo } = M_dibujo;
+const { Morfi } = M_morfi;
+const { FondoMenu, ESCENA } = M_menu;
+const { dibujarHud, dibujarRastros } = M_hud;
+const { crearEntrada } = M_entrada;
+const { crearSonido } = M_sonido;
+const { crearIdioma, IDIOMAS } = M_idioma;
+const { cargar, guardar, base, estrellasTotal, estrellasCaja, cajaAbierta, nivelAbierto } = M_guardado;
+const { MORFIS, DULCES, premio, BONO_CAJA } = M_pieles;
+const { IntroJXS } = M_intro;
+const { fondo, pegar, pintarGrano } = M_papel;
+const { clamp, trozos } = M_util;
+const PASO = 1 / 60;
+const q = new URLSearchParams(location.search);
+const $ = (id) => document.getElementById(id);
+const lienzo = $('juego'), g = lienzo.getContext('2d');
+
+let datos = q.has('limpio') ? base() : cargar();
+if (IDIOMAS.includes(q.get('idioma'))) datos.ajustes.idioma = q.get('idioma');
+if (q.has('todo')) { datos.mejor = datos.mejor.map((e) => Math.max(e, 3)); }
+const tr = crearIdioma(datos.ajustes.idioma);
+const sonido = crearSonido(datos.ajustes);
+const entrada = crearEntrada(lienzo);
+const tactil = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+const guardarTodo = () => guardar(datos);
+// antes del primer toque el navegador no deja vibrar (y lo avisa en la consola)
+const vibrar = (p) => { if (datos.ajustes.vibrar && navigator.vibrate && navigator.userActivation?.hasBeenActive !== false) try { navigator.vibrate(p); } catch { /* no deja */ } };
+
+// ── la pantalla: resolución de verdad, con tope según la calidad ──────────
+let W = 0, H = 0, dpr = 1, dprTope = tactil ? 1.5 : 2;
+function medir() {
+  const tope = datos.ajustes.calidad === 'baja' ? 1 : datos.ajustes.calidad === 'alta' ? 2.5 : dprTope;
+  dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, tope));
+  const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  if (w !== W || h !== H) { W = lienzo.width = w; H = lienzo.height = h; }
+}
+// dónde empieza lo usable arriba (debajo de la muesca), en píxeles de CSS:
+// lo mide una sonda puesta en env(safe-area-inset-top), una vez por tamaño
+let arribaSeguro = 0;
+const arribaCss = () => Math.max(10, arribaSeguro + 8);
+function medirTodo() { medir(); arribaSeguro = $('sonda').getBoundingClientRect().top || 0; }
+medirTodo();
+addEventListener('resize', medirTodo);
+
+let estado = 'espera', partida = null, nivelI = 0, intro = null, t = 0, alfa = 1;
+let morfi = new Morfi(datos.morfi, 3), efectos = new Efectos(), hud = { tomadas: [null, null, null] }, aviso = null;
+let ayuda = null;                     // { texto, t, hasta } mientras se muestra la nota
+const fondoMenu = new FondoMenu({ alEvento: (ev) => eventoMenu(ev) });
+const tienda = { tipo: 'morfis', i: 0, muestra: new Morfi('kraft', 5) };
+const nombreCaja = (c) => tr('caja_' + CAJAS[c].id);
+
+// ── las pantallas de HTML ──────────────────────────────────────────────────
+function mostrar(id) {
+  for (const s of document.querySelectorAll('.pantalla')) s.classList.toggle('oculto', s.id !== id);
+  const jugando = id === null && estado === 'juego';
+  $('bPausa').classList.toggle('oculto', !jugando); $('bReiniciar').classList.toggle('oculto', !jugando);
+}
+function boton(id, fn) { $(id).addEventListener('click', () => { sonido.tocar('boton'); fn(); }); }
+
+// el próximo nivel para jugar: el primero sin ganar que esté abierto (o el último abierto)
+function proximoNivel() {
+  for (let i = 0; i < NIVELES.length; i++) if (datos.mejor[i] < 0 && nivelAbierto(datos, i)) return i;
+  for (let i = NIVELES.length - 1; i >= 0; i--) if (nivelAbierto(datos, i)) return i;
+  return 0;
+}
+function textos() {
+  document.documentElement.lang = tr.actual();
+  const n = proximoNivel(), todos = datos.mejor.every((e) => e >= 0);
+  $('tJugar').textContent = tr('jugar');
+  $('tNivelJugar').textContent = todos ? tr('todos') : `${nombreCaja(Math.floor(n / 10))} · ${NIVELES[n].id}`;
+  $('bCajas').textContent = tr('cajas'); $('bTienda').textContent = tr('tienda'); $('bAjustes').textContent = tr('ajustes');
+  $('tFirma').textContent = tr('creditos').toUpperCase();
+  for (const id of ['tMonedas', 'tMonedasTienda', 'tMonedasCajas']) $(id).textContent = datos.monedas;
+  $('tEstrellasMenu').textContent = `${estrellasTotal(datos)} / ${NIVELES.length * 3}`;
+  $('tCajas').textContent = tr('cajas'); $('bVolverCajas').textContent = tr('volver'); $('bVolverNiveles').textContent = tr('volver');
+  $('bPestMorfis').textContent = tr('morfis'); $('bPestDulces').textContent = tr('caramelos'); $('bVolverTienda').textContent = tr('volver');
+  $('tAjustes').textContent = tr('ajustes'); $('bCerrarAjustes').textContent = tr('volver');
+  $('tPausa').textContent = tr('pausa'); $('bSeguir').textContent = tr('seguir'); $('bOtraVezPausa').textContent = tr('otraVez'); $('bSalirPausa').textContent = tr('menu');
+  $('bSiguienteNivel').textContent = tr('siguiente'); $('bOtraVez').textContent = tr('otraVez'); $('bMenuGano').textContent = tr('menu');
+}
+
+// ── el ir y venir ──────────────────────────────────────────────────────────
+function entrar() {
+  if (estado !== 'espera') return;
+  sonido.despertar();
+  estado = 'intro'; mostrar(null);
+  intro = new IntroJXS({ sonido, vibrar, alTerminar: () => (datos.ajustes.idioma ? aMenu() : elegirIdioma()) });
+  intro.textoPresenta = tr('presenta');
+}
+// después del logo, la primera vez, elegir el idioma (?idioma= ya lo trae elegido)
+function elegirIdioma() {
+  estado = 'idiomas'; mostrar('idiomas');
+  entrada.activo = true; entrada.soltarTodo();
+  sonido.musica('menu');
+  setTimeout(() => $('bIdioma_' + tr.actual())?.focus(), 50);
+}
+// dónde empiezan los botones del menú (en píxeles de CSS), para que el caramelo del menú no quede detrás
+let topeBotones = Infinity;
+function medirBotones() { const r = $('botonera').getBoundingClientRect(); if (r.height) topeBotones = r.top; }
+addEventListener('resize', () => { if (estado === 'menu') medirBotones(); });
+function aMenu() {
+  estado = 'menu'; partida = null;
+  entrada.activo = true; entrada.soltarTodo();
+  sonido.musica('menu');
+  textos(); mostrar('menu');
+  medirBotones();
+}
+function jugar(i) {
+  i = clamp(i, 0, NIVELES.length - 1);
+  nivelI = i; partida = new Partida(NIVELES[i]);
+  datos.partidas++; guardarTodo();
+  estado = 'juego'; alfa = 1; aviso = null;
+  hud = { tomadas: [null, null, null] };
+  morfi = new Morfi(datos.morfi, 3 + i); efectos = new Efectos();
+  const clave = NIVELES[i].ayuda;
+  ayuda = clave && !datos.ayudas.includes(clave) ? { texto: i === 0 && !tactil ? tr('consejoPc') : tr(clave), t: 0, hasta: 9 } : null;
+  mostrar(null);
+  entrada.activo = true; entrada.soltarTodo(); entrada.usos = 0;
+  sonido.musica('juego');
+}
+function pausar() { if (estado !== 'juego' || !partida || partida.estado !== 'juego') return; estado = 'pausa'; entrada.soltarTodo(); mostrar('pausa'); }
+function seguir() { if (estado !== 'pausa') return; estado = 'juego'; mostrar(null); }
+function reiniciar() { if (partida) jugar(nivelI); }
+
+// ganó: estrellas, monedas, cajas nuevas y la tarjeta del final
+function ganar() {
+  const p = partida, n = p.tomadas, antes = datos.mejor[nivelI], c = Math.floor(nivelI / 10);
+  const abiertasAntes = CAJAS.map((_, k) => cajaAbierta(datos, k));
+  let monedas = premio(antes, n);
+  datos.mejor[nivelI] = Math.max(antes, n);
+  if (estrellasCaja(datos, c) === 30 && !datos.bonos.includes(CAJAS[c].id)) { datos.bonos.push(CAJAS[c].id); monedas += BONO_CAJA; }
+  datos.monedas += monedas;
+  const clave = NIVELES[nivelI].ayuda;
+  if (clave && !datos.ayudas.includes(clave)) datos.ayudas.push(clave);
+  guardarTodo();
+  const nueva = CAJAS.findIndex((_, k) => !abiertasAntes[k] && cajaAbierta(datos, k));
+  estado = 'gano';
+  entrada.activo = false; entrada.soltarTodo();
+  $('tGano').textContent = n === 3 ? tr('perfecto') : tr('superado');
+  $('tGanoMonedas').textContent = tr('ganaste', monedas);
+  $('tGanoAviso').textContent = nueva >= 0 ? `${tr('cajaNueva')} · ${nombreCaja(nueva)}` : datos.mejor.every((e) => e >= 0) && antes < 0 && nivelI === NIVELES.length - 1 ? tr('todos') : '';
+  const sig = nivelI + 1 < NIVELES.length && nivelAbierto(datos, nivelI + 1);
+  $('bSiguienteNivel').classList.toggle('oculto', !sig);
+  $('tGanoFalta').textContent = !sig && nivelI + 1 < NIVELES.length ? tr('juntaEstrellas', CAJAS[Math.floor((nivelI + 1) / 10)].estrellas) : '';
+  const spans = document.querySelectorAll('#ganoEstrellas span');
+  spans.forEach((s, k) => { s.classList.remove('llena', 'pega'); void s.offsetWidth; if (k < n) s.classList.add('llena', 'pega'); });
+  for (let k = 0; k < n; k++) setTimeout(() => { if (estado === 'gano') { sonido.tocar('pega', { n: k + 1 }); vibrar(12); } }, 380 + k * 300);
+  sonido.tocar('gana');
+  mostrar('gano');
+  setTimeout(() => (sig ? $('bSiguienteNivel') : $('bOtraVez')).focus({ preventScroll: true }), 60);
+}
+
+// ── las cajas y los niveles ────────────────────────────────────────────────
+function armarCajas() {
+  const lista = $('listaCajas');
+  lista.textContent = '';
+  CAJAS.forEach((caja, c) => {
+    const b = document.createElement('button'), abierta = cajaAbierta(datos, c);
+    b.className = `caja caja-${caja.id}` + (abierta ? '' : ' cerrada');
+    const nombre = document.createElement('span'); nombre.className = 'nombre-caja'; nombre.textContent = nombreCaja(c);
+    const dato = document.createElement('span'); dato.className = 'dato-caja';
+    dato.textContent = abierta ? `★ ${estrellasCaja(datos, c)} / 30` : `🔒 ${tr('juntaEstrellas', caja.estrellas)}`;
+    b.append(nombre, dato);
+    b.addEventListener('click', () => {
+      if (!abierta) { sonido.tocar('error'); vibrar(30); return; }
+      sonido.tocar('boton'); armarNiveles(c); estado = 'niveles'; mostrar('niveles');
+    });
+    lista.appendChild(b);
+  });
+}
+let cajaVista = 0;
+function armarNiveles(c) {
+  cajaVista = c;
+  $('tNiveles').textContent = nombreCaja(c);
+  const grilla = $('grillaNiveles');
+  grilla.textContent = '';
+  grilla.className = `grilla caja-${CAJAS[c].id}`;
+  for (let i = c * 10; i < c * 10 + 10; i++) {
+    const b = document.createElement('button'), abierto = nivelAbierto(datos, i), e = datos.mejor[i];
+    b.className = 'nivelB' + (abierto ? '' : ' cerrado');
+    const num = document.createElement('span'); num.className = 'num'; num.textContent = abierto ? String(i % 10 + 1) : '🔒';
+    const est = document.createElement('span'); est.className = 'est';
+    est.textContent = abierto && e >= 0 ? '★'.repeat(e) + '☆'.repeat(3 - e) : '';
+    b.append(num, est);
+    b.setAttribute('aria-label', tr('nivel', NIVELES[i].id));
+    b.addEventListener('click', () => {
+      if (!abierto) { sonido.tocar('error'); return; }
+      sonido.tocar('boton'); jugar(i);
+    });
+    grilla.appendChild(b);
+  }
+}
+
+// ── la tienda: la muestra grande en el lienzo, flechas y comprar o usar ────
+function lista() { return tienda.tipo === 'morfis' ? MORFIS : DULCES; }
+function abrirTienda(tipo = tienda.tipo) {
+  tienda.tipo = tipo;
+  const actual = tipo === 'morfis' ? datos.morfi : datos.dulce;
+  tienda.i = Math.max(0, lista().findIndex((p) => p.id === actual));
+  estado = 'tienda'; mostrar('tienda');
+  entrada.activo = false;
+  actualizarTienda();
+}
+function actualizarTienda() {
+  const p = lista()[tienda.i], tipo = tienda.tipo, tengo = (tipo === 'morfis' ? datos.morfis : datos.dulces).includes(p.id);
+  const usando = (tipo === 'morfis' ? datos.morfi : datos.dulce) === p.id;
+  $('bPestMorfis').classList.toggle('elegida', tipo === 'morfis'); $('bPestDulces').classList.toggle('elegida', tipo === 'dulces');
+  $('bPestMorfis').setAttribute('aria-selected', tipo === 'morfis'); $('bPestDulces').setAttribute('aria-selected', tipo === 'dulces');
+  $('tNombre').textContent = tr((tipo === 'morfis' ? 'morfi_' : 'caramelo_') + p.id);
+  const b = $('bComprar');
+  b.textContent = usando ? tr('enUso') : tengo ? tr('usar') : tr('comprar', p.precio);
+  b.classList.toggle('apagado', usando || (!tengo && datos.monedas < p.precio));
+  $('tAviso').textContent = !tengo && datos.monedas < p.precio ? tr('faltan', p.precio - datos.monedas) : '';
+  for (const id of ['tMonedas', 'tMonedasTienda', 'tMonedasCajas']) $(id).textContent = datos.monedas;
+  tienda.muestra.piel = tipo === 'morfis' ? p.id : datos.morfi;
+}
+function moverTienda(d) { tienda.i = (tienda.i + d + lista().length) % lista().length; sonido.tocar('cambia'); actualizarTienda(); }
+function comprarOUsar() {
+  const p = lista()[tienda.i], mias = tienda.tipo === 'morfis' ? datos.morfis : datos.dulces;
+  if (!mias.includes(p.id)) {
+    if (datos.monedas < p.precio) { sonido.tocar('error'); vibrar(40); return; }
+    datos.monedas -= p.precio; mias.push(p.id); sonido.tocar('compra'); vibrar(20);
+    tienda.muestra.comer();
+  } else sonido.tocar('boton');
+  if (tienda.tipo === 'morfis') datos.morfi = p.id; else datos.dulce = p.id;
+  guardarTodo(); actualizarTienda();
+}
+
+// ── los ajustes, armados con botones de opción ─────────────────────────────
+let borrarArmado = false;
+function armarAjustes() {
+  const a = datos.ajustes, listaA = $('listaAjustes');
+  listaA.textContent = '';
+  const fila = (nombre, opciones, actual, poner) => {
+    const d = document.createElement('div'); d.className = 'item';
+    const s = document.createElement('span'); s.textContent = nombre; d.appendChild(s);
+    const ops = document.createElement('div'); ops.className = 'ops';
+    for (const [valor, texto, clase] of opciones) {
+      const b = document.createElement('button'); b.className = 'opcion' + (valor === actual ? ' elegida' : '') + (clase ? ' ' + clase : ''); b.textContent = texto;
+      b.addEventListener('click', () => { poner(valor); sonido.aplicar(); guardarTodo(); sonido.tocar('boton'); textos(); armarAjustes(); });
+      ops.appendChild(b);
+    }
+    d.appendChild(ops); listaA.appendChild(d);
+  };
+  const siNo = [[true, tr('si')], [false, tr('no')]];
+  fila(tr('musica'), siNo, a.musica, (v) => (a.musica = v));
+  fila(tr('sonido'), siNo, a.sonido, (v) => (a.sonido = v));
+  fila(tr('vibrar'), siNo, a.vibrar, (v) => { a.vibrar = v; if (v) vibrar(30); });
+  fila(tr('calidad'), [['auto', tr('auto')], ['alta', tr('alta')], ['baja', tr('baja')]], a.calidad, (v) => { a.calidad = v; medir(); });
+  fila(tr('idioma'), IDIOMAS.map((l) => [l, l.toUpperCase()]), tr.actual(), (v) => { a.idioma = v; tr.poner(v); });
+  // borrar el progreso pide dos toques (los ajustes y el idioma quedan)
+  fila('', [['borrar', borrarArmado ? tr('borrarSeguro') : tr('borrar'), 'peligro']], null, () => {
+    if (!borrarArmado) { borrarArmado = true; return; }
+    borrarArmado = false;
+    const nuevo = base(); nuevo.ajustes = datos.ajustes; datos = nuevo;
+  });
+}
+
+for (const l of IDIOMAS) boton('bIdioma_' + l, () => { datos.ajustes.idioma = l; tr.poner(l); guardarTodo(); aMenu(); });
+boton('bJugar', () => jugar(proximoNivel()));
+boton('bCajas', () => { armarCajas(); estado = 'cajas'; entrada.activo = false; mostrar('cajas'); });
+boton('bTienda', () => abrirTienda());
+boton('bAjustes', () => { borrarArmado = false; armarAjustes(); estado = 'ajustes'; entrada.activo = false; mostrar('ajustes'); });
+boton('bVolverCajas', aMenu);
+boton('bVolverNiveles', () => { armarCajas(); estado = 'cajas'; mostrar('cajas'); });
+boton('bVolverTienda', aMenu);
+boton('bCerrarAjustes', aMenu);
+boton('bPestMorfis', () => abrirTienda('morfis'));
+boton('bPestDulces', () => abrirTienda('dulces'));
+boton('bAnterior', () => moverTienda(-1));
+boton('bSiguiente', () => moverTienda(1));
+$('bComprar').addEventListener('click', comprarOUsar);
+boton('bPausa', pausar);
+boton('bReiniciar', reiniciar);
+boton('bSeguir', seguir);
+boton('bOtraVezPausa', reiniciar);
+boton('bSalirPausa', aMenu);
+boton('bOtraVez', reiniciar);
+boton('bMenuGano', aMenu);
+boton('bSiguienteNivel', () => jugar(nivelI + 1));
+// el primer toque en cualquier lado despierta el audio (tiene que ser dentro del evento)
+addEventListener('pointerdown', () => sonido.despertar(), { capture: true });
+addEventListener('keydown', (ev) => {
+  sonido.despertar();
+  if (estado === 'intro') intro?.saltear();
+  else if (estado === 'tienda' && ev.code === 'ArrowLeft') moverTienda(-1);
+  else if (estado === 'tienda' && ev.code === 'ArrowRight') moverTienda(1);
+  else if (estado === 'juego' && ev.code === 'KeyR' && !ev.repeat) reiniciar();
+  // la pausa se maneja acá: si no, la misma tecla que la saca la vuelve a poner
+  else if ((ev.code === 'Escape' || ev.code === 'KeyP') && !ev.repeat) {
+    if (estado === 'juego') pausar();
+    else if (estado === 'pausa') seguir();
+    else if (['cajas', 'tienda', 'ajustes'].includes(estado) && ev.code === 'Escape') aMenu();
+    else if (estado === 'niveles' && ev.code === 'Escape') { armarCajas(); estado = 'cajas'; mostrar('cajas'); }
+  }
+}, { capture: true });
+lienzo.addEventListener('pointerdown', () => { if (estado === 'intro') intro?.saltear(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { pausar(); sonido.lava(0); } else sonido.lava(0.9); });
+
+// ── los eventos de la partida: sonido, papelitos y la cara de Morfi ────────
+const COLORES_PAPEL = ['#e8423a', '#f5c542', '#3f7fd1', '#58b368', '#ff93b3'];
+function evento(ev, fx, m, p) {
+  const col = CARAMELOS[datos.dulce] || CARAMELOS.rojo;
+  switch (ev.tipo) {
+    case 'corte': sonido.tocar('corte'); fx.papelitos(ev.x, ev.y, 6, ['#e2c48f', '#fff4dc', '#b68e55'], { vel: 90, arriba: 20, tam: 2 }); vibrar(6); break;
+    case 'estrella': sonido.tocar('estrella', { n: ev.n }); fx.brillos(ev.x, ev.y, 10); fx.papelitos(ev.x, ev.y, 8, ['#ffd84a', '#f0b21c'], { vel: 120, tam: 2.4 }); if (p === partida) hud.tomadas[ev.n - 1] = t; vibrar(10); break;
+    case 'clip': sonido.tocar('clip'); break;
+    case 'globo': sonido.tocar('globo'); break;
+    case 'pop': sonido.tocar('pop'); fx.papelitos(ev.x, ev.y, 14, ['#9ad0f5', '#7dbbea', '#b8def8'], { vel: 170, tam: 3.2 }); vibrar(14); break;
+    case 'soplo': sonido.tocar('soplo'); fx.aire(ev.x, ev.y, ev.ang); break;
+    case 'sobre': sonido.tocar('sobre'); fx.papelitos(ev.x2, ev.y2, 6, ['#f7f1e3', '#cfc3a8'], { vel: 80, tam: 2.5 }); break;
+    case 'boing': sonido.tocar('boing', { fuerza: ev.fuerza }); break;
+    case 'comido': sonido.tocar('comer'); m.comer(); fx.papelitos(ev.x, ev.y - 10, 22, COLORES_PAPEL, { vel: 220, arriba: 120 }); vibrar([18, 30, 18]); break;
+    case 'roto': sonido.tocar('roto'); m.llorar(); fx.papelitos(ev.x, ev.y, 18, [col.a, col.b, col.papel], { vel: 190, tam: 3 }); vibrar([30, 20, 50]); if (p === partida) aviso = { texto: tr('roto'), t: 0 }; break;
+    case 'perdido': sonido.tocar('perdido'); m.llorar(); if (p === partida) aviso = { texto: tr('perdido'), t: 0 }; break;
+  }
+}
+function eventoMenu(ev) {
+  if (ev.tipo === 'corte') { sonido.tocar('corte'); vibrar(6); }
+  else if (ev.tipo === 'comido') { sonido.tocar('comer'); vibrar(15); }
+}
+
+// ── el paso ────────────────────────────────────────────────────────────────
+let camJuego = null;
+const aTablero = (cam, x, y) => [(x * dpr - cam.ox) / cam.esc, (y * dpr - cam.oy) / cam.esc];
+function paso(dt) {
+  t += dt;
+  if (estado === 'espera') return;
+  if (estado === 'intro') { intro.pasar(dt, W, H); return; }
+  if (estado === 'menu' || estado === 'idiomas') {
+    // el dedo en el menú: el tajo corta el hilo del caramelo del menú y empuja el cartel
+    entrada.sacarToques();
+    for (const [x1, y1, x2, y2] of entrada.sacarCortes()) { fondoMenu.cortar(x1 * dpr, y1 * dpr, x2 * dpr, y2 * dpr); fondoMenu.mover(x2 - x1); }
+  }
+  if (!['juego', 'pausa', 'gano'].includes(estado)) fondoMenu.pasar(dt);
+  if (estado === 'tienda') tienda.muestra.pasar(dt, { blanco: tienda.tipo === 'dulces' ? [0, -170] : [Math.sin(t * 0.8) * 60, -80], ganas: tienda.tipo === 'dulces' ? 0.55 : 0 });
+  if (!partida || estado === 'pausa') return;
+  const p = partida;
+  if (estado === 'juego' && p.estado === 'juego' && camJuego) {
+    for (const [x, y] of entrada.sacarToques()) p.tocar(...aTablero(camJuego, x, y));
+    for (const [x1, y1, x2, y2] of entrada.sacarCortes()) p.cortar(...aTablero(camJuego, x1, y1), ...aTablero(camJuego, x2, y2));
+  } else { entrada.sacarToques(); entrada.sacarCortes(); }
+  alfa = p.avanzar(dt);
+  for (const ev of p.sacarEventos()) evento(ev, efectos, morfi, p);
+  morfi.pasar(dt, { blanco: p.estado === 'juego' ? [p.x - p.morfi.x, p.y - p.morfi.y] : null, ganas: p.apetito() });
+  efectos.pasar(dt);
+  if (aviso) aviso.t += dt;
+  if (ayuda) {
+    ayuda.t += dt;
+    if (entrada.usos > 0 && ayuda.hasta > ayuda.t + 2.5) ayuda.hasta = ayuda.t + 2.5;
+  }
+  if (estado === 'juego' && p.estado === 'comido' && p.tFin > 1.35) ganar();
+  // se cayó o se rompió: como en los juegos del género, vuelve a empezar solo
+  if (estado === 'juego' && (p.estado === 'roto' || p.estado === 'perdido') && p.tFin > 1.25) jugar(nivelI);
+}
+
+// ── el dibujo ──────────────────────────────────────────────────────────────
+function dibujar() {
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  if (estado === 'espera') { g.fillStyle = '#b7864f'; g.fillRect(0, 0, W, H); return; }
+  if (estado === 'intro') { intro.dibujar(g, W, H); return; }
+  if (partida && ['juego', 'pausa', 'gano'].includes(estado)) {
+    const arriba = arribaCss() * dpr;
+    camJuego = camaraTablero(W, H, { margenArriba: arriba + 50 * dpr });
+    const c = Math.floor(nivelI / 10);
+    dibujarNivel(g, W, H, partida, camJuego, { t, alfa, morfi, pielCaramelo: datos.dulce, efectos, mundo: CAJAS[c].id, dpr });
+    if (estado !== 'gano') {
+      const ay = ayuda && ayuda.t < ayuda.hasta ? { texto: ayuda.texto, alfa: clamp(ayuda.t / 0.3, 0, 1) * clamp((ayuda.hasta - ayuda.t) / 0.4, 0, 1) } : null;
+      dibujarHud(g, W, H, { p: partida, u: dpr, t, hud, arriba, ayuda: ay, aviso, nombreCaja: nombreCaja(c) });
+      dibujarRastros(g, entrada.rastrosVivos().map((r) => r.map((q2) => ({ x: q2.x * dpr, y: q2.y * dpr, edad: q2.edad }))), dpr);
+    }
+    return;
+  }
+  const acostado = W > H * 1.2;
+  if (estado === 'tienda') {
+    g.drawImage(fondo('carton', W, H, dpr), 0, 0);
+    const cx = W / 2, piso = acostado ? H * 0.72 : H * 0.62, s = Math.min(W, H) / 250;
+    if (tienda.tipo === 'dulces') {
+      // el caramelo elegido colgado de un hilo y Morfi abajo, con ganas
+      const p = lista()[tienda.i], cy = piso - 150 * s, bal = Math.sin(t * 1.5) * 0.12;
+      const hx = cx + Math.sin(bal) * 70 * s, hy = cy - 70 * s + Math.cos(bal) * 70 * s;
+      g.strokeStyle = '#e2c48f'; g.lineWidth = 3.2 * s; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx, cy - 70 * s); g.lineTo(hx, hy); g.stroke();
+      pegar(g, spriteCaramelo(s * 1.6, p.id), hx, hy + 6 * s, { ang: bal * 0.6, alto: 5 * s });
+      tienda.muestra.dibujar(g, cx, piso, s * 0.9);
+    } else tienda.muestra.dibujar(g, cx, piso, s * 1.3);
+    pintarGrano(g, W, H, 0.35);
+    return;
+  }
+  // los menús: parado, el cartel arriba, Morfi con su caramelo en el medio (si
+  // hay lugar) y los botones abajo; acostado (o en la compu), Morfi grande a
+  // la izquierda y el cartel arriba de los botones, a la derecha
+  const arriba = arribaCss() * dpr;
+  let zona, escena = null;
+  if (acostado) {
+    const r = $(estado === 'idiomas' ? 'idiomasBotones' : 'botonera').getBoundingClientRect();
+    const cx = r.width ? ((r.left + r.right) / 2) * dpr : W * 0.74, techo = r.height ? r.top * dpr : H * 0.55;
+    // el cartel ocupa de los alfileres a la tira del subtítulo unos 0,86 de su ancho
+    const ancho = Math.max(120 * dpr, Math.min(W * 0.38, H * 0.6, (techo - arriba - 48 * dpr) / 0.86));
+    zona = { cx, y: arriba + 40 * dpr + ancho * 0.3, ancho };
+    if (estado === 'menu' || estado === 'idiomas') escena = { x: W * 0.03, y: arriba, w: W * 0.46, h: H - arriba - 10 * dpr };
+  } else {
+    const ancho = Math.min(W * 0.86, 460 * dpr);
+    // el cartel cuelga debajo de las bolsas de monedas y estrellas (si no, tapaban los alfileres)
+    zona = { cx: W / 2, y: arriba + 50 * dpr + ancho * 0.3, ancho };
+    if (estado === 'menu' || estado === 'idiomas') {
+      const abajoCartel = zona.y + ancho * 0.62, tope = (estado === 'menu' ? topeBotones : $('idiomasBotones').getBoundingClientRect().top || Infinity) * dpr;
+      if (tope - abajoCartel > 110 * dpr) escena = { x: W * 0.08, y: abajoCartel, w: W * 0.84, h: Math.min(tope - abajoCartel - 6 * dpr, (W * 0.84 * ESCENA.h) / ESCENA.w) };
+    }
+  }
+  // en las cajas, los niveles y los ajustes el cartel no va: se pisaba con el título
+  const conCartel = estado === 'menu' || estado === 'idiomas';
+  fondoMenu.dibujar(g, W, H, dpr, { zona: conCartel ? zona : null, escena, pielMorfi: datos.morfi, pielDulce: datos.dulce, subtitulo: tr('subtitulo') });
+  if (estado === 'menu' || estado === 'idiomas') dibujarRastros(g, entrada.rastrosVivos().map((r) => r.map((q2) => ({ x: q2.x * dpr, y: q2.y * dpr, edad: q2.edad }))), dpr);
+  if (['cajas', 'niveles', 'ajustes'].includes(estado)) { g.fillStyle = 'rgba(40,24,8,0.28)'; g.fillRect(0, 0, W, H); }
+}
+
+// ── el bucle, con calidad que se ajusta sola ──────────────────────────────
+let ultimo = performance.now(), lento = 0;
+const manual = q.has('pausa');
+function cuadro(ahora) {
+  requestAnimationFrame(cuadro);
+  const dtReal = Math.min(0.1, (ahora - ultimo) / 1000);
+  ultimo = ahora;
+  // si los cuadros tardan mucho seguido, se baja la resolución (un cuarto de punto por vez)
+  if (datos.ajustes.calidad === 'auto' && estado === 'juego') {
+    lento = dtReal > 0.026 ? lento + 1 : Math.max(0, lento - 1);
+    if (lento > 45 && dprTope > 1) { dprTope = Math.max(1, dprTope - 0.25); lento = 0; medir(); }
+  }
+  if (!manual) {
+    const [n, d] = trozos(dtReal, PASO);
+    for (let k = 0; k < n; k++) paso(d);
+  }
+  dibujar();
+}
+
+textos();
+const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
+// La intro arranca apenas abre, sin tocar nada. Si el navegador deja sonar
+// sin un toque, el audio nace andando y la música va en fase; si no (lo
+// normal), la intro va muda y el primer toque la saltea y prende el sonido.
+if (conIntro) { mostrar(null); entrar(); }
+else {
+  aMenu();
+  const d = q.get('directo') || '';
+  if (d.startsWith('nivel:')) { const i = NIVELES.findIndex((n) => n.id === d.slice(6)); jugar(i >= 0 ? i : 0); }
+}
+requestAnimationFrame(cuadro);
+
+// Las sondas para las pruebas (pruebas/juego.mjs).
+window.__G = {
+  get estado() { return estado; }, get partida() { return partida; }, get datos() { return datos; }, get intro() { return intro; },
+  get tienda() { return tienda; }, get fondo() { return fondoMenu; }, get morfi() { return morfi; }, get hud() { return hud; }, get camJuego() { return camJuego; },
+  get nivelI() { return nivelI; }, get ayuda() { return ayuda; },
+  pasos(n, dib = false) { for (let k = 0; k < n; k++) paso(PASO); if (dib) dibujar(); },
+  dibujar, entrar, jugar, aMenu, pausar, seguir, reiniciar, elegirIdioma, abrirTienda, moverTienda, comprarOUsar, armarCajas, armarNiveles, entrada, sonido, tr,
+  get W() { return W; }, get H() { return H; }, get dpr() { return dpr; },
+};
+window.listo = true;
+
+})();
+
+</script>
+</body>
+</html>

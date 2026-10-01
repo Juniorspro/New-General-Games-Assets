@@ -17,7 +17,9 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
   - 30/09: BRILLO, KUNTUR y RUTA 40 en vertical de verdad (sin girar; el giro queda como opción) y el tirón del
     arranque de KUNTUR (shaders compilados con el telón cerrado). Pruebas `vertical.mjs` de los tres, todas bien.
     Pidió no usar ayudantes: gastan muchos tokens. Hacerlo en la sesión.
-  - Falta: que diga cómo le quedan en su celu la construcción y los tres juegos parados; el primer juego de Roblox
+  - 01/10: mandó seis HTML hechos ("ahora estos"): cinco ya eran de celu parado; LA ISLA se giraba y se porteó
+    (Girar queda como ajuste); el parpadeo de las antorchas de CRIPTA y dos textos de GLOBO ([sueltos](sueltos.md)).
+  - Falta: que diga cómo le quedan en su celu la construcción y los juegos parados; el primer juego de Roblox
     (desde la sesión de su PC).
 - **28/09/2026, de noche, decimocuarta vez · `claude/fijate-iszyer`:**
   - Dijo: "no le llegan las actualizaciones".

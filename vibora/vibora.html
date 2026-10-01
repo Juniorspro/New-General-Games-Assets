@@ -1,0 +1,2344 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0c1019">
+<meta name="description" content="Víbora.io, de JXSTUDIOS: comé, crecé y no choques la cabeza.">
+<title>Víbora.io</title>
+<style>
+/* El juego se dibuja en el lienzo; los menús son HTML encima (el apodo
+   necesita un campo de verdad para que salga el teclado del teléfono).
+   Botones redondos y brillantes, como caramelos; paneles oscuros de vidrio. */
+:root {
+  --fondo: #0c1019;
+  --tinta: #f4f7ff;
+  --tenue: rgba(244, 247, 255, 0.68);
+  --lima: #8cff3a;
+  --lima-osc: #3f9e0d;
+  --violeta: #a36bff;
+  --violeta-osc: #5a2bb8;
+  --panel: rgba(8, 10, 18, 0.72);
+  --oro: #ffd35c;
+  --rojo: #ff5e7a;
+  color-scheme: dark;
+}
+html, body { margin: 0; height: 100%; background: var(--fondo); overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; inset: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--tinta); }
+#juego { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+#ui { position: absolute; inset: 0; pointer-events: none; }
+.pantalla {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 1.8vh, 16px);
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); box-sizing: border-box;
+  pointer-events: auto; text-align: center;
+}
+.pantalla.oculto { display: none; }
+.velo { background: rgba(5, 6, 12, 0.55); backdrop-filter: blur(2px); }
+h2 { margin: 0; font-size: clamp(22px, 4.2vh, 34px); font-weight: 900; letter-spacing: 0.02em; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
+
+@keyframes late { 50% { opacity: 0.25; } }
+
+#logo { width: min(92vw, 560px); height: auto; aspect-ratio: 5 / 1.35; }
+.titulo-idioma { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; }
+.titulo-idioma small { font-size: clamp(13px, 2vh, 16px); font-weight: 700; color: var(--tenue); letter-spacing: 0.01em; text-shadow: none; }
+#apodo {
+  width: min(78vw, 330px); box-sizing: border-box; padding: 12px 18px; border-radius: 999px; border: 2px solid rgba(140, 255, 58, 0.55);
+  background: rgba(10, 20, 14, 0.75); color: var(--tinta); font: 700 18px system-ui, sans-serif; text-align: center; outline: none;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+#apodo:focus { border-color: var(--lima); box-shadow: 0 0 0 3px rgba(140, 255, 58, 0.25), inset 0 2px 6px rgba(0, 0, 0, 0.5); }
+#apodo::placeholder { color: rgba(244, 247, 255, 0.45); }
+
+.boton {
+  all: unset; cursor: pointer; box-sizing: border-box; border-radius: 999px; font-weight: 900; letter-spacing: 0.03em; text-align: center;
+  color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); transition: transform 0.08s ease, filter 0.15s ease; -webkit-tap-highlight-color: transparent;
+}
+.boton:active { transform: translateY(3px) scale(0.98); }
+.boton:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.boton.principal {
+  min-width: min(70vw, 280px); padding: 16px 30px; font-size: clamp(20px, 3.6vh, 28px);
+  background: linear-gradient(180deg, #b8ff6e 0%, var(--lima) 45%, var(--lima-osc) 100%);
+  box-shadow: 0 6px 0 #2b6e08, 0 10px 22px rgba(0, 0, 0, 0.45), inset 0 3px 0 rgba(255, 255, 255, 0.45);
+}
+.boton.principal:active { box-shadow: 0 3px 0 #2b6e08, 0 6px 14px rgba(0, 0, 0, 0.45), inset 0 3px 0 rgba(255, 255, 255, 0.45); }
+.boton.chico {
+  padding: 10px 18px; font-size: clamp(14px, 2.2vh, 17px);
+  background: linear-gradient(180deg, #c49bff 0%, var(--violeta) 45%, var(--violeta-osc) 100%);
+  box-shadow: 0 4px 0 #3b1b85, 0 8px 16px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+}
+.fila { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.nivel { display: flex; align-items: center; gap: 6px; background: var(--panel); padding: 6px 8px; border-radius: 999px; flex-wrap: wrap; justify-content: center; }
+.nivel span { font-weight: 800; font-size: 13px; color: var(--tenue); padding: 0 6px; letter-spacing: 0.08em; }
+.opcion { all: unset; cursor: pointer; padding: 6px 12px; border-radius: 999px; font-weight: 800; font-size: 13px; color: var(--tenue); }
+.opcion.elegida { background: rgba(255, 255, 255, 0.16); color: #fff; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4); }
+.dato { margin: 0; font-weight: 800; color: var(--oro); font-size: clamp(14px, 2.2vh, 17px); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
+.consejo { margin: 0; max-width: 34ch; font-size: 13px; color: var(--tenue); }
+.firma { position: absolute; bottom: max(10px, env(safe-area-inset-bottom)); margin: 0; font-size: 12px; letter-spacing: 0.24em; color: rgba(201, 204, 212, 0.7); font-weight: 700; }
+
+#elegir { justify-content: space-between; padding-top: max(28px, env(safe-area-inset-top)); padding-bottom: max(28px, env(safe-area-inset-bottom)); background: linear-gradient(180deg, rgba(5, 6, 12, 0.6), rgba(5, 6, 12, 0) 25%, rgba(5, 6, 12, 0) 70%, rgba(5, 6, 12, 0.6)); }
+.flechas { display: flex; align-items: center; justify-content: space-between; width: min(96vw, 720px); flex: 1; }
+.flechas .hueco { flex: 1; }
+.flecha {
+  all: unset; cursor: pointer; width: 64px; height: 64px; border-radius: 50%; font-size: 42px; line-height: 60px; text-align: center; font-weight: 900; color: #fff;
+  background: radial-gradient(circle at 35% 30%, #b8ff6e, var(--lima) 45%, var(--lima-osc)); box-shadow: 0 5px 0 #2b6e08, 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+.flecha:active { transform: translateY(3px); }
+.nombre { margin: 0; font-size: clamp(20px, 3.4vh, 26px); font-weight: 900; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.5); }
+.candado { margin: 0; min-height: 1.2em; font-weight: 800; color: var(--rojo); }
+
+.lista { display: grid; gap: 8px; width: min(92vw, 420px); background: var(--panel); padding: 12px; border-radius: 18px; box-sizing: border-box; }
+.lista .item { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 700; }
+.lista .item span { color: var(--tenue); }
+.lista .ops { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+
+.causa { margin: 0; font-size: clamp(16px, 2.6vh, 20px); font-weight: 800; color: var(--rojo); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
+.rotulo { margin: 0; font-size: 14px; letter-spacing: 0.12em; color: var(--tenue); font-weight: 800; text-transform: uppercase; }
+.final { margin: 0; font-size: clamp(52px, 11vh, 84px); font-weight: 900; line-height: 1; text-shadow: 0 5px 0 rgba(0, 0, 0, 0.45); font-variant-numeric: tabular-nums; }
+.record { margin: 0; min-height: 1.2em; font-weight: 900; color: var(--oro); animation: late 0.8s ease-in-out infinite; }
+
+/* En un teléfono angosto (360) los niveles de bots no entraban en una línea. */
+@media (max-width: 380px) {
+  .nivel { gap: 2px; }
+  .nivel span { padding: 0 4px; }
+  .opcion { padding: 6px 9px; }
+}
+
+/* Con el teléfono acostado no entra la columna: el menú pasa a dos columnas
+   debajo del logo (:not(.oculto) para no pisar el display:none de .oculto). */
+@media (orientation: landscape) and (max-height: 540px) {
+  #menu:not(.oculto) {
+    display: grid; grid-template-columns: repeat(2, max-content); justify-content: center; align-content: center;
+    grid-template-areas: "logo logo" "apodo fila" "jugar nivel" "mejor consejo"; gap: 10px 28px; justify-items: center;
+  }
+  #logo { grid-area: logo; width: min(80vw, 560px, 80vh); }
+  #apodo { grid-area: apodo; }
+  #bJugar { grid-area: jugar; }
+  #menu .fila { grid-area: fila; }
+  #menu .nivel { grid-area: nivel; }
+  #tMejor { grid-area: mejor; }
+  #tConsejo { grid-area: consejo; }
+}
+
+@media (prefers-reduced-motion: reduce) { .record { animation: none; } .boton { transition: none; } }
+
+</style>
+</head>
+<body>
+<canvas id="juego" aria-label="Víbora.io"></canvas>
+<div id="ui">
+  <!-- la primera vez, después del logo: el idioma (el título va en los tres) -->
+  <section id="idiomas" class="pantalla oculto velo">
+    <h2 class="titulo-idioma">Elegí tu idioma<small lang="en">Choose your language</small><small lang="pt">Escolha seu idioma</small></h2>
+    <button id="bIdioma_es" class="boton principal" lang="es">Español</button>
+    <button id="bIdioma_en" class="boton principal" lang="en">English</button>
+    <button id="bIdioma_pt" class="boton principal" lang="pt">Português</button>
+  </section>
+
+  <section id="menu" class="pantalla oculto">
+    <canvas id="logo" aria-hidden="true"></canvas>
+    <input id="apodo" maxlength="16" autocomplete="off" spellcheck="false" enterkeyhint="go">
+    <button id="bJugar" class="boton principal"></button>
+    <div class="fila">
+      <button id="bPiel" class="boton chico"></button>
+      <button id="bFondo" class="boton chico"></button>
+      <button id="bAjustes" class="boton chico"></button>
+    </div>
+    <div class="nivel" role="group">
+      <span id="tBots"></span>
+      <button class="opcion" data-nivel="0"></button>
+      <button class="opcion" data-nivel="1"></button>
+      <button class="opcion" data-nivel="2"></button>
+    </div>
+    <p id="tMejor" class="dato"></p>
+    <p id="tConsejo" class="consejo"></p>
+    <p id="tFirma" class="firma"></p>
+  </section>
+
+  <section id="elegir" class="pantalla oculto">
+    <h2 id="tElegir"></h2>
+    <div class="flechas">
+      <button id="bAnterior" class="flecha" aria-label="anterior">‹</button>
+      <div class="hueco"></div>
+      <button id="bSiguiente" class="flecha" aria-label="siguiente">›</button>
+    </div>
+    <p id="tNombre" class="nombre"></p>
+    <p id="tCandado" class="candado"></p>
+    <button id="bListo" class="boton principal"></button>
+  </section>
+
+  <section id="ajustes" class="pantalla oculto">
+    <h2 id="tAjustes"></h2>
+    <div id="listaAjustes" class="lista"></div>
+    <button id="bCerrarAjustes" class="boton principal"></button>
+  </section>
+
+  <section id="pausa" class="pantalla oculto velo">
+    <h2 id="tPausa"></h2>
+    <button id="bSeguir" class="boton principal"></button>
+    <button id="bSalirPausa" class="boton chico"></button>
+  </section>
+
+  <section id="muerte" class="pantalla oculto velo">
+    <p id="tCausa" class="causa"></p>
+    <p id="tFinalRotulo" class="rotulo"></p>
+    <p id="tFinal" class="final"></p>
+    <p id="tRecord" class="record"></p>
+    <p id="tBajas" class="dato"></p>
+    <button id="bOtraVez" class="boton principal"></button>
+    <button id="bMenu" class="boton chico"></button>
+  </section>
+</div>
+<script>
+/* ── fondos ── */
+const M_fondos = (() => {
+// Los fondos de la arena: cada uno es una baldosa que se dibuja una vez y se
+// repite como patrón (con la cámara y el zoom puestos en la transformación del
+// patrón: un solo fillRect por cuadro, sin importar cuánto se ve).
+const FONDOS = ['colmena', 'carbono', 'circuito', 'galaxia', 'magma'];
+
+function lienzo(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  return [c, c.getContext('2d')];
+}
+
+// Hexágonos de tapa plana. Con lado 26, la altura (√3·26 = 45,03) es casi
+// entera y la baldosa de 78 × 45 repite sin costura visible.
+function colmena() {
+  const s = 26, h = Math.sqrt(3) * s, [c, g] = lienzo(78, 45);
+  g.fillStyle = '#0c1019'; g.fillRect(0, 0, 78, 45);
+  const hex = (cx, cy) => {
+    g.beginPath();
+    for (let k = 0; k < 6; k++) { const a = (Math.PI / 3) * k; g.lineTo(cx + Math.cos(a) * (s - 2.2), cy + Math.sin(a) * (s - 2.2)); }
+    g.closePath();
+    const gr = g.createLinearGradient(cx, cy - s, cx, cy + s);
+    gr.addColorStop(0, '#26304a'); gr.addColorStop(0.5, '#1c2437'); gr.addColorStop(1, '#161d2d');
+    g.fillStyle = gr; g.fill();
+    g.strokeStyle = 'rgba(120,150,210,0.10)'; g.lineWidth = 1.2; g.stroke();
+  };
+  for (let i = -1; i <= 3; i++) for (let j = -1; j <= 2; j++) hex(i * 1.5 * s, j * h + (i & 1 ? h / 2 : 0));
+  return { c, escala: 1.6 };
+}
+
+// Fibra de carbono (la de JXSTUDIOS): sarga 2 × 2 con un brillo en diagonal.
+function carbono() {
+  const [c, g] = lienzo(32, 32);
+  for (let y = 0; y < 32; y += 4) for (let x = 0; x < 32; x += 4) {
+    const sarga = ((x >> 2) + (y >> 2)) % 4 < 2;
+    const gr = g.createLinearGradient(x, y, x + (sarga ? 4 : 0), y + (sarga ? 0 : 4));
+    gr.addColorStop(0, sarga ? '#2a2c31' : '#1a1b1f'); gr.addColorStop(1, sarga ? '#1d1e22' : '#26282d');
+    g.fillStyle = gr; g.fillRect(x, y, 4, 4);
+  }
+  return { c, escala: 1.4 };
+}
+
+// Un circuito de neón: pistas a 45° con sus pads.
+function circuito() {
+  const [c, g] = lienzo(256, 256);
+  g.fillStyle = '#05100f'; g.fillRect(0, 0, 256, 256);
+  let semilla = 11;
+  const r = () => ((semilla = (semilla * 16807) % 2147483647) / 2147483647);
+  const pistas = [];
+  for (let k = 0; k < 22; k++) {
+    let x = Math.round(r() * 16) * 16, y = Math.round(r() * 16) * 16;
+    const p = [[x, y]];
+    for (let s = 0; s < 4; s++) {
+      const dir = Math.floor(r() * 8), l = 16 + Math.floor(r() * 4) * 16;
+      const ang = (dir * Math.PI) / 4;
+      x += Math.round(Math.cos(ang)) * l; y += Math.round(Math.sin(ang)) * l;
+      p.push([x, y]);
+    }
+    pistas.push(p);
+  }
+  const trazar = (ancho, color) => {
+    g.strokeStyle = color; g.lineWidth = ancho; g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const p of pistas) for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) {
+      g.beginPath(); p.forEach(([x, y], i) => (i ? g.lineTo(x + ox, y + oy) : g.moveTo(x + ox, y + oy))); g.stroke();
+    }
+  };
+  trazar(7, 'rgba(0,255,200,0.06)');
+  trazar(2, 'rgba(0,255,200,0.28)');
+  g.fillStyle = 'rgba(120,255,230,0.55)';
+  for (const p of pistas) { const [x, y] = p[p.length - 1]; g.beginPath(); g.arc((x + 256) % 256, (y + 256) % 256, 3, 0, Math.PI * 2); g.fill(); }
+  return { c, escala: 1.5 };
+}
+
+function galaxia() {
+  const [c, g] = lienzo(512, 512);
+  g.fillStyle = '#07061a'; g.fillRect(0, 0, 512, 512);
+  let semilla = 5;
+  const r = () => ((semilla = (semilla * 16807) % 2147483647) / 2147483647);
+  // nubes de color (repetidas en los bordes para que la baldosa cierre)
+  for (let k = 0; k < 7; k++) {
+    const x = r() * 512, y = r() * 512, rad = 90 + r() * 140, col = ['rgba(120,40,200,', 'rgba(30,80,200,', 'rgba(200,40,140,'][k % 3];
+    for (const ox of [-512, 0, 512]) for (const oy of [-512, 0, 512]) {
+      const gr = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rad);
+      gr.addColorStop(0, col + '0.22)'); gr.addColorStop(1, col + '0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+    }
+  }
+  for (let k = 0; k < 420; k++) {
+    const x = r() * 512, y = r() * 512, b = r();
+    g.fillStyle = `rgba(255,255,255,${0.25 + b * 0.6})`;
+    g.fillRect(x, y, b > 0.92 ? 2 : 1, b > 0.92 ? 2 : 1);
+    if (b > 0.985) { g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(x - 3, y + 0.5, 8, 1); g.fillRect(x + 0.5, y - 3, 1, 8); }
+  }
+  return { c, escala: 1.8 };
+}
+
+function magma() {
+  const [c, g] = lienzo(256, 256);
+  g.fillStyle = '#140c0a'; g.fillRect(0, 0, 256, 256);
+  let semilla = 23;
+  const r = () => ((semilla = (semilla * 16807) % 2147483647) / 2147483647);
+  // piedras oscuras y las grietas de brasa entre ellas
+  for (let k = 0; k < 40; k++) {
+    const x = r() * 256, y = r() * 256, rad = 12 + r() * 26;
+    g.fillStyle = `rgb(${28 + (r() * 14) | 0},${18 + (r() * 8) | 0},${16})`;
+    for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) { g.beginPath(); g.ellipse(x + ox, y + oy, rad, rad * 0.8, r() * 3, 0, Math.PI * 2); g.fill(); }
+  }
+  g.lineCap = 'round';
+  for (let k = 0; k < 14; k++) {
+    let x = r() * 256, y = r() * 256;
+    const p = [[x, y]];
+    for (let s = 0; s < 6; s++) { x += (r() - 0.5) * 60; y += (r() - 0.5) * 60; p.push([x, y]); }
+    for (const [w, col] of [[6, 'rgba(255,80,0,0.10)'], [2, 'rgba(255,120,20,0.55)'], [1, 'rgba(255,220,120,0.6)']]) {
+      g.strokeStyle = col; g.lineWidth = w;
+      for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) { g.beginPath(); p.forEach(([a, b], i) => (i ? g.lineTo(a + ox, b + oy) : g.moveTo(a + ox, b + oy))); g.stroke(); }
+    }
+  }
+  return { c, escala: 1.7 };
+}
+
+const HACER = { colmena, carbono, circuito, galaxia, magma };
+const cache = new Map();
+
+// El patrón listo para pintar con la cámara puesta.
+function fondo(id, g) {
+  if (!cache.has(id)) {
+    const f = (HACER[id] || colmena)();
+    f.patron = g.createPattern(f.c, 'repeat');
+    cache.set(id, f);
+  }
+  return cache.get(id);
+}
+
+function pintarFondo(g, id, cam, W, H) {
+  const f = fondo(id, g), k = f.escala * cam.zoom;
+  f.patron.setTransform(new DOMMatrix([k, 0, 0, k, W / 2 - cam.x * cam.zoom, H / 2 - cam.y * cam.zoom]));
+  g.fillStyle = f.patron;
+  g.fillRect(0, 0, W, H);
+}
+
+// Una miniatura para el selector de fondos.
+const baldosa = (id) => (HACER[id] || colmena)().c;
+return { FONDOS, fondo, pintarFondo, baldosa };
+})();
+
+/* ── pieles ── */
+const M_pieles = (() => {
+// Las pieles: una lista de colores que se repite a lo largo del cuerpo, de a
+// `franja` bolitas por color. Las primeras están abiertas; las demás se abren
+// con el mejor largo alcanzado (le da un porqué a la partida siguiente).
+// Todas son nuestras: colores, franjas y banderas, nada copiado.
+const PIELES = [
+  { id: 'lima', colores: ['#8cff3a', '#58c91c'], franja: 3 },
+  { id: 'coral', colores: ['#ff6b6b', '#ffb0a8'], franja: 3 },
+  { id: 'uva', colores: ['#a36bff', '#6e33d6'], franja: 3 },
+  { id: 'cielo', colores: ['#4fc3ff', '#1d8fe0'], franja: 3 },
+  { id: 'menta', colores: ['#2effb0', '#b6ffe6'], franja: 2 },
+  { id: 'rosa', colores: ['#ff5fb3', '#ffc6e6'], franja: 2 },
+  { id: 'fuego', colores: ['#ff3d00', '#ff9100', '#ffe600'], franja: 2 },
+  { id: 'hielo', colores: ['#eafaff', '#95dcff', '#46b6ff'], franja: 2 },
+  { id: 'argentina', colores: ['#74acdf', '#74acdf', '#ffffff', '#f6b40e', '#ffffff', '#74acdf'], franja: 2 },
+  { id: 'uruguay', colores: ['#ffffff', '#1f5fbf'], franja: 2 },
+  { id: 'brasil', colores: ['#009c3b', '#ffdf00', '#002776', '#ffdf00'], franja: 2 },
+  { id: 'mexico', colores: ['#006847', '#ffffff', '#ce1126'], franja: 3 },
+  { id: 'jx', colores: ['#17181b', '#26282d', '#c9ccd4', '#26282d'], franja: 2, mejor: 150 },
+  { id: 'abeja', colores: ['#ffd000', '#ffd000', '#1b1b1f'], franja: 2, mejor: 250 },
+  { id: 'tigre', colores: ['#ff8a00', '#ff8a00', '#ff8a00', '#1b1b1f'], franja: 2, mejor: 350 },
+  { id: 'cebra', colores: ['#f5f5f5', '#1b1b1f'], franja: 2, mejor: 450 },
+  { id: 'caramelo', colores: ['#ffffff', '#ff2d55'], franja: 2, mejor: 600 },
+  { id: 'sandia', colores: ['#ff3b5c', '#ff3b5c', '#ff3b5c', '#ffffff', '#1fb34a'], franja: 2, mejor: 750 },
+  { id: 'oceano', colores: ['#00608a', '#00a6ed', '#7fdbff', '#00a6ed'], franja: 2, mejor: 900 },
+  { id: 'bosque', colores: ['#1e5631', '#4c9a2a', '#a4de02', '#4c9a2a'], franja: 2, mejor: 1100 },
+  { id: 'lava', colores: ['#ff3d00', '#ff7a1a', '#3a0d08'], franja: 2, mejor: 1300 },
+  { id: 'chicle', colores: ['#ff9ff3', '#feca57', '#48dbfb'], franja: 3, mejor: 1600 },
+  { id: 'robot', colores: ['#9aa0aa', '#9aa0aa', '#5b5f68', '#ff3b30'], franja: 2, mejor: 2000 },
+  { id: 'galaxia', colores: ['#2b0f5a', '#5a2bd6', '#e0a0ff', '#1c0a3a'], franja: 2, mejor: 2500 },
+  { id: 'oro', colores: ['#ffd23f', '#ffb000', '#fff3b0', '#ffb000'], franja: 2, mejor: 3000 },
+  { id: 'neon', colores: ['#39ff14', '#00e5ff', '#ff00e5'], franja: 3, mejor: 4000 },
+  { id: 'arcoiris', colores: ['#ff3b30', '#ff9500', '#ffcc00', '#34c759', '#007aff', '#af52de'], franja: 2, mejor: 5000 },
+];
+
+const pielPorId = (id) => PIELES.find((p) => p.id === id) || PIELES[0];
+const abierta = (p, mejor) => !p.mejor || mejor >= p.mejor;
+
+// El color de la bolita k (0 = la cabeza) de una piel.
+const colorDe = (piel, k) => piel.colores[Math.floor(k / piel.franja) % piel.colores.length];
+
+// Nombres para los bots: inventados, cortos, de varios idiomas (como la gente real).
+const NOMBRES = [
+  'Tito', 'Lucha', 'Mxxa', 'Pipo', 'Nube', 'Chispa', 'Rulo', 'Kiki', 'Toto', 'Fer', 'Maru', 'Juli', 'Nacho', 'Coqui',
+  'Rayo', 'Tobi', 'Luz', 'Bruno', 'Chule', 'Pato', 'Mora', 'Gaspi', 'Yanina', 'Lolo', 'Santi', 'Vale', 'Nico', 'Cami',
+  'Bolt', 'Ziggy', 'Moxie', 'Ninja', 'Pixel', 'Rex', 'Zora', 'Echo', 'Luna', 'Nova', 'Kai', 'Milo', 'Juno', 'Axel',
+  'Tatu', 'Bia', 'Caio', 'Dudu', 'Leka', 'Vini', 'Gabi', 'Rafa', 'Tati', 'Zeca', 'Lipe', 'Duda',
+  'serpenteo', 'la_ñata', 'sin nombre', 'xX_viper_Xx', 'el_gusano', 'fideo', 'manguera', 'churro', 'spaghetti', 'caracol?',
+  'no me comas', 'soy chiquito', 'mamba', 'cobra_ar', 'boa', 'anaconda', 'coral', 'yarará', 'culebrita', 'viborón',
+];
+return { PIELES, pielPorId, abierta, colorDe, NOMBRES };
+})();
+
+/* ── dibujo ── */
+const M_dibujo = (() => {
+// El dibujo de la arena: fondo, borde, comida y víboras. Todo sale de
+// sprites que se hornean una vez por color (una bolita con luz y sombra, un
+// halo) y después solo se copian: dibujar degradés por cuadro es lo que hace
+// lento un juego así en el teléfono.
+const { pintarFondo } = M_fondos;
+const { colorDe } = M_pieles;
+const bolas = new Map(), halos = new Map(), sombras = new Map();
+const TAM = 64;
+
+function rgb(hex) { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
+const mezcla = ([r, g, b], f) => `rgb(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)})`;
+const aclarar = ([r, g, b], f) => `rgb(${Math.round(r + (255 - r) * f)},${Math.round(g + (255 - g) * f)},${Math.round(b + (255 - b) * f)})`;
+
+// Una bolita del cuerpo: luz arriba a la izquierda, borde oscuro.
+function bola(color) {
+  let c = bolas.get(color);
+  if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = TAM;
+  const g = c.getContext('2d'), k = rgb(color), m = TAM / 2;
+  const gr = g.createRadialGradient(m * 0.72, m * 0.62, m * 0.08, m, m, m);
+  gr.addColorStop(0, aclarar(k, 0.55)); gr.addColorStop(0.35, color); gr.addColorStop(0.85, mezcla(k, 0.62)); gr.addColorStop(1, mezcla(k, 0.35));
+  g.fillStyle = gr; g.beginPath(); g.arc(m, m, m - 0.5, 0, Math.PI * 2); g.fill();
+  bolas.set(color, c);
+  return c;
+}
+// El halo de la comida y del turbo (se suma con 'lighter').
+function halo(color) {
+  let c = halos.get(color);
+  if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = TAM;
+  const g = c.getContext('2d'), [r, gg, b] = rgb(color), m = TAM / 2;
+  const gr = g.createRadialGradient(m, m, 0, m, m, m);
+  gr.addColorStop(0, `rgba(255,255,255,0.95)`); gr.addColorStop(0.12, `rgba(${r},${gg},${b},0.95)`);
+  gr.addColorStop(0.35, `rgba(${r},${gg},${b},0.35)`); gr.addColorStop(1, `rgba(${r},${gg},${b},0)`);
+  g.fillStyle = gr; g.fillRect(0, 0, TAM, TAM);
+  halos.set(color, c);
+  return c;
+}
+function sombra() {
+  let c = sombras.get('s');
+  if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = TAM;
+  const g = c.getContext('2d'), m = TAM / 2, gr = g.createRadialGradient(m, m, 0, m, m, m);
+  gr.addColorStop(0, 'rgba(0,0,0,0.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, TAM, TAM);
+  sombras.set('s', c);
+  return c;
+}
+
+// De mundo a pantalla.
+const aPantalla = (cam, W, H, x, y) => [(x - cam.x) * cam.zoom + W / 2, (y - cam.y) * cam.zoom + H / 2];
+
+function dibujarArena(g, mundo, cam, W, H, { fondoId = 'colmena', calidad = 2, destacada = null, nombres = true, esc = 1 } = {}) {
+  pintarFondo(g, fondoId, cam, W, H);
+  // afuera de la arena: oscuro, y el borde que brilla rojo. Solo si se ve:
+  // desde lejos, el círculo gigante se pinta igual y cuesta en el teléfono.
+  const [ox, oy] = aPantalla(cam, W, H, 0, 0), R = mundo.radio * cam.zoom;
+  if (Math.hypot(W / 2 - ox, H / 2 - oy) + Math.hypot(W, H) / 2 > R - 10 * cam.zoom) {
+    g.save();
+    g.beginPath(); g.rect(0, 0, W, H); g.arc(ox, oy, R, 0, Math.PI * 2, true);
+    g.fillStyle = 'rgba(0,0,0,0.62)'; g.fill();
+    g.beginPath(); g.arc(ox, oy, R, 0, Math.PI * 2);
+    g.lineWidth = 14 * cam.zoom; g.strokeStyle = 'rgba(255,40,80,0.18)'; g.stroke();
+    g.lineWidth = 4 * cam.zoom; g.strokeStyle = 'rgba(255,60,90,0.9)'; g.stroke();
+    g.restore();
+  }
+  dibujarComida(g, mundo, cam, W, H);
+  // las víboras: primero las demás, la del jugador arriba de todo
+  for (const v of mundo.viboras) if (v.viva && v !== destacada) dibujarVibora(g, v, cam, W, H, mundo.t, calidad);
+  if (destacada && destacada.viva) dibujarVibora(g, destacada, cam, W, H, mundo.t, calidad);
+  if (nombres && cam.zoom > 0.32) for (const v of mundo.viboras) if (v.viva) nombre(g, v, cam, W, H, esc, v === destacada);
+}
+
+function dibujarComida(g, mundo, cam, W, H) {
+  const mx = W / 2 / cam.zoom + 20, my = H / 2 / cam.zoom + 20;
+  const x0 = cam.x - mx, x1 = cam.x + mx, y0 = cam.y - my, y1 = cam.y + my;
+  const cel = 128, nc = mundo.nc;
+  const c0 = Math.max(0, Math.floor((x0 + mundo.radio) / cel) + 1), c1 = Math.min(nc - 1, Math.floor((x1 + mundo.radio) / cel) + 1);
+  const f0 = Math.max(0, Math.floor((y0 + mundo.radio) / cel) + 1), f1 = Math.min(nc - 1, Math.floor((y1 + mundo.radio) / cel) + 1);
+  g.globalCompositeOperation = 'lighter';
+  const t = mundo.t, z = cam.zoom, bx = W / 2 - cam.x * z, by = H / 2 - cam.y * z;
+  for (let j = f0; j <= f1; j++) for (let i = c0; i <= c1; i++) for (const f of mundo.grilla[j * nc + i]) {
+    if (!mundo.fvivo[f]) continue;
+    const nace = Math.min(1, (t - mundo.fn[f]) / 0.35);
+    const late = 1 + Math.sin(t * 4 + f * 1.7) * 0.18;
+    const s = mundo.fr[f] * 4.2 * late * nace * z;
+    if (s < 1) continue;
+    g.drawImage(halo(mundo.colores[mundo.fc[f]]), mundo.fx[f] * z + bx - s / 2, mundo.fy[f] * z + by - s / 2, s, s);
+  }
+  g.globalCompositeOperation = 'source-over';
+}
+
+// Las bolitas que se ven, de la cola a la cabeza, en un solo arreglo que se
+// reusa (x, y, k): uno nuevo por bolita y por cuadro es basura para el teléfono.
+let PTS = new Float32Array(3 * 4096);
+
+function dibujarVibora(g, v, cam, W, H, t, calidad = 2) {
+  const r = v.radio(), R = r * cam.zoom, salto = v.salto();
+  const margen = R * 2, z = cam.zoom, bx = W / 2 - cam.x * z, by = H / 2 - cam.y * z;
+  if (PTS.length < 3 * (v.n / salto + 2)) PTS = new Float32Array(3 * Math.ceil(v.n / salto + 64));
+  let n = 0;
+  for (let k = Math.floor((v.n - 1) / salto) * salto; k >= 0; k -= salto) {
+    const j = v.i(k), sx = v.px[j] * z + bx, sy = v.py[j] * z + by;
+    if (sx < -margen || sy < -margen || sx > W + margen || sy > H + margen) continue;
+    PTS[n * 3] = sx; PTS[n * 3 + 1] = sy; PTS[n * 3 + 2] = k; n++;
+  }
+  const hx = v.x * z + bx, hy = v.y * z + by;
+  // la sombra (en calidad alta, una cada dos bolitas: igual se ve pareja) y
+  // el brillo del turbo, abajo del cuerpo
+  if (calidad >= 2) { const sm = sombra(), d = R * 2.2; for (let i = 0; i < n; i += 2) g.drawImage(sm, PTS[i * 3] - R * 0.85, PTS[i * 3 + 1] - R * 0.75, d, d); }
+  if (v.turbo) {
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < n; i++) {
+      const k = PTS[i * 3 + 2], f = 0.55 + 0.45 * Math.sin(t * 18 - k * 0.12), s = R * 3.4 * f;
+      g.drawImage(halo(colorDe(v.piel, Math.floor(k / salto))), PTS[i * 3] - s / 2, PTS[i * 3 + 1] - s / 2, s, s);
+    }
+    g.globalCompositeOperation = 'source-over';
+  }
+  for (let i = 0; i < n; i++) g.drawImage(bola(colorDe(v.piel, Math.floor(PTS[i * 3 + 2] / salto))), PTS[i * 3] - R, PTS[i * 3 + 1] - R, R * 2, R * 2);
+  // la cabeza y los ojos (miran hacia donde quiere ir)
+  g.drawImage(bola(colorDe(v.piel, 0)), hx - R * 1.05, hy - R * 1.05, R * 2.1, R * 2.1);
+  const mira = v.angObj;
+  for (const lado of [-1, 1]) {
+    const a = v.ang + lado * 0.62, ex = hx + Math.cos(a) * R * 0.5, ey = hy + Math.sin(a) * R * 0.5;
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(ex, ey, R * 0.34, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#101018'; g.beginPath(); g.arc(ex + Math.cos(mira) * R * 0.14, ey + Math.sin(mira) * R * 0.14, R * 0.19, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.9)'; g.beginPath(); g.arc(ex + Math.cos(mira) * R * 0.14 - R * 0.06, ey + Math.sin(mira) * R * 0.14 - R * 0.07, R * 0.06, 0, Math.PI * 2); g.fill();
+  }
+}
+
+// Cada nombre se escribe una vez en un lienzo chico y después se copia:
+// escribir texto (con su borde) por cuadro es de lo más caro en el teléfono.
+const carteles = new Map();
+function cartel(txt, esc, esMia) {
+  const clave = `${esMia ? 1 : 0}|${esc}|${txt}`;
+  let c = carteles.get(clave);
+  if (c) return c;
+  if (carteles.size > 300) carteles.clear();
+  const fuente = `700 ${Math.round(12 * esc)}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  c = document.createElement('canvas');
+  let g = c.getContext('2d');
+  g.font = fuente;
+  const b = Math.ceil(3 * esc);
+  c.width = Math.ceil(g.measureText(txt).width + b * 2 + 2); c.height = Math.ceil(16 * esc + b * 2);
+  g = c.getContext('2d');
+  g.font = fuente; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.lineWidth = 3 * esc; g.strokeStyle = 'rgba(0,0,0,0.7)'; g.lineJoin = 'round';
+  g.strokeText(txt, c.width / 2, c.height - b);
+  g.fillStyle = esMia ? '#ffffff' : 'rgba(255,255,255,0.75)'; g.fillText(txt, c.width / 2, c.height - b);
+  carteles.set(clave, c);
+  return c;
+}
+function nombre(g, v, cam, W, H, esc, esMia) {
+  const [hx, hy] = aPantalla(cam, W, H, v.x, v.y), R = v.radio() * cam.zoom;
+  if (hx < -80 || hy < -40 || hx > W + 80 || hy > H + 40) return;
+  const c = cartel(v.nombre, esc, esMia);
+  g.drawImage(c, Math.round(hx - c.width / 2), Math.round(hy - R - 3 * esc - c.height));
+}
+return { bola, halo, dibujarArena, dibujarVibora };
+})();
+
+/* ── entrada ── */
+const M_entrada = (() => {
+// Manejar la víbora con el dedo, el mouse o el teclado.
+//  - Dedo, modo "flecha" (el de siempre): la víbora va hacia donde está el
+//    dedo, mirado desde el centro de la pantalla (ahí está su cabeza).
+//  - Dedo, modo "joystick": donde se apoya el dedo queda la base; hacia donde
+//    se arrastra, va la víbora.
+//  - Turbo: el botón del rayo, o un segundo dedo en cualquier lado.
+//  - Mouse: apuntar y mantener apretado para el turbo.
+//  - Teclado: ← → (o A D) doblan, espacio o ↑ turbo (Escape y P, la pausa,
+//    los atiende main.js).
+// Todo en píxeles del lienzo (ya multiplicados por la densidad de pantalla).
+function crearEntrada(lienzo) {
+  const e = {
+    modo: 'flecha', dedos: new Map(), apunta: null, turboDedo: false, turboMouse: false, turboTecla: false,
+    teclas: new Set(), pausa: false, joy: null, dpr: 1, botonTurbo: null, botonPausa: null, activo: false,
+  };
+  const aLienzo = (ev) => { const r = lienzo.getBoundingClientRect(); return [(ev.clientX - r.left) * e.dpr, (ev.clientY - r.top) * e.dpr]; };
+  const dentro = (b, x, y) => b && Math.hypot(x - b.x, y - b.y) <= b.r * 1.25;
+
+  lienzo.addEventListener('pointerdown', (ev) => {
+    if (!e.activo) return;
+    ev.preventDefault();
+    lienzo.setPointerCapture?.(ev.pointerId);
+    const [x, y] = aLienzo(ev);
+    if (dentro(e.botonPausa, x, y)) { e.pausa = true; return; }
+    if (ev.pointerType === 'mouse') { e.apunta = [x, y]; if (ev.button === 0) e.turboMouse = true; return; }
+    if (dentro(e.botonTurbo, x, y)) { e.dedos.set(ev.pointerId, { turbo: true }); return; }
+    // el segundo dedo (que no sea el de apuntar) es turbo
+    const apuntando = [...e.dedos.values()].some((d) => !d.turbo);
+    if (apuntando) { e.dedos.set(ev.pointerId, { turbo: true }); return; }
+    e.dedos.set(ev.pointerId, { turbo: false, ox: x, oy: y });
+    if (e.modo === 'joystick') e.joy = { x, y, dx: 0, dy: 0 };
+    else e.apunta = [x, y];
+  }, { passive: false });
+
+  lienzo.addEventListener('pointermove', (ev) => {
+    if (!e.activo) return;
+    const [x, y] = aLienzo(ev);
+    if (ev.pointerType === 'mouse') { e.apunta = [x, y]; return; }
+    const d = e.dedos.get(ev.pointerId);
+    if (!d || d.turbo) return;
+    if (e.modo === 'joystick' && e.joy) { e.joy.dx = x - e.joy.x; e.joy.dy = y - e.joy.y; }
+    else e.apunta = [x, y];
+  });
+
+  const soltar = (ev) => {
+    if (ev.pointerType === 'mouse') { e.turboMouse = false; return; }
+    const d = e.dedos.get(ev.pointerId);
+    e.dedos.delete(ev.pointerId);
+    if (d && !d.turbo && e.modo === 'joystick') e.joy = null;
+  };
+  lienzo.addEventListener('pointerup', soltar);
+  lienzo.addEventListener('pointercancel', soltar);
+  lienzo.addEventListener('contextmenu', (ev) => ev.preventDefault());
+  for (const t of ['touchstart', 'touchmove', 'touchend']) lienzo.addEventListener(t, (ev) => { if (e.activo) ev.preventDefault(); }, { passive: false });
+
+  window.addEventListener('keydown', (ev) => {
+    if (ev.target && ev.target.tagName === 'INPUT') return;       // escribiendo el apodo
+    e.teclas.add(ev.code);
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space'].includes(ev.code) && e.activo) ev.preventDefault();
+  });
+  window.addEventListener('keyup', (ev) => e.teclas.delete(ev.code));
+  window.addEventListener('blur', () => { e.teclas.clear(); e.turboMouse = false; e.dedos.clear(); e.joy = null; });
+
+  // El rumbo que se pide (o null: seguir derecho) mirando desde la cabeza en (cx, cy).
+  e.rumbo = (actual, cx, cy, dt) => {
+    const izq = e.teclas.has('ArrowLeft') || e.teclas.has('KeyA'), der = e.teclas.has('ArrowRight') || e.teclas.has('KeyD');
+    if (izq || der) { e.apunta = null; return actual + (der ? 1 : -1) * 3.2 * dt * 3; }
+    if (e.modo === 'joystick' && e.joy) {
+      if (Math.hypot(e.joy.dx, e.joy.dy) < 8 * e.dpr) return null;
+      return Math.atan2(e.joy.dy, e.joy.dx);
+    }
+    if (!e.apunta) return null;
+    const dx = e.apunta[0] - cx, dy = e.apunta[1] - cy;
+    if (Math.hypot(dx, dy) < 6 * e.dpr) return null;
+    return Math.atan2(dy, dx);
+  };
+  e.turbo = () => e.turboMouse || e.teclas.has('Space') || e.teclas.has('ArrowUp') || e.teclas.has('KeyW') || [...e.dedos.values()].some((d) => d.turbo);
+  e.sacarPausa = () => { const p = e.pausa; e.pausa = false; return p; };
+  e.soltarTodo = () => { e.dedos.clear(); e.joy = null; e.turboMouse = false; e.apunta = null; };
+  return e;
+}
+return { crearEntrada };
+})();
+
+/* ── guardado ── */
+const M_guardado = (() => {
+// Lo que se guarda en el teléfono (en try: sin localStorage, el juego anda
+// igual sin guardar). Lo leído se valida campo por campo.
+const { PIELES } = M_pieles;
+const { FONDOS } = M_fondos;
+const CLAVE = 'vibora-io-1';
+
+function base() {
+  return {
+    apodo: '', piel: 'lima', fondo: 'colmena', nivelBots: 1,
+    mejor: 0, partidas: 0, bajas: 0,
+    ajustes: { musica: true, sonido: true, vibrar: true, control: 'flecha', calidad: 'auto', idioma: null, nombres: true },
+  };
+}
+
+const num = (v, a, b, d) => (Number.isFinite(v) ? Math.max(a, Math.min(b, Math.floor(v))) : d);
+
+function validar(d) {
+  const b = base();
+  if (!d || typeof d !== 'object') return b;
+  if (typeof d.apodo === 'string') b.apodo = d.apodo.slice(0, 16);
+  if (PIELES.some((p) => p.id === d.piel)) b.piel = d.piel;
+  if (FONDOS.includes(d.fondo)) b.fondo = d.fondo;
+  b.nivelBots = num(d.nivelBots, 0, 2, 1);
+  b.mejor = num(d.mejor, 0, 1e9, 0);
+  b.partidas = num(d.partidas, 0, 1e9, 0);
+  b.bajas = num(d.bajas, 0, 1e9, 0);
+  const a = d.ajustes || {};
+  for (const k of ['musica', 'sonido', 'vibrar', 'nombres']) if (typeof a[k] === 'boolean') b.ajustes[k] = a[k];
+  if (['flecha', 'joystick'].includes(a.control)) b.ajustes.control = a.control;
+  if (['auto', 'alta', 'baja'].includes(a.calidad)) b.ajustes.calidad = a.calidad;
+  if (['es', 'en', 'pt'].includes(a.idioma)) b.ajustes.idioma = a.idioma;
+  return b;
+}
+
+function cargar() { try { return validar(JSON.parse(localStorage.getItem(CLAVE))); } catch { return base(); } }
+function guardar(d) { try { localStorage.setItem(CLAVE, JSON.stringify(d)); return true; } catch { return false; } }
+return { base, validar, cargar, guardar };
+})();
+
+/* ── hud ── */
+const M_hud = (() => {
+// Lo que se lee jugando: la tabla de las diez más largas, el minimapa, tu
+// largo y tu puesto, y los carteles de lo que pasa (a quién comiste). Todo
+// en el lienzo, en píxeles de pantalla (esc = píxeles por punto CSS).
+const FUENTE = (px, peso = 700) => `${peso} ${Math.round(px)}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+const miles = (n) => Math.floor(n).toLocaleString('es-AR');
+
+// La tabla son unos treinta textos: se escriben en un lienzo aparte cuatro
+// veces por segundo y cada cuadro solo se copia (escribir texto por cuadro es
+// de lo más caro en el teléfono). Lo mismo "tu largo", cuando cambia.
+const tablaC = { c: null, hasta: 0, clave: '' }, largoC = { c: null, clave: '' };
+
+function dibujarHud(g, W, H, { mundo, mia, esc = 1, tr, avisos = [], tabla = null, turboBoton = null, pausa = null, joystick = null }) {
+  const m = 16 * esc;             // el mismo margen de 16 px que los menús
+  // ── la tabla ──
+  const top = tabla || mundo.tabla();
+  const filas = top.slice(0, 10), puesto = mia ? top.indexOf(mia) + 1 : 0;
+  const fs = 12.5 * esc, alto = fs * 1.35;
+  const anchoT = Math.min(W * 0.46, 190 * esc), x0 = W - anchoT - m, y0 = m;
+  const n = filas.length + (mia && puesto > 10 ? 1 : 0);
+  const ahora = performance.now(), clave = `${Math.round(anchoT)}|${esc}|${n}|${tr('tabla')}`;
+  if (!tablaC.c || ahora >= tablaC.hasta || tablaC.clave !== clave) {
+    tablaC.clave = clave; tablaC.hasta = ahora + 250;
+    const c = tablaC.c || (tablaC.c = document.createElement('canvas'));
+    c.width = Math.ceil(anchoT); c.height = Math.ceil(alto * (n + 1.4));
+    const q = c.getContext('2d');
+    q.fillStyle = 'rgba(8,10,18,0.55)';
+    redondo(q, 0, 0, anchoT, alto * (n + 1.4), 8 * esc); q.fill();
+    q.font = FUENTE(fs, 800); q.textBaseline = 'middle'; q.textAlign = 'left';
+    q.fillStyle = '#ffd35c'; q.fillText(tr('tabla'), 10 * esc, alto * 0.8);
+    const fila = (i, v, y, destacar) => {
+      q.font = FUENTE(fs * 0.92, destacar ? 800 : 600);
+      q.fillStyle = destacar ? '#ffffff' : 'rgba(255,255,255,0.72)';
+      // el puesto alineado a la derecha: "#10" no se pega al nombre
+      q.textAlign = 'right'; q.fillText(`#${i}`, 34 * esc, y);
+      q.textAlign = 'left'; q.fillText(recortar(q, v.nombre, anchoT - 96 * esc), 40 * esc, y);
+      q.textAlign = 'right'; q.fillText(miles(v.masa), anchoT - 10 * esc, y);
+    };
+    filas.forEach((v, k) => fila(k + 1, v, alto * (k + 1.8), v === mia));
+    if (mia && puesto > 10) fila(puesto, mia, alto * (filas.length + 1.8), true);
+  }
+  g.drawImage(tablaC.c, Math.round(x0), Math.round(y0));
+  // ── tu largo y tu puesto ──
+  if (mia) {
+    const largo = `${tr('largo')}: ${miles(mia.masa)}`, suPuesto = tr('puesto', { n: puesto, de: top.length });
+    const clave = `${esc}|${largo}|${suPuesto}`;
+    if (!largoC.c || largoC.clave !== clave) {
+      largoC.clave = clave;
+      const c = largoC.c || (largoC.c = document.createElement('canvas'));
+      c.width = Math.ceil(Math.min(W, 420 * esc)); c.height = Math.ceil(46 * esc);
+      const q = c.getContext('2d');
+      q.textAlign = 'left'; q.textBaseline = 'alphabetic';
+      q.font = FUENTE(22 * esc, 900);
+      sombreado(q, largo, 4 * esc, 24 * esc, '#ffffff');
+      q.font = FUENTE(13 * esc, 700);
+      sombreado(q, suPuesto, 4 * esc, 42 * esc, 'rgba(255,255,255,0.75)');
+    }
+    g.drawImage(largoC.c, Math.round(m), Math.round(H - m - 46 * esc));
+  }
+  // ── el minimapa ──
+  const rm = 44 * esc, cx = W - m - rm, cy = H - m - rm;
+  g.fillStyle = 'rgba(8,10,18,0.6)'; g.beginPath(); g.arc(cx, cy, rm, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = 'rgba(255,60,90,0.7)'; g.lineWidth = 1.5 * esc; g.stroke();
+  const k = rm / mundo.radio;
+  g.fillStyle = 'rgba(255,255,255,0.28)';
+  for (const v of top.slice(0, 12)) if (v !== mia) { g.beginPath(); g.arc(cx + v.x * k, cy + v.y * k, Math.max(1.2, Math.min(4, v.radio() * k * 3)) * esc * 0.9, 0, Math.PI * 2); g.fill(); }
+  if (top[0] && top[0] !== mia) { g.fillStyle = '#ffd35c'; g.beginPath(); g.arc(cx + top[0].x * k, cy + top[0].y * k, 2.6 * esc, 0, Math.PI * 2); g.fill(); }
+  if (mia) {
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(cx + mia.x * k, cy + mia.y * k, 3 * esc, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#ffffff'; g.lineWidth = 1 * esc; g.beginPath(); g.moveTo(cx + mia.x * k, cy + mia.y * k); g.lineTo(cx + mia.x * k + Math.cos(mia.ang) * 8 * esc, cy + mia.y * k + Math.sin(mia.ang) * 8 * esc); g.stroke();
+  }
+  // ── los carteles de arriba (en un teléfono parado la tabla ocupa el medio:
+  // van debajo de ella) ──
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const yAvisos = x0 > W / 2 + 130 * esc ? 58 * esc : y0 + alto * (n + 1.4) + 24 * esc;
+  avisos.forEach((a, i) => {
+    const vida = Math.min(1, a.t / 0.25) * Math.min(1, (a.dura - a.t) / 0.4);
+    g.globalAlpha = Math.max(0, vida);
+    g.font = FUENTE((a.grande ? 20 : 15) * esc, 900);
+    sombreado(g, a.txt, W / 2, yAvisos + i * 26 * esc, a.color || '#ffffff');
+    g.globalAlpha = 1;
+  });
+  // ── los botones de pantalla (turbo y pausa) ──
+  if (turboBoton) {
+    const { x, y, r, activo } = turboBoton;
+    g.fillStyle = activo ? 'rgba(255,211,92,0.55)' : 'rgba(255,255,255,0.14)';
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = activo ? '#ffd35c' : 'rgba(255,255,255,0.45)'; g.lineWidth = 2 * esc; g.stroke();
+    // un rayo
+    g.fillStyle = activo ? '#fff6d0' : 'rgba(255,255,255,0.8)';
+    g.beginPath();
+    const s = r * 0.5;
+    g.moveTo(x + s * 0.15, y - s); g.lineTo(x - s * 0.55, y + s * 0.1); g.lineTo(x - s * 0.05, y + s * 0.1);
+    g.lineTo(x - s * 0.2, y + s); g.lineTo(x + s * 0.55, y - s * 0.15); g.lineTo(x + s * 0.05, y - s * 0.15); g.closePath(); g.fill();
+  }
+  if (pausa) {
+    const { x, y, r } = pausa;
+    g.fillStyle = 'rgba(255,255,255,0.14)'; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillRect(x - r * 0.3, y - r * 0.35, r * 0.2, r * 0.7); g.fillRect(x + r * 0.1, y - r * 0.35, r * 0.2, r * 0.7);
+  }
+  if (joystick) {
+    const { x, y, dx, dy, r } = joystick;
+    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 2 * esc; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.arc(x + dx, y + dy, r * 0.4, 0, Math.PI * 2); g.fill();
+  }
+}
+
+function sombreado(g, txt, x, y, color) {
+  g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillText(txt, x + 1.5, y + 2);
+  g.fillStyle = color; g.fillText(txt, x, y);
+}
+
+function recortar(g, txt, ancho) {
+  if (g.measureText(txt).width <= ancho) return txt;
+  let t = txt;
+  while (t.length > 1 && g.measureText(t + '…').width > ancho) t = t.slice(0, -1);
+  return t + '…';
+}
+
+function redondo(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
+  g.lineTo(x + w, y + h - r); g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  g.lineTo(x + r, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r);
+  g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.closePath();
+}
+return { dibujarHud, redondo };
+})();
+
+/* ── util ── */
+const M_util = (() => {
+// Lo chico: azar con semilla, ángulos y límites.
+
+// mulberry32: el azar del mundo (dónde nace la comida, qué hacen los bots)
+// va con semilla, así una prueba se puede repetir igual.
+function azar(semilla) {
+  let a = semilla >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
+const mezclar = (a, b, t) => a + (b - a) * t;
+const acercar = (x, obj, vel, dt) => x + (obj - x) * (1 - Math.exp(-vel * dt));
+// La diferencia más corta entre dos ángulos, en (-π, π].
+function difAng(a, b) {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d <= -Math.PI) d += Math.PI * 2;
+  return d;
+}
+const salida = (t) => 1 - (1 - t) * (1 - t);
+const salidaAtras = (t) => 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2);
+// El tiempo real de un cuadro partido en pasos de a lo sumo `max`: [cuántos,
+// de cuánto]. Con pasos fijos de 1/60 y una pantalla de 90 o 120 Hz, uno de
+// cada dos o tres cuadros quedaba sin moverse y la víbora iba a tirones.
+function trozos(dtReal, max) {
+  const n = Math.max(1, Math.ceil(dtReal / max - 1e-9));
+  return [n, dtReal / n];
+}
+return { azar, clamp, mezclar, acercar, difAng, salida, salidaAtras, trozos };
+})();
+
+/* ── ia ── */
+const M_ia = (() => {
+// La cabeza de los bots. Piensan diez veces por segundo (entre medio siguen
+// doblando hacia lo último que decidieron):
+//  1. miran con nueve "rayos" hacia adelante hasta dónde está libre (cuerpos
+//     de otras y el borde);
+//  2. si adelante hay peligro, doblan hacia el rayo más libre (y con turbo si
+//     está muy cerca);
+//  3. si no, van a comer: la comida que más rinde por distancia (la de una
+//     muerta, grande, tira mucho);
+//  4. las agresivas, si tienen una más chica adelante, le cortan el camino
+//     apuntando a donde va a estar su cabeza.
+const { difAng } = M_util;
+const RAYOS = [0, -0.35, 0.35, -0.7, 0.7, -1.1, 1.1, -1.6, 1.6];
+
+// Cuánto se puede avanzar por un rayo hasta tocar algo (o `largo` si nada).
+function libre(v, mundo, ang, largo) {
+  const r = v.radio(), vi = mundo.viboras.indexOf(v), paso = Math.max(10, r * 0.8);
+  const cs = Math.cos(ang), sn = Math.sin(ang);
+  for (let d = r; d <= largo; d += paso) {
+    const x = v.x + cs * d, y = v.y + sn * d;
+    if (x * x + y * y > (mundo.radio - r * 1.5) ** 2) return d;
+    const c = mundo.celdaDe(x, y), nc = mundo.nc;
+    for (const cc of [c, c - 1, c + 1, c - nc, c + nc]) {
+      const lista = mundo.celdasCuerpo[cc];
+      if (!lista) continue;
+      for (const s of lista) {
+        if (mundo.sv[s] === vi) continue;
+        const toca = mundo.sr[s] + r * 0.9;
+        if ((mundo.sx[s] - x) ** 2 + (mundo.sy[s] - y) ** 2 < toca * toca) return d;
+      }
+    }
+  }
+  return largo;
+}
+
+// La comida que más rinde cerca (valor / distancia), o null.
+function mejorComida(v, mundo, alcance) {
+  let mejor = null, puntaje = 0;
+  const celdas = Math.ceil(alcance / 128);
+  const cx = Math.floor((v.x + mundo.radio) / 128) + 1, cy = Math.floor((v.y + mundo.radio) / 128) + 1;
+  for (let j = cy - celdas; j <= cy + celdas; j++) for (let i = cx - celdas; i <= cx + celdas; i++) {
+    if (i < 0 || j < 0 || i >= mundo.nc || j >= mundo.nc) continue;
+    for (const f of mundo.grilla[j * mundo.nc + i]) {
+      const d = Math.hypot(mundo.fx[f] - v.x, mundo.fy[f] - v.y);
+      if (d > alcance) continue;
+      // lo que queda detrás cuesta dar la vuelta: vale menos
+      const atras = Math.abs(difAng(v.ang, Math.atan2(mundo.fy[f] - v.y, mundo.fx[f] - v.x))) / Math.PI;
+      const p = mundo.fv[f] / (d + 40) / (1 + atras * 1.5);
+      if (p > puntaje) { puntaje = p; mejor = f; }
+    }
+  }
+  return mejor;
+}
+
+function pensar(v, mundo) {
+  const ia = v.ia, r = v.radio();
+  const largo = r * 3.5 + 90 * ia.prudencia;
+  // 1. los ojos
+  const vistos = RAYOS.map((da) => ({ da, ang: v.ang + da, d: libre(v, mundo, v.ang + da, largo) }));
+  const frente = vistos[0].d;
+  v.turbo = false;
+  // 2. peligro adelante: al más libre (a igualdad, el que menos obliga a doblar)
+  if (frente < largo * 0.7) {
+    let mejor = vistos[0];
+    for (const o of vistos) if (o.d - Math.abs(o.da) * 12 > mejor.d - Math.abs(mejor.da) * 12) mejor = o;
+    v.angObj = mejor.ang;
+    if (frente < largo * 0.35 && v.masa > 25 && mundo.r() < 0.6) v.turbo = true;
+    return;
+  }
+  // 4. cortarle el paso a una más chica que viene de frente o de costado
+  if (ia.agresion > 0.3 && v.masa > 40) {
+    for (const o of mundo.viboras) {
+      if (o === v || !o.viva || o.masa > v.masa * 0.8) continue;
+      const d = Math.hypot(o.x - v.x, o.y - v.y);
+      if (d > 380) continue;
+      const adelante = d * 0.55, px = o.x + Math.cos(o.ang) * adelante, py = o.y + Math.sin(o.ang) * adelante;
+      const ang = Math.atan2(py - v.y, px - v.x);
+      if (libre(v, mundo, ang, Math.min(largo, d)) < Math.min(largo, d) * 0.8) continue;
+      v.angObj = ang;
+      v.turbo = d < 240 && mundo.r() < ia.agresion;
+      return;
+    }
+  }
+  // 3. comer
+  const f = mejorComida(v, mundo, 260 + 140 * ia.codicia);
+  if (f !== null) {
+    const ang = Math.atan2(mundo.fy[f] - v.y, mundo.fx[f] - v.x);
+    // si para ir a la comida hay que pasar cerca de algo, mejor no
+    if (libre(v, mundo, ang, largo * 0.8) >= largo * 0.6) { v.angObj = ang; return; }
+  }
+  // sin nada: pasear con un rumbo que cambia despacio, y de vuelta al centro si está lejos
+  ia.deambula += (mundo.r() - 0.5) * 0.6;
+  const lejos = Math.hypot(v.x, v.y) > mundo.radio * 0.75;
+  v.angObj = lejos ? Math.atan2(-v.y, -v.x) : v.ang + difAng(v.ang, ia.deambula) * 0.3;
+}
+return { pensar };
+})();
+
+/* ── idioma ── */
+const M_idioma = (() => {
+// Los textos en castellano, inglés y portugués. {n} y {de} se reemplazan.
+const T = {
+  jugar: ['JUGAR', 'PLAY', 'JOGAR'],
+  apodo: ['Tu apodo', 'Your nickname', 'Seu apelido'],
+  piel: ['PIEL', 'SKIN', 'PELE'],
+  fondo: ['FONDO', 'ARENA', 'FUNDO'],
+  ajustes: ['AJUSTES', 'SETTINGS', 'AJUSTES'],
+  bots: ['BOTS', 'BOTS', 'BOTS'],
+  nivel_0: ['TRANQUI', 'CHILL', 'CALMO'],
+  nivel_1: ['NORMAL', 'NORMAL', 'NORMAL'],
+  nivel_2: ['PICANTE', 'SPICY', 'PICANTE'],
+  mejor: ['Tu mejor largo: {n}', 'Your best length: {n}', 'Seu melhor tamanho: {n}'],
+  tabla: ['Clasificación', 'Leaderboard', 'Classificação'],
+  largo: ['Tu largo', 'Your length', 'Seu tamanho'],
+  puesto: ['Puesto {n} de {de}', 'Rank {n} of {de}', 'Posição {n} de {de}'],
+  comiste: ['¡Te comiste a {n}!', 'You ate {n}!', 'Você comeu {n}!'],
+  teComio: ['Te comió {n}', '{n} got you', '{n} te pegou'],
+  borde: ['Chocaste con el borde', 'You hit the border', 'Você bateu na borda'],
+  final: ['Largo final', 'Final length', 'Tamanho final'],
+  nuevoRecord: ['¡Nuevo récord!', 'New best!', 'Novo recorde!'],
+  bajas: ['Te comiste {n}', 'You ate {n}', 'Você comeu {n}'],
+  otraVez: ['OTRA VEZ', 'PLAY AGAIN', 'DE NOVO'],
+  menu: ['MENÚ', 'MENU', 'MENU'],
+  pausa: ['PAUSA', 'PAUSED', 'PAUSA'],
+  seguir: ['SEGUIR', 'RESUME', 'CONTINUAR'],
+  listo: ['LISTO', 'DONE', 'PRONTO'],
+  bloqueada: ['Se abre con largo {n}', 'Unlocks at length {n}', 'Abre com tamanho {n}'],
+  musica: ['Música', 'Music', 'Música'],
+  sonido: ['Sonido', 'Sound', 'Som'],
+  vibrar: ['Vibración', 'Vibration', 'Vibração'],
+  control: ['Control', 'Controls', 'Controle'],
+  flecha: ['Seguir el dedo', 'Follow finger', 'Seguir o dedo'],
+  joystick: ['Joystick', 'Joystick', 'Joystick'],
+  calidad: ['Calidad', 'Quality', 'Qualidade'],
+  auto: ['Auto', 'Auto', 'Auto'],
+  alta: ['Alta', 'High', 'Alta'],
+  baja: ['Baja', 'Low', 'Baixa'],
+  idioma: ['Idioma', 'Language', 'Idioma'],
+  nombres: ['Nombres', 'Names', 'Nomes'],
+  si: ['Sí', 'On', 'Sim'],
+  no: ['No', 'Off', 'Não'],
+  consejo: ['Arrastrá el dedo para doblar · el rayo o un segundo dedo es turbo', 'Drag to turn · the bolt or a second finger boosts', 'Arraste para virar · o raio ou um segundo dedo é turbo'],
+  consejoPc: ['El mouse apunta · clic o espacio es turbo · P pausa', 'Aim with the mouse · click or space to boost · P pauses', 'O mouse aponta · clique ou espaço é turbo · P pausa'],
+  hito: ['¡Largo {n}!', 'Length {n}!', 'Tamanho {n}!'],
+  presenta: ['presenta', 'presents', 'apresenta'],
+  creditos: ['Un juego de JXSTUDIOS', 'A JXSTUDIOS game', 'Um jogo da JXSTUDIOS'],
+  piel_lima: ['Lima', 'Lime', 'Limão'], piel_coral: ['Coral', 'Coral', 'Coral'], piel_uva: ['Uva', 'Grape', 'Uva'],
+  piel_cielo: ['Cielo', 'Sky', 'Céu'], piel_menta: ['Menta', 'Mint', 'Hortelã'], piel_rosa: ['Rosa', 'Pink', 'Rosa'],
+  piel_fuego: ['Fuego', 'Fire', 'Fogo'], piel_hielo: ['Hielo', 'Ice', 'Gelo'], piel_argentina: ['Argentina', 'Argentina', 'Argentina'],
+  piel_uruguay: ['Uruguay', 'Uruguay', 'Uruguai'], piel_brasil: ['Brasil', 'Brazil', 'Brasil'], piel_mexico: ['México', 'Mexico', 'México'],
+  piel_jx: ['Carbono JX', 'JX Carbon', 'Carbono JX'], piel_abeja: ['Abeja', 'Bee', 'Abelha'], piel_tigre: ['Tigre', 'Tiger', 'Tigre'],
+  piel_cebra: ['Cebra', 'Zebra', 'Zebra'], piel_caramelo: ['Caramelo', 'Candy', 'Bala'], piel_sandia: ['Sandía', 'Watermelon', 'Melancia'],
+  piel_oceano: ['Océano', 'Ocean', 'Oceano'], piel_bosque: ['Bosque', 'Forest', 'Floresta'], piel_lava: ['Lava', 'Lava', 'Lava'],
+  piel_chicle: ['Chicle', 'Bubblegum', 'Chiclete'], piel_robot: ['Robot', 'Robot', 'Robô'], piel_galaxia: ['Galaxia', 'Galaxy', 'Galáxia'],
+  piel_oro: ['Oro', 'Gold', 'Ouro'], piel_neon: ['Neón', 'Neon', 'Neon'], piel_arcoiris: ['Arcoíris', 'Rainbow', 'Arco-íris'],
+  fondo_colmena: ['Colmena', 'Honeycomb', 'Colmeia'], fondo_carbono: ['Carbono JX', 'JX Carbon', 'Carbono JX'],
+  fondo_circuito: ['Circuito', 'Circuit', 'Circuito'], fondo_galaxia: ['Galaxia', 'Galaxy', 'Galáxia'], fondo_magma: ['Magma', 'Magma', 'Magma'],
+};
+
+const IDIOMAS = ['es', 'en', 'pt'];
+const TABLA = T;
+
+function crearIdioma(inicial) {
+  const nav = (navigator.language || 'es').slice(0, 2).toLowerCase();
+  let actual = IDIOMAS.includes(inicial) ? inicial : IDIOMAS.includes(nav) ? nav : 'en';
+  const tr = (clave, datos) => {
+    const fila = T[clave];
+    if (!fila) return clave;
+    let s = fila[IDIOMAS.indexOf(actual)] ?? fila[0];
+    if (datos !== undefined) {
+      if (typeof datos === 'object') for (const [k, v] of Object.entries(datos)) s = s.replace(`{${k}}`, v);
+      else s = s.replace('{n}', datos);
+    }
+    return s;
+  };
+  tr.poner = (l) => { if (IDIOMAS.includes(l)) actual = l; };
+  tr.actual = () => actual;
+  return tr;
+}
+return { IDIOMAS, TABLA, crearIdioma };
+})();
+
+/* ── logojxs ── */
+const M_logojxs = (() => {
+// El logo de JXSTUDIOS, calcado de la imagen que mandó quien pide
+// (30/09/2026): el monograma JXS son cuatro trazos de metal del mismo
+// ancho, en paralelo de a dos (entre línea y línea, el doble del grosor):
+//   - la J de adentro (barra, palo y gancho);
+//   - la S de adentro;
+//   - A: la barra de arriba de la J que baja en diagonal (el "\" de la X) y
+//     abraza la S por abajo;
+//   - B: el gancho de abajo de la J que sube en diagonal (el "/" de la X,
+//     que pasa POR ENCIMA del "\") y abraza la S por arriba.
+// Coordenadas en una caja de 350 × 172. El mismo dibujo sirve para la
+// versión de píxeles (se rasteriza chico), la 2D suave (se traza) y la 3D
+// (se muestrea la línea y se engorda a los costados).
+const CAJA = { w: 350, h: 172 };
+const GROSOR = 14.5;
+
+const TRAZOS = [
+  // A va abajo en el cruce: se dibuja primero
+  { id: 'A', capa: 0, d: [['M', 40, 19], ['L', 114, 19], ['L', 176, 101], ['C', 194, 128, 222, 168, 268, 169], ['C', 310, 170, 342, 152, 342, 122]] },
+  { id: 'J', capa: 0, d: [['M', 40, 43], ['L', 98, 43], ['L', 98, 116], ['C', 98, 148, 44, 158, 36, 124]] },
+  { id: 'S', capa: 0, d: [['M', 312, 66], ['C', 306, 46, 288, 36, 266, 36], ['C', 242, 36, 226, 48, 226, 63], ['C', 226, 80, 248, 86, 272, 92], ['C', 302, 99, 320, 108, 320, 126], ['C', 320, 142, 300, 148, 272, 148], ['C', 246, 148, 226, 138, 216, 118]] },
+  { id: 'B', capa: 1, d: [['M', 10, 130], ['C', 18, 158, 50, 168, 86, 166], ['C', 108, 165, 122, 158, 134, 142], ['L', 200, 46], ['C', 216, 24, 244, 12, 272, 12], ['C', 310, 12, 340, 30, 340, 62]] },
+];
+
+// Un trazo como Path2D, escalado y corrido.
+function camino2d(t, esc = 1, ox = 0, oy = 0) {
+  const p = new Path2D();
+  for (const [op, ...n] of t.d) {
+    const q = n.map((v, i) => (i % 2 ? oy + v * esc : ox + v * esc));
+    if (op === 'M') p.moveTo(q[0], q[1]);
+    else if (op === 'L') p.lineTo(q[0], q[1]);
+    else p.bezierCurveTo(q[0], q[1], q[2], q[3], q[4], q[5]);
+  }
+  return p;
+}
+
+// Puntos a lo largo del trazo, más o menos parejos (para la 3D, para animar
+// el dibujo de la línea y para medir el largo).
+function muestrear(t, cada = 3) {
+  const pts = [];
+  let x = 0, y = 0;
+  for (const [op, ...n] of t.d) {
+    if (op === 'M') { x = n[0]; y = n[1]; pts.push([x, y]); continue; }
+    if (op === 'L') {
+      const [x1, y1] = n, largo = Math.hypot(x1 - x, y1 - y), k = Math.max(1, Math.ceil(largo / cada));
+      for (let i = 1; i <= k; i++) pts.push([x + ((x1 - x) * i) / k, y + ((y1 - y) * i) / k]);
+      x = x1; y = y1; continue;
+    }
+    const [c1x, c1y, c2x, c2y, x1, y1] = n;
+    const aprox = Math.hypot(c1x - x, c1y - y) + Math.hypot(c2x - c1x, c2y - c1y) + Math.hypot(x1 - c2x, y1 - c2y);
+    const k = Math.max(2, Math.ceil(aprox / cada));
+    for (let i = 1; i <= k; i++) {
+      const s = i / k, r = 1 - s;
+      pts.push([r * r * r * x + 3 * r * r * s * c1x + 3 * r * s * s * c2x + s * s * s * x1, r * r * r * y + 3 * r * r * s * c1y + 3 * r * s * s * c2y + s * s * s * y1]);
+    }
+    x = x1; y = y1;
+  }
+  return pts;
+}
+
+function largo(t) {
+  const p = muestrear(t, 2);
+  let l = 0;
+  for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+  return l;
+}
+
+// El monograma dibujado en 2D con su metal, en un lienzo aparte (así el
+// reflejo, que se pinta "arriba de lo dibujado", toca solo el metal):
+// sombra, borde oscuro (que en el cruce hace de hueco y deja ver que B pasa
+// por encima), el cuerpo con un degradé de cromo y el filo de luz.
+// `avance` (0 a 1) dibuja cada trazo hasta ahí: el metal "se escribe".
+// `brillo` (0 a 1) pasa una franja de luz de izquierda a derecha.
+function monograma(ancho, { avance = 1, brillo = -1, sombra = true, lienzo = null } = {}) {
+  const esc = ancho / CAJA.w, gro = GROSOR * esc, alto = Math.ceil(CAJA.h * esc);
+  const m = Math.ceil(10 * esc) + 2;
+  const c = lienzo || document.createElement('canvas');
+  c.width = Math.ceil(ancho) + 2 * m; c.height = alto + 2 * m;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  const crom = g.createLinearGradient(0, m, 0, m + alto);
+  crom.addColorStop(0, '#fbfbfd'); crom.addColorStop(0.35, '#c9ccd4'); crom.addColorStop(0.55, '#8a8f99');
+  crom.addColorStop(0.7, '#d9dce3'); crom.addColorStop(1, '#6f747e');
+  g.lineCap = 'butt'; g.lineJoin = 'round';
+  for (const capa of [0, 1]) for (const t of TRAZOS) {
+    if (t.capa !== capa) continue;
+    const p = camino2d(t, esc, m, m), l = largo(t) * esc;
+    const trazo = (a, estilo, dx = 0, dy = 0) => {
+      g.save();
+      g.translate(dx, dy);
+      if (avance < 1) g.setLineDash([Math.max(0.01, l * avance), l + 10]);
+      g.lineWidth = a; g.strokeStyle = estilo; g.stroke(p);
+      g.restore();
+    };
+    // cara plana con bisel (como el logo): el borde que abre el hueco del
+    // cruce, el bisel gris y la cara de cromo
+    if (sombra) trazo(gro + 2 * esc, 'rgba(0,0,0,0.6)', 3 * esc, 5 * esc);
+    trazo(gro + 5 * esc, '#050607');
+    trazo(gro, '#5b5f68');
+    trazo(gro * 0.74, crom);
+  }
+  if (brillo >= 0 && brillo <= 1) {
+    g.globalCompositeOperation = 'source-atop';
+    const bx = m + (brillo * 1.6 - 0.3) * ancho;
+    const f = g.createLinearGradient(bx - ancho * 0.12, 0, bx + ancho * 0.12, 0);
+    f.addColorStop(0, 'rgba(255,255,255,0)'); f.addColorStop(0.5, 'rgba(255,255,255,0.85)'); f.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = f; g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = 'source-over';
+  }
+  c.margen = m;
+  return c;
+}
+
+// La palabra "JXStudios" en metal, con la letra del sistema (sans gruesa):
+// se mide y se escala para que ocupe justo `ancho`.
+function palabra(ancho, { color = null } = {}) {
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  const fuente = (px) => `600 ${px}px "Montserrat", "Poppins", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+  g.font = fuente(100);
+  const w100 = g.measureText('JXStudios').width || 400;
+  const px = Math.max(8, (ancho / w100) * 100);
+  c.width = Math.ceil(ancho + px * 0.2); c.height = Math.ceil(px * 1.35);
+  g.font = fuente(px); g.textBaseline = 'alphabetic';
+  const base = Math.round(px * 1.02), x = Math.round(px * 0.1);
+  g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillText('JXStudios', x + px * 0.03, base + px * 0.05);
+  const crom = g.createLinearGradient(0, base - px * 0.75, 0, base);
+  crom.addColorStop(0, '#ffffff'); crom.addColorStop(0.5, '#d2d5dc'); crom.addColorStop(0.62, '#9aa0aa'); crom.addColorStop(1, '#e7e9ee');
+  g.fillStyle = color || crom; g.fillText('JXStudios', x, base);
+  return c;
+}
+
+// El monograma en píxeles: se traza chico (con el hueco del cruce), se
+// separa metal de borde por color y se vuelve a pintar a mano en escalones
+// de cromo (claro arriba, oscuro al medio, claro abajo) con bisel.
+function monogramaPixel(anchoPx, { avance = 1 } = {}) {
+  const esc = anchoPx / CAJA.w, alto = Math.ceil(CAJA.h * esc) + 4, ancho = Math.ceil(anchoPx) + 4;
+  const c = document.createElement('canvas');
+  c.width = ancho; c.height = alto;
+  const g = c.getContext('2d');
+  for (const capa of [0, 1]) for (const t of TRAZOS) {
+    if (t.capa !== capa) continue;
+    const p = camino2d(t, esc, 2, 2), l = largo(t) * esc;
+    g.save();
+    if (avance < 1) g.setLineDash([Math.max(0.01, l * avance), l + 10]);
+    g.lineCap = 'butt';
+    g.lineWidth = GROSOR * esc + 2.2; g.strokeStyle = '#ff0000'; g.stroke(p);
+    g.lineWidth = GROSOR * esc; g.strokeStyle = '#00ff00'; g.stroke(p);
+    g.restore();
+  }
+  const img = g.getImageData(0, 0, ancho, alto), d = img.data;
+  const metal = new Uint8Array(ancho * alto), borde = new Uint8Array(ancho * alto);
+  for (let i = 0; i < ancho * alto; i++) {
+    if (d[i * 4 + 3] < 90) continue;
+    if (d[i * 4 + 1] > 110) metal[i] = 1; else if (d[i * 4] > 110) borde[i] = 1;
+  }
+  const ESCALON = ['#f4f5f8', '#d9dbe1', '#b7bbc4', '#8d929c', '#a9adb6', '#d3d6dc', '#9ea3ad', '#767b85'];
+  for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
+    const i = y * ancho + x, k = i * 4;
+    if (metal[i]) {
+      const arriba = y > 0 && metal[i - ancho], abajo = y < alto - 1 && metal[i + ancho];
+      const izq = x > 0 && metal[i - 1], der = x < ancho - 1 && metal[i + 1];
+      let col = ESCALON[Math.min(ESCALON.length - 1, Math.floor(((y - 2) / (alto - 4)) * ESCALON.length))];
+      if (!arriba || !izq) col = '#ffffff';            // el filo que da a la luz
+      else if (!abajo || !der) col = '#5b5f68';        // el bisel en sombra
+      const n = parseInt(col.slice(1), 16);
+      d[k] = n >> 16; d[k + 1] = (n >> 8) & 255; d[k + 2] = n & 255; d[k + 3] = 255;
+    } else if (borde[i]) { d[k] = 5; d[k + 1] = 6; d[k + 2] = 8; d[k + 3] = 255; }
+    else d[k + 3] = 0;
+  }
+  g.putImageData(img, 0, 0);
+  c.mascara = metal;       // para pasarle el brillo solo por el metal
+  c.esc = esc;             // para ubicar puntas de trazo en pantalla
+  return c;
+}
+
+// Dónde va la punta de cada trazo cuando está escrito hasta `avance`
+// (coordenadas de la caja del logo).
+const cacheMuestras = new Map();
+function puntas(avance) {
+  const out = [];
+  for (const t of TRAZOS) {
+    if (!cacheMuestras.has(t.id)) {
+      const p = muestrear(t, 2), acum = [0];
+      for (let i = 1; i < p.length; i++) acum.push(acum[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+      cacheMuestras.set(t.id, { p, acum });
+    }
+    const { p, acum } = cacheMuestras.get(t.id), meta = acum[acum.length - 1] * avance;
+    let i = 1;
+    while (i < acum.length - 1 && acum[i] < meta) i++;
+    out.push(p[i]);
+  }
+  return out;
+}
+return { CAJA, GROSOR, TRAZOS, camino2d, muestrear, largo, monograma, palabra, monogramaPixel, puntas };
+})();
+
+/* ── intro ── */
+const M_intro = (() => {
+// La intro de JXSTUDIOS en 2D, rápida (menos de tres segundos) y con
+// movimiento de cámara: una raya de luz abre la fibra de carbono, la reja de
+// metal entra desde los costados, el monograma se escribe con luz (cuatro
+// puntas que dejan chispas), golpe con destello y onda, brillo que cruza el
+// metal, la palabra JXStudios sube, y un empujón hacia adelante que da paso
+// al juego. Arranca apenas abre la página (main.js). La música sale de
+// sonido.js › jingleJXS, agendada con el mismo reloj; un toque la saltea.
+const { monograma, palabra, puntas, CAJA } = M_logojxs;
+const { clamp, salida, salidaAtras } = M_util;
+const T = { raya: 0.16, abre: 0.5, traza: [0.15, 1.0], golpe: 1.05, brillo: [1.15, 1.7], palabra: 1.2, fin: 2.5, salto: 0.35 };
+
+let carbono = null;
+function patronCarbono(g) {
+  if (carbono) return carbono;
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const q = c.getContext('2d');
+  for (let y = 0; y < 16; y += 2) for (let x = 0; x < 16; x += 2) {
+    const s = ((x >> 1) + (y >> 1)) % 4 < 2;
+    q.fillStyle = s ? '#27292e' : '#18191c'; q.fillRect(x, y, 2, 2);
+    q.fillStyle = s ? '#2f3137' : '#1d1e22'; q.fillRect(x, y, 1, 1);
+  }
+  carbono = g.createPattern(c, 'repeat');
+  return carbono;
+}
+
+// El fondo: carbono con un rombo al centro y la reja de metal alrededor.
+function fondoJX(g, W, H, t, { entra = 1, zoom = 1 } = {}) {
+  g.fillStyle = '#050506'; g.fillRect(0, 0, W, H);
+  g.save();
+  g.translate(W / 2, H / 2); g.scale(zoom, zoom); g.translate(-W / 2, -H / 2);
+  const p = patronCarbono(g), esc = Math.max(1, Math.min(W, H) / 400);
+  p.setTransform(new DOMMatrix([esc, 0, 0, esc, 0, 0]));
+  g.fillStyle = p; g.fillRect(-W, -H, W * 3, H * 3);
+  // la reja: barras de metal cepillado a ±45°, entrando desde los costados
+  const paso = Math.min(W, H) * 0.22, grosor = paso * 0.1, rombo = Math.min(W, H) * 0.36;
+  g.save();
+  g.beginPath(); g.rect(-W, -H, W * 3, H * 3);
+  g.moveTo(W / 2, H / 2 - rombo); g.lineTo(W / 2 - rombo, H / 2); g.lineTo(W / 2, H / 2 + rombo); g.lineTo(W / 2 + rombo, H / 2); g.closePath();
+  g.clip('evenodd');
+  const corre = (1 - salida(entra)) * W * 0.6;
+  for (const lado of [-1, 1]) {
+    g.save();
+    g.translate(W / 2 + lado * corre, H / 2);
+    g.rotate((lado * Math.PI) / 4);
+    const metal = g.createLinearGradient(0, -grosor, 0, grosor);
+    metal.addColorStop(0, '#5f646d'); metal.addColorStop(0.5, '#a3a8b1'); metal.addColorStop(1, '#3f434a');
+    for (let k = -12; k <= 12; k++) {
+      g.fillStyle = '#050506'; g.fillRect(-W * 2, k * paso - grosor / 2 - 2, W * 4, grosor + 4);
+      g.fillStyle = metal; g.save(); g.translate(0, k * paso); g.fillRect(-W * 2, -grosor / 2, W * 4, grosor); g.restore();
+    }
+    g.restore();
+  }
+  g.restore();
+  // el borde del rombo
+  g.strokeStyle = '#8d929c'; g.lineWidth = Math.max(2, grosor * 0.35);
+  g.beginPath(); g.moveTo(W / 2, H / 2 - rombo); g.lineTo(W / 2 - rombo, H / 2); g.lineTo(W / 2, H / 2 + rombo); g.lineTo(W / 2 + rombo, H / 2); g.closePath(); g.stroke();
+  g.restore();
+  // viñeta y un halo de luz arriba del centro
+  const v = g.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.1, W / 2, H / 2, Math.max(W, H) * 0.75);
+  v.addColorStop(0, 'rgba(255,255,255,0.06)'); v.addColorStop(0.6, 'rgba(0,0,0,0.2)'); v.addColorStop(1, 'rgba(0,0,0,0.85)');
+  g.fillStyle = v; g.fillRect(0, 0, W, H);
+}
+
+class Intro {
+  constructor({ sonido, vibrar = () => {}, alTerminar }) {
+    this.t = 0; this.chispas = []; this.golpeado = false; this.terminado = false;
+    this.alTerminar = alTerminar; this.vibrar = vibrar;
+    this.musica = sonido.jingleJXS?.() || null;
+    this.lienzoLogo = null;
+  }
+  saltear() {
+    if (this.t < T.salto || this.terminado) return;
+    this.musica?.cortar();
+    this.t = Math.max(this.t, T.fin);
+  }
+  pasar(dt, W, H) {
+    this.t += dt;
+    const ancho = this.ancho(W, H);
+    if (this.t > T.traza[0] && this.t < T.traza[1] && this.puntasPantalla) {
+      for (const [x, y] of this.puntasPantalla) for (let k = 0; k < 3; k++) {
+        const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 90;
+        this.chispas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, vida: 0.3 + Math.random() * 0.3, col: Math.random() < 0.6 ? '#ffffff' : '#9fdcff' });
+      }
+    }
+    if (!this.golpeado && this.t >= T.golpe) {
+      this.golpeado = true;
+      this.vibrar([30, 20, 40]);
+      for (let k = 0; k < 120; k++) {
+        const a = Math.random() * Math.PI * 2, v = 80 + Math.random() * 380;
+        this.chispas.push({ x: W / 2 + (Math.random() - 0.5) * ancho * 0.8, y: H * 0.44 + (Math.random() - 0.5) * ancho * 0.3, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, vida: 0.5 + Math.random() * 0.7, col: ['#ffffff', '#ffe7a8', '#c9ccd4', '#9fdcff'][k % 4] });
+      }
+    }
+    for (const c of this.chispas) { c.t += dt; c.x += c.vx * dt; c.y += c.vy * dt; c.vx *= 0.95; c.vy = c.vy * 0.95 + 160 * dt; }
+    this.chispas = this.chispas.filter((c) => c.t < c.vida);
+    if (this.t >= T.fin + 0.35 && !this.terminado) { this.terminado = true; this.alTerminar?.(); }
+  }
+  ancho(W, H) { return Math.min(W * 0.72, H * 0.95, 760); }
+
+  dibujar(g, W, H) {
+    const t = this.t, ancho = this.ancho(W, H), cy = H * 0.44;
+    g.save();
+    // la sacudida del golpe
+    const sac = t > T.golpe && t < T.golpe + 0.4 ? (1 - (t - T.golpe) / 0.4) * 10 * (W / 800) : 0;
+    if (sac) g.translate((Math.random() - 0.5) * sac, (Math.random() - 0.5) * sac);
+    // el empujón final hacia adelante
+    const fin = clamp((t - T.fin) / 0.35, 0, 1), zoom = 1 + fin * fin * 0.6;
+    if (t < T.raya) {
+      g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+      const w = W * salida(t / T.raya);
+      const gr = g.createLinearGradient(W / 2 - w / 2, 0, W / 2 + w / 2, 0);
+      gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, '#ffffff'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.fillRect(W / 2 - w / 2, cy - 1, w, 2);
+      g.restore();
+      return;
+    }
+    const abre = clamp((t - T.raya) / (T.abre - T.raya), 0, 1);
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+    g.save();
+    const alto = (Math.max(cy, H - cy) + 10) * salidaAtras(abre);
+    g.beginPath(); g.rect(0, cy - alto, W, alto * 2); g.clip();
+    fondoJX(g, W, H, t, { entra: clamp((t - 0.2) / 0.6, 0, 1), zoom: (1.12 - 0.12 * salida(abre)) * zoom });
+    g.restore();
+    // el monograma: se escribe, golpea y brilla
+    const avance = clamp((t - T.traza[0]) / (T.traza[1] - T.traza[0]), 0, 1);
+    if (avance > 0) {
+      const brillo = t > T.brillo[0] && t < T.brillo[1] ? (t - T.brillo[0]) / (T.brillo[1] - T.brillo[0]) : -1;
+      const golpe = t >= T.golpe ? salida(clamp((t - T.golpe) / 0.25, 0, 1)) : 0;
+      const escala = (avance < 1 ? 1 : 1 + (1 - golpe) * 0.06) * zoom;
+      this.lienzoLogo = monograma(ancho * escala, { avance, brillo, lienzo: this.lienzoLogo });
+      const m = this.lienzoLogo, x0 = W / 2 - m.width / 2, y0 = cy - m.height / 2;
+      // mientras se escribe, las puntas brillan con luz
+      if (avance < 1) {
+        const esc = (ancho * escala) / CAJA.w;
+        this.puntasPantalla = puntas(avance).map(([px, py]) => [x0 + m.margen + px * esc, y0 + m.margen + py * esc]);
+        g.globalCompositeOperation = 'lighter';
+        for (const [px, py] of this.puntasPantalla) {
+          const r = ancho * 0.05, gr = g.createRadialGradient(px, py, 0, px, py, r);
+          gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.3, 'rgba(160,220,255,0.5)'); gr.addColorStop(1, 'rgba(160,220,255,0)');
+          g.fillStyle = gr; g.beginPath(); g.arc(px, py, r, 0, Math.PI * 2); g.fill();
+        }
+        g.globalCompositeOperation = 'source-over';
+      } else this.puntasPantalla = null;
+      g.drawImage(m, x0, y0);
+      // el destello y la onda del golpe
+      if (t >= T.golpe && t < T.golpe + 0.5) {
+        const k = (t - T.golpe) / 0.5;
+        g.fillStyle = `rgba(255,255,255,${(1 - k) * (1 - k) * 0.9})`; g.fillRect(0, 0, W, H);
+        g.strokeStyle = `rgba(255,255,255,${(1 - k) * 0.7})`; g.lineWidth = 6 * (1 - k) + 1;
+        g.beginPath(); g.arc(W / 2, cy, ancho * (0.3 + k * 0.9), 0, Math.PI * 2); g.stroke();
+      }
+    }
+    // la palabra que sube
+    if (t > T.palabra) {
+      const k = salida(clamp((t - T.palabra) / 0.45, 0, 1));
+      const p = this.palabraC || (this.palabraC = palabra(ancho * 0.72));
+      g.globalAlpha = k;
+      g.drawImage(p, W / 2 - (p.width * zoom) / 2, cy + ancho * 0.26 + (1 - k) * ancho * 0.08, p.width * zoom, p.height * zoom);
+      g.globalAlpha = 1;
+    }
+    for (const c of this.chispas) {
+      const a = 1 - c.t / c.vida;
+      g.fillStyle = c.col; g.globalAlpha = a;
+      g.fillRect(c.x - 1.5, c.y - 1.5, 3, 3);
+    }
+    g.globalAlpha = 1;
+    if (fin > 0) { g.fillStyle = `rgba(0,0,0,${fin})`; g.fillRect(0, 0, W, H); }
+    g.restore();
+  }
+}
+return { Intro };
+})();
+
+/* ── logo ── */
+const M_logo = (() => {
+// El logo VÍBORA.IO, dibujado con trazos gruesos y redondos, como si cada
+// letra fuera una víbora: borde oscuro, cuerpo con franjas de la piel lima,
+// brillo arriba y un ojito en la O. No depende de ninguna letra instalada.
+const L = {
+  V: [[[8, 8], [50, 112], [92, 8]]],
+  I: [[[18, 8], [18, 112]]],
+  Í: [[[22, 8], [22, 112]], [[18, -22], [38, -40]]],
+  B: [[[16, 112], [16, 8], [52, 8], ['c', 86, 8, 86, 58, 52, 58], [16, 58]], [[52, 58], ['c', 94, 58, 94, 112, 54, 112], [16, 112]]],
+  O: 'O',
+  R: [[[16, 112], [16, 8], [52, 8], ['c', 88, 8, 88, 62, 52, 62], [16, 62]], [[50, 62], [88, 112]]],
+  A: [[[8, 112], [50, 8], [92, 112]], [[26, 74], [74, 74]]],
+  '.': '.',
+};
+const ANCHO = { V: 100, I: 36, Í: 44, B: 92, O: 104, R: 94, A: 100, '.': 36 };
+
+function caminoLetra(ch, x, y, k) {
+  const p = new Path2D(), def = L[ch];
+  if (def === 'O') { p.ellipse(x + 52 * k, y + 60 * k, 42 * k, 52 * k, 0, 0, Math.PI * 2); return p; }
+  if (def === '.') return p;
+  for (const tramo of def) tramo.forEach((q, i) => {
+    if (q[0] === 'c') p.bezierCurveTo(x + q[1] * k, y + q[2] * k, x + q[3] * k, y + q[4] * k, x + q[5] * k, y + q[6] * k);
+    else if (i === 0) p.moveTo(x + q[0] * k, y + q[1] * k);
+    else p.lineTo(x + q[0] * k, y + q[1] * k);
+  });
+  return p;
+}
+
+let lienzoFranjas = null;
+function franjas() {
+  if (lienzoFranjas) return lienzoFranjas;
+  const c = document.createElement('canvas'); c.width = 24; c.height = 24;
+  const f = c.getContext('2d');
+  f.fillStyle = '#8cff3a'; f.fillRect(0, 0, 24, 24); f.fillStyle = '#58c91c'; f.fillRect(0, 0, 12, 24);
+  return (lienzoFranjas = c);
+}
+
+// Dibuja "VÍBORA.IO" centrado en (cx, cy) con alto de letra `alto`.
+// `t` mueve las franjas y hace latir el punto (una comida que brilla).
+function dibujarLogo(g, cx, cy, alto, t = 0) {
+  const texto = ['V', 'Í', 'B', 'O', 'R', 'A', '.', 'I', 'O'];
+  const k = alto / 120, gro = 27 * k;
+  const total = texto.reduce((s, c) => s + ANCHO[c] * k, 0) + (texto.length - 1) * 6 * k;
+  let x = cx - total / 2;
+  const y = cy - alto / 2;
+  const caminos = [];
+  for (const ch of texto) { caminos.push([ch, caminoLetra(ch, x, y, k), x]); x += (ANCHO[ch] + 6) * k; }
+  g.save();
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const pasada = (ancho, estilo, dy = 0) => {
+    for (const [ch, p] of caminos) { if (ch === '.') continue; g.save(); g.translate(0, dy); g.lineWidth = ancho; g.strokeStyle = estilo; g.stroke(p); g.restore(); }
+  };
+  pasada(gro + 12 * k, 'rgba(0,0,0,0.45)', 7 * k);   // sombra
+  pasada(gro + 9 * k, '#0b2410');                     // borde
+  // el cuerpo con franjas que corren (el patrón se mueve con t); el lienzo
+  // de las franjas se hace una vez, no en cada cuadro del menú
+  const patron = g.createPattern(franjas(), 'repeat');
+  patron.setTransform(new DOMMatrix([k * 1.6, k * 1.6, -k * 1.6, k * 1.6, t * 30 * k, 0]));
+  pasada(gro, patron);
+  pasada(gro * 0.32, 'rgba(255,255,255,0.55)', -gro * 0.22);     // brillo
+  // el ojito en la primera O
+  const [, , ox] = caminos[3];
+  g.fillStyle = '#ffffff'; g.beginPath(); g.arc(ox + 70 * k, y + 32 * k, 11 * k, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#101018'; g.beginPath(); g.arc(ox + 73 * k, y + 33 * k, 6 * k, 0, Math.PI * 2); g.fill();
+  // el punto: una comida que late
+  const [, , px] = caminos[6], late = 1 + Math.sin(t * 5) * 0.15;
+  const rad = 14 * k * late, gr = g.createRadialGradient(px + 18 * k, y + 104 * k, 0, px + 18 * k, y + 104 * k, rad * 2.2);
+  gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.25, '#ffe35e'); gr.addColorStop(1, 'rgba(255,200,40,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(px + 18 * k, y + 104 * k, rad * 2.2, 0, Math.PI * 2); g.fill();
+  g.restore();
+  return total;
+}
+return { dibujarLogo };
+})();
+
+/* ── vibora ── */
+const M_vibora = (() => {
+// Una víbora: la cabeza se mueve y el cuerpo es el camino que dejó, guardado
+// como puntos a PASO unidades uno del otro en un anillo (el punto nuevo entra
+// por un lado y el de la cola se cae por el otro, sin mover la lista). Crecer
+// es dejar de cortar la cola: el cuerpo se estira solo mientras avanza.
+const { clamp, difAng } = M_util;
+const { colorDe } = M_pieles;
+const PASO = 4;
+const CAP = 1600;                 // puntos: alcanza para el largo máximo (~5600 unidades)
+const MASA_INICIAL = 10;
+const MASA_TURBO = 12;     // con menos no hay turbo
+
+class Vibora {
+  constructor({ id, nombre, piel, x, y, ang = 0, masa = MASA_INICIAL, bot = false }) {
+    Object.assign(this, { id, nombre, piel, x, y, ang, masa, bot });
+    this.angObj = ang;
+    this.turbo = false;
+    this.viva = true;
+    this.bajas = 0;
+    this.t = 0;
+    this.goteo = 0;               // masa gastada en turbo que todavía no cayó como comida
+    this.px = new Float32Array(CAP);
+    this.py = new Float32Array(CAP);
+    this.cab = 0; this.n = 0;
+    // el cuerpo nace estirado detrás de la cabeza
+    const n = Math.ceil(this.largo() / PASO);
+    for (let k = n; k >= 1; k--) this.empujar(x - Math.cos(ang) * PASO * k, y - Math.sin(ang) * PASO * k);
+  }
+
+  // Cuanto más come, más gruesa, más larga y más lenta para doblar (así una
+  // chiquita siempre puede escaparse de una grande).
+  radio() { return 11 + Math.min(33, Math.sqrt(this.masa) * 0.8); }
+  largo() { return 60 + 3.3 * Math.pow(this.masa, 0.85); }
+  velocidad() { return this.turbo ? 470 : 200; }
+  giro() { return 4.6 / (1 + (this.radio() - 13) / 26); }
+
+  // El punto k del cuerpo (0 = el más nuevo, al lado de la cabeza).
+  i(k) { return (this.cab + k) % CAP; }
+  empujar(x, y) {
+    this.cab = (this.cab - 1 + CAP) % CAP;
+    this.px[this.cab] = x; this.py[this.cab] = y;
+    if (this.n < CAP) this.n++;
+  }
+
+  // `soltar(x, y, valor, color)` deja comida (la del turbo cae por la cola).
+  pasar(dt, soltar) {
+    this.t += dt;
+    const d = difAng(this.ang, this.angObj), max = this.giro() * dt;
+    this.ang += clamp(d, -max, max);
+    // el ángulo queda entre -π y π (dando vueltas no crece sin fin)
+    if (this.ang > Math.PI) this.ang -= Math.PI * 2; else if (this.ang < -Math.PI) this.ang += Math.PI * 2;
+    if (this.turbo && this.masa <= MASA_TURBO) this.turbo = false;
+    if (this.turbo) { const gasto = 4 * dt; this.masa -= gasto; this.goteo += gasto; }
+    const v = this.velocidad();
+    this.x += Math.cos(this.ang) * v * dt;
+    this.y += Math.sin(this.ang) * v * dt;
+    // puntos nuevos cada PASO, sobre la recta desde el último
+    let lx = this.px[this.cab], ly = this.py[this.cab];
+    let dx = this.x - lx, dy = this.y - ly, dist = Math.hypot(dx, dy);
+    while (dist >= PASO) {
+      lx += (dx / dist) * PASO; ly += (dy / dist) * PASO;
+      this.empujar(lx, ly);
+      dx = this.x - lx; dy = this.y - ly; dist = Math.hypot(dx, dy);
+    }
+    // la cola se acorta de a poco, 240 puntos por segundo (si no, al gastar
+    // turbo pega un salto); por segundo y no por paso: los pasos varían
+    const quiero = Math.min(CAP, Math.ceil(this.largo() / PASO));
+    if (this.n > quiero) this.n = Math.max(quiero, this.n - Math.max(1, Math.round(240 * dt)));
+    if (this.goteo >= 1.5 && soltar) {
+      const k = this.n - 1, j = this.i(k);
+      soltar(this.px[j], this.py[j], this.goteo * 0.8, colorDe(this.piel, Math.floor(k / this.salto())));
+      this.goteo = 0;
+    }
+  }
+
+  // Cada cuántos puntos se dibuja una bolita (se solapan: cuerpo liso).
+  salto() { return Math.max(1, Math.round((this.radio() * 0.42) / PASO)); }
+  // Cada cuántos puntos se prueba un choque (un poco más espaciado).
+  saltoChoque() { return Math.max(1, Math.round((this.radio() * 0.7) / PASO)); }
+}
+return { PASO, MASA_INICIAL, MASA_TURBO, Vibora };
+})();
+
+/* ── mundo ── */
+const M_mundo = (() => {
+// El mundo: una arena redonda con comida, víboras y bots. Sin dibujo: lo usa
+// el juego y lo usan las pruebas en Node (miles de pasos en un momento).
+//
+// Dos grillas de 128 unidades: la de la comida (fija, se toca al comer o al
+// nacer comida) y la de los cuerpos (se rehace cada paso con una muestra
+// cada tanto de cada víbora). Con eso, comer, chocar y los "ojos" de los
+// bots miran solo las celdas de al lado y no todo el mundo.
+const { azar, clamp } = M_util;
+const { Vibora, MASA_INICIAL } = M_vibora;
+const { PIELES, NOMBRES, colorDe } = M_pieles;
+const { pensar } = M_ia;
+const CAP_COMIDA = 9000;
+const CELDA = 128;
+const CAP_MUESTRAS = 12000;
+
+class Mundo {
+  constructor({ radio = 3000, semilla = 1, bots = 18, comida = 1500, nivelBots = 1 } = {}) {
+    this.r = azar(semilla);
+    this.radio = radio;
+    this.t = 0;
+    this.viboras = [];
+    this.eventos = [];
+    this.proximoId = 1;
+    this.cantidadBots = bots;
+    this.nivelBots = nivelBots;           // 0 tranqui · 1 normal · 2 picante
+    this.esperando = [];                  // bots muertos que vuelven a nacer
+    // la comida, en arreglos planos (miles de bolitas: nada de objetos)
+    this.fx = new Float32Array(CAP_COMIDA); this.fy = new Float32Array(CAP_COMIDA);
+    this.fv = new Float32Array(CAP_COMIDA); this.fr = new Float32Array(CAP_COMIDA);
+    this.fn = new Float32Array(CAP_COMIDA);                 // cuándo nació (para que aparezca creciendo)
+    this.fc = new Uint16Array(CAP_COMIDA); this.fvivo = new Uint8Array(CAP_COMIDA);
+    // la celda donde quedó anotada: el imán la mueve, y sacarla buscando por
+    // la posición nueva dejaba la vieja anotada (se comía dos veces: la masa
+    // crecía sin freno en la primera simulación)
+    this.fcel = new Int32Array(CAP_COMIDA);
+    this.libres = []; for (let i = CAP_COMIDA - 1; i >= 0; i--) this.libres.push(i);
+    this.colores = []; this.indiceColor = new Map();
+    this.nc = Math.ceil((radio * 2) / CELDA) + 2;
+    this.grilla = Array.from({ length: this.nc * this.nc }, () => []);
+    this.comidaMeta = comida;
+    this.cantidadComida = 0;
+    // la grilla de cuerpos
+    this.sx = new Float32Array(CAP_MUESTRAS); this.sy = new Float32Array(CAP_MUESTRAS);
+    this.sr = new Float32Array(CAP_MUESTRAS); this.sv = new Int32Array(CAP_MUESTRAS);
+    this.ns = 0;
+    this.celdasCuerpo = Array.from({ length: this.nc * this.nc }, () => []);
+    this.usadas = [];
+    for (let k = 0; k < comida; k++) this.comidaSuelta();
+    for (let k = 0; k < bots; k++) this.nacerBot(true);
+  }
+
+  // ── la comida ────────────────────────────────────────────────────────────
+  celdaDe(x, y) {
+    const cx = clamp(Math.floor((x + this.radio) / CELDA) + 1, 0, this.nc - 1);
+    const cy = clamp(Math.floor((y + this.radio) / CELDA) + 1, 0, this.nc - 1);
+    return cy * this.nc + cx;
+  }
+  color(c) {
+    let i = this.indiceColor.get(c);
+    if (i === undefined) { i = this.colores.length; this.colores.push(c); this.indiceColor.set(c, i); }
+    return i;
+  }
+  ponerComida(x, y, valor, color) {
+    const i = this.libres.pop();
+    if (i === undefined) return -1;
+    this.fx[i] = x; this.fy[i] = y; this.fv[i] = valor;
+    this.fr[i] = Math.min(15, 3.5 + Math.sqrt(valor) * 2.6);
+    this.fn[i] = this.t; this.fc[i] = this.color(color); this.fvivo[i] = 1;
+    const c = this.celdaDe(x, y);
+    this.fcel[i] = c;
+    this.grilla[c].push(i);
+    this.cantidadComida++;
+    return i;
+  }
+  sacarComida(i) {
+    if (!this.fvivo[i]) return;
+    this.fvivo[i] = 0;
+    const c = this.grilla[this.fcel[i]], k = c.indexOf(i);
+    if (k >= 0) { c[k] = c[c.length - 1]; c.pop(); }
+    this.libres.push(i);
+    this.cantidadComida--;
+  }
+  comidaSuelta() {
+    const a = this.r() * Math.PI * 2, d = Math.sqrt(this.r()) * (this.radio - 40);
+    const PALETA = ['#ff5e5e', '#ffb13b', '#ffe35e', '#7dff5e', '#5ef3ff', '#5e8bff', '#c45eff', '#ff5ec8'];
+    this.ponerComida(Math.cos(a) * d, Math.sin(a) * d, 1 + (this.r() < 0.2 ? 1 : 0), PALETA[(this.r() * PALETA.length) | 0]);
+  }
+
+  // ── las víboras ──────────────────────────────────────────────────────────
+  // Un lugar para nacer lejos de los cuerpos (probar unos cuantos al azar).
+  lugarLibre() {
+    let mejor = null, lejos = -1;
+    for (let k = 0; k < 14; k++) {
+      const a = this.r() * Math.PI * 2, d = Math.sqrt(this.r()) * this.radio * 0.8;
+      const x = Math.cos(a) * d, y = Math.sin(a) * d;
+      let cerca = Infinity;
+      for (const v of this.viboras) if (v.viva) cerca = Math.min(cerca, Math.hypot(v.x - x, v.y - y));
+      if (cerca > 500) return [x, y];
+      if (cerca > lejos) { lejos = cerca; mejor = [x, y]; }
+    }
+    return mejor;
+  }
+  nacer({ nombre, piel, masa = MASA_INICIAL, bot = false }) {
+    const [x, y] = this.lugarLibre();
+    const v = new Vibora({ id: this.proximoId++, nombre, piel, x, y, ang: this.r() * Math.PI * 2, masa, bot });
+    this.viboras.push(v);
+    return v;
+  }
+  nacerBot(alArrancar = false) {
+    // la mayoría chicas, algunas grandes: así la tabla tiene de todo
+    const q = this.r(), masa = alArrancar && q < 0.25 ? 150 + this.r() * 1400 : q < 0.5 ? 30 + this.r() * 120 : MASA_INICIAL + this.r() * 20;
+    const usados = new Set(this.viboras.filter((v) => v.viva).map((v) => v.nombre));
+    let nombre = NOMBRES[(this.r() * NOMBRES.length) | 0];
+    for (let k = 0; k < 5 && usados.has(nombre); k++) nombre = NOMBRES[(this.r() * NOMBRES.length) | 0];
+    const v = this.nacer({ nombre, piel: PIELES[(this.r() * PIELES.length) | 0], masa, bot: true });
+    v.ia = { proxima: this.r() * 0.1, codicia: 0.6 + this.r() * 0.8, agresion: [0.1, 0.45, 0.8][this.nivelBots] * (0.5 + this.r()), prudencia: 0.7 + this.r() * 0.6, deambula: this.r() * Math.PI * 2 };
+    return v;
+  }
+
+  // ── el paso ──────────────────────────────────────────────────────────────
+  pasar(dt) {
+    this.t += dt;
+    const soltar = (x, y, valor, color) => this.ponerComida(x + (this.r() - 0.5) * 6, y + (this.r() - 0.5) * 6, valor, color);
+    this.armarCuerpos();
+    for (const v of this.viboras) {
+      if (!v.viva) continue;
+      if (v.bot && (v.ia.proxima -= dt) <= 0) { pensar(v, this); v.ia.proxima = 0.1; }
+      v.pasar(dt, soltar);
+    }
+    this.armarCuerpos();
+    for (const v of this.viboras) if (v.viva) this.comer(v, dt);
+    for (const v of this.viboras) if (v.viva) this.choques(v);
+    // los bots muertos vuelven, y la comida suelta se repone de a poco
+    this.esperando = this.esperando.filter((e) => { if (this.t < e.cuando) return true; this.nacerBot(); return false; });
+    const vivos = this.viboras.filter((v) => v.viva && v.bot).length + this.esperando.length;
+    for (let k = vivos; k < this.cantidadBots; k++) this.esperando.push({ cuando: this.t + 1 + this.r() * 3 });
+    // hasta 480 bolitas por segundo (por segundo y no por paso: los pasos varían)
+    let reponer = Math.min(Math.max(1, Math.round(480 * dt)), this.comidaMeta - this.cantidadComida);
+    while (reponer-- > 0) this.comidaSuelta();
+    // las muertas se sacan de la lista (después de avisar)
+    if (this.viboras.some((v) => !v.viva)) this.viboras = this.viboras.filter((v) => v.viva);
+  }
+
+  // Una muestra cada tanto de cada cuerpo, en su celda.
+  armarCuerpos() {
+    for (const c of this.usadas) this.celdasCuerpo[c].length = 0;
+    this.usadas.length = 0;
+    let n = 0;
+    for (let vi = 0; vi < this.viboras.length; vi++) {
+      const v = this.viboras[vi];
+      if (!v.viva) continue;
+      const r = v.radio(), salto = v.saltoChoque();
+      const poner = (x, y) => {
+        if (n >= CAP_MUESTRAS) return;
+        this.sx[n] = x; this.sy[n] = y; this.sr[n] = r; this.sv[n] = vi;
+        const c = this.celdaDe(x, y), lista = this.celdasCuerpo[c];
+        if (!lista.length) this.usadas.push(c);
+        lista.push(n++);
+      };
+      poner(v.x, v.y);
+      for (let k = salto; k < v.n; k += salto) { const j = v.i(k); poner(v.px[j], v.py[j]); }
+    }
+    this.ns = n;
+  }
+
+  // Lo que queda cerca de la cabeza viene hacia la boca (el imán) y se come.
+  comer(v, dt) {
+    const r = v.radio(), alcance = r * 1.6 + 28, boca = r * 0.9;
+    const cx = Math.floor((v.x + this.radio) / CELDA) + 1, cy = Math.floor((v.y + this.radio) / CELDA) + 1;
+    for (let j = cy - 1; j <= cy + 1; j++) for (let i = cx - 1; i <= cx + 1; i++) {
+      if (i < 0 || j < 0 || i >= this.nc || j >= this.nc) continue;
+      const c = this.grilla[j * this.nc + i];
+      for (let k = c.length - 1; k >= 0; k--) {
+        const f = c[k];
+        if (!this.fvivo[f]) continue;
+        const dx = v.x - this.fx[f], dy = v.y - this.fy[f], d = Math.hypot(dx, dy);
+        if (d < boca) {
+          v.masa += this.fv[f];
+          // los bots comen callados: el aviso es para la del jugador (sonido)
+          if (!v.bot) this.eventos.push({ tipo: 'come', v, valor: this.fv[f] });
+          this.sacarComida(f);
+        } else if (d < alcance) {
+          // se arrima (queda en su celda: en un par de cuadros se come igual)
+          const paso = Math.min(d - boca * 0.5, (260 + v.velocidad()) * dt);
+          this.fx[f] += (dx / d) * paso; this.fy[f] += (dy / d) * paso;
+        }
+      }
+    }
+  }
+
+  // ¿La cabeza tocó el cuerpo de otra, o el borde?
+  choques(v) {
+    const vi = this.viboras.indexOf(v), r = v.radio();
+    if (v.x * v.x + v.y * v.y > (this.radio - r * 0.5) ** 2) return this.morir(v, null);
+    const cx = Math.floor((v.x + this.radio) / CELDA) + 1, cy = Math.floor((v.y + this.radio) / CELDA) + 1;
+    for (let j = cy - 1; j <= cy + 1; j++) for (let i = cx - 1; i <= cx + 1; i++) {
+      if (i < 0 || j < 0 || i >= this.nc || j >= this.nc) continue;
+      for (const s of this.celdasCuerpo[j * this.nc + i]) {
+        if (this.sv[s] === vi) continue;
+        const toca = r * 0.62 + this.sr[s] * 0.92;
+        if ((this.sx[s] - v.x) ** 2 + (this.sy[s] - v.y) ** 2 < toca * toca) return this.morir(v, this.viboras[this.sv[s]]);
+      }
+    }
+  }
+
+  // Morir: el cuerpo se vuelve comida grande y brillante, de sus colores.
+  morir(v, asesino) {
+    if (!v.viva) return;
+    v.viva = false;
+    const r = v.radio(), salto = Math.max(2, Math.round((r * 1.1) / 4));
+    const piezas = Math.max(1, Math.floor(v.n / salto)), valor = Math.max(1, (v.masa * 0.8) / piezas);
+    for (let k = 0; k < v.n; k += salto) {
+      const j = v.i(k), e = r * 0.8;
+      this.ponerComida(v.px[j] + (this.r() - 0.5) * e, v.py[j] + (this.r() - 0.5) * e, valor, colorDe(v.piel, Math.floor(k / v.salto())));
+    }
+    if (asesino && asesino !== v) asesino.bajas++;
+    this.eventos.push({ tipo: 'muere', v, asesino });
+  }
+
+  // La tabla: todas las vivas, de mayor a menor.
+  tabla() { return this.viboras.filter((v) => v.viva).sort((a, b) => b.masa - a.masa); }
+
+  // Lo que pasó desde la última vez (el juego lo usa para sonidos y carteles).
+  sacarEventos() { const e = this.eventos; this.eventos = []; return e; }
+}
+return { Mundo };
+})();
+
+/* ── sonido ── */
+const M_sonido = (() => {
+// El sonido, sintetizado con WebAudio (nada de archivos): efectos suaves y
+// redondos para comer, el soplido del turbo, el crujido al morir, la
+// campanita al comerte a otra, y dos canciones con progresiones fijas
+// (menú tranquilo, partida con ritmo). El AudioContext arranca recién con un
+// toque de verdad (main.js › despertar).
+const NOTA = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11, Bb: 10, Eb: 3 };
+const midi = (n) => { const m = /^([A-G][#b]?)(\d)$/.exec(n); return 12 * (+m[2] + 1) + NOTA[m[1]]; };
+const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+const f = (n) => hz(midi(n));
+const PENTA = [0, 2, 4, 7, 9, 12, 14, 16];
+
+// acordes: raíz y tipo (m menor, M mayor, m7, M7); bajo y arpegio en 16 pasos
+const CANCIONES = {
+  menu: {
+    bpm: 92, acordes: [['A2', 'm7'], ['F2', 'M7'], ['C3', 'M'], ['G2', 'M']],
+    bajo: 'R-------O-----5-', arpegio: '0.2.1.3.2.1.3.2.', bombo: 'x.......x.......', caja: '................', hat: '..x...x...x...x.',
+  },
+  juego: {
+    bpm: 112, acordes: [['D3', 'm'], ['A#2', 'M'], ['F2', 'M'], ['C3', 'M']],
+    bajo: 'R.R.O.R.R.R.5.O.', arpegio: '0.1.2.3.2.1.0.2.', bombo: 'x...x...x...x...', caja: '....x.......x...', hat: '..x...x...x...x.',
+  },
+};
+const TIPOS = { m: [0, 3, 7, 12], M: [0, 4, 7, 12], m7: [0, 3, 7, 10], M7: [0, 4, 7, 11] };
+
+function crearSonido(ajustes) {
+  let ctx = null, maestro, busSfx, busMus, ruido, turboGan = null, eco;
+  const s = { ajustes, errores: [] };
+  let tema = null, proximo = 0, pasoN = 0, reloj = null, ultimaComida = 0;
+
+  function iniciar() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    ctx = new AC();
+    maestro = ctx.createGain(); maestro.gain.value = 0.9;
+    // un compresor suave: muchas comidas juntas no saturan
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4;
+    maestro.connect(comp); comp.connect(ctx.destination);
+    busSfx = ctx.createGain(); busSfx.connect(maestro);
+    busMus = ctx.createGain(); busMus.connect(maestro);
+    eco = ctx.createDelay(1); eco.delayTime.value = 0.32;
+    const vuelta = ctx.createGain(), sal = ctx.createGain();
+    vuelta.gain.value = 0.3; sal.gain.value = 0.28;
+    busMus.connect(eco); eco.connect(vuelta); vuelta.connect(eco); eco.connect(sal); sal.connect(maestro);
+    const b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    ruido = b;
+    s.aplicar();
+    return true;
+  }
+
+  function tono({ onda = 'sine', f0, f1 = f0, dur = 0.1, vol = 0.1, t = ctx.currentTime, ataque = 0.005, destino = busSfx }) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = onda;
+    o.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + ataque);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(destino);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function soplo({ dur = 0.1, vol = 0.1, tipo = 'bandpass', f0 = 1000, f1 = f0, q = 1, t = ctx.currentTime, destino = busSfx }) {
+    const n = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
+    n.buffer = ruido; n.loop = true;
+    fl.type = tipo; fl.Q.value = q;
+    fl.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) fl.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    n.connect(fl); fl.connect(g); g.connect(destino);
+    n.start(t, Math.random() * 0.5); n.stop(t + dur + 0.02);
+  }
+
+  const SFX = {
+    // la comida: un "pop" de burbuja, más grave cuanto más grande
+    come: ({ valor = 1 } = {}) => {
+      const t = ctx.currentTime;
+      if (t - ultimaComida < 0.035) return;
+      ultimaComida = t;
+      const nota = 72 + PENTA[(Math.random() * PENTA.length) | 0] - Math.min(12, Math.log2(valor) * 4);
+      tono({ onda: 'sine', f0: hz(nota), f1: hz(nota + 7), dur: 0.07, vol: 0.06 + Math.min(0.08, valor * 0.01) });
+    },
+    muere: () => {
+      soplo({ dur: 0.5, vol: 0.3, tipo: 'lowpass', f0: 2600, f1: 180 });
+      tono({ onda: 'triangle', f0: 420, f1: 60, dur: 0.6, vol: 0.18 });
+      tono({ onda: 'sine', f0: 110, f1: 40, dur: 0.5, vol: 0.3 });
+    },
+    baja: () => ['E5', 'G#5', 'B5', 'E6'].forEach((n, k) => tono({ onda: 'triangle', f0: f(n), dur: 0.35, vol: 0.09, t: ctx.currentTime + k * 0.06 })),
+    hito: () => ['C5', 'E5', 'G5', 'C6', 'E6'].forEach((n, k) => tono({ onda: 'triangle', f0: f(n), dur: 0.3, vol: 0.08, t: ctx.currentTime + k * 0.07 })),
+    nace: () => { soplo({ dur: 0.35, vol: 0.1, f0: 300, f1: 2400, q: 0.8 }); tono({ onda: 'sine', f0: 220, f1: 660, dur: 0.3, vol: 0.08 }); },
+    boton: () => { tono({ onda: 'sine', f0: 880, dur: 0.05, vol: 0.07 }); tono({ onda: 'sine', f0: 1320, dur: 0.06, vol: 0.05, t: ctx.currentTime + 0.03 }); },
+    cambia: () => { soplo({ dur: 0.12, vol: 0.06, f0: 1500, f1: 4000 }); tono({ onda: 'triangle', f0: 660, f1: 990, dur: 0.1, vol: 0.06 }); },
+    error: () => { tono({ onda: 'triangle', f0: 180, dur: 0.1, vol: 0.1 }); tono({ onda: 'triangle', f0: 150, dur: 0.14, vol: 0.1, t: ctx.currentTime + 0.1 }); },
+    record: () => ['C5', 'G5', 'C6', 'E6', 'G6', 'C7'].forEach((n, k) => tono({ onda: 'triangle', f0: f(n), dur: 0.4, vol: 0.08, t: ctx.currentTime + k * 0.08 })),
+  };
+
+  function programar() {
+    if (!tema || !ctx) return;
+    const c = CANCIONES[tema], d = 60 / c.bpm / 4;
+    if (proximo < ctx.currentTime - 0.3) proximo = ctx.currentTime + 0.05;
+    try {
+      while (proximo < ctx.currentTime + 0.12) { paso(c, pasoN, proximo, d); proximo += d; pasoN++; }
+    } catch (e) { s.errores.push('música ' + tema + ': ' + e.message); tema = null; }
+  }
+  function paso(c, n, t, d) {
+    const p = n % 16, compas = Math.floor(n / 16) % c.acordes.length;
+    const [raizN, tipo] = c.acordes[compas], raiz = midi(raizN), ac = TIPOS[tipo];
+    const b = c.bajo[p];
+    if (b !== '.' && b !== '-') {
+      let l = 1; while (c.bajo[p + l] === '-') l++;
+      const nota = raiz + (b === 'O' ? 12 : b === '5' ? 7 : 0);
+      tono({ onda: 'triangle', f0: hz(nota), dur: d * l * 0.95, vol: 0.2, t, destino: busMus, ataque: 0.01 });
+    }
+    const a = c.arpegio[p];
+    if (a !== '.') tono({ onda: 'sine', f0: hz(raiz + 24 + ac[+a]), dur: d * 1.6, vol: 0.05, t, destino: busMus });
+    // un colchón con el acorde al empezar cada compás
+    if (p === 0) for (const k of ac.slice(0, 3)) tono({ onda: 'triangle', f0: hz(raiz + 12 + k), dur: d * 15, vol: 0.022, t, ataque: 0.25, destino: busMus });
+    if (c.bombo[p] === 'x') tono({ onda: 'sine', f0: 130, f1: 42, dur: 0.16, vol: 0.28, t, destino: busMus });
+    if (c.caja[p] === 'x') soplo({ dur: 0.12, vol: 0.06, f0: 2000, q: 0.8, t, destino: busMus });
+    if (c.hat[p] === 'x') soplo({ dur: 0.03, vol: 0.02, tipo: 'highpass', f0: 8000, t, destino: busMus });
+  }
+
+  s.despertar = () => {
+    if (!ctx && !iniciar()) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    if (!reloj) reloj = setInterval(programar, 25);
+  };
+  s.tocar = (nombre, op) => {
+    if (!ctx || !ajustes.sonido || ctx.state !== 'running') return;
+    if (!SFX[nombre]) { s.errores.push('no existe ' + nombre); return; }
+    try { SFX[nombre](op); } catch (e) { s.errores.push(nombre + ': ' + e.message); }
+  };
+  s.musica = (nombre) => {
+    if (s.cancion === nombre) return;
+    s.cancion = nombre; tema = CANCIONES[nombre] ? nombre : null; pasoN = 0;
+    if (ctx) proximo = ctx.currentTime + 0.05;
+  };
+  s.aplicar = () => {
+    if (!ctx) return;
+    busSfx.gain.setTargetAtTime(ajustes.sonido ? 0.9 : 0, ctx.currentTime, 0.02);
+    busMus.gain.setTargetAtTime(ajustes.musica ? 0.5 : 0, ctx.currentTime, 0.05);
+  };
+  // El soplido del turbo, que suena mientras dura.
+  s.turbo = (encendido) => {
+    if (!ctx) return;
+    if (!turboGan) {
+      const n = ctx.createBufferSource(), fl = ctx.createBiquadFilter();
+      n.buffer = ruido; n.loop = true; fl.type = 'bandpass'; fl.frequency.value = 1400; fl.Q.value = 0.7;
+      turboGan = ctx.createGain(); turboGan.gain.value = 0;
+      n.connect(fl); fl.connect(turboGan); turboGan.connect(busSfx); n.start();
+    }
+    turboGan.gain.setTargetAtTime(encendido && ajustes.sonido ? 0.07 : 0, ctx.currentTime, 0.05);
+  };
+  // La música de la intro de JXSTUDIOS (intro.js › T_*): el metal que se
+  // escribe (zumbidos que suben), el golpe (bombo + campana de parciales no
+  // armónicos), el brillo y un acorde grande que queda.
+  s.jingleJXS = () => {
+    // con el audio suspendido (sin un toque) se agendaría y sonaría tarde, fuera de fase
+    if (!ctx || ctx.state !== 'running' || !(ajustes.sonido || ajustes.musica)) return null;
+    const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(maestro);
+    const t0 = ctx.currentTime + 0.03, tg = t0 + 1.05;
+    soplo({ dur: 0.9, vol: 0.09, f0: 200, f1: 3000, q: 0.9, t: t0 + 0.1, destino: bus });
+    [0.15, 0.3, 0.45, 0.6].forEach((dd, k) => tono({ onda: 'triangle', f0: 180 + k * 60, f1: 900 + k * 180, dur: 0.35, vol: 0.05, t: t0 + dd, destino: bus }));
+    tono({ onda: 'sine', f0: 100, f1: 28, dur: 1.2, vol: 0.6, t: tg, destino: bus });
+    for (const [fr, v, dd] of [[440, 0.07, 1.8], [1046, 0.05, 1.4], [1712, 0.035, 1.0], [2630, 0.025, 0.7], [3880, 0.015, 0.45]]) tono({ onda: 'sine', f0: fr, dur: dd, vol: v, t: tg, destino: bus });
+    soplo({ dur: 0.5, vol: 0.25, tipo: 'lowpass', f0: 5000, f1: 220, t: tg, destino: bus });
+    ['A5', 'C#6', 'E6', 'A6', 'C#7', 'E7'].forEach((n, k) => tono({ onda: 'triangle', f0: f(n), dur: 0.4, vol: 0.045, t: tg + 0.3 + k * 0.045, destino: bus }));
+    for (const n of ['A2', 'E3', 'C#4', 'G#4', 'B4', 'E5']) tono({ onda: 'triangle', f0: f(n), dur: 2.0, vol: 0.05, t: tg + 0.1, ataque: 0.3, destino: bus });
+    return { cortar: () => bus.gain.setTargetAtTime(0, ctx.currentTime, 0.06) };
+  };
+  s.activo = () => !!ctx && ctx.state === 'running';
+  return s;
+}
+return { crearSonido, CANCIONES };
+})();
+
+/* ── main ── */
+(() => {
+// Víbora.io, de JXSTUDIOS: el arranque, las pantallas y el bucle.
+//
+// El mundo corre siempre (en el menú, los bots juegan atrás y la cámara sigue
+// a una); al tocar JUGAR, tu víbora nace en ese mismo mundo. Cada cuadro la
+// simulación avanza lo que tardó el cuadro, en pasos de a lo sumo 1/60 s, y
+// se dibuja una vez.
+//
+// Para probar: ?sinintro (directo al menú), ?directo=juego, ?pausa (no avanza
+// solo: __V.pasos(n); también saltea la intro, salvo con ?intro), ?limpio (sin
+// lo guardado), ?idioma=en.
+const { Mundo } = M_mundo;
+const { Vibora } = M_vibora;
+const { dibujarArena, dibujarVibora } = M_dibujo;
+const { pintarFondo, FONDOS } = M_fondos;
+const { dibujarHud } = M_hud;
+const { dibujarLogo } = M_logo;
+const { crearEntrada } = M_entrada;
+const { crearSonido } = M_sonido;
+const { crearIdioma, IDIOMAS } = M_idioma;
+const { cargar, guardar, base } = M_guardado;
+const { PIELES, pielPorId, abierta } = M_pieles;
+const { Intro } = M_intro;
+const { acercar, clamp, trozos } = M_util;
+const PASO = 1 / 60;
+const BOTS = [10, 18, 26];
+const HITOS = [100, 250, 500, 1000, 2000, 3500, 5000, 7500, 10000];
+const q = new URLSearchParams(location.search);
+const $ = (id) => document.getElementById(id);
+const lienzo = $('juego'), g = lienzo.getContext('2d');
+
+let datos = q.has('limpio') ? base() : cargar();
+if (IDIOMAS.includes(q.get('idioma'))) datos.ajustes.idioma = q.get('idioma');
+const tr = crearIdioma(datos.ajustes.idioma);
+const sonido = crearSonido(datos.ajustes);
+const entrada = crearEntrada(lienzo);
+const tactil = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+const guardarTodo = () => guardar(datos);
+// antes del primer toque el navegador no deja vibrar (y lo avisa en la consola)
+const vibrar = (p) => { if (datos.ajustes.vibrar && navigator.vibrate && navigator.userActivation?.hasBeenActive !== false) try { navigator.vibrate(p); } catch { /* no deja */ } };
+
+// ── la pantalla: resolución de verdad, con tope según la calidad ──────────
+// en el teléfono, 1,5 de densidad: se ve nítido y pinta la mitad de píxeles que a 2
+let W = 0, H = 0, dpr = 1, dprTope = tactil ? 1.5 : 2;
+function medir() {
+  const tope = datos.ajustes.calidad === 'baja' ? 1 : datos.ajustes.calidad === 'alta' ? 2.5 : dprTope;
+  dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, tope));
+  const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  if (w !== W || h !== H) { W = lienzo.width = w; H = lienzo.height = h; }
+  entrada.dpr = dpr;
+}
+medir();
+addEventListener('resize', medir);
+
+// ── el mundo y la cámara ───────────────────────────────────────────────────
+let mundo = nuevoMundo();
+function nuevoMundo() { return new Mundo({ semilla: ((Date.now() / 1000) | 0) & 0xffffff, bots: BOTS[datos.nivelBots], nivelBots: datos.nivelBots }); }
+let mia = null, seguida = null, estado = 'espera', intro = null, preview = null, muerteT = 0, avisos = [], hitoN = 0, t = 0, sonarRecord = false;
+const cam = { x: 0, y: 0, zoom: 1 };
+
+function camara(dt) {
+  // al nacer se ven unas 600 unidades en el lado corto; al crecer, la cámara se aleja
+  const base = Math.min(W, H) / 600;
+  let obj = mia && mia.viva && (estado === 'juego' || estado === 'pausa') ? mia : null;
+  if (!obj && estado !== 'muerte') {
+    if (!seguida || !seguida.viva) seguida = mundo.tabla()[Math.min(3, mundo.viboras.length - 1)] || null;
+    obj = seguida;
+  }
+  if (obj) {
+    cam.x = acercar(cam.x, obj.x, 9, dt); cam.y = acercar(cam.y, obj.y, 9, dt);
+    const z = base * clamp(1.25 - (obj.radio() - 13) / 55, 0.5, 1.2) * (estado === 'menu' ? 0.8 : 1);
+    cam.zoom = acercar(cam.zoom, z, 2, dt);
+  }
+}
+
+// ── las pantallas de HTML ──────────────────────────────────────────────────
+function mostrar(id) { for (const s of document.querySelectorAll('.pantalla')) s.classList.toggle('oculto', s.id !== id); }
+
+function textos() {
+  document.documentElement.lang = tr.actual();
+  $('apodo').placeholder = tr('apodo');
+  $('bJugar').textContent = tr('jugar');
+  $('bPiel').textContent = tr('piel'); $('bFondo').textContent = tr('fondo'); $('bAjustes').textContent = tr('ajustes');
+  $('tBots').textContent = tr('bots');
+  document.querySelectorAll('.opcion[data-nivel]').forEach((b) => { b.textContent = tr('nivel_' + b.dataset.nivel); b.classList.toggle('elegida', +b.dataset.nivel === datos.nivelBots); });
+  $('tMejor').textContent = datos.mejor ? tr('mejor', Math.floor(datos.mejor).toLocaleString('es-AR')) : '';
+  $('tConsejo').textContent = tactil ? tr('consejo') : tr('consejoPc');
+  $('tFirma').textContent = tr('creditos').toUpperCase();
+  $('bListo').textContent = tr('listo');
+  $('tAjustes').textContent = tr('ajustes'); $('bCerrarAjustes').textContent = tr('listo');
+  $('tPausa').textContent = tr('pausa'); $('bSeguir').textContent = tr('seguir'); $('bSalirPausa').textContent = tr('menu');
+  $('bOtraVez').textContent = tr('otraVez'); $('bMenu').textContent = tr('menu');
+  $('tFinalRotulo').textContent = tr('final');
+}
+
+function boton(id, fn) { $(id).addEventListener('click', () => { sonido.tocar('boton'); fn(); }); }
+
+// ── el ir y venir ──────────────────────────────────────────────────────────
+function entrar() {
+  if (estado !== 'espera') return;
+  sonido.despertar();
+  estado = 'intro'; mostrar(null);
+  // después del logo, la primera vez, elegir el idioma (?idioma= ya lo trae elegido)
+  intro = new Intro({ sonido, vibrar, alTerminar: () => (datos.ajustes.idioma ? aMenu() : elegirIdioma()) });
+}
+function elegirIdioma() {
+  estado = 'idiomas'; mostrar('idiomas');
+  sonido.musica('menu');
+  setTimeout(() => $('bIdioma_' + tr.actual())?.focus(), 50);
+}
+function aMenu() {
+  estado = 'menu'; mia = null; preview = null;
+  entrada.activo = false; entrada.soltarTodo();
+  sonido.turbo(false); sonido.musica('menu');
+  textos(); mostrar('menu');
+  $('apodo').value = datos.apodo;
+}
+function jugar() {
+  datos.apodo = $('apodo').value.trim().slice(0, 16);
+  if (mundo.nivelBots !== datos.nivelBots) mundo = nuevoMundo();
+  mia = mundo.nacer({ nombre: datos.apodo || 'Vos', piel: pielPorId(datos.piel), bot: false });
+  datos.partidas++; guardarTodo();
+  estado = 'juego'; mostrar(null);
+  $('apodo').blur();
+  entrada.activo = true; entrada.modo = datos.ajustes.control; entrada.soltarTodo();
+  cam.x = mia.x; cam.y = mia.y;
+  sonido.musica('juego'); sonido.tocar('nace');
+  hitoN = 0; avisos = [];
+}
+function pausar() { if (estado !== 'juego') return; estado = 'pausa'; entrada.soltarTodo(); sonido.turbo(false); mostrar('pausa'); }
+function seguir() { estado = 'juego'; mostrar(null); }
+function morir(asesino) {
+  estado = 'muerte'; muerteT = 0;
+  entrada.activo = false; entrada.soltarTodo();
+  sonido.turbo(false); sonido.tocar('muere'); vibrar([60, 40, 90]);
+  const final = Math.floor(mia.masa), record = final > datos.mejor;
+  if (record) datos.mejor = final;
+  datos.bajas += mia.bajas;
+  guardarTodo();
+  $('tCausa').textContent = asesino ? tr('teComio', asesino.nombre) : tr('borde');
+  $('tFinal').textContent = final.toLocaleString('es-AR');
+  $('tRecord').textContent = record ? tr('nuevoRecord') : '';
+  $('tBajas').textContent = mia.bajas ? tr('bajas', mia.bajas) : '';
+  sonarRecord = record;
+}
+
+// elegir piel o fondo: una víbora de muestra que culebrea en el centro
+function elegir(tipo) {
+  const lista = tipo === 'piel' ? PIELES.map((p) => p.id) : FONDOS;
+  const actual = tipo === 'piel' ? datos.piel : datos.fondo;
+  preview = { tipo, lista, i: Math.max(0, lista.indexOf(actual)), fondo: datos.fondo };
+  nuevaMuestra();
+  estado = 'elegir'; mostrar('elegir');
+  $('tElegir').textContent = tr(tipo);
+  actualizarElegir();
+}
+function nuevaMuestra() {
+  const piel = preview.tipo === 'piel' ? pielPorId(preview.lista[preview.i]) : pielPorId(datos.piel);
+  preview.v = new Vibora({ id: 0, nombre: '', piel, x: 0, y: 0, ang: 0, masa: 90 });
+}
+function actualizarElegir() {
+  const id = preview.lista[preview.i];
+  if (preview.tipo === 'piel') {
+    const p = pielPorId(id), libre = abierta(p, datos.mejor);
+    $('tNombre').textContent = tr('piel_' + id);
+    $('tCandado').textContent = libre ? '' : '🔒 ' + tr('bloqueada', p.mejor.toLocaleString('es-AR'));
+    $('bListo').style.opacity = libre ? '1' : '0.5';
+  } else {
+    preview.fondo = id;
+    $('tNombre').textContent = tr('fondo_' + id); $('tCandado').textContent = ''; $('bListo').style.opacity = '1';
+  }
+}
+function moverElegir(d) {
+  preview.i = (preview.i + d + preview.lista.length) % preview.lista.length;
+  if (preview.tipo === 'piel') nuevaMuestra();
+  sonido.tocar('cambia');
+  actualizarElegir();
+}
+function listoElegir() {
+  const id = preview.lista[preview.i];
+  if (preview.tipo === 'piel') {
+    if (!abierta(pielPorId(id), datos.mejor)) { sonido.tocar('error'); return; }
+    datos.piel = id;
+  } else datos.fondo = id;
+  guardarTodo(); aMenu();
+}
+
+// los ajustes, armados con botones de opción
+function armarAjustes() {
+  const a = datos.ajustes, lista = $('listaAjustes');
+  lista.textContent = '';
+  const fila = (nombre, opciones, actual, poner) => {
+    const d = document.createElement('div'); d.className = 'item';
+    const s = document.createElement('span'); s.textContent = nombre; d.appendChild(s);
+    const ops = document.createElement('div'); ops.className = 'ops';
+    for (const [valor, texto] of opciones) {
+      const b = document.createElement('button'); b.className = 'opcion' + (valor === actual ? ' elegida' : ''); b.textContent = texto;
+      b.addEventListener('click', () => { poner(valor); sonido.aplicar(); guardarTodo(); sonido.tocar('boton'); textos(); armarAjustes(); });
+      ops.appendChild(b);
+    }
+    d.appendChild(ops); lista.appendChild(d);
+  };
+  const siNo = [[true, tr('si')], [false, tr('no')]];
+  fila(tr('musica'), siNo, a.musica, (v) => (a.musica = v));
+  fila(tr('sonido'), siNo, a.sonido, (v) => (a.sonido = v));
+  fila(tr('vibrar'), siNo, a.vibrar, (v) => { a.vibrar = v; if (v) vibrar(30); });
+  fila(tr('nombres'), siNo, a.nombres, (v) => (a.nombres = v));
+  fila(tr('control'), [['flecha', tr('flecha')], ['joystick', tr('joystick')]], a.control, (v) => (a.control = v));
+  fila(tr('calidad'), [['auto', tr('auto')], ['alta', tr('alta')], ['baja', tr('baja')]], a.calidad, (v) => { a.calidad = v; medir(); });
+  fila(tr('idioma'), IDIOMAS.map((l) => [l, l.toUpperCase()]), tr.actual(), (v) => { a.idioma = v; tr.poner(v); });
+}
+
+for (const l of IDIOMAS) boton('bIdioma_' + l, () => { datos.ajustes.idioma = l; tr.poner(l); guardarTodo(); aMenu(); });
+boton('bJugar', jugar);
+$('apodo').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { sonido.tocar('boton'); jugar(); } });
+boton('bPiel', () => elegir('piel'));
+boton('bFondo', () => elegir('fondo'));
+boton('bAjustes', () => { armarAjustes(); estado = 'ajustes'; mostrar('ajustes'); });
+boton('bCerrarAjustes', aMenu);
+document.querySelectorAll('.opcion[data-nivel]').forEach((b) => b.addEventListener('click', () => { datos.nivelBots = +b.dataset.nivel; guardarTodo(); sonido.tocar('boton'); textos(); }));
+boton('bAnterior', () => moverElegir(-1));
+boton('bSiguiente', () => moverElegir(1));
+boton('bListo', listoElegir);
+boton('bSeguir', seguir);
+boton('bSalirPausa', aMenu);
+boton('bOtraVez', jugar);
+boton('bMenu', aMenu);
+// el primer toque en cualquier lado despierta el audio (tiene que ser dentro del evento)
+addEventListener('pointerdown', () => sonido.despertar(), { capture: true });
+addEventListener('keydown', (ev) => {
+  sonido.despertar();
+  if (estado === 'intro') intro?.saltear();
+  else if (estado === 'elegir' && ev.code === 'ArrowLeft') moverElegir(-1);
+  else if (estado === 'elegir' && ev.code === 'ArrowRight') moverElegir(1);
+  // la pausa se maneja acá y no en entrada.js: si no, la misma tecla que la
+  // saca la vuelve a poner en el paso siguiente
+  else if ((ev.code === 'Escape' || ev.code === 'KeyP') && !ev.repeat) {
+    if (estado === 'juego') pausar();
+    else if (estado === 'pausa') seguir();
+    else if ((estado === 'elegir' || estado === 'ajustes') && ev.code === 'Escape') aMenu();
+  }
+}, { capture: true });
+lienzo.addEventListener('pointerdown', () => { if (estado === 'intro') intro?.saltear(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) pausar(); });
+
+// ── el paso de simulación ──────────────────────────────────────────────────
+function paso(dt) {
+  t += dt;
+  if (estado === 'espera') return;
+  if (estado === 'intro') { intro.pasar(dt, W, H); return; }
+  if (estado === 'pausa') return;
+  if (estado === 'elegir' && preview) {
+    const v = preview.v;
+    v.angObj = Math.sin(t * 1.6) * 1.1;
+    v.pasar(dt, null);
+    cam.x = v.x; cam.y = v.y; cam.zoom = Math.min(W, H) / 520;
+    return;
+  }
+  if (estado === 'juego' && mia && mia.viva) {
+    const cx = (mia.x - cam.x) * cam.zoom + W / 2, cy = (mia.y - cam.y) * cam.zoom + H / 2;
+    const r = entrada.rumbo(mia.angObj, cx, cy, dt);
+    if (r !== null) mia.angObj = r;
+    mia.turbo = entrada.turbo() && mia.masa > 12;
+    sonido.turbo(mia.turbo);
+    if (entrada.sacarPausa()) pausar();
+  }
+  mundo.pasar(dt);
+  for (const ev of mundo.sacarEventos()) {
+    if (ev.tipo === 'come' && ev.v === mia) sonido.tocar('come', { valor: ev.valor });
+    else if (ev.tipo === 'muere') {
+      if (ev.v === mia) morir(ev.asesino);
+      else if (ev.asesino && ev.asesino === mia) {
+        avisos.push({ txt: tr('comiste', ev.v.nombre), t: 0, dura: 2.2, color: '#ffd35c', grande: true });
+        sonido.tocar('baja'); vibrar(35);
+      }
+    }
+  }
+  if (mia && mia.viva && hitoN < HITOS.length && mia.masa >= HITOS[hitoN]) {
+    avisos.push({ txt: tr('hito', HITOS[hitoN].toLocaleString('es-AR')), t: 0, dura: 1.8, color: '#8cff3a' });
+    sonido.tocar('hito'); hitoN++;
+  }
+  for (const a of avisos) a.t += dt;
+  avisos = avisos.filter((a) => a.t < a.dura).slice(-3);
+  if (estado === 'muerte' && (muerteT += dt) > 0.9 && $('muerte').classList.contains('oculto')) {
+    mostrar('muerte');
+    if (sonarRecord) { sonido.tocar('record'); sonarRecord = false; }
+  }
+  camara(dt);
+}
+
+// ── el dibujo ──────────────────────────────────────────────────────────────
+const calidad = () => (dpr >= 1.5 ? 2 : 1);
+function dibujar() {
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  if (estado === 'espera') { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); return; }
+  if (estado === 'intro') { intro.dibujar(g, W, H); return; }
+  if (estado === 'elegir' && preview) {
+    pintarFondo(g, preview.fondo, cam, W, H);
+    dibujarVibora(g, preview.v, cam, W, H, t, calidad());
+    return;
+  }
+  dibujarArena(g, mundo, cam, W, H, { fondoId: datos.fondo, calidad: calidad(), destacada: mia, nombres: datos.ajustes.nombres, esc: dpr });
+  if (estado === 'menu' || estado === 'ajustes' || estado === 'idiomas') {
+    g.fillStyle = 'rgba(5,6,12,0.45)'; g.fillRect(0, 0, W, H);
+    if (estado !== 'idiomas') dibujarLogoMenu();
+    return;
+  }
+  const botones = estado === 'juego' && tactil;
+  const rt = 34 * dpr;
+  entrada.botonTurbo = botones ? { x: 16 * dpr + rt, y: H - 78 * dpr - rt, r: rt } : null;
+  entrada.botonPausa = estado === 'juego' ? { x: 16 * dpr + 18 * dpr, y: 16 * dpr + 18 * dpr, r: 18 * dpr } : null;
+  dibujarHud(g, W, H, {
+    mundo, mia: mia && mia.viva ? mia : null, esc: dpr, tr, avisos,
+    turboBoton: entrada.botonTurbo && { ...entrada.botonTurbo, activo: mia?.turbo }, pausa: entrada.botonPausa,
+    joystick: entrada.joy && { x: entrada.joy.x, y: entrada.joy.y, dx: clamp(entrada.joy.dx, -50 * dpr, 50 * dpr), dy: clamp(entrada.joy.dy, -50 * dpr, 50 * dpr), r: 50 * dpr },
+  });
+}
+const lienzoLogo = $('logo'), gl = lienzoLogo.getContext('2d');
+function dibujarLogoMenu() {
+  const w = Math.round(lienzoLogo.clientWidth * dpr), h = Math.round(lienzoLogo.clientHeight * dpr);
+  if (!w || !h) return;
+  if (lienzoLogo.width !== w || lienzoLogo.height !== h) { lienzoLogo.width = w; lienzoLogo.height = h; }
+  gl.clearRect(0, 0, w, h);
+  const alto = Math.min(h * 0.7, w / 6.6);
+  dibujarLogo(gl, w / 2, h * 0.52, alto, t);
+}
+
+// ── el bucle, con calidad que se ajusta sola ──────────────────────────────
+let ultimo = performance.now(), lento = 0;
+const manual = q.has('pausa');
+function cuadro(ahora) {
+  requestAnimationFrame(cuadro);
+  const dtReal = Math.min(0.1, (ahora - ultimo) / 1000);
+  ultimo = ahora;
+  // si los cuadros tardan mucho seguido, se baja la resolución (medio punto por vez)
+  if (datos.ajustes.calidad === 'auto' && (estado === 'juego' || estado === 'menu')) {
+    lento = dtReal > 0.026 ? lento + 1 : Math.max(0, lento - 1);
+    if (lento > 45 && dprTope > 1) { dprTope = Math.max(1, dprTope - 0.25); lento = 0; medir(); }
+  }
+  if (!manual) {
+    // cada cuadro avanza lo que tardó de verdad, en pasos de a lo sumo 1/60 s
+    const [n, d] = trozos(dtReal, PASO);
+    for (let k = 0; k < n; k++) paso(d);
+  }
+  dibujar();
+}
+
+textos();
+const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
+// La intro arranca apenas abre, sin tocar nada. El sonido se decide en el
+// acto: si el navegador deja sonar sin un toque, el audio nace andando y la
+// música va en fase; si no (lo normal), nace suspendido y la intro va muda:
+// el primer toque la saltea y prende el sonido.
+if (conIntro) { mostrar(null); entrar(); }
+else { aMenu(); if (q.get('directo') === 'juego') jugar(); }
+requestAnimationFrame(cuadro);
+
+// Las sondas para las pruebas (pruebas/juego.mjs).
+window.__V = {
+  get estado() { return estado; }, get mundo() { return mundo; }, get mia() { return mia; }, get datos() { return datos; }, get cam() { return cam; },
+  get avisos() { return avisos; }, get intro() { return intro; }, get preview() { return preview; },
+  pasos(n, dib = false) { for (let k = 0; k < n; k++) paso(PASO); if (dib) dibujar(); },
+  dibujar, entrar, jugar, aMenu, pausar, seguir, elegir, moverElegir, listoElegir, elegirIdioma, entrada, sonido, tr,
+  matar() { if (mia && mia.viva) mundo.morir(mia, null); },
+  get W() { return W; }, get H() { return H; }, get dpr() { return dpr; },
+};
+window.listo = true;
+
+})();
+
+</script>
+</body>
+</html>
