@@ -20,7 +20,7 @@ const JUEGOS = {
   morfi: { yTexto: 330, yChip: 140, nombre: 'MORFI', tag: 'PUZLE · CORTA EL HILO', color: '#ff5a4f', color2: '#ffd84a', tinta: '#3b2410', musica: 'musica/morfi-juego.wav' },
   cripta: { nombre: 'CRIPTA NEÓN', tag: 'LABERINTO · DESLIZA', color: '#2ef2d0', color2: '#ff6ae0', tinta: '#140a24', musica: 'musica/cripta-mundo0.wav' },
   isla: { nombre: 'LA ISLA', tag: 'SUPERVIVENCIA 3D', color: '#ffe27a', color2: '#7dff8f', tinta: '#10366e', musica: 'musica/isla-juego.wav' },
-  grumo: { yTexto: 330, yChip: 140, nombre: 'GRUMO', tag: 'PLATAFORMAS · STOP MOTION', color: '#ff8a3d', color2: '#ffe066', tinta: '#4a2a12', musica: 'musica/grumo-taller.wav' },
+  grumo: { yTexto: 330, yChip: 165, nombre: 'GRUMO', tag: 'PLATAFORMAS · STOP MOTION', color: '#ff8a3d', color2: '#ffe066', tinta: '#4a2a12', musica: 'musica/grumo-taller.wav' },
 };
 const par = (a, b) => ({ [a]: JUEGOS[a], [b]: JUEGOS[b] });
 
@@ -125,23 +125,24 @@ export const DUOS = {
     voz: 'voz/isla-grumo', juegos: par('isla', 'grumo'),
     gancho: ['2 AVENTURAS', 'PARA EL CELULAR 📱'],
     lineas: [
-      { forma: 'partida', juego: 'isla', sticker: 'sorpresa', pausa: 0.3, junta: true, yTexto: 1195, arriba: ['isla/menu', 0.4, 0.3], abajo: ['grumo/menu', 0.6, 0.3] },
+      { forma: 'partida', juego: 'isla', sticker: null, pausa: 0.3, junta: true, yTexto: 1195, arriba: ['isla/menu', 0.4, 0.3], abajo: ['grumo/menu', 0.6, 0.0] },
       { juego: 'isla', titulo: true, sticker: 'lee', pausa: 0.5,
-        planos: [['isla/menu', 3.6], ['isla/naufragio', 0.3, { en: 'y' }]] },
+        planos: [['isla/menu', 3.4], ['isla/naufragio', 1.2, { en: 'y', antes: 0.3 }]] },
       { juego: 'isla', sticker: 'guino', pausa: 0.3,
-        planos: [['isla/talar', 1.0], ['isla/picar', 1.2, { en: 'picas' }], ['isla/pescar', 3.0, { en: 'pescas,' }], ['isla/cocinar', 1.6, { en: 'cocinas' }], ['isla/fabricar', 1.4, { en: 'y' }]],
+        planos: [['isla/talar', 1.85], ['isla/picar', 2.3, { en: 'picas', antes: 0.2 }], ['isla/pescar', 2.85, { en: 'pescas,', antes: 0.4 }],
+          ['isla/cocinar', 2.2, { en: 'cocinas', antes: -0.2, enfoque: [0.5, 0.6, 1.2] }], ['isla/fabricar', 1.6, { en: 'armas', antes: 0.1, enfoque: [0.56, 0.58, 1.35] }]],
         extras: [{ tipo: 'chip', texto: '🪓 ⛏️ 🎣 🔥', palabra: 'Talas', dur: 2.2 }] },
       { juego: 'isla', sticker: 'serio', pausa: 0.3,
-        planos: [['isla/cangrejos', 0.6], ['isla/noche', 1.1, { en: 'pero' }]],
+        planos: [['isla/cangrejos', 0.6], ['isla/noche', 4.0, { en: 'pero', enfoque: [0.5, 0.5, 1.35] }]],
         extras: [
           { tipo: 'chip', texto: '🦀 DE DÍA', palabra: 'día', dur: 1.8 },
           { tipo: 'chip', texto: '💀 DE NOCHE', palabra: 'noche', dur: 1.9 },
         ] },
       { juego: 'isla', sticker: 'sorpresa', pausa: 0.5,
-        planos: [['isla/golem', 0.4]],
+        planos: [['isla/golem', 0.4], ['isla/golem', 3.0, { en: 'gólem', enfoque: [0.5, 0.42, 1.4] }]],
         extras: [{ tipo: 'golpe', texto: '¡EL JEFE!', palabra: 'gólem', tam: 190 }] },
       { juego: 'grumo', cortina: true, titulo: true, tituloMas: 0.3, sticker: 'sorpresa', pausa: 0.3,
-        planos: [['grumo/menu', 1.0], ['grumo/t16', 0.7, { en: 'un' }], ['grumo/t24', 0.6, { en: 'animado' }]],
+        planos: [['grumo/menu', 1.0], ['grumo/t16', 0.7, { en: 'un' }], ['grumo/t26', 0.7, { en: 'animado' }]],
         extras: [
           { tipo: 'sigue', toma: 'grumo/t16', campo: 'grumo', texto: 'GRUMO', palabra: 'muñequito', dur: 1.5, r: 80 },
           { tipo: 'chip', texto: '🎞️ CUADRO POR CUADRO', palabra: 'cuadro', dur: 2.0 },
@@ -150,7 +151,8 @@ export const DUOS = {
         planos: [['grumo/t11', 0.4]],
         extras: [
           { tipo: 'sigue', toma: 'grumo/t11', campo: 'puerta', texto: 'LA PUERTA', palabra: 'puerta...', dur: 1.1, r: 90, lado: -1 },
-          { tipo: 'sigue', toma: 'grumo/t11', campo: 'mano', texto: '✋ EL ANIMADOR', palabra: 'mano', dur: 1.6, r: 100, lado: -1 },
+          /* la mano se lleva la puerta: el círculo va con la puerta (el bot anota la mano solo donde agarra) */
+          { tipo: 'sigue', toma: 'grumo/t11', campo: 'puerta', texto: '✋ EL ANIMADOR', palabra: 'mano', dur: 1.6, r: 120, lado: -1 },
         ] },
       { juego: 'grumo', sticker: 'guino', pausa: 0.3,
         planos: [['grumo/t12', 0.2], ['grumo/t21', 0.3, { en: 'Son' }], ['grumo/camarin', 1.4, { en: 'camarín', antes: 0.3 }]],
@@ -159,7 +161,7 @@ export const DUOS = {
           { tipo: 'chip', texto: '🎬 20 ESCENAS', palabra: 'veinte', dur: 1.5 },
           { tipo: 'chip', texto: '🎩 SOMBREROS', palabra: 'sombreros.', mas: -0.4, dur: 1.4 },
         ] },
-      { forma: 'partida', juego: 'grumo', sticker: 'guino', pausa: 0.3, yTexto: 1285, arriba: ['isla/noche', 4.0, 0.4], abajo: ['grumo/t15', 2.0, 0.45] },
+      { forma: 'partida', juego: 'grumo', sticker: 'guino', pausa: 0.3, yTexto: 1285, arriba: [['isla/cangrejos', 3.2, 0.45, 3.3], ['isla/noche', 0.3, 0.45]], abajo: [['grumo/t15', 0.9, 0.45, 7.5], ['grumo/t24', 3.2, 0.45]] },
     ],
     cierre: { dur: 3.0 },
   },

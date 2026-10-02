@@ -174,6 +174,9 @@ GLOBO + VÍBORA, MORFI + CRIPTA y LA ISLA + GRUMO, de ~58 s, con voz Andre
   juego, cortina, círculo que sigue, dedo que corta/toca/desliza, marco,
   encuesta "comenta 1 o 2" y JXSTUDIOS). Los subtítulos van donde no tapan:
   GLOBO a 640, MORFI y GRUMO a 330, el resto a 1185.
+- **Portadas:** `node videos/portadas-duo.mjs` → `salida/Portada<Comp>.png` (+ .jpg): "2 JUEGOS"
+  con la frase del gancho, las dos capturas en tarjetas con número y nombre, "¿1 o 2?" y el
+  narrador asomado. Qué cuadro va en cada una: `remotion/src/portadasDuo.js`.
 - **Render:** `node videos/render.mjs GloboVibora globo-vibora --publico=../salida/publico`
   (`salida/publico/` son enlaces absolutos solo a lo de los dúos: el bundle
   los deja como enlaces y no copia 150 MB por render).
@@ -206,3 +209,8 @@ GLOBO + VÍBORA, MORFI + CRIPTA y LA ISLA + GRUMO, de ~58 s, con voz Andre
   sticker. Los chips de MORFI y GRUMO van a 140 (`yChip`): a 250 pisaban los
   subtítulos de 330. Un plano puede llevar su `yTexto` (el menú de bots de
   VÍBORA, a 330).
+- `OffthreadVideo` en un Still salta al cuadro clave más cercano (las tomas
+  llevan uno por segundo): en la portada el atún nunca salía del agua. Las
+  portadas usan cuadros sacados con ffmpeg a `salida/publico/fotos/`.
+- El bot de GRUMO anota la mano solo donde agarra (`m.punto`): el círculo de
+  "el animador" va con la puerta, que es lo que la mano se lleva.

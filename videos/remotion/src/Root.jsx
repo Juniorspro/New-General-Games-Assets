@@ -7,6 +7,7 @@ import { LARGO_TOMAS } from './montajes.js';
 import { Portada } from './Portada.jsx';
 import { PortadaArte } from './PortadaArte.jsx';
 import { Duo, armarDuo } from './Duo.jsx';
+import { PortadaDuo } from './PortadaDuo.jsx';
 import { DUOS } from './duos.js';
 import { tramosDe } from './kit2.jsx';
 import './fuentes.js';
@@ -45,5 +46,8 @@ export const Root = () => (
     <Still id="ArteLuzMala" component={PortadaArte} width={1080} height={1920} defaultProps={{ id: 'luz-mala' }} />
     <Still id="ArteKuntur" component={PortadaArte} width={1080} height={1920} defaultProps={{ id: 'kuntur' }} />
     <Still id="ArteBrillo" component={PortadaArte} width={1080} height={1920} defaultProps={{ id: 'brillo' }} />
+    <Still id="PortadaGloboVibora" component={PortadaDuo} width={1080} height={1920} defaultProps={{ id: 'globo-vibora' }} />
+    <Still id="PortadaMorfiCripta" component={PortadaDuo} width={1080} height={1920} defaultProps={{ id: 'morfi-cripta' }} />
+    <Still id="PortadaIslaGrumo" component={PortadaDuo} width={1080} height={1920} defaultProps={{ id: 'isla-grumo' }} />
   </>
 );

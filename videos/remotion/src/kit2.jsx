@@ -91,7 +91,7 @@ export function Titular({ t, lineas, J1, J2, hasta, y = 960 }) {
         const e = rebote((t - 0.35 - i * 0.18) / 0.45);
         return (
           <div key={i} style={{ transform: `scale(${e})`, padding: i ? '10px 34px 18px' : 0, borderRadius: 24, background: i ? '#fff' : 'transparent', boxShadow: i ? `0 12px 0 ${J2.tinta}, 0 24px 40px rgba(0,0,0,0.5)` : 'none' }}>
-            {i ? <span style={{ font: `900 ${Math.min(90, Math.floor(1420 / [...l].length))}px ${LETRA}`, color: J1.tinta, whiteSpace: 'nowrap' }}>{l}</span> : <Grueso texto={l} tam={150} color="#fff" />}
+            {i ? <span style={{ font: `900 ${Math.min(90, Math.floor(1420 / [...l].length))}px ${LETRA}`, color: J1.tinta, whiteSpace: 'nowrap' }}>{l}</span> : <Grueso texto={l} tam={Math.min(150, Math.floor(1300 / [...l].length))} color="#fff" />}
           </div>
         );
       })}
