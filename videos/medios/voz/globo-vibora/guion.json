@@ -1,0 +1,44 @@
+{
+ "voz": "ElevenLabs (Higgsfield text2speech_v2), voz Andre, español latino neutro",
+ "lineas": [
+  {
+   "archivo": "01.mp3",
+   "texto": "Hice dos juegos que se juegan con un solo dedo... y el segundo es un vicio."
+  },
+  {
+   "archivo": "02.mp3",
+   "texto": "Primero, Globo Libre. Tu globo sube solito, y todo el cielo lo quiere reventar."
+  },
+  {
+   "archivo": "03.mp3",
+   "texto": "Tú no lo tocas: mueves el escudo con el dedo, y apartas cajas, ladrillos y péndulos."
+  },
+  {
+   "archivo": "04.mp3",
+   "texto": "Son treinta niveles, de día, al atardecer y de noche, y un modo infinito para ver quién llega más alto."
+  },
+  {
+   "archivo": "05.mp3",
+   "texto": "Y el segundo... es una víbora."
+  },
+  {
+   "archivo": "06.mp3",
+   "texto": "Víbora punto io: comes lucecitas, creces, y si otra víbora choca contigo, se deshace en comida.",
+   "pantalla": {
+    "Víbora punto io:": "Víbora.io:"
+   }
+  },
+  {
+   "archivo": "07.mp3",
+   "texto": "Con el rayo, o con un segundo dedo, vas en turbo y les cierras el paso."
+  },
+  {
+   "archivo": "08.mp3",
+   "texto": "Hay bots tranquis, normales y picantes, y una tabla con los más largos de la arena."
+  },
+  {
+   "archivo": "09.mp3",
+   "texto": "¿Cuál juegas primero, el uno o el dos? Te leo en los comentarios."
+  }
+ ]
+}

@@ -6,7 +6,21 @@ import { Relato, armar, FPS } from './Relato.jsx';
 import { LARGO_TOMAS } from './montajes.js';
 import { Portada } from './Portada.jsx';
 import { PortadaArte } from './PortadaArte.jsx';
+import { Duo, armarDuo } from './Duo.jsx';
+import { DUOS } from './duos.js';
+import { tramosDe } from './kit2.jsx';
 import './fuentes.js';
+
+/* los dúos: además de la voz, lo que anotó el bot de cada toma usada (para los círculos y los dedos) */
+const calcularDuo = async ({ props }) => {
+  const { lineas } = await (await fetch(staticFile(`voz/${props.id}/lineas.json`))).json();
+  const M = DUOS[props.id], tomas = new Set();
+  for (const l of M.lineas) { for (const p of l.planos || []) tomas.add(p[0]); for (const p of [l.arriba, l.abajo]) if (p) for (const m of tramosDe(p)) tomas.add(m[0]); }
+  const datos = {};
+  for (const tm of tomas) { try { const r = await fetch(staticFile(`tomas/${tm}.datos.json`)); if (r.ok) datos[tm] = await r.json(); } catch { /* sin datos */ } }
+  const A = armarDuo(props.id, lineas);
+  return { durationInFrames: A.total, props: { ...props, lineas, datos } };
+};
 
 const calcular = async ({ props }) => {
   const { lineas } = await (await fetch(staticFile(`voz/${props.id}/lineas.json`))).json();
@@ -23,6 +37,9 @@ export const Root = () => (
       defaultProps={{ id: 'luz-mala', lineas: [] }} calculateMetadata={calcular} />
     <Composition id="Kuntur" component={Relato} width={1080} height={1920} fps={FPS} durationInFrames={1800}
       defaultProps={{ id: 'kuntur', lineas: [] }} calculateMetadata={calcular} />
+    <Composition id="GloboVibora" component={Duo} width={1080} height={1920} fps={FPS} durationInFrames={1800} defaultProps={{ id: 'globo-vibora', lineas: [] }} calculateMetadata={calcularDuo} />
+    <Composition id="MorfiCripta" component={Duo} width={1080} height={1920} fps={FPS} durationInFrames={1800} defaultProps={{ id: 'morfi-cripta', lineas: [] }} calculateMetadata={calcularDuo} />
+    <Composition id="IslaGrumo" component={Duo} width={1080} height={1920} fps={FPS} durationInFrames={1800} defaultProps={{ id: 'isla-grumo', lineas: [] }} calculateMetadata={calcularDuo} />
     <Still id="PortadaLuzMala" component={Portada} width={1080} height={1920} defaultProps={{ id: 'luz-mala' }} />
     <Still id="PortadaKuntur" component={Portada} width={1080} height={1920} defaultProps={{ id: 'kuntur' }} />
     <Still id="ArteLuzMala" component={PortadaArte} width={1080} height={1920} defaultProps={{ id: 'luz-mala' }} />

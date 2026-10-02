@@ -1,0 +1,748 @@
+{
+ "voz": "ElevenLabs (Higgsfield text2speech_v2), voz Andre, español latino neutro",
+ "lineas": [
+  {
+   "archivo": "01.mp3",
+   "texto": "Hice dos juegos de pensar rápido... y no vas a poder jugar solo uno.",
+   "dur": 5.6,
+   "habla": [
+    0.0,
+    5.19
+   ],
+   "palabras": [
+    {
+     "p": "Hice",
+     "t0": 0.0,
+     "t1": 0.395
+    },
+    {
+     "p": "dos",
+     "t0": 0.42,
+     "t1": 0.724
+    },
+    {
+     "p": "juegos",
+     "t0": 0.78,
+     "t1": 1.241
+    },
+    {
+     "p": "de",
+     "t0": 1.38,
+     "t1": 1.465
+    },
+    {
+     "p": "pensar",
+     "t0": 1.549,
+     "t1": 1.9
+    },
+    {
+     "p": "rápido...",
+     "t0": 1.97,
+     "t1": 2.91
+    },
+    {
+     "p": "y",
+     "t0": 3.042,
+     "t1": 3.122
+    },
+    {
+     "p": "no",
+     "t0": 3.14,
+     "t1": 3.27
+    },
+    {
+     "p": "vas",
+     "t0": 3.305,
+     "t1": 3.45
+    },
+    {
+     "p": "a",
+     "t0": 3.482,
+     "t1": 3.562
+    },
+    {
+     "p": "poder",
+     "t0": 3.553,
+     "t1": 3.807
+    },
+    {
+     "p": "jugar",
+     "t0": 3.81,
+     "t1": 4.223
+    },
+    {
+     "p": "solo",
+     "t0": 4.35,
+     "t1": 4.721
+    },
+    {
+     "p": "uno.",
+     "t0": 4.8,
+     "t1": 5.19
+    }
+   ],
+   "oido": "hice dos juegos de pensar rápido y no vas a poder jugar solo uno"
+  },
+  {
+   "archivo": "02.mp3",
+   "texto": "Este es Morfi: una cajita de cartón con muchísima hambre.",
+   "dur": 4.64,
+   "habla": [
+    0.0,
+    4.62
+   ],
+   "palabras": [
+    {
+     "p": "Este",
+     "t0": 0.0,
+     "t1": 0.383
+    },
+    {
+     "p": "es",
+     "t0": 0.39,
+     "t1": 0.587
+    },
+    {
+     "p": "Morfi:",
+     "t0": 0.6,
+     "t1": 1.06
+    },
+    {
+     "p": "una",
+     "t0": 1.59,
+     "t1": 1.832
+    },
+    {
+     "p": "cajita",
+     "t0": 1.86,
+     "t1": 2.305
+    },
+    {
+     "p": "de",
+     "t0": 2.34,
+     "t1": 2.42
+    },
+    {
+     "p": "cartón",
+     "t0": 2.43,
+     "t1": 2.861
+    },
+    {
+     "p": "con",
+     "t0": 2.91,
+     "t1": 3.118
+    },
+    {
+     "p": "muchísima",
+     "t0": 3.18,
+     "t1": 4.13
+    },
+    {
+     "p": "hambre.",
+     "t0": 4.23,
+     "t1": 4.62
+    }
+   ],
+   "oido": "este es morfeo una cajita de cartón con muchísima hambre"
+  },
+  {
+   "archivo": "03.mp3",
+   "texto": "Cortas los hilos con el dedo, y el caramelo tiene que caerle justo en la boca.",
+   "dur": 4.64,
+   "habla": [
+    0.0,
+    4.62
+   ],
+   "palabras": [
+    {
+     "p": "Cortas",
+     "t0": 0.0,
+     "t1": 0.497
+    },
+    {
+     "p": "los",
+     "t0": 0.51,
+     "t1": 0.702
+    },
+    {
+     "p": "hilos",
+     "t0": 0.72,
+     "t1": 0.968
+    },
+    {
+     "p": "con",
+     "t0": 0.99,
+     "t1": 1.139
+    },
+    {
+     "p": "el",
+     "t0": 1.17,
+     "t1": 1.25
+    },
+    {
+     "p": "dedo,",
+     "t0": 1.26,
+     "t1": 1.83
+    },
+    {
+     "p": "y",
+     "t0": 1.858,
+     "t1": 1.95
+    },
+    {
+     "p": "el",
+     "t0": 1.961,
+     "t1": 2.07
+    },
+    {
+     "p": "caramelo",
+     "t0": 2.076,
+     "t1": 2.544
+    },
+    {
+     "p": "tiene",
+     "t0": 2.55,
+     "t1": 2.806
+    },
+    {
+     "p": "que",
+     "t0": 2.82,
+     "t1": 2.924
+    },
+    {
+     "p": "caerle",
+     "t0": 2.939,
+     "t1": 3.349
+    },
+    {
+     "p": "justo",
+     "t0": 3.39,
+     "t1": 3.855
+    },
+    {
+     "p": "en",
+     "t0": 3.99,
+     "t1": 4.082
+    },
+    {
+     "p": "la",
+     "t0": 4.14,
+     "t1": 4.22
+    },
+    {
+     "p": "boca.",
+     "t0": 4.26,
+     "t1": 4.62
+    }
+   ],
+   "oido": "cortas los hilos con el dedo y el caramelo tiene que caerle justo en la boca"
+  },
+  {
+   "archivo": "04.mp3",
+   "texto": "Hay globos que lo suben, abanicos que lo soplan y chinches que lo rompen.",
+   "dur": 5.28,
+   "habla": [
+    0.0,
+    4.92
+   ],
+   "palabras": [
+    {
+     "p": "Hay",
+     "t0": 0.0,
+     "t1": 0.263
+    },
+    {
+     "p": "globos",
+     "t0": 0.27,
+     "t1": 0.671
+    },
+    {
+     "p": "que",
+     "t0": 0.69,
+     "t1": 0.795
+    },
+    {
+     "p": "lo",
+     "t0": 0.81,
+     "t1": 0.902
+    },
+    {
+     "p": "suben,",
+     "t0": 0.957,
+     "t1": 1.62
+    },
+    {
+     "p": "abanicos",
+     "t0": 1.644,
+     "t1": 2.22
+    },
+    {
+     "p": "que",
+     "t0": 2.223,
+     "t1": 2.339
+    },
+    {
+     "p": "lo",
+     "t0": 2.34,
+     "t1": 2.426
+    },
+    {
+     "p": "soplan",
+     "t0": 2.443,
+     "t1": 2.916
+    },
+    {
+     "p": "y",
+     "t0": 3.15,
+     "t1": 3.288
+    },
+    {
+     "p": "chinches",
+     "t0": 3.39,
+     "t1": 3.974
+    },
+    {
+     "p": "que",
+     "t0": 4.02,
+     "t1": 4.158
+    },
+    {
+     "p": "lo",
+     "t0": 4.2,
+     "t1": 4.291
+    },
+    {
+     "p": "rompen.",
+     "t0": 4.351,
+     "t1": 4.92
+    }
+   ],
+   "oido": "hay globos que lo suben abanicos que lo soplan y chinches que lo rompen"
+  },
+  {
+   "archivo": "05.mp3",
+   "texto": "Treinta niveles en tres cajas, y tres estrellas para juntar en cada uno.",
+   "dur": 4.32,
+   "habla": [
+    0.0,
+    4.02
+   ],
+   "palabras": [
+    {
+     "p": "Treinta",
+     "t0": 0.0,
+     "t1": 0.35
+    },
+    {
+     "p": "niveles",
+     "t0": 0.36,
+     "t1": 0.727
+    },
+    {
+     "p": "en",
+     "t0": 0.75,
+     "t1": 0.84
+    },
+    {
+     "p": "tres",
+     "t0": 0.87,
+     "t1": 1.072
+    },
+    {
+     "p": "cajas,",
+     "t0": 1.11,
+     "t1": 1.77
+    },
+    {
+     "p": "y",
+     "t0": 1.791,
+     "t1": 1.92
+    },
+    {
+     "p": "tres",
+     "t0": 1.926,
+     "t1": 2.218
+    },
+    {
+     "p": "estrellas",
+     "t0": 2.22,
+     "t1": 2.742
+    },
+    {
+     "p": "para",
+     "t0": 2.76,
+     "t1": 2.973
+    },
+    {
+     "p": "juntar",
+     "t0": 3.0,
+     "t1": 3.295
+    },
+    {
+     "p": "en",
+     "t0": 3.33,
+     "t1": 3.41
+    },
+    {
+     "p": "cada",
+     "t0": 3.42,
+     "t1": 3.608
+    },
+    {
+     "p": "uno.",
+     "t0": 3.66,
+     "t1": 4.02
+    }
+   ],
+   "oido": "treinta niveles en tres cajas y tres estrellas para juntar en cada uno"
+  },
+  {
+   "archivo": "06.mp3",
+   "texto": "Y esto es Cripta Neón. Deslizas, y Lu, una luciérnaga, sale disparada hasta chocar con la pared.",
+   "dur": 7.76,
+   "habla": [
+    0.0,
+    7.74
+   ],
+   "palabras": [
+    {
+     "p": "Y",
+     "t0": 0.0,
+     "t1": 0.201
+    },
+    {
+     "p": "esto",
+     "t0": 0.21,
+     "t1": 0.576
+    },
+    {
+     "p": "es",
+     "t0": 0.6,
+     "t1": 0.844
+    },
+    {
+     "p": "Cripta",
+     "t0": 0.99,
+     "t1": 1.39
+    },
+    {
+     "p": "Neón.",
+     "t0": 1.44,
+     "t1": 2.85
+    },
+    {
+     "p": "Deslizas,",
+     "t0": 2.853,
+     "t1": 3.552
+    },
+    {
+     "p": "y",
+     "t0": 3.63,
+     "t1": 3.78
+    },
+    {
+     "p": "Lu,",
+     "t0": 3.872,
+     "t1": 4.38
+    },
+    {
+     "p": "una",
+     "t0": 4.41,
+     "t1": 4.62
+    },
+    {
+     "p": "luciérnaga,",
+     "t0": 4.636,
+     "t1": 5.49
+    },
+    {
+     "p": "sale",
+     "t0": 5.554,
+     "t1": 5.85
+    },
+    {
+     "p": "disparada",
+     "t0": 5.883,
+     "t1": 6.48
+    },
+    {
+     "p": "hasta",
+     "t0": 6.485,
+     "t1": 6.772
+    },
+    {
+     "p": "chocar",
+     "t0": 6.78,
+     "t1": 7.087
+    },
+    {
+     "p": "con",
+     "t0": 7.11,
+     "t1": 7.255
+    },
+    {
+     "p": "la",
+     "t0": 7.29,
+     "t1": 7.37
+    },
+    {
+     "p": "pared.",
+     "t0": 7.38,
+     "t1": 7.74
+    }
+   ],
+   "oido": "y esto es cripta neón deslizarse ilu una luciérnaga sale disparada hasta chocar con la pared"
+  },
+  {
+   "archivo": "07.mp3",
+   "texto": "No puede frenar a la mitad: cada movimiento se piensa, entre pinchos, polillas y fuego.",
+   "dur": 6.48,
+   "habla": [
+    0.0,
+    6.36
+   ],
+   "palabras": [
+    {
+     "p": "No",
+     "t0": 0.0,
+     "t1": 0.286
+    },
+    {
+     "p": "puede",
+     "t0": 0.3,
+     "t1": 0.634
+    },
+    {
+     "p": "frenar",
+     "t0": 0.66,
+     "t1": 1.032
+    },
+    {
+     "p": "a",
+     "t0": 1.08,
+     "t1": 1.16
+    },
+    {
+     "p": "la",
+     "t0": 1.14,
+     "t1": 1.22
+    },
+    {
+     "p": "mitad:",
+     "t0": 1.23,
+     "t1": 1.656
+    },
+    {
+     "p": "cada",
+     "t0": 2.01,
+     "t1": 2.301
+    },
+    {
+     "p": "movimiento",
+     "t0": 2.34,
+     "t1": 2.881
+    },
+    {
+     "p": "se",
+     "t0": 2.939,
+     "t1": 3.019
+    },
+    {
+     "p": "piensa,",
+     "t0": 3.05,
+     "t1": 3.557
+    },
+    {
+     "p": "entre",
+     "t0": 3.84,
+     "t1": 4.094
+    },
+    {
+     "p": "pinchos,",
+     "t0": 4.14,
+     "t1": 4.725
+    },
+    {
+     "p": "polillas",
+     "t0": 4.86,
+     "t1": 5.555
+    },
+    {
+     "p": "y",
+     "t0": 5.7,
+     "t1": 5.78
+    },
+    {
+     "p": "fuego.",
+     "t0": 5.82,
+     "t1": 6.36
+    }
+   ],
+   "oido": "no puede frenar a la mitad cada movimiento se piensa entre pinchos polillas y fuego"
+  },
+  {
+   "archivo": "08.mp3",
+   "texto": "Treinta niveles en tres mundos, y una torre infinita donde la lava no deja de subir.",
+   "dur": 6.16,
+   "habla": [
+    0.0,
+    6.0
+   ],
+   "palabras": [
+    {
+     "p": "Treinta",
+     "t0": 0.0,
+     "t1": 0.45
+    },
+    {
+     "p": "niveles",
+     "t0": 0.45,
+     "t1": 0.93
+    },
+    {
+     "p": "en",
+     "t0": 0.99,
+     "t1": 1.17
+    },
+    {
+     "p": "tres",
+     "t0": 1.17,
+     "t1": 1.5
+    },
+    {
+     "p": "mundos,",
+     "t0": 1.5,
+     "t1": 2.22
+    },
+    {
+     "p": "y",
+     "t0": 2.37,
+     "t1": 2.45
+    },
+    {
+     "p": "una",
+     "t0": 2.44,
+     "t1": 2.58
+    },
+    {
+     "p": "torre",
+     "t0": 2.652,
+     "t1": 2.94
+    },
+    {
+     "p": "infinita",
+     "t0": 3.0,
+     "t1": 3.66
+    },
+    {
+     "p": "donde",
+     "t0": 3.75,
+     "t1": 4.048
+    },
+    {
+     "p": "la",
+     "t0": 4.05,
+     "t1": 4.14
+    },
+    {
+     "p": "lava",
+     "t0": 4.14,
+     "t1": 4.53
+    },
+    {
+     "p": "no",
+     "t0": 4.59,
+     "t1": 5.01
+    },
+    {
+     "p": "deja",
+     "t0": 5.01,
+     "t1": 5.4
+    },
+    {
+     "p": "de",
+     "t0": 5.4,
+     "t1": 5.52
+    },
+    {
+     "p": "subir.",
+     "t0": 5.52,
+     "t1": 6.0
+    }
+   ],
+   "oido": "treinta niveles en tres mundos y una torre in finita donde la lava no deja de subirá"
+  },
+  {
+   "archivo": "09.mp3",
+   "texto": "¿Con cuál te quedas, Morfi o Cripta? Te leo en los comentarios.",
+   "dur": 4.48,
+   "habla": [
+    0.12,
+    4.35
+   ],
+   "palabras": [
+    {
+     "p": "¿Con",
+     "t0": 0.12,
+     "t1": 0.3
+    },
+    {
+     "p": "cuál",
+     "t0": 0.319,
+     "t1": 0.502
+    },
+    {
+     "p": "te",
+     "t0": 0.51,
+     "t1": 0.621
+    },
+    {
+     "p": "quedas,",
+     "t0": 0.66,
+     "t1": 1.097
+    },
+    {
+     "p": "Morfi",
+     "t0": 1.26,
+     "t1": 1.682
+    },
+    {
+     "p": "o",
+     "t0": 1.781,
+     "t1": 1.95
+    },
+    {
+     "p": "Cripta?",
+     "t0": 1.988,
+     "t1": 2.548
+    },
+    {
+     "p": "Te",
+     "t0": 3.06,
+     "t1": 3.14
+    },
+    {
+     "p": "leo",
+     "t0": 3.204,
+     "t1": 3.318
+    },
+    {
+     "p": "en",
+     "t0": 3.379,
+     "t1": 3.459
+    },
+    {
+     "p": "los",
+     "t0": 3.484,
+     "t1": 3.6
+    },
+    {
+     "p": "comentarios.",
+     "t0": 3.636,
+     "t1": 4.35
+    }
+   ],
+   "oido": "con cuál te quedas morty o grita te leo los comentarios"
+  }
+ ]
+}

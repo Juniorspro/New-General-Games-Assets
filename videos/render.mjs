@@ -15,7 +15,10 @@ const cuadros = (resto.find((a) => a.startsWith('--cuadros=')) || '').split('=')
 const SAL = path.join(AQUI, 'salida'); fs.mkdirSync(SAL, { recursive: true });
 const crudo = path.join(SAL, `${id}.crudo.mp4`), dest = path.join(SAL, `${id}-tiktok.mp4`), liviano = path.join(SAL, `${id}-tiktok-liviano.mp4`);
 const correr = (bin, args, o = {}) => { const r = spawnSync(bin, args, { stdio: 'inherit', ...o }); if (r.status !== 0) throw new Error(`${bin} terminó con ${r.status}`); };
-const REMOTION = ['--public-dir=../medios', '--browser-executable=/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell', '--gl=swangle'];
+/* --publico=<carpeta>: otra carpeta pública (los dúos usan salida/publico, con enlaces solo a lo suyo,
+   así Remotion no copia todas las tomas de medios/ en cada render) */
+const publico = (resto.find((a) => a.startsWith('--publico=')) || '').split('=')[1] || '../medios';
+const REMOTION = [`--public-dir=${publico}`, '--browser-executable=/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell', '--gl=swangle'];
 /* un pase de -14 LUFS en dos pasadas: se mide y se corrige lineal */
 const nivel = (f) => {
   const med = spawnSync('ffmpeg', ['-hide_banner', '-i', f, '-vn', '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;

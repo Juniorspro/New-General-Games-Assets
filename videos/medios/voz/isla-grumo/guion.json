@@ -1,0 +1,41 @@
+{
+ "voz": "ElevenLabs (Higgsfield text2speech_v2), voz Andre, español latino neutro",
+ "lineas": [
+  {
+   "archivo": "01.mp3",
+   "texto": "Hice dos aventuras para el celular: una de supervivencia, y otra de plastilina."
+  },
+  {
+   "archivo": "02.mp3",
+   "texto": "En La Isla naufragas, y una botella te cuenta que el faro se apagó."
+  },
+  {
+   "archivo": "03.mp3",
+   "texto": "Talas palmeras, picas piedra, pescas, cocinas y te armas tus propias herramientas."
+  },
+  {
+   "archivo": "04.mp3",
+   "texto": "De día los cangrejos se hacen los tontos, pero de noche salen esqueletos piratas."
+  },
+  {
+   "archivo": "05.mp3",
+   "texto": "Y en lo más hondo de la mina te espera un gólem de piedra, con el cristal del faro."
+  },
+  {
+   "archivo": "06.mp3",
+   "texto": "Y este es Grumo: un muñequito de plastilina, animado cuadro por cuadro, como en stop motion."
+  },
+  {
+   "archivo": "07.mp3",
+   "texto": "Tienes que llegar a la puerta... pero la mano del animador te cambia el escenario."
+  },
+  {
+   "archivo": "08.mp3",
+   "texto": "Y si te mueres, tranquilo: es otra toma. Son veinte escenas, y un camarín lleno de sombreros."
+  },
+  {
+   "archivo": "09.mp3",
+   "texto": "¿Cuál juegas primero, La Isla o Grumo? Te leo en los comentarios."
+  }
+ ]
+}

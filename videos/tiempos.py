@@ -36,6 +36,13 @@ for L in G['lineas']:
         t0, t1 = tiempo(pos / largo), tiempo((pos + len(p)) / largo)
         lista.append({'p': p, 't0': round(t0, 3), 't1': round(max(t1, t0 + 0.08), 3)})
         pos += len(p) + 1
+    # lo que se dice no siempre es lo que se lee: "Víbora punto io:" se muestra "Víbora.io:"
+    for dicho, leido in L.get('pantalla', {}).items():
+        ws = dicho.split()
+        for i in range(len(lista) - len(ws) + 1):
+            if [x['p'] for x in lista[i:i + len(ws)]] == ws:
+                lista[i:i + len(ws)] = [{'p': leido, 't0': lista[i]['t0'], 't1': lista[i + len(ws) - 1]['t1']}]
+                break
     out.append({**L, 'dur': round(dur, 3), 'habla': [round(marcas[0][2], 3) if marcas else 0, round(marcas[-1][3], 3) if marcas else dur], 'palabras': lista, 'oido': ' '.join(w['word'] for w in oidas)})
 json.dump({**G, 'lineas': out}, open(os.path.join(base, 'lineas.json'), 'w'), ensure_ascii=False, indent=1)
 print('\n'.join(f"{l['archivo']}: {l['dur']} s, habla {l['habla']}" for l in out))

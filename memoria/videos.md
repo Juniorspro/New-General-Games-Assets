@@ -136,3 +136,73 @@ MALA y KUNTUR. Todo vive en `videos/`. Ver también:
   - versión sin música, para usar un sonido de TikTok;
   - versiones en inglés o portugués (habría que regrabar la voz y las tomas);
   - un tercer video (BRILLO o ZONDA) con el mismo sistema.
+
+## Los dúos (02/10): dos juegos de un archivo por video
+
+Pidió "3 videos bien producidos en español latino, de 1 minuto, con buen motion
+graphics" de los seis de un archivo ([sueltos](sueltos.md)). Salieron de a dos:
+GLOBO + VÍBORA, MORFI + CRIPTA y LA ISLA + GRUMO, de ~58 s, con voz Andre
+(Higgsfield, ElevenLabs) en neutro latino (tú, no vos), sin memes.
+
+- **Tomas:** `node videos/grabar-sueltos.mjs <juego> [toma,…] [--cada=N]`. El
+  reloj propio va en `<head>` (`sueltos/reloj.mjs`); cada juego tiene su bot en
+  `sueltos/<juego>.mjs`, que juega por los ganchos de prueba (`__G`, `__V`, `__C`,
+  `__isla`) y anota por cuadro dónde está todo (`<toma>.datos.json`) para los
+  círculos y los dedos del montaje. 432×768 a ×2,5 = 1080×1920 justo.
+  `--cada=15` es la prueba rápida: una hoja de contactos en `salida/pruebas/`.
+  - GLOBO: el escudo empuja desde abajo y de costado lo que va a tocar el globo;
+    los molinetes, por la punta. Inmortal + anota los toques: se usan los
+    tramos limpios.
+  - VÍBORA: la propia, marcada `bot` con una `ia` prudente: la maneja el
+    cerebro de los bots. Inmortal (se anota `salvada`). Turbo: `entrada.turbo`.
+  - MORFI: cada nivel trae su solución (`def.sol`); se aplica en el paso exacto
+    envolviendo `partida.paso`. Tres estrellas siempre.
+  - CRIPTA: el camino del resolvedor (`__C.camino(i)`), deslizando con el SIGNO
+    (−1/0/1; con píxeles no se mueve). Gana 12 de 30: los bichos que se mueven
+    no los mira. La torre: los tramos que talló la torre (como la demo).
+  - GRUMO: cada escena trae su guion "jugado como persona"; el intérprete es
+    nuestro (`borde` = caminar al borde mirando adelante con `clonar()` y
+    saltar; soltar el botón antes de cada salto). Gana 10 de 20.
+  - LA ISLA: un director maneja la palanca, usar/poner y la mirada; aparece lo
+    que pide el guion (`J.enemigos.crear`, `J.ponerBajo`, `J.cielo.hora` de 0 a 1,
+    `J.historia.leerCarta()`).
+- **Música:** `node videos/sueltos/musica.mjs <juego> <tema> 34`: el AudioContext
+  del juego pasa a ser un OfflineAudioContext con el reloj propio. Salen a
+  -33 LUFS; se pasan a -18 con `loudnorm` antes de montar.
+- **Montaje:** `remotion/src/duos.js` (qué va en cada línea; planos enganchados
+  a palabras con `en`), `Duo.jsx` y `kit2.jsx` (pantalla partida, título por
+  juego, cortina, círculo que sigue, dedo que corta/toca/desliza, marco,
+  encuesta "comenta 1 o 2" y JXSTUDIOS). Los subtítulos van donde no tapan:
+  GLOBO a 640, MORFI y GRUMO a 330, el resto a 1185.
+- **Render:** `node videos/render.mjs GloboVibora globo-vibora --publico=../salida/publico`
+  (`salida/publico/` son enlaces absolutos solo a lo de los dúos: el bundle
+  los deja como enlaces y no copia 150 MB por render).
+
+### Trampas de los dúos
+
+- `pkill -f <nombre>` en una orden que contiene ese nombre se mata a sí mismo
+  (otra vez, dos veces): `pgrep -f "grabar-sueltos.mj[s]"` con corchete.
+- `partida.clonar()` copia también el `paso` que el bot le enganchó a la
+  instancia: la copia se llamaba a sí misma sin fin. `delete q.paso`.
+- LA ISLA con `?directo` arranca con 1,5 s de vuelo de cámara: lo que se manda
+  durante el vuelo se pierde (la mochila no abría). Esperar `J.estado ===
+  'jugando'` y `!J.menu.vuelo`. La caña tira en el impacto del golpe: el botón
+  se mantiene medio segundo. En la punta del muelle está el cartel de los
+  créditos del menú (la cámara quedaba adentro).
+- Los cuadros sueltos del grabador iban dentro de `medios/` (que Remotion
+  copia entero): ahora van a `salida/cuadros/`.
+- Con cinco grabaciones a la vez la máquina va a 1-1,6 s por cuadro; un
+  `timeout` de 25 min cortó una prueba a la mitad.
+- Un plano que pide más toma de la que se grabó no avisa en Remotion: los
+  menús duraban 5 s y el gancho pedía 6,6. `node videos/revisar-duo.mjs <id>`
+  muestra la línea de tiempo y marca "SE PASA". Si una toma no alcanza para la
+  pantalla partida, la mitad puede ser una tira: `[[toma, desde, recorte, dur], …]`.
+- Antes del render entero: `node videos/fotos.mjs <Comp> <id> 3,7.5,13` (un
+  navegador, una foto por segundo pedido, hoja en `salida/pruebas/<id>-fotos.jpg`).
+- La música de LA ISLA tiraba el navegador: cada `__reloj.cuadro(10)` dibujaba
+  el 3D. Se corta el `requestAnimationFrame` (la música va con `setInterval`)
+  y se callan ambiente y efectos (si no, entran olas). Salió a -35 LUFS.
+- En el gancho el narrador tapaba el logo del segundo juego: el gancho va sin
+  sticker. Los chips de MORFI y GRUMO van a 140 (`yChip`): a 250 pisaban los
+  subtítulos de 330. Un plano puede llevar su `yTexto` (el menú de bots de
+  VÍBORA, a 330).

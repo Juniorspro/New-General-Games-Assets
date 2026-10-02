@@ -1,0 +1,41 @@
+{
+ "voz": "ElevenLabs (Higgsfield text2speech_v2), voz Andre, español latino neutro",
+ "lineas": [
+  {
+   "archivo": "01.mp3",
+   "texto": "Hice dos juegos de pensar rápido... y no vas a poder jugar solo uno."
+  },
+  {
+   "archivo": "02.mp3",
+   "texto": "Este es Morfi: una cajita de cartón con muchísima hambre."
+  },
+  {
+   "archivo": "03.mp3",
+   "texto": "Cortas los hilos con el dedo, y el caramelo tiene que caerle justo en la boca."
+  },
+  {
+   "archivo": "04.mp3",
+   "texto": "Hay globos que lo suben, abanicos que lo soplan y chinches que lo rompen."
+  },
+  {
+   "archivo": "05.mp3",
+   "texto": "Treinta niveles en tres cajas, y tres estrellas para juntar en cada uno."
+  },
+  {
+   "archivo": "06.mp3",
+   "texto": "Y esto es Cripta Neón. Deslizas, y Lu, una luciérnaga, sale disparada hasta chocar con la pared."
+  },
+  {
+   "archivo": "07.mp3",
+   "texto": "No puede frenar a la mitad: cada movimiento se piensa, entre pinchos, polillas y fuego."
+  },
+  {
+   "archivo": "08.mp3",
+   "texto": "Treinta niveles en tres mundos, y una torre infinita donde la lava no deja de subir."
+  },
+  {
+   "archivo": "09.mp3",
+   "texto": "¿Con cuál te quedas, Morfi o Cripta? Te leo en los comentarios."
+  }
+ ]
+}

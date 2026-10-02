@@ -1,0 +1,771 @@
+{
+ "voz": "ElevenLabs (Higgsfield text2speech_v2), voz Andre, español latino neutro",
+ "lineas": [
+  {
+   "archivo": "01.mp3",
+   "texto": "Hice dos juegos que se juegan con un solo dedo... y el segundo es un vicio.",
+   "dur": 4.96,
+   "habla": [
+    0.005,
+    4.8
+   ],
+   "palabras": [
+    {
+     "p": "Hice",
+     "t0": 0.005,
+     "t1": 0.313
+    },
+    {
+     "p": "dos",
+     "t0": 0.33,
+     "t1": 0.536
+    },
+    {
+     "p": "juegos",
+     "t0": 0.57,
+     "t1": 0.986
+    },
+    {
+     "p": "que",
+     "t0": 1.11,
+     "t1": 1.209
+    },
+    {
+     "p": "se",
+     "t0": 1.257,
+     "t1": 1.337
+    },
+    {
+     "p": "juegan",
+     "t0": 1.393,
+     "t1": 1.699
+    },
+    {
+     "p": "con",
+     "t0": 1.761,
+     "t1": 1.874
+    },
+    {
+     "p": "un",
+     "t0": 1.931,
+     "t1": 2.011
+    },
+    {
+     "p": "solo",
+     "t0": 2.072,
+     "t1": 2.296
+    },
+    {
+     "p": "dedo...",
+     "t0": 2.367,
+     "t1": 3.03
+    },
+    {
+     "p": "y",
+     "t0": 3.06,
+     "t1": 3.14
+    },
+    {
+     "p": "el",
+     "t0": 3.134,
+     "t1": 3.24
+    },
+    {
+     "p": "segundo",
+     "t0": 3.245,
+     "t1": 3.756
+    },
+    {
+     "p": "es",
+     "t0": 3.93,
+     "t1": 4.091
+    },
+    {
+     "p": "un",
+     "t0": 4.14,
+     "t1": 4.264
+    },
+    {
+     "p": "vicio.",
+     "t0": 4.32,
+     "t1": 4.8
+    }
+   ],
+   "oido": "hice dos juegos que se juegan con un solo dedo y el segunda es un vicio"
+  },
+  {
+   "archivo": "02.mp3",
+   "texto": "Primero, Globo Libre. Tu globo sube solito, y todo el cielo lo quiere reventar.",
+   "dur": 5.68,
+   "habla": [
+    0.0,
+    5.61
+   ],
+   "palabras": [
+    {
+     "p": "Primero,",
+     "t0": 0.0,
+     "t1": 0.75
+    },
+    {
+     "p": "Globo",
+     "t0": 0.81,
+     "t1": 1.14
+    },
+    {
+     "p": "Libre.",
+     "t0": 1.192,
+     "t1": 1.865
+    },
+    {
+     "p": "Tu",
+     "t0": 1.938,
+     "t1": 2.018
+    },
+    {
+     "p": "globo",
+     "t0": 2.087,
+     "t1": 2.448
+    },
+    {
+     "p": "sube",
+     "t0": 2.464,
+     "t1": 2.765
+    },
+    {
+     "p": "solito,",
+     "t0": 2.833,
+     "t1": 3.382
+    },
+    {
+     "p": "y",
+     "t0": 3.6,
+     "t1": 3.755
+    },
+    {
+     "p": "todo",
+     "t0": 3.78,
+     "t1": 4.116
+    },
+    {
+     "p": "el",
+     "t0": 4.14,
+     "t1": 4.22
+    },
+    {
+     "p": "cielo",
+     "t0": 4.23,
+     "t1": 4.527
+    },
+    {
+     "p": "lo",
+     "t0": 4.56,
+     "t1": 4.71
+    },
+    {
+     "p": "quiere",
+     "t0": 4.77,
+     "t1": 5.033
+    },
+    {
+     "p": "reventar.",
+     "t0": 5.074,
+     "t1": 5.61
+    }
+   ],
+   "oido": "primero globo libre tu globos subes solito y todo el cielo lo quiere reventar"
+  },
+  {
+   "archivo": "03.mp3",
+   "texto": "Tú no lo tocas: mueves el escudo con el dedo, y apartas cajas, ladrillos y péndulos.",
+   "dur": 5.92,
+   "habla": [
+    0.002,
+    5.73
+   ],
+   "palabras": [
+    {
+     "p": "Tú",
+     "t0": 0.002,
+     "t1": 0.257
+    },
+    {
+     "p": "no",
+     "t0": 0.27,
+     "t1": 0.402
+    },
+    {
+     "p": "lo",
+     "t0": 0.42,
+     "t1": 0.517
+    },
+    {
+     "p": "tocas:",
+     "t0": 0.54,
+     "t1": 1.32
+    },
+    {
+     "p": "mueves",
+     "t0": 1.335,
+     "t1": 1.707
+    },
+    {
+     "p": "el",
+     "t0": 1.71,
+     "t1": 1.819
+    },
+    {
+     "p": "escudo",
+     "t0": 1.83,
+     "t1": 2.186
+    },
+    {
+     "p": "con",
+     "t0": 2.22,
+     "t1": 2.334
+    },
+    {
+     "p": "el",
+     "t0": 2.37,
+     "t1": 2.45
+    },
+    {
+     "p": "dedo,",
+     "t0": 2.49,
+     "t1": 2.837
+    },
+    {
+     "p": "y",
+     "t0": 3.03,
+     "t1": 3.121
+    },
+    {
+     "p": "apartas",
+     "t0": 3.15,
+     "t1": 3.588
+    },
+    {
+     "p": "cajas,",
+     "t0": 3.63,
+     "t1": 4.23
+    },
+    {
+     "p": "ladrillos",
+     "t0": 4.23,
+     "t1": 4.887
+    },
+    {
+     "p": "y",
+     "t0": 4.98,
+     "t1": 5.06
+    },
+    {
+     "p": "péndulos.",
+     "t0": 5.1,
+     "t1": 5.73
+    }
+   ],
+   "oido": "tú no lo tocas mueves el escudo con el dedo y apartas cajas ladrillos y péndulos"
+  },
+  {
+   "archivo": "04.mp3",
+   "texto": "Son treinta niveles, de día, al atardecer y de noche, y un modo infinito para ver quién llega más alto.",
+   "dur": 6.96,
+   "habla": [
+    0.0,
+    6.81
+   ],
+   "palabras": [
+    {
+     "p": "Son",
+     "t0": 0.0,
+     "t1": 0.32
+    },
+    {
+     "p": "treinta",
+     "t0": 0.33,
+     "t1": 0.702
+    },
+    {
+     "p": "niveles,",
+     "t0": 0.72,
+     "t1": 1.44
+    },
+    {
+     "p": "de",
+     "t0": 1.475,
+     "t1": 1.62
+    },
+    {
+     "p": "día,",
+     "t0": 1.656,
+     "t1": 2.144
+    },
+    {
+     "p": "al",
+     "t0": 2.217,
+     "t1": 2.297
+    },
+    {
+     "p": "atardecer",
+     "t0": 2.364,
+     "t1": 3.06
+    },
+    {
+     "p": "y",
+     "t0": 3.13,
+     "t1": 3.21
+    },
+    {
+     "p": "de",
+     "t0": 3.193,
+     "t1": 3.273
+    },
+    {
+     "p": "noche,",
+     "t0": 3.327,
+     "t1": 3.968
+    },
+    {
+     "p": "y",
+     "t0": 4.05,
+     "t1": 4.13
+    },
+    {
+     "p": "un",
+     "t0": 4.173,
+     "t1": 4.253
+    },
+    {
+     "p": "modo",
+     "t0": 4.326,
+     "t1": 4.537
+    },
+    {
+     "p": "infinito",
+     "t0": 4.581,
+     "t1": 5.004
+    },
+    {
+     "p": "para",
+     "t0": 5.01,
+     "t1": 5.179
+    },
+    {
+     "p": "ver",
+     "t0": 5.19,
+     "t1": 5.375
+    },
+    {
+     "p": "quién",
+     "t0": 5.4,
+     "t1": 5.722
+    },
+    {
+     "p": "llega",
+     "t0": 5.76,
+     "t1": 6.069
+    },
+    {
+     "p": "más",
+     "t0": 6.12,
+     "t1": 6.272
+    },
+    {
+     "p": "alto.",
+     "t0": 6.33,
+     "t1": 6.81
+    }
+   ],
+   "oido": "son treinta niveles de día al atardecer y de noche y un modo in finito para ver quién llega más alto"
+  },
+  {
+   "archivo": "05.mp3",
+   "texto": "Y el segundo... es una víbora.",
+   "dur": 2.64,
+   "habla": [
+    0.0,
+    2.61
+   ],
+   "palabras": [
+    {
+     "p": "Y",
+     "t0": 0.0,
+     "t1": 0.156
+    },
+    {
+     "p": "el",
+     "t0": 0.18,
+     "t1": 0.268
+    },
+    {
+     "p": "segundo...",
+     "t0": 0.3,
+     "t1": 1.29
+    },
+    {
+     "p": "es",
+     "t0": 1.433,
+     "t1": 1.71
+    },
+    {
+     "p": "una",
+     "t0": 1.766,
+     "t1": 2.1
+    },
+    {
+     "p": "víbora.",
+     "t0": 2.1,
+     "t1": 2.61
+    }
+   ],
+   "oido": "y el segundo es una víbora"
+  },
+  {
+   "archivo": "06.mp3",
+   "texto": "Víbora punto io: comes lucecitas, creces, y si otra víbora choca contigo, se deshace en comida.",
+   "pantalla": {
+    "Víbora punto io:": "Víbora.io:"
+   },
+   "dur": 7.6,
+   "habla": [
+    0.0,
+    7.59
+   ],
+   "palabras": [
+    {
+     "p": "Víbora.io:",
+     "t0": 0.0,
+     "t1": 1.92
+    },
+    {
+     "p": "comes",
+     "t0": 1.94,
+     "t1": 2.28
+    },
+    {
+     "p": "lucecitas,",
+     "t0": 2.283,
+     "t1": 3.3
+    },
+    {
+     "p": "creces,",
+     "t0": 3.36,
+     "t1": 4.189
+    },
+    {
+     "p": "y",
+     "t0": 4.32,
+     "t1": 4.4
+    },
+    {
+     "p": "si",
+     "t0": 4.44,
+     "t1": 4.535
+    },
+    {
+     "p": "otra",
+     "t0": 4.599,
+     "t1": 4.8
+    },
+    {
+     "p": "víbora",
+     "t0": 4.848,
+     "t1": 5.11
+    },
+    {
+     "p": "choca",
+     "t0": 5.131,
+     "t1": 5.414
+    },
+    {
+     "p": "contigo,",
+     "t0": 5.46,
+     "t1": 6.083
+    },
+    {
+     "p": "se",
+     "t0": 6.24,
+     "t1": 6.456
+    },
+    {
+     "p": "deshace",
+     "t0": 6.48,
+     "t1": 6.979
+    },
+    {
+     "p": "en",
+     "t0": 7.02,
+     "t1": 7.1
+    },
+    {
+     "p": "comida.",
+     "t0": 7.11,
+     "t1": 7.59
+    }
+   ],
+   "oido": "víboras punto y comes lucecitas creces y si otra vivo la choca consigo se deshace en comida"
+  },
+  {
+   "archivo": "07.mp3",
+   "texto": "Con el rayo, o con un segundo dedo, vas en turbo y les cierras el paso.",
+   "dur": 4.88,
+   "habla": [
+    0.0,
+    4.86
+   ],
+   "palabras": [
+    {
+     "p": "Con",
+     "t0": 0.0,
+     "t1": 0.201
+    },
+    {
+     "p": "el",
+     "t0": 0.21,
+     "t1": 0.315
+    },
+    {
+     "p": "rayo,",
+     "t0": 0.33,
+     "t1": 0.96
+    },
+    {
+     "p": "o",
+     "t0": 1.001,
+     "t1": 1.081
+    },
+    {
+     "p": "con",
+     "t0": 1.072,
+     "t1": 1.23
+    },
+    {
+     "p": "un",
+     "t0": 1.242,
+     "t1": 1.35
+    },
+    {
+     "p": "segundo",
+     "t0": 1.355,
+     "t1": 1.786
+    },
+    {
+     "p": "dedo,",
+     "t0": 1.8,
+     "t1": 2.34
+    },
+    {
+     "p": "vas",
+     "t0": 2.393,
+     "t1": 2.712
+    },
+    {
+     "p": "en",
+     "t0": 2.784,
+     "t1": 2.864
+    },
+    {
+     "p": "turbo",
+     "t0": 2.88,
+     "t1": 3.309
+    },
+    {
+     "p": "y",
+     "t0": 3.412,
+     "t1": 3.51
+    },
+    {
+     "p": "les",
+     "t0": 3.637,
+     "t1": 3.789
+    },
+    {
+     "p": "cierras",
+     "t0": 3.854,
+     "t1": 4.306
+    },
+    {
+     "p": "el",
+     "t0": 4.35,
+     "t1": 4.43
+    },
+    {
+     "p": "paso.",
+     "t0": 4.44,
+     "t1": 4.86
+    }
+   ],
+   "oido": "con el rayo o con un segundo dedo base en turbó y le cierras el paso"
+  },
+  {
+   "archivo": "08.mp3",
+   "texto": "Hay bots tranquis, normales y picantes, y una tabla con los más largos de la arena.",
+   "dur": 6.0,
+   "habla": [
+    0.0,
+    5.91
+   ],
+   "palabras": [
+    {
+     "p": "Hay",
+     "t0": 0.0,
+     "t1": 0.289
+    },
+    {
+     "p": "bots",
+     "t0": 0.301,
+     "t1": 0.745
+    },
+    {
+     "p": "tranquis,",
+     "t0": 0.99,
+     "t1": 1.77
+    },
+    {
+     "p": "normales",
+     "t0": 1.797,
+     "t1": 2.55
+    },
+    {
+     "p": "y",
+     "t0": 2.55,
+     "t1": 2.693
+    },
+    {
+     "p": "picantes,",
+     "t0": 2.7,
+     "t1": 3.75
+    },
+    {
+     "p": "y",
+     "t0": 3.817,
+     "t1": 3.897
+    },
+    {
+     "p": "una",
+     "t0": 3.899,
+     "t1": 4.05
+    },
+    {
+     "p": "tabla",
+     "t0": 4.072,
+     "t1": 4.38
+    },
+    {
+     "p": "con",
+     "t0": 4.387,
+     "t1": 4.56
+    },
+    {
+     "p": "los",
+     "t0": 4.56,
+     "t1": 4.761
+    },
+    {
+     "p": "más",
+     "t0": 4.77,
+     "t1": 4.988
+    },
+    {
+     "p": "largos",
+     "t0": 5.01,
+     "t1": 5.393
+    },
+    {
+     "p": "de",
+     "t0": 5.43,
+     "t1": 5.51
+    },
+    {
+     "p": "la",
+     "t0": 5.52,
+     "t1": 5.6
+    },
+    {
+     "p": "arena.",
+     "t0": 5.638,
+     "t1": 5.91
+    }
+   ],
+   "oido": "hay bots tranquis normales y picantes y una tabla con los más largos de la arena"
+  },
+  {
+   "archivo": "09.mp3",
+   "texto": "¿Cuál juegas primero, el uno o el dos? Te leo en los comentarios.",
+   "dur": 4.64,
+   "habla": [
+    0.0,
+    4.47
+   ],
+   "palabras": [
+    {
+     "p": "¿Cuál",
+     "t0": 0.0,
+     "t1": 0.36
+    },
+    {
+     "p": "juegas",
+     "t0": 0.395,
+     "t1": 0.69
+    },
+    {
+     "p": "primero,",
+     "t0": 0.705,
+     "t1": 1.38
+    },
+    {
+     "p": "el",
+     "t0": 1.438,
+     "t1": 1.56
+    },
+    {
+     "p": "uno",
+     "t0": 1.606,
+     "t1": 2.04
+    },
+    {
+     "p": "o",
+     "t0": 2.066,
+     "t1": 2.16
+    },
+    {
+     "p": "el",
+     "t0": 2.166,
+     "t1": 2.278
+    },
+    {
+     "p": "dos?",
+     "t0": 2.28,
+     "t1": 3.06
+    },
+    {
+     "p": "Te",
+     "t0": 3.114,
+     "t1": 3.24
+    },
+    {
+     "p": "leo",
+     "t0": 3.277,
+     "t1": 3.51
+    },
+    {
+     "p": "en",
+     "t0": 3.518,
+     "t1": 3.6
+    },
+    {
+     "p": "los",
+     "t0": 3.6,
+     "t1": 3.712
+    },
+    {
+     "p": "comentarios.",
+     "t0": 3.72,
+     "t1": 4.47
+    }
+   ],
+   "oido": "cuán juegas primero el uno o el dos te leo en los comentarios"
+  }
+ ]
+}
