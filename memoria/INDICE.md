@@ -67,7 +67,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [brillo](brillo.md) | BRILLO: armarlo, probarlo, el celular parado (vertical con consola), el resolvedor de plataformas, las canciones grabadas y sus trampas |
 | [brillo-rendimiento](brillo-rendimiento.md) | BRILLO: qué lo hacía lento, la cámara más cerca, las cinemáticas de charla y la calidad automática |
 | [brillo-trailer](brillo-trailer.md) | el tráiler de TikTok de BRILLO: tomas con reloj propio, Remotion, la música y sus trampas |
-| [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR): tomas, voz, subtítulos, memes, montaje en Remotion |
+| [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR y los dúos de los seis de un archivo): tomas con bots, voz, subtítulos, montaje en Remotion, portadas |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el celular parado (vertical), el arte de Rezona y sus trampas |
 | [aeroplaza](aeroplaza.md) | AEROPLAZA, lo general: el 3D social Frutiger Aero (multijugador MQTT, la isla y los reinos, parkour, interiores), cómo se arma y se prueba, las trampas de three |
 | [aeroplaza-vueltas](aeroplaza-vueltas.md) | AEROPLAZA vuelta por vuelta (de la 8.ª a la 48.ª: VR, manos, APK, ARCore, tu espacio, el mando VR Box, las actualizaciones, el celu con amigos, construir la casa como en Sims Mobile): qué nota abrir para cada cosa |

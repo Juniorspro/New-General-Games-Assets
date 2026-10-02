@@ -19,8 +19,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
     Pidió no usar ayudantes: gastan muchos tokens. Hacerlo en la sesión.
   - 01/10: mandó seis HTML hechos ("ahora estos"): cinco ya eran de celu parado; LA ISLA se giraba y se porteó
     (Girar queda como ajuste); el parpadeo de las antorchas de CRIPTA y dos textos de GLOBO ([sueltos](sueltos.md)).
-  - Falta: que diga cómo le quedan en su celu la construcción y los juegos parados; el primer juego de Roblox
-    (desde la sesión de su PC).
+  - 02/10: tres videos dúos de ~58 s en neutro latino (GLOBO+VÍBORA, MORFI+CRIPTA, LA ISLA+GRUMO): un bot juega
+    cada juego, la música es la de cada juego, voz Andre, motion graphics en Remotion y una portada por video
+    ([videos](videos.md), «Los dúos»). Se mandaron los livianos y las portadas.
+  - Falta: que diga cómo le quedan en su celu la construcción y los juegos parados, y qué le parecen los videos
+    (hay `--sin-musica` para ponerles un sonido de TikTok); el primer juego de Roblox (desde la sesión de su PC).
 - **28/09/2026, de noche, decimocuarta vez · `claude/fijate-iszyer`:**
   - Dijo: "no le llegan las actualizaciones".
   - Quedó ([aeroplaza-47](aeroplaza-47.md)): la APK 45 solo buscaba al arrancar de cero. La 46 busca al volver y cada

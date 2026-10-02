@@ -214,3 +214,9 @@ GLOBO + VÍBORA, MORFI + CRIPTA y LA ISLA + GRUMO, de ~58 s, con voz Andre
   portadas usan cuadros sacados con ffmpeg a `salida/publico/fotos/`.
 - El bot de GRUMO anota la mano solo donde agarra (`m.punto`): el círculo de
   "el animador" va con la puerta, que es lo que la mano se lleva.
+- Con los subtítulos arriba (GLOBO 640, MORFI y GRUMO 330) el cartel del título,
+  que se va para arriba, los pisaba uno o dos cuadros: ahora esperan a que salga
+  del todo. Los videos 1 y 2 que se mandaron tienen ese pisotón (casi no se ve).
+- La revisión del video entero: hoja a 0,5 cuadros por segundo con ffmpeg (sale
+  corrida 1 s: los cuadros son de 1, 3, 5… s) y `loudnorm` para medir: los tres
+  quedaron en -14,1/-14,2 LUFS.

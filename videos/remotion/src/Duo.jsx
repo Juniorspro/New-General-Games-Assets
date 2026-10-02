@@ -66,8 +66,9 @@ export function Duo({ id, lineas, datos = {}, sinMusica }) {
   const yTexto = (planoAhora && planoAhora.yTexto) || actual.yTexto || (actual.forma !== 'partida' && Jl.yTexto) || M.yTexto || 1185;
   const hablando = actual.palabras.some((w) => tl >= w.t0 && tl < w.t1 + 0.05);
   const enFinal = t >= cierre.ini;
-  /* mientras el cartel del título está en pantalla, los subtítulos esperan */
-  const conTitulo = actual.titulo && t - actual.ini - (actual.tituloMas || 0) < (actual.tituloDur || 1.9) - 0.25;
+  /* mientras el cartel del título está en pantalla, los subtítulos esperan; si van arriba, hasta
+     que el cartel (que se va para arriba) termina de salir, que si no lo pisan un par de cuadros */
+  const conTitulo = actual.titulo && t - actual.ini - (actual.tituloMas || 0) < (actual.tituloDur || 1.9) - (yTexto < 1000 ? -0.03 : 0.25);
   const vozEn = (s) => L.some((l) => s >= l.voz && s < l.voz + l.dur);
   const fundidoFinal = (s) => 1 - suave((s - cierre.fin + 1.4) / 1.3);
   const musica = (k) => (fr) => {
