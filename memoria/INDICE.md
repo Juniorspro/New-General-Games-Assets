@@ -21,6 +21,7 @@
 ## Las notas
 | nota | abrila cuando… |
 |---|---|
+| [`HISTORIAL-DE-LA-SESION.md`](../HISTORIAL-DE-LA-SESION.md) | querés la historia larga: cómo se trabajó de Tajo a WYRMGUARD, método, errores y causas raíz (leerla entera sólo si hace falta) |
 | [juegos](juegos.md) | se hace un juego nuevo: qué guía seguir, qué hay ya hecho |
 | [maquina](maquina.md) | probar en Chromium, el proxy, Playwright, Pillow, APK sin Gradle |
 | [nexo](nexo.md) | se toca Nexo XR (la app de realidad mixta) o Nexo Web |
