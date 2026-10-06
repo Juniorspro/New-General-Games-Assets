@@ -1,0 +1,35 @@
+:root { --rojo: #b3121f; --tinta: #e8e2d8; --fondo: #050507; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--fondo); color: var(--tinta); overflow: hidden; font-family: 'Sufficit', 'Arial Narrow', sans-serif; touch-action: none; user-select: none; -webkit-user-select: none; }
+#juego { position: fixed; inset: 0; }
+.lienzo { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#umg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 3; }
+#fundido { position: fixed; inset: 0; pointer-events: none; background: #000; opacity: 0; z-index: 4; }
+#toque { position: absolute; inset: 0; z-index: 2; }
+#botones { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.boton { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(232,226,216,.45); background: rgba(10,10,14,.35); color: var(--tinta);
+  font-family: inherit; letter-spacing: .04em; text-transform: uppercase; display: flex; align-items: center; justify-content: center; text-align: center; padding: 4px; touch-action: none; }
+.boton span { pointer-events: none; line-height: 1.05; }
+.boton.apretado { background: rgba(179,18,31,.55); border-color: rgba(255,120,120,.8); }
+.editando .boton { border-style: dashed; border-color: #f2c14e; animation: tiembla .6s infinite alternate; }
+@keyframes tiembla { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+#engranaje { position: fixed; left: max(8px, env(safe-area-inset-left)); top: 8px; z-index: 8; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(232,226,216,.3); background: rgba(0,0,0,.35); color: var(--tinta); font-size: 20px; opacity: .6; }
+#ajustes { position: fixed; z-index: 9; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(420px, 92vw); max-height: 90vh; overflow: auto; padding: 18px; background: rgba(8,8,12,.94); border: 1px solid #3a2a2a; border-radius: 10px; }
+#ajustes h2 { margin: 0 0 10px; color: var(--rojo); letter-spacing: .08em; }
+#ajustes label { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 10px 0; }
+#ajustes input[type=range] { flex: 1; accent-color: var(--rojo); }
+#ajustes .fila { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+#ajustes button, .pantalla button, #fin-editar { font-family: inherit; font-size: 16px; padding: 9px 14px; color: var(--tinta); background: #17121a; border: 1px solid #4b2a30; border-radius: 6px; letter-spacing: .05em; }
+#ajustes button.sel { border-color: var(--rojo); color: #fff; }
+#fin-editar { position: fixed; z-index: 9; left: 50%; top: 12px; transform: translateX(-50%); background: #f2c14e; color: #111; }
+#carga { position: fixed; inset: 0; z-index: 7; background: #000; display: flex; align-items: flex-end; justify-content: flex-end; padding: 22px 28px; letter-spacing: .2em; }
+#carga span { animation: latido 1.2s infinite; }
+@keyframes latido { 50% { opacity: .35; } }
+.pantalla { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 20px; text-align: center;
+  background: radial-gradient(ellipse at 50% 40%, #1d0c10 0%, #050507 70%); }
+.pantalla h1 { margin: 0; font-size: clamp(28px, 7vw, 56px); letter-spacing: .06em; text-shadow: 0 0 18px #000; }
+.pantalla h1 small { display: block; color: #c98a2b; font-size: .5em; letter-spacing: .3em; margin-top: 6px; }
+.pantalla .idiomas { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.pantalla .aviso { max-width: 640px; font-family: system-ui, sans-serif; font-size: 12px; opacity: .55; line-height: 1.4; }
+.pulso { animation: latido 1.4s infinite; letter-spacing: .25em; text-transform: uppercase; }
+[hidden] { display: none !important; }

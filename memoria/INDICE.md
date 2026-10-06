@@ -73,6 +73,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR y los dúos de los seis de un archivo): tomas con bots, voz, subtítulos, montaje en Remotion, portadas |
 | [barro](barro.md) | BARRO: motocross tipo Mad Skills (de cero): física de la moto, rivales, pistas, la tierra en tiras, el arte de Rezona |
 | [bus-stop](bus-stop.md) | port de un juego de Unity 4.5 ajeno (Bus Stop Simulator) a APK sin el editor: UnityPy, el IL de los scripts, la luz de Unity 4 en three, lo que no entra al repo |
+| [tjoc](tjoc.md) | port de Unreal 4.16 (TJOC: Story Mode) por capítulos: CUE4Parse, el Blueprint corriendo en una VM de Kismet, colisión por tipo, exposición de 4.16, imágenes con texto traducidas |
 | [pizza-delivery](pizza-delivery.md) | segundo port (Unity 3.5, 6 escenas, UnityScript): campos de scripts desde las DLL, static batching, objetos que se prenden solos, personajes con huesos, corrutinas, pruebas con await |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el celular parado (vertical), el arte de Rezona y sus trampas |
 | [aeroplaza](aeroplaza.md) | AEROPLAZA, lo general: el 3D social Frutiger Aero (multijugador MQTT, la isla y los reinos, parkour, interiores), cómo se arma y se prueba, las trampas de three |
@@ -96,6 +97,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | `brillo/` | BRILLO: plataformas 2D Frutiger Aero, 6 mundos con historia, pixel art de 288 de alto | [brillo](brillo.md) · `brillo/README.md` |
 | `barro/` | BARRO: motocross de costado tipo Mad Skills, 20 pistas en 4 sedes, Jam del día, contrarreloj, un archivo | [barro](barro.md) · `barro/README.md` |
 | `ports/bus-stop/` | port de *Bus Stop Simulator* (Unity 4.5, de otros) a three.js y APK: solo el código y las herramientas; lo del juego sale de su zip | [bus-stop](bus-stop.md) · `ports/bus-stop/README.md` |
+| `ports/tjoc-sm/` | port de *The Joy of Creation: Story Mode* (UE 4.16, de otros) a three.js y APK, por capítulos: solo el código y las herramientas | [tjoc](tjoc.md) · `ports/tjoc-sm/README.md` |
 | `ports/pizza-delivery/` | port de *Pizza Delivery v0.2* (Unity 3.5, de otros) a three.js y APK: solo el código y las herramientas; lo del juego sale de su archivo | [pizza-delivery](pizza-delivery.md) · `ports/pizza-delivery/README.md` |
 | `ruta40/` | RUTA 40: autos tipo Hill Climb por la Ruta 40, arte pintado de Rezona, 7 tramos, 5 vehículos, picadas | [ruta40](ruta40.md) · `ruta40/README.md` |
 | `aeroplaza/` | AEROPLAZA: 3D social Frutiger Aero, multijugador por MQTT sin servidor, 5 reinos, muñecos de gelatina, 3 idiomas | [aeroplaza](aeroplaza.md) · `aeroplaza/README.md` |

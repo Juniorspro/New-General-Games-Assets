@@ -1,0 +1,27 @@
+# Nada del juego original entra al repo: ni el descargado, ni lo exportado (mapas, mallas, texturas, sonidos,
+# animaciones, letras, textos y sus traducciones, capturas), ni lo armado.
+juego/
+paks
+descarga/
+crudo/
+salida/
+ref/
+traduccion/
+web/datos/
+dist/
+pruebas/
+lista.txt
+*.zip
+herr/umodel/
+herr/__pycache__/
+herr/ue/bin/
+herr/ue/obj/
+herr/refl/bin/
+herr/refl/obj/
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/
+android/app/src/main/res/mipmap-*/
+*.apk

@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Quedan las ~8 más nuevas; las viejas pasan a
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
+- **06/10/2026 · `claude/fijate-iszyer`:**
+  - Pidió: portear TJOC: Story Mode (gamejolt). Es UE 4.16: se hizo el motor que ejecuta su Blueprint
+    ([tjoc](tjoc.md)). Se entregó el capítulo 1 (APK 18 MB, es/en/pt, imágenes con texto traducidas).
+  - Falta: los capítulos 2 en adelante (living, oficina, sótano, ático) y probar la APK en el celu.
+
 - **29/09/2026, de tarde, decimoquinta vez · `claude/fijate-iszyer`:**
   - Pidió: el HTML; construir en la casa y mejores decoraciones; arreglar minijuegos y menús; el celu parado; guardar
     botones en el celu.
