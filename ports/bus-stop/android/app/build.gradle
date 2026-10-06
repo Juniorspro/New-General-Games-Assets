@@ -1,0 +1,20 @@
+/* Bus Stop Simulator (port) para Android: el juego en una WebView a pantalla completa (apk.mjs pone el
+   juego armado en src/main/assets). Sin librerías nativas: una sola APK para todos los celulares */
+plugins { id 'com.android.application' }
+android {
+  namespace 'ar.jxstudios.busstop'
+  compileSdk 36
+  defaultConfig {
+    applicationId 'ar.jxstudios.busstop'
+    /* (Android 7: los celulares más baratos que siguen dando vueltas; la WebView se actualiza sola) */
+    minSdk 24
+    targetSdk 36
+    versionCode 1
+    versionName '1.0'
+  }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+  buildTypes { release { minifyEnabled false } }
+}
+dependencies {
+  implementation 'androidx.webkit:webkit:1.14.0'
+}

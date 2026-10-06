@@ -72,6 +72,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [brillo-trailer](brillo-trailer.md) | el tráiler de TikTok de BRILLO: tomas con reloj propio, Remotion, la música y sus trampas |
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR y los dúos de los seis de un archivo): tomas con bots, voz, subtítulos, montaje en Remotion, portadas |
 | [barro](barro.md) | BARRO: motocross tipo Mad Skills (de cero): física de la moto, rivales, pistas, la tierra en tiras, el arte de Rezona |
+| [bus-stop](bus-stop.md) | port de un juego de Unity 4.5 ajeno (Bus Stop Simulator) a APK sin el editor: UnityPy, el IL de los scripts, la luz de Unity 4 en three, lo que no entra al repo |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el celular parado (vertical), el arte de Rezona y sus trampas |
 | [aeroplaza](aeroplaza.md) | AEROPLAZA, lo general: el 3D social Frutiger Aero (multijugador MQTT, la isla y los reinos, parkour, interiores), cómo se arma y se prueba, las trampas de three |
 | [aeroplaza-vueltas](aeroplaza-vueltas.md) | AEROPLAZA vuelta por vuelta (de la 8.ª a la 48.ª: VR, manos, APK, ARCore, tu espacio, el mando VR Box, las actualizaciones, el celu con amigos, construir la casa como en Sims Mobile): qué nota abrir para cada cosa |
@@ -93,6 +94,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | `kuntur/` | KUNTUR: 2.5D de papel tipo Paper Mario, 7 capítulos con historia, 3 idiomas | [kuntur](kuntur.md) |
 | `brillo/` | BRILLO: plataformas 2D Frutiger Aero, 6 mundos con historia, pixel art de 288 de alto | [brillo](brillo.md) · `brillo/README.md` |
 | `barro/` | BARRO: motocross de costado tipo Mad Skills, 20 pistas en 4 sedes, Jam del día, contrarreloj, un archivo | [barro](barro.md) · `barro/README.md` |
+| `ports/bus-stop/` | port de *Bus Stop Simulator* (Unity 4.5, de otros) a three.js y APK: solo el código y las herramientas; lo del juego sale de su zip | [bus-stop](bus-stop.md) · `ports/bus-stop/README.md` |
 | `ruta40/` | RUTA 40: autos tipo Hill Climb por la Ruta 40, arte pintado de Rezona, 7 tramos, 5 vehículos, picadas | [ruta40](ruta40.md) · `ruta40/README.md` |
 | `aeroplaza/` | AEROPLAZA: 3D social Frutiger Aero, multijugador por MQTT sin servidor, 5 reinos, muñecos de gelatina, 3 idiomas | [aeroplaza](aeroplaza.md) · `aeroplaza/README.md` |
 | `videos/` | videos de TikTok relatados: grabadores de tomas, voz, stickers, memes y el montaje en Remotion | [videos](videos.md) |

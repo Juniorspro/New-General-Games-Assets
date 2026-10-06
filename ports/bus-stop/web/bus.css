@@ -1,0 +1,86 @@
+/* Bus Stop Simulator (port): la estética del original (letra de máquina de escribir, la noche azul
+   oscura, los glitches de colores) para los menús y el HUD. */
+@font-face { font-family: BusTipo; src: url('datos/fuente.ttf'); font-display: swap; }
+:root { --fondo: #02040a; --tinta: #e8ecf2; --tenue: #8d97a8; --rojo: #ff2340; --cian: #22e6ff; --verde: #00ff21; --magenta: #fb00ff; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--fondo); color: var(--tinta); font-family: BusTipo, 'Courier New', monospace; user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none; }
+#lienzo { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+
+/* HUD */
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+body.en-menu #hud { display: none; }
+#contador { position: absolute; top: max(10px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); font-size: clamp(14px, 2.4vmin, 22px); text-align: right; text-shadow: 1px 0 var(--rojo), -1px 0 var(--cian), 0 0 6px #000; }
+#mira { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.55); box-shadow: 0 0 0 1px rgba(0,0,0,.6); }
+#prompt { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 26px); font-size: clamp(15px, 2.8vmin, 24px); white-space: nowrap; text-shadow: 2px 0 var(--rojo), -2px 0 var(--cian), 0 0 8px #000; animation: titila 0.9s steps(2) infinite; }
+#aviso, #ayuda { position: absolute; left: 50%; transform: translateX(-50%); max-width: 90vw; text-align: center; opacity: 0; transition: opacity .6s; text-shadow: 0 0 8px #000, 1px 0 var(--rojo), -1px 0 var(--cian); }
+#aviso { top: 20%; font-size: clamp(15px, 3vmin, 26px); }
+#ayuda { bottom: 4%; font-size: clamp(12px, 2vmin, 16px); color: var(--tenue); }
+#aviso.ve, #ayuda.ve { opacity: 1; }
+@keyframes titila { 50% { opacity: .7; } }
+
+/* el efecto de muerte / final: un glitch que tapa la pantalla un momento */
+#efecto { position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: 0; }
+#efecto.muerte { animation: muerte 1.1s steps(9) forwards; background: repeating-linear-gradient(0deg, rgba(255,35,64,.35) 0 3px, transparent 3px 7px), linear-gradient(90deg, rgba(34,230,255,.25), rgba(251,0,255,.25)); }
+@keyframes muerte { 0% { opacity: 1; transform: translateX(-8px) scaleY(1.04); } 20% { opacity: .9; transform: translateX(10px); } 45% { opacity: .7; transform: translateX(-4px) skewX(8deg); } 70% { opacity: .35; } 100% { opacity: 0; transform: none; } }
+#ruido { position: fixed; inset: 0; z-index: 6; pointer-events: none; opacity: .06; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.5) 0 1px, transparent 1px 3px); mix-blend-mode: overlay; }
+
+/* controles táctiles */
+#tactil { position: fixed; inset: 0; z-index: 4; touch-action: none; }
+#tactil.sin-tactil .ctl { display: none; }
+#tactil.editando { background: rgba(2,4,10,.35); }
+#tactil.editando .ctl { display: flex !important; }
+.ctl { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; color: #fff; background: rgba(10,14,24,.55); border: 2px solid rgba(255,255,255,.45); box-shadow: 2px 0 0 rgba(255,35,64,.45), -2px 0 0 rgba(34,230,255,.45); font-size: 11px; letter-spacing: .04em; pointer-events: none; transition: transform .06s, background .1s; }
+.ctl svg { width: 46%; height: 46%; }
+.ctl span { margin-top: 2px; }
+.ctl b { font-size: 2.1em; font-weight: bold; }
+.ctl.apretado { transform: scale(.92); background: rgba(255,255,255,.28); }
+.ctl.fijo { background: rgba(34,230,255,.35); }
+.c-usar { opacity: .35 !important; }
+.c-usar.activo { opacity: 1 !important; background: rgba(255,35,64,.55); animation: latido .7s infinite alternate; }
+@keyframes latido { to { box-shadow: 4px 0 0 rgba(255,35,64,.7), -4px 0 0 rgba(34,230,255,.7), 0 0 22px rgba(255,35,64,.6); } }
+.c-joy { background: rgba(10,14,24,.35); border-style: dashed; }
+.c-joy .perilla { width: 44%; height: 44%; border-radius: 50%; background: rgba(255,255,255,.4); border: 2px solid rgba(255,255,255,.7); }
+.ctl.elegido { outline: 3px solid var(--verde); outline-offset: 4px; }
+
+/* pantallas */
+#pantallas { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; pointer-events: none; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+#pantallas > .caja { pointer-events: auto; width: min(560px, 100%); max-height: 100%; overflow-y: auto; text-align: center; padding: 10px 6px; }
+#pantallas.p-menu, #pantallas.p-idioma, #pantallas.p-cargando { background: radial-gradient(ellipse at center, rgba(2,4,10,.15), rgba(2,4,10,.75)); }
+#pantallas.p-pausa, #pantallas.p-ajustes, #pantallas.p-creditos { background: rgba(2,4,10,.82); }
+#pantallas.p-controles { align-items: flex-end; justify-content: center; z-index: 5; }
+#pantallas.p-controles > .caja { background: rgba(2,4,10,.88); border: 1px solid rgba(255,255,255,.2); width: min(520px, 100%); }
+.titulo { position: relative; margin: 0 0 4px; font-size: clamp(30px, 7.6vmin, 68px); letter-spacing: .02em; line-height: 1; text-shadow: 3px 0 var(--rojo), -3px 0 var(--cian); animation: temblor 3.2s infinite; }
+.titulo::before, .titulo::after, .glitchy::before, .glitchy::after { content: attr(data-t); position: absolute; inset: 0; pointer-events: none; }
+.titulo::before { color: var(--verde); clip-path: inset(0 0 62% 0); transform: translate(-4px, 0); opacity: 0; animation: corte 2.7s infinite; }
+.titulo::after { color: var(--magenta); clip-path: inset(58% 0 0 0); transform: translate(5px, 0); opacity: 0; animation: corte 3.1s .6s infinite; }
+@keyframes corte { 0%, 86%, 100% { opacity: 0; } 88% { opacity: .9; transform: translate(-7px, 1px); } 92% { opacity: .9; transform: translate(6px, -1px); } }
+@keyframes temblor { 0%, 93%, 100% { transform: none; } 94% { transform: translate(2px, -1px) skewX(-6deg); } 96% { transform: translate(-3px, 1px); } }
+.sub { margin: 0 0 22px; color: var(--tenue); font-size: clamp(12px, 2.2vmin, 16px); letter-spacing: .3em; }
+h2 { margin: 6px 0 14px; font-size: clamp(22px, 5vmin, 40px); text-shadow: 2px 0 var(--rojo), -2px 0 var(--cian); }
+.botones { display: flex; flex-direction: column; gap: 9px; align-items: center; margin-top: 8px; }
+.botones.fila2 { flex-direction: row; justify-content: center; }
+button { font: inherit; color: var(--tinta); background: rgba(10,14,24,.78); border: 1px solid rgba(255,255,255,.4); padding: 11px 22px; min-width: min(300px, 80vw); font-size: clamp(15px, 2.9vmin, 21px); letter-spacing: .08em; cursor: pointer; box-shadow: 2px 0 0 rgba(255,35,64,.5), -2px 0 0 rgba(34,230,255,.5); }
+button:active { transform: translate(1px, 1px); background: rgba(255,255,255,.18); }
+@media (hover: hover) { button:hover { background: rgba(255,35,64,.28); } }
+.panel { text-align: left; background: rgba(10,14,24,.6); border: 1px solid rgba(255,255,255,.15); padding: 8px 14px; }
+.panel.texto { line-height: 1.5; font-size: clamp(13px, 2.3vmin, 16px); }
+.fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: clamp(13px, 2.4vmin, 17px); border-bottom: 1px dashed rgba(255,255,255,.12); }
+.fila:last-child { border-bottom: 0; }
+.fila input[type=range] { width: min(200px, 45vw); accent-color: var(--rojo); }
+.grupo { display: flex; gap: 6px; }
+.sino, .opc { min-width: 0; padding: 6px 12px; font-size: clamp(12px, 2.2vmin, 15px); }
+.sino.si, .opc.si { background: rgba(255,35,64,.45); }
+.barra { width: min(360px, 80vw); height: 8px; margin: 26px auto 8px; border: 1px solid rgba(255,255,255,.5); }
+.barra i { display: block; height: 100%; background: linear-gradient(90deg, var(--cian), var(--rojo)); transition: width .2s; }
+.chico { color: var(--tenue); font-size: clamp(12px, 2.1vmin, 15px); }
+.editor p { margin: 4px 0 8px; font-size: clamp(12px, 2.2vmin, 15px); }
+.editor .fila { padding: 4px 0; }
+.fin { background: rgba(2,4,10,.6); padding: 14px; }
+.glitchy { position: relative; }
+.glitchy::before { color: var(--verde); transform: translate(-3px, 0); clip-path: inset(0 0 55% 0); opacity: .7; }
+.glitchy::after { color: var(--magenta); transform: translate(3px, 0); clip-path: inset(55% 0 0 0); opacity: .7; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .sub { margin-bottom: 10px; }
+  .botones { gap: 6px; }
+  button { padding: 8px 18px; }
+}

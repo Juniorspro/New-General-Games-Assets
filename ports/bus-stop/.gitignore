@@ -1,0 +1,14 @@
+# Nada del juego original entra al repo: ni el descargado, ni lo exportado, ni lo armado.
+juego/
+descarga/
+crudo/
+web/datos/
+dist/
+pruebas/salida/
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/
+android/app/src/main/res/mipmap-*/
+*.apk
