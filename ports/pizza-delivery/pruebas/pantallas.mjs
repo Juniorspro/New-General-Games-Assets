@@ -1,0 +1,42 @@
+// Las pantallas en un celular acostado: idioma, menú en los 3 idiomas, ajustes, editor de controles y pausa.
+import { createRequire } from 'node:module';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+const { chromium } = createRequire('/opt/node22/lib/node_modules/playwright/')('playwright');
+const AQUI = path.dirname(new URL(import.meta.url).pathname);
+(await import('node:fs')).mkdirSync(path.join(AQUI, 'salida'), { recursive: true });
+const PUERTO = 18000 + Math.floor(Math.random() * 2000);
+const srv = spawn('python3', ['-m', 'http.server', String(PUERTO), '--bind', '127.0.0.1'], { cwd: path.join(AQUI, '../dist'), stdio: 'ignore' });
+await new Promise((r) => setTimeout(r, 700));
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const p = await b.newPage({ viewport: { width: 780, height: 360 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+const errores = []; p.on('pageerror', (e) => errores.push(e.message));
+let mal = 0; const ok = (c, m) => { console.log((c ? '  ok  ' : '  MAL ') + m); if (!c) mal++; };
+await p.goto(`http://127.0.0.1:${PUERTO}/index.html`);
+await p.waitForFunction(() => window.__pizza?.listo, null, { timeout: 120000 });
+const foto = (n) => p.screenshot({ path: path.join(AQUI, 'salida', n + '.jpg'), type: 'jpeg', quality: 50 });
+ok(await p.isVisible('[data-i="pt"]'), 'la primera vez pide idioma'); await foto('u-idioma');
+for (const [i, txt] of [['en', 'PLAY'], ['pt', 'JOGAR'], ['es', 'JUGAR']]) {
+  await p.evaluate((i) => { localStorage.setItem('pizza.v1', JSON.stringify({ idioma: i })); }, i);
+  await p.reload(); await p.waitForFunction(() => window.__pizza?.listo, null, { timeout: 120000 });
+  const t = await p.textContent('[data-b="jugar"]'); ok(t.includes(txt), `menú en ${i}: ${t}`);
+}
+await p.tap('[data-b="ajustes"]'); await p.waitForTimeout(300); await foto('u-ajustes');
+const ajOk = await p.evaluate(() => { const r = document.querySelector('.caja').getBoundingClientRect(); return r.height > 50; });
+ok(ajOk, 'ajustes se ve');
+await p.tap('[data-b="volver"]'); await p.tap('[data-b="controles"]'); await p.waitForTimeout(300);
+const j = await p.$eval('.c-pausa', (e) => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+await p.touchscreen.tap(j.x, j.y);
+await p.evaluate(({ x, y }) => { const el = document.querySelector('#tactil'); const ev = (t, X, Y) => el.dispatchEvent(new PointerEvent(t, { pointerId: 7, pointerType: 'touch', clientX: X, clientY: Y, bubbles: true })); ev('pointerdown', x, y); ev('pointermove', x - 30, y + 60); ev('pointerup', x - 30, y + 60); }, j);
+await foto('u-editor');
+const cfg = await p.evaluate(() => JSON.parse(localStorage.getItem('pizza.v1')).ajustes.controles?.b.pausa);
+ok(cfg && cfg.x < 0.04, `el botón de pausa quedó movido y guardado (x=${cfg?.x.toFixed(2)})`);
+await p.tap('[data-b="volver"]'); await p.tap('[data-b="jugar"]'); await p.waitForFunction(() => __pizza.modo === 'jugando' && !__pizza.J.cargando, null, { timeout: 120000 }); await p.waitForTimeout(800);
+ok(await p.isVisible('.c-joy'), 'jugando: se ven los controles táctiles');
+await p.evaluate(() => dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true })));
+await p.waitForTimeout(600); ok(await p.isVisible('[data-b="seguir"]'), 'atrás (Escape) pausa'); await foto('u-pausa');
+await p.evaluate(() => dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true })));
+await p.waitForTimeout(600); ok(!(await p.isVisible('[data-b="seguir"]')), 'otra vez atrás: sigue el juego');
+ok(errores.length === 0, 'sin errores' + (errores[0] ? ': ' + errores[0] : ''));
+console.log(mal ? `${mal} cosas para arreglar` : 'Todo bien');
+await b.close(); srv.kill();

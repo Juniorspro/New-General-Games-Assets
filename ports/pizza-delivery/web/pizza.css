@@ -1,0 +1,57 @@
+/* Pizza Delivery (port): menús oscuros con las letras del juego (mensch-inline para el título,
+   AlmostDeadBloody para los botones), el rojo de la caja de pizza y subtítulos abajo como el original. */
+:root { --fondo: #050506; --tinta: #ece6dc; --tenue: #9a9088; --rojo: #c4121d; --ambar: #f2a33a; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--fondo); color: var(--tinta); font-family: 'L-Lorenabold', Georgia, serif; user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none; }
+#lienzo { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+#subtitulo { position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(92vw, 900px); padding: 10px 16px; text-align: center; font-size: clamp(14px, 2.6vmin, 22px); line-height: 1.35; background: rgba(0, 0, 0, .62); border: 1px solid rgba(255, 255, 255, .16); border-radius: 6px; opacity: 0; transition: opacity .25s; }
+#subtitulo.ve { opacity: 1; }
+#subtitulo.otro { color: #ffd9a8; font-style: italic; }
+body.subs-grandes #subtitulo { font-size: clamp(18px, 3.6vmin, 30px); }
+#ayuda { position: absolute; left: 50%; top: max(12px, env(safe-area-inset-top)); transform: translateX(-50%); max-width: 90vw; text-align: center; font-size: clamp(12px, 2vmin, 16px); color: var(--tenue); text-shadow: 0 0 6px #000; opacity: 0; transition: opacity .6s; }
+#ayuda.ve { opacity: 1; }
+body.en-menu #hud #ayuda { display: none; }
+
+/* controles táctiles */
+#tactil { position: fixed; inset: 0; z-index: 4; touch-action: none; }
+#tactil.sin-tactil .ctl { display: none; }
+#tactil.editando { background: rgba(5, 5, 6, .35); }
+#tactil.editando .ctl { display: flex !important; }
+.ctl { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; background: rgba(20, 14, 12, .5); border: 2px solid rgba(255, 255, 255, .4); pointer-events: none; transition: transform .06s; }
+.ctl svg { width: 46%; height: 46%; }
+.ctl.apretado { transform: scale(.92); background: rgba(196, 18, 29, .45); }
+.c-joy { background: rgba(20, 14, 12, .3); border-style: dashed; }
+.c-joy .perilla { width: 44%; height: 44%; border-radius: 50%; background: rgba(255, 255, 255, .35); border: 2px solid rgba(255, 255, 255, .7); }
+.ctl.elegido { outline: 3px solid var(--ambar); outline-offset: 4px; }
+
+/* pantallas */
+#pantallas { position: fixed; inset: 0; z-index: 5; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+#pantallas > .caja { pointer-events: auto; width: min(560px, 100%); max-height: 100%; overflow-y: auto; text-align: center; padding: 8px 6px; }
+#pantallas.p-menu, #pantallas.p-idioma { align-items: flex-end; padding-bottom: max(18px, env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgba(5, 5, 6, 0) 45%, rgba(5, 5, 6, .7)); }
+#pantallas.p-menu .botones, #pantallas.p-idioma .botones { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+#pantallas.p-menu button, #pantallas.p-idioma button { min-width: min(200px, 40vw); }
+#pantallas.p-pausa, #pantallas.p-ajustes, #pantallas.p-creditos { align-items: center; background: rgba(5, 5, 6, .86); }
+#pantallas.p-cargando { align-items: center; background: #000; }
+#pantallas.p-controles > .caja { background: rgba(5, 5, 6, .9); border: 1px solid rgba(255, 255, 255, .2); }
+.titulo { margin: 0 0 4px; font-family: 'L-menschinline', Impact, sans-serif; font-weight: normal; font-size: clamp(32px, 8.5vmin, 76px); letter-spacing: .04em; color: var(--tinta); text-shadow: 0 0 18px rgba(196, 18, 29, .55); }
+.sub { margin: 0 0 18px; color: var(--tenue); font-size: clamp(12px, 2.2vmin, 16px); letter-spacing: .2em; }
+h2 { margin: 6px 0 14px; font-family: 'L-AlmostDeadBloody', Impact, sans-serif; font-weight: normal; font-size: clamp(26px, 5.5vmin, 44px); color: var(--rojo); }
+.botones { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 6px; }
+.botones.fila2 { flex-direction: row; justify-content: center; }
+button { font-family: 'L-AlmostDeadBloody', Impact, sans-serif; color: var(--tinta); background: rgba(16, 10, 9, .78); border: 1px solid rgba(255, 255, 255, .25); padding: 9px 22px; min-width: min(300px, 80vw); font-size: clamp(17px, 3.2vmin, 24px); letter-spacing: .06em; cursor: pointer; border-radius: 4px; }
+button:active { transform: translate(1px, 1px); background: rgba(196, 18, 29, .35); }
+@media (hover: hover) { button:hover { background: rgba(196, 18, 29, .3); color: #fff; } }
+.panel { text-align: left; background: rgba(16, 10, 9, .6); border: 1px solid rgba(255, 255, 255, .12); padding: 8px 14px; border-radius: 4px; }
+.panel.texto { line-height: 1.5; font-size: clamp(13px, 2.3vmin, 16px); }
+.fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: clamp(13px, 2.4vmin, 17px); border-bottom: 1px dashed rgba(255, 255, 255, .1); }
+.fila:last-child { border-bottom: 0; }
+.fila input[type=range] { width: min(200px, 45vw); accent-color: var(--rojo); }
+.grupo { display: flex; gap: 6px; }
+.sino, .opc { min-width: 0; padding: 5px 12px; font-family: inherit; font-size: clamp(12px, 2.2vmin, 15px); }
+.sino.si, .opc.si { background: rgba(196, 18, 29, .5); }
+.chico { color: var(--tenue); font-size: clamp(11px, 2vmin, 14px); margin-top: 12px; }
+.cargando { font-family: 'L-AlmostDeadBloody', Impact, sans-serif; font-size: clamp(24px, 6vmin, 48px); color: var(--tenue); animation: late 1.6s ease-in-out infinite; }
+@keyframes late { 50% { opacity: .35; } }
+.editor p { margin: 4px 0 8px; font-size: clamp(12px, 2.2vmin, 15px); }
+@media (orientation: landscape) and (max-height: 500px) { .sub { margin-bottom: 8px; } .botones { gap: 5px; } button { padding: 6px 18px; } }

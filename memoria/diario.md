@@ -27,6 +27,8 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
     Jam del día, contrarreloj con fantasma, garage, 3 idiomas, controles editables; `navegador.mjs` da "Todo bien".
     Después: los árboles pintorescos de BARRO y el HTML. Y un port a APK de *Bus Stop Simulator* (Unity 4.5, de
     otros): rearmado en three.js desde sus archivos ([bus-stop](bus-stop.md)); se mandó la APK (6,5 MB).
+    Después, otro: *Pizza Delivery v0.2* (Unity 3.5, 6 escenas) a APK ([pizza-delivery](pizza-delivery.md)); las tres
+    pruebas de la historia dan "Todo bien"; se mandó la APK (21 MB). Falta probar las dos en un teléfono.
   - Falta: que diga cómo le quedan en su celu la construcción y los juegos parados, y qué le parecen los videos
     (hay `--sin-musica` para ponerles un sonido de TikTok); el primer juego de Roblox (desde la sesión de su PC).
 - **28/09/2026, de noche, decimocuarta vez · `claude/fijate-iszyer`:**

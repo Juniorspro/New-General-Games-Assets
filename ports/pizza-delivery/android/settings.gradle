@@ -1,0 +1,10 @@
+pluginManagement {
+  repositories { google(); maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }; mavenCentral(); gradlePluginPortal() }
+}
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+  /* (el espejo de Google de Maven Central primero: Central corta con 429 si se le pide mucho junto) */
+  repositories { google(); maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }; mavenCentral() }
+}
+rootProject.name = 'pizzadelivery'
+include ':app'
