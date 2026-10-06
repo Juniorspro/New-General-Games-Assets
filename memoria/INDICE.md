@@ -59,7 +59,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 
 | nota | abrila cuando… |
 |---|---|
-| [ahorro](ahorro.md) | gastar menos tokens sin bajar la calidad (el TikTok de JUNIOR → GOAT), y la caché/lote para el bot |
+| [ahorro](ahorro.md) | el modo GOAT: bajo consumo y máxima calidad (solo lo que importa, caché, en lote) |
 | [maquina](maquina.md) | el contenedor, la red, instalar algo, probar con navegador |
 | [desplegar](desplegar.md) | publicar en Cloudflare o en Rezona; dónde vive cada credencial |
 | [rezona](rezona.md) | generar assets con Rezona: ciclo, trampas, lo que anduvo, caídas |
