@@ -38,18 +38,19 @@ export function medir(V, calidad = V.calidad) {
 export function prepararPista(V, pista) {
   V.pista = pista; V.mundo = pista.mundo; V.part.length = 0; V.sueltos.length = 0;
   const r = azar(pista.semilla || 7), M = MUNDOS_VISTA[pista.mundo];
-  const arboles = [], frente = [], postes = [], carteles = [], fardos = [];
-  for (let x = -40; x < pista.largo + 80; x += 7 + r() * 16) {
-    const p = 0.5 + r() * 0.3;
-    arboles.push({ x, p, i: Math.floor(r() * M.arboles), alto: 7 + r() * 6, espejo: r() < 0.5 });
-  }
+  const arboles = [], cerca = [], frente = [], postes = [], carteles = [], fardos = [];
+  // lejanos: los del bosque de atrás, chicos y con bruma
+  for (let x = -60; x < pista.largo + 120; x += 5 + r() * 11) arboles.push({ x, p: 0.36 + r() * 0.2, i: Math.floor(r() * M.arboles), alto: 6 + r() * 5, espejo: r() < 0.5 });
   arboles.sort((a, b) => a.p - b.p);
+  // cercanos: los grandes, pintados en alta, justo detrás de la pista
+  for (let x = -30; x < pista.largo + 80; x += 16 + r() * 30) cerca.push({ x, p: 0.8 + r() * 0.12, i: Math.floor(r() * 3), alto: 11 + r() * 7, espejo: r() < 0.5, fase: r() * 6 });
+  cerca.sort((a, b) => a.p - b.p);
   for (let x = -20; x < pista.largo + 60; x += 3.5 + r() * 6) frente.push({ x, i: Math.floor(r() * M.frente), alto: 2.2 + r() * 2.2, espejo: r() < 0.5 });
   for (let x = 10; x < pista.largo + 30; x += 14) postes.push({ x: x + r() * 3, c: r() < 0.5 ? '#e8392f' : '#f2c21a' });
   const textos = ['BARRO', 'JXSTUDIOS', 'A FONDO', 'MX', 'BARRO', 'NÚMERO 1'];
   for (let x = 60; x < pista.largo; x += 70 + r() * 60) carteles.push({ x, t: textos[Math.floor(r() * textos.length)], c: ['#d8242a', '#1f5bd8', '#141414', '#f2c21a'][Math.floor(r() * 4)] });
   for (let x = 30; x < pista.largo; x += 40 + r() * 50) fardos.push({ x, n: 1 + Math.floor(r() * 3) });
-  V.decor = { arboles, frente, postes, carteles, fardos };
+  V.decor = { arboles, cerca, frente, postes, carteles, fardos };
   V.lluvia = Array.from({ length: 140 }, () => [Math.random(), Math.random(), 0.6 + Math.random() * 0.4]);
 }
 
@@ -187,21 +188,17 @@ export function dibujar(V, C, dt, opciones = {}) {
       ctx.restore();
     }
   }
-  // --- árboles sueltos, con paralaje propio
-  for (const a of V.decor.arboles) {
-    const sprite = img(`${V.mundo}-arbol${a.i}`);
-    if (!sprite) continue;
-    const sx = W * V.cam.ax + (a.x - V.cam.x) * z * a.p;
-    const alto = a.alto * z * (0.55 + 0.45 * a.p) * 0.9;
-    const ancho = alto * (sprite.width / sprite.height);
-    if (sx < -ancho || sx > W + ancho) continue;
-    const base = aY(V, altoEn(S, mundoX(V, sx)) + BORDE) - 4 + (1 - a.p) * 18;
-    ctx.save();
-    ctx.globalAlpha = 0.75 + 0.25 * a.p;
-    if (a.espejo) { ctx.translate(sx, 0); ctx.scale(-1, 1); ctx.drawImage(sprite, -ancho / 2, base - alto, ancho, alto); }
-    else ctx.drawImage(sprite, sx - ancho / 2, base - alto, ancho, alto);
-    ctx.restore();
-  }
+  // --- bruma entre las montañas y el bosque
+  const brumaY = yBorde - H * 0.12;
+  const gb = ctx.createLinearGradient(0, brumaY - H * 0.15, 0, yBorde);
+  gb.addColorStop(0, 'rgba(255,255,255,0)'); gb.addColorStop(1, VM.niebla);
+  ctx.fillStyle = gb; ctx.fillRect(0, brumaY - H * 0.15, W, yBorde - brumaY + H * 0.15);
+  // --- árboles lejanos (con la bruma encima) y después los grandes de adelante
+  dibujarArboles(V, ctx, V.decor.arboles, (a) => `${V.mundo}-arbol${a.i}`);
+  ctx.fillStyle = VM.niebla; ctx.globalAlpha = 0.45; ctx.fillRect(0, 0, W, yBorde); ctx.globalAlpha = 1;
+  dibujarArboles(V, ctx, V.decor.cerca, (a) => (img(`${V.mundo}-grande${a.i}`) ? `${V.mundo}-grande${a.i}` : `${V.mundo}-arbol${a.i}`), true);
+  // rayos de sol entre los árboles
+  if (V.calidad >= 2 && !VM.noche) rayos(V, ctx, VM);
 
   // --- la pista
   const tierra = img(V.mundo === 'bosque' ? 'tierra' : `tierra-${V.mundo}`) || img('tierra');
@@ -245,6 +242,18 @@ export function dibujar(V, C, dt, opciones = {}) {
     for (let sx = 0; sx <= W + paso; sx += paso * 2) { const y = aY(V, altoEn(S, mundoX(V, sx))) + d * z * PROF + 0.36 * z; sx ? ctx.lineTo(sx, y) : ctx.moveTo(sx, y); }
     ctx.stroke();
   }
+  // la sombra que tira el barranco de atrás sobre la pista (sigue la curva)
+  for (let k = 0; k < 6; k++) {
+    ctx.lineWidth = z * 0.22; ctx.strokeStyle = `rgba(20,10,4,${0.2 - k * 0.03})`;
+    ctx.beginPath();
+    for (let sx = 0; sx <= W + paso; sx += paso * 2) { const y = aY(V, altoEn(S, mundoX(V, sx)) + BORDE) + z * (0.12 + k * 0.2); sx ? ctx.lineTo(sx, y) : ctx.moveTo(sx, y); }
+    ctx.stroke();
+  }
+  // la luz sobre la línea de carrera
+  ctx.lineWidth = z * 1.4; ctx.strokeStyle = 'rgba(255,226,170,0.07)';
+  ctx.beginPath();
+  for (let sx = 0; sx <= W + paso; sx += paso * 2) { const y = aY(V, altoEn(S, mundoX(V, sx))) + z * 0.6; sx ? ctx.lineTo(sx, y) : ctx.moveTo(sx, y); }
+  ctx.stroke();
   // borde de atrás: filo iluminado y pasto
   ctx.lineWidth = Math.max(2, z * 0.08); ctx.strokeStyle = VM.borde;
   ctx.beginPath();
@@ -286,7 +295,7 @@ export function dibujar(V, C, dt, opciones = {}) {
     const sx = W * V.cam.ax + (f.x - V.cam.x) * z * 1.28;
     const alto = f.alto * z * 1.2, ancho = alto * (sprite.width / sprite.height);
     if (sx < -ancho || sx > W + ancho) continue;
-    ctx.save(); ctx.filter = V.calidad >= 1 ? 'brightness(0.22) saturate(0.6)' : 'none';
+    ctx.save();
     if (f.espejo) { ctx.translate(sx, 0); ctx.scale(-1, 1); ctx.drawImage(sprite, -ancho / 2, H - alto * 0.85, ancho, alto); }
     else ctx.drawImage(sprite, sx - ancho / 2, H - alto * 0.85, ancho, alto);
     ctx.restore();
@@ -315,13 +324,56 @@ export function dibujar(V, C, dt, opciones = {}) {
   }
   if (VM.noche) dibujarNoche(V, ctx);
   if (VM.luz) { ctx.fillStyle = VM.luz; ctx.fillRect(0, 0, W, H); }
-  // viñeta
+  // viñeta (hecha una vez por tamaño de pantalla)
   if (V.calidad >= 1) {
-    const vg = ctx.createRadialGradient(W / 2, H * 0.5, Math.min(W, H) * 0.35, W / 2, H * 0.5, Math.max(W, H) * 0.75);
-    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.38)');
-    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    if (!V.vineta || V.vineta.w !== W || V.vineta.h !== H) {
+      const c = document.createElement('canvas'); c.width = Math.ceil(W / 2); c.height = Math.ceil(H / 2);
+      const x = c.getContext('2d'), vg = x.createRadialGradient(c.width / 2, c.height / 2, Math.min(c.width, c.height) * 0.35, c.width / 2, c.height / 2, Math.max(c.width, c.height) * 0.75);
+      vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.38)');
+      x.fillStyle = vg; x.fillRect(0, 0, c.width, c.height);
+      V.vineta = { c, w: W, h: H };
+    }
+    ctx.drawImage(V.vineta.c, 0, 0, W, H);
   }
   if (opciones.indicadores !== false) indicadores(V, ctx, C);
+}
+
+function dibujarArboles(V, ctx, lista, nombre, viento = false) {
+  const W = V.W, z = V.cam.z, S = V.pista.suelo;
+  for (const a of lista) {
+    const sprite = img(nombre(a));
+    if (!sprite) continue;
+    const sx = W * V.cam.ax + (a.x - V.cam.x) * z * a.p;
+    const alto = a.alto * z * (0.55 + 0.45 * a.p) * 0.9;
+    const ancho = alto * (sprite.width / sprite.height);
+    if (sx < -ancho || sx > W + ancho) continue;
+    const base = aY(V, altoEn(S, mundoX(V, sx)) + BORDE) + (1 - a.p) * 14 + 0.25 * z;
+    ctx.save();
+    ctx.translate(sx, base);
+    if (viento) { const k = Math.sin(V.t * 1.2 + a.fase) * 0.018 + Math.sin(V.t * 2.7 + a.fase * 2) * 0.006; ctx.transform(1, 0, -k, 1, 0, 0); }
+    if (a.espejo) ctx.scale(-1, 1);
+    ctx.drawImage(sprite, -ancho / 2, -alto, ancho, alto);
+    ctx.restore();
+  }
+}
+
+/* haces de luz que bajan del sol, suaves y lentos */
+function rayos(V, ctx, VM) {
+  const W = V.W, H = V.H, [sx, sy] = [W * VM.sol[0], H * VM.sol[1]];
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let k = 0; k < 4; k++) {
+    const a = 1.95 + k * 0.17 + Math.sin(V.t * 0.15 + k) * 0.03, ancho = 0.05 + (k % 2) * 0.03;
+    const largo = H * 1.1;
+    const g = ctx.createLinearGradient(sx, sy, sx + Math.cos(a) * largo, sy + Math.sin(a) * largo);
+    g.addColorStop(0, 'rgba(255,244,210,0.16)'); g.addColorStop(1, 'rgba(255,244,210,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(a - ancho) * largo, sy + Math.sin(a - ancho) * largo);
+    ctx.lineTo(sx + Math.cos(a + ancho) * largo, sy + Math.sin(a + ancho) * largo);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
 }
 
 function dibujarCostado(V, ctx, C, pasto) {

@@ -70,6 +70,22 @@ comandos: `barro/README.md`.
   `herramientas/arte.py` (`bosque`, `canon`, `selva`, `noche`, `tierra-*`, `pasto-*`).
 - La letra es Barlow Condensed 800 en cursiva (OFL), metida en el HTML.
 
+## Lo pintoresco (06/10, "que los árboles tengan los detalles pintorescos")
+
+- Árboles grandes de a uno en alta resolución (`<sede>-grande0..2`, 1024x1536 →
+  960 px de alto), con `source_urls` de la hoja de la sede, en una capa cercana
+  (paralaje 0,8–0,92) que se mece con el viento. Los de la hoja van atrás, chicos
+  y con bruma encima.
+- El recorte de Rezona dejaba un **filo violeta**: `limpiar()` en `arte.py` oscurece
+  el borde semitransparente, que queda como trazo de tinta.
+- **Grano de lienzo y luz cálida/sombra fría horneados** en cada imagen al cargarla
+  (`hornear()` en `arte.js`), igual que el desenfoque del frente. Hechos en cada
+  cuadro costaban la mitad del dibujo: 263 → 71 ms por cuadro en calidad alta sin GPU.
+- Sombra del barranco sobre la pista (trazos que siguen la curva) y rayos de sol
+  (solo en calidad alta).
+- En Chromium sin GPU la carrera corre más lenta que el reloj (cada cuadro avanza
+  0,05 s como mucho): `navegador.mjs` espera hasta 150 s.
+
 ## Lo que falta
 
 - Probarlo en un teléfono de verdad: el tacto de los mandos, los FPS y el sonido.

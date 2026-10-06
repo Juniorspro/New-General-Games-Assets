@@ -37,6 +37,27 @@ def sin_borde(im, px=2):
     return im.crop((px, 0, im.width - px, im.height))
 
 
+def limpiar(im):
+    """el recorte deja un filo violeta: el borde semitransparente se oscurece (queda como
+    trazo de tinta) y el alfa se come un píxel"""
+    im = im.convert('RGBA')
+    r, g, b, a = im.split()
+    a = a.filter(ImageFilter.MinFilter(3))
+    px = im.load(); pa = a.load()
+    w, h = im.size
+    for y in range(h):
+        for x in range(w):
+            al = pa[x, y]
+            if 0 < al < 235:
+                R, G, B, _ = px[x, y]
+                k = 0.25 + 0.5 * al / 235
+                px[x, y] = (int(R * k * 0.8), int(G * k * 0.75), int(B * k * 0.7), al)
+            else:
+                R, G, B, _ = px[x, y]
+                px[x, y] = (R, G, B, al)
+    return im
+
+
 def hoja(im, cuantos, umbral=60):
     """corta una hoja de adornos por las columnas vacías; si salen de más o de menos, por las más vacías"""
     a = im.split()[-1]
@@ -92,9 +113,16 @@ def mundo(m, arboles=5, frente=5):
     medio = sin_borde(recortar(abrir(f'{m}-medio').convert('RGBA')))
     guardar(medio, f'{m}-medio', 82)
     for i, p in enumerate(hoja(abrir(f'{m}-arboles').convert('RGBA'), arboles)):
-        guardar(p, f'{m}-arbol{i}', 84)
+        guardar(limpiar(p), f'{m}-arbol{i}', 84)
     for i, p in enumerate(hoja(abrir(f'{m}-frente').convert('RGBA'), frente)):
-        guardar(p, f'{m}-frente{i}', 84)
+        guardar(limpiar(p), f'{m}-frente{i}', 84)
+    # los árboles grandes del primer plano, de a uno y en alta
+    for i in range(3):
+        ruta = os.path.join(CRUDO, f'{m}-grande{i}.png')
+        if os.path.exists(ruta):
+            g = recortar(Image.open(ruta).convert('RGBA'), 40)
+            if g.height > 960: g = g.resize((g.width * 960 // g.height, 960), Image.LANCZOS)
+            guardar(limpiar(g), f'{m}-grande{i}', 82)
 
 
 if __name__ == '__main__':
