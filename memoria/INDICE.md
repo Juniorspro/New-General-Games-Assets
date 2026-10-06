@@ -29,7 +29,9 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
   se puede: la firma ([aeroplaza-47](aeroplaza-47.md) › La firma).
 - **No instalar nada aparte sin que lo pida.** El 22/09 se deshizo una red
   neuronal instalada para esta memoria: quería notas, no un programa.
-- **Cuida los tokens:** nada de leer `.md` del repo "por las dudas".
+- **Cuida los tokens** (06/10, [ahorro](ahorro.md)): nada de leer `.md` "por las dudas"; salidas filtradas;
+  imágenes chicas y solo de lo que cambió; lo largo en segundo plano con un solo aviso; juntar llamadas.
+  La calidad no baja: se ahorra lo repetido.
 - **Lo simple, rápido** (01/10): "te pedí en vertical simple y después en zip nomás, ¿pa' qué tardás tanto?". Arreglar lo que hace falta, mandar enseguida y probar en segundo plano; nada de rondas largas de pruebas antes de entregar.
 - **Sin ayudantes (subagentes):** "hacelo vos, gastás muchos tokens" (30/09). Todo en la misma sesión, de a una cosa.
 - Quiere calidad visual alta ("goty", "AAA"), con números detrás.
@@ -57,6 +59,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 
 | nota | abrila cuando… |
 |---|---|
+| [ahorro](ahorro.md) | gastar menos tokens sin bajar la calidad (el TikTok de JUNIOR → GOAT), y la caché/lote para el bot |
 | [maquina](maquina.md) | el contenedor, la red, instalar algo, probar con navegador |
 | [desplegar](desplegar.md) | publicar en Cloudflare o en Rezona; dónde vive cada credencial |
 | [rezona](rezona.md) | generar assets con Rezona: ciclo, trampas, lo que anduvo, caídas |

@@ -28,5 +28,6 @@ for (const s of lista.split(',').map(Number)) {
 }
 await browser.close({ silent: true });
 const hoja = path.join(AQUI, 'salida/pruebas', `${id}-fotos.jpg`);
-spawnSync('montage', [...fotos, '-tile', `${Math.min(6, fotos.length)}x`, '-geometry', '360x640+3+3', hoja]);
+/* celdas chicas: una hoja grande cuesta muchos tokens al mirarla (memoria/ahorro.md) */
+spawnSync('montage', [...fotos, '-tile', `${Math.min(6, fotos.length)}x`, '-geometry', '240x427+2+2', hoja]);
 console.log('→', path.relative(path.join(AQUI, '..'), hoja));
