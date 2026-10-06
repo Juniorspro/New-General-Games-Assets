@@ -79,7 +79,7 @@ const mundoX = (V, sx) => V.cam.x + (sx - V.W * V.cam.ax) / V.cam.z;
 
 /* ---------- partículas ---------- */
 export function polvo(V, x, y, n, fuerza = 1, col) {
-  const lim = V.calidad >= 2 ? 420 : V.calidad === 1 ? 260 : 120;
+  const lim = V.calidad >= 2 ? 520 : V.calidad === 1 ? 300 : 140;
   const C = col || MUNDOS_VISTA[V.mundo].polvo;
   for (let i = 0; i < n && V.part.length < lim; i++) {
     V.part.push({ t: 'polvo', x: x + (Math.random() - 0.5) * 0.6, y: y + Math.random() * 0.3, vx: (Math.random() - 0.5) * 3 * fuerza, vy: Math.random() * 1.6 * fuerza, vida: 0, dura: 0.7 + Math.random() * 0.9, r: 0.25 + Math.random() * 0.35, c: C });
@@ -92,6 +92,11 @@ export function terrones(V, x, y, vx, vy, n, col) {
     V.part.push({ t: 'terron', x, y, vx: vx * (0.5 + Math.random() * 0.7) + (Math.random() - 0.5) * 2, vy: vy * (0.5 + Math.random() * 0.8) + Math.random() * 2, vida: 0, dura: 0.6 + Math.random() * 0.5, r: 0.03 + Math.random() * 0.06, g: Math.random() * 6, c: C });
   }
 }
+/* papelitos de colores (al subir al podio) */
+export function papelitos(V, x, y, n = 80) {
+  const cols = [[255, 204, 26], [216, 36, 42], [242, 236, 224], [31, 91, 216], [63, 174, 58]];
+  for (let i = 0; i < n; i++) V.part.push({ t: 'papel', x: x + (Math.random() - 0.5) * 8, y: y + 4 + Math.random() * 6, vx: (Math.random() - 0.5) * 6, vy: Math.random() * 5, vida: 0, dura: 2.5 + Math.random() * 1.5, r: 0.08 + Math.random() * 0.06, g: Math.random() * 6, c: cols[i % cols.length] });
+}
 export function humo(V, x, y) {
   if (V.part.length > 300) return;
   V.part.push({ t: 'humo', x, y, vx: -0.6 - Math.random(), vy: 0.4 + Math.random() * 0.4, vida: 0, dura: 0.6, r: 0.08, c: [200, 200, 205] });
@@ -102,6 +107,7 @@ function moverParticulas(V, dt) {
     const p = V.part[i];
     p.vida += dt;
     if (p.vida > p.dura) { V.part[i] = V.part[V.part.length - 1]; V.part.pop(); continue; }
+    if (p.t === 'papel') { p.vy = Math.max(p.vy - 6 * dt, -1.6); p.vx *= Math.exp(-dt); p.x += (p.vx + Math.sin(p.vida * 5 + p.g) * 0.8) * dt; p.y += p.vy * dt; p.g += dt * 7; continue; }
     if (p.t === 'terron') {
       p.vy -= 13 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.g += p.vx * dt * 3;
       const h = altoEn(S, p.x);
@@ -260,7 +266,10 @@ export function dibujar(V, C, dt, opciones = {}) {
   for (const p of V.part) {
     const sx = aX(V, p.x), sy = aY(V, p.y) + 0.25 * z * PROF;
     const k = 1 - p.vida / p.dura;
-    if (p.t === 'terron') {
+    if (p.t === 'papel') {
+      ctx.fillStyle = `rgb(${p.c[0]},${p.c[1]},${p.c[2]})`;
+      ctx.save(); ctx.translate(sx, aY(V, p.y)); ctx.rotate(p.g); ctx.scale(1, Math.cos(p.g * 1.7)); ctx.fillRect(-p.r * z, -p.r * z * 0.5, p.r * z * 2, p.r * z); ctx.restore();
+    } else if (p.t === 'terron') {
       ctx.fillStyle = `rgb(${p.c[0]},${p.c[1]},${p.c[2]})`;
       const r = p.r * z;
       ctx.save(); ctx.translate(sx, sy); ctx.rotate(p.g); ctx.fillRect(-r, -r, r * 2, r * 2); ctx.restore();

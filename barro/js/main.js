@@ -7,7 +7,7 @@
 import { PASO, altoEn } from './fisica.js';
 import { construir, PISTAS, MUNDOS, pistaJam, numeroJam, azar } from './pistas.js';
 import { crearCarrera, pasoCarrera, cerrar, ordenar } from './carrera.js';
-import { crearVista, medir, prepararPista, moverCamara, dibujar, sacudir, polvo, terrones, humo, soltarPiloto, levantarPiloto, aX, aY } from './dibujo.js';
+import { crearVista, medir, prepararPista, moverCamara, dibujar, sacudir, polvo, terrones, humo, papelitos, soltarPiloto, levantarPiloto, aX, aY } from './dibujo.js';
 import { EQUIPOS, dibujarMoto } from './moto.js';
 import { cargarComun, cargarMundo } from './arte.js';
 import { crearControles, entrada, ubicar, vibrar } from './controles.js';
@@ -143,6 +143,7 @@ function terminar(C) {
   const yo = C.corredores.find((c) => c.jugador);
   sfx('meta'); sfx('ovacion'); vibrar([40, 30, 40, 30, 120]);
   aviso(yo.puesto === 1 ? t('ganaste') : yo.puesto <= 3 ? t('podio') : t('meta'), yo.puesto <= 3 ? 'oro grande' : 'grande');
+  if (yo.puesto <= 3 || J.tipo === 'reloj') papelitos(V, yo.moto.x + 3, yo.moto.y, yo.puesto === 1 ? 120 : 70);
 }
 function resultados() {
   const C = J.C, def = J.def;

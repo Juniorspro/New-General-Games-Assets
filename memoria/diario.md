@@ -22,6 +22,9 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
   - 02/10: tres videos dúos de ~58 s en neutro latino (GLOBO+VÍBORA, MORFI+CRIPTA, LA ISLA+GRUMO): un bot juega
     cada juego, la música es la de cada juego, voz Andre, motion graphics en Remotion y una portada por video
     ([videos](videos.md), «Los dúos»). Se mandaron los livianos y las portadas.
+  - 06/10: el md del modo GOAT ([ahorro](ahorro.md)), aplicado en `CLAUDE.md`. Después mandó un TikTok de Mad Skills
+    Motocross: "ese juego, full, 200 % mejor", sin usar RUTA 40. Quedó BARRO ([barro](barro.md)): 20 pistas en 4 sedes,
+    Jam del día, contrarreloj con fantasma, garage, 3 idiomas, controles editables; `navegador.mjs` da "Todo bien".
   - Falta: que diga cómo le quedan en su celu la construcción y los juegos parados, y qué le parecen los videos
     (hay `--sin-musica` para ponerles un sonido de TikTok); el primer juego de Roblox (desde la sesión de su PC).
 - **28/09/2026, de noche, decimocuarta vez · `claude/fijate-iszyer`:**

@@ -71,6 +71,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [brillo-rendimiento](brillo-rendimiento.md) | BRILLO: qué lo hacía lento, la cámara más cerca, las cinemáticas de charla y la calidad automática |
 | [brillo-trailer](brillo-trailer.md) | el tráiler de TikTok de BRILLO: tomas con reloj propio, Remotion, la música y sus trampas |
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR y los dúos de los seis de un archivo): tomas con bots, voz, subtítulos, montaje en Remotion, portadas |
+| [barro](barro.md) | BARRO: motocross tipo Mad Skills (de cero): física de la moto, rivales, pistas, la tierra en tiras, el arte de Rezona |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el celular parado (vertical), el arte de Rezona y sus trampas |
 | [aeroplaza](aeroplaza.md) | AEROPLAZA, lo general: el 3D social Frutiger Aero (multijugador MQTT, la isla y los reinos, parkour, interiores), cómo se arma y se prueba, las trampas de three |
 | [aeroplaza-vueltas](aeroplaza-vueltas.md) | AEROPLAZA vuelta por vuelta (de la 8.ª a la 48.ª: VR, manos, APK, ARCore, tu espacio, el mando VR Box, las actualizaciones, el celu con amigos, construir la casa como en Sims Mobile): qué nota abrir para cada cosa |
@@ -91,6 +92,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | `luz-mala/` | LUZ MALA: metroidvania tipo Silksong, 9 salas y 3 jefes, menús en el lienzo, 3 idiomas | `luz-mala/README.md` |
 | `kuntur/` | KUNTUR: 2.5D de papel tipo Paper Mario, 7 capítulos con historia, 3 idiomas | [kuntur](kuntur.md) |
 | `brillo/` | BRILLO: plataformas 2D Frutiger Aero, 6 mundos con historia, pixel art de 288 de alto | [brillo](brillo.md) · `brillo/README.md` |
+| `barro/` | BARRO: motocross de costado tipo Mad Skills, 20 pistas en 4 sedes, Jam del día, contrarreloj, un archivo | [barro](barro.md) · `barro/README.md` |
 | `ruta40/` | RUTA 40: autos tipo Hill Climb por la Ruta 40, arte pintado de Rezona, 7 tramos, 5 vehículos, picadas | [ruta40](ruta40.md) · `ruta40/README.md` |
 | `aeroplaza/` | AEROPLAZA: 3D social Frutiger Aero, multijugador por MQTT sin servidor, 5 reinos, muñecos de gelatina, 3 idiomas | [aeroplaza](aeroplaza.md) · `aeroplaza/README.md` |
 | `videos/` | videos de TikTok relatados: grabadores de tomas, voz, stickers, memes y el montaje en Remotion | [videos](videos.md) |

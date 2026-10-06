@@ -95,12 +95,15 @@ export function crearUI(api) {
       const sub = tipo === 'jam' ? t('jamSub') : tipo === 'reloj' ? t('relojSub') : t('lugares')[def.sede];
       const mejor = tipo === 'jam' ? D.jam[def.jam] : D.tiempos[def.id];
       const premio = tipo === 'campeonato' ? plata(Math.round(400 * (1 + def.sede * 0.5))) : tipo === 'jam' ? plata(320) : '—';
-      const consejo = t('ayuda')[Math.floor(Math.random() * t('ayuda').length)];
+      // la primera vez, la guía entera de los mandos; después, un consejo suelto
+      const primera = !D.vistas.ayuda;
+      const consejo = primera ? t('ayuda').map((a) => `• ${a}`).join('<br>') : t('ayuda')[Math.floor(Math.random() * t('ayuda').length)];
+      if (primera) { D.vistas.ayuda = true; api.guardar(); }
       mostrar('previa', `<div class="tarjeta">
           <div class="rayas"></div>
           <h2>${titulo}</h2><p class="sub">${sub}</p>
           <div class="datos"><div><small>${t('premio')}</small><b>${premio}</b></div><div><small>${t('record')}</small><b>${fmt(mejor)}</b></div></div>
-          <p class="consejo">💡 ${consejo}</p>
+          <p class="consejo ${primera ? 'guia' : ''}">${primera ? '' : '💡 '}${consejo}</p>
           <button class="chapa grande ir" data-clic><b>GO</b><span>${t('aLaGrilla')}</span></button>
           <button class="volver" data-clic>${t('volver')}</button>
         </div>`);

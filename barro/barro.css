@@ -96,6 +96,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .tarjeta .datos div { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 0.3em; border: 3px solid var(--tinta); border-radius: 10px; background: #fff8ea; }
 .tarjeta .datos small { font-size: min(3.4vw, 14px); opacity: 0.65; } .tarjeta .datos b { font-size: min(6.6vw, 28px); }
 .tarjeta .consejo { margin: 0; font-size: min(4.2vw, 18px); text-align: center; font-style: normal; font-weight: 700; padding: 0.4em 0.6em; background: #fff2b8; border-radius: 10px; border: 2px dashed var(--tinta); }
+.tarjeta .consejo.guia { text-align: left; line-height: 1.35; }
 .tarjeta .chapa { box-shadow: 0 6px 0 var(--tinta); }
 .tarjeta .volver { border-color: var(--tinta); color: var(--tinta); }
 .puestazo { font-size: min(22vw, 110px); line-height: 0.9; color: var(--rojo); -webkit-text-stroke: 3px var(--tinta); paint-order: stroke fill; text-shadow: 0 6px 0 var(--tinta); }
