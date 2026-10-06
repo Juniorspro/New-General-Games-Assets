@@ -86,3 +86,9 @@
 - Propuso correr Studio en Kaggle "que tiene una T4": se midió con un notebook privado (2 T4 para cálculo, las librerías de gráficos están pero sin Vulkan armado; sale desde Google, Carolina del Sur, EE. UU.). Para el inicio de sesión no cambia nada: Roblox lo ve igual de lejos. → `ARRANQUE.md § 3`
 - Preguntó por algo gratis y sin tarjeta para usar Studio o Blender con GPU. Blender sí: renderiza en las T4 de su Kaggle (CUDA 12,5 s contra 115 s de la CPU) → `herramientas/kaggle/blender_gpu.py`. Para Studio no hay: los servicios gratis son notebooks sin pantalla, Colab gratis prohíbe escritorios remotos y la ubicación sigue siendo la de un datacenter.
 - Pidió "una Game boy y una animación goty de 13 segundos". Se hizo una consola propia, la JX-1 (sin nada de Nintendo, y se le dijo), con su pantallita, sonido y cámara (`herramientas/blender/consola/`). El render de 312 cuadros en Kaggle pasó la hora y media sin terminar (el primero falló por el limpiador OptiX) y dijo "ya fue": se dejó. Lección: medir UN cuadro en la GPU antes de mandar todos, y entregar primero una versión rápida.
+
+## 06/10/2026 (un APK ajeno) · rama `ccr-6f24de5d-v3vxtu`
+- Pidió portear "tal cual" a un HTML (para él, con créditos) un APK de MediaFire: NoomiClone v2.3.1 (com.JamesWest.NoomiClone).
+- Medido: es Unity con IL2CPP (el código C# compilado a ARM), con publicidad LevelPlay, tienda de monedas y Google Play Games. Y es la parte base de un APK partido: no trae `lib/` (ni `libil2cpp.so` ni `libunity.so`), así que la lógica ni siquiera está en el archivo.
+- No se porteó: tal cual es imposible (no hay código que pasar), y rehacerlo con su arte y sus sonidos sacados del APK es copiar el juego de otro. Se ofreció jugarlo en la PC con Google Play Games o un emulador, o hacer uno propio del mismo género. El APK se borró del scratchpad.
+
