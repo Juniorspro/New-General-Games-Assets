@@ -1,0 +1,27 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<style>html,body{margin:0;height:100%;background:#000}canvas{width:100%;height:100%;display:block}</style>
+<canvas id="c"></canvas>
+<script type="module">
+globalThis.BARRO_ARTE = "../arte/";
+import { construir, PISTAS } from '../js/pistas.js';
+import { crearCarrera, pasoCarrera } from '../js/carrera.js';
+import { crearVista, medir, prepararPista, moverCamara, dibujar } from '../js/dibujo.js';
+import { cargarComun, cargarMundo } from '../js/arte.js';
+import { EQUIPOS } from '../js/moto.js';
+import { PASO } from '../js/fisica.js';
+const q = new URLSearchParams(location.search);
+const seg = +(q.get('t') || 4), id = q.get('pista') || 'b1';
+await cargarComun();
+const def = PISTAS.find((p) => p.id === id); await cargarMundo(def.mundo);
+const P = construir(def);
+const nombres = ['TÚ', 'Nacho', 'Flor', 'Tincho', 'Lu', 'Bauti'];
+const C = crearCarrera(P, nombres.map((n, i) => ({ nombre: n, numero: [1, 7, 23, 88, 12, 5][i], colores: EQUIPOS[i], ia: [1, 0.9, 0.8, 0.7, 0.6, 0.5][i] })));
+C.corredores[0].jugador = false;
+const V = crearVista(document.getElementById('c')); medir(V, 2); prepararPista(V, P);
+const yo = C.corredores[0];
+moverCamara(V, yo, 0.016, true);
+while (C.t < seg) { pasoCarrera(C, {}); if (Math.round(C.t / PASO) % 4 === 0) moverCamara(V, yo, PASO * 4); }
+C.corredores[0].jugador = true;
+dibujar(V, C, 0.016);
+document.title = 'listo';
+</script>

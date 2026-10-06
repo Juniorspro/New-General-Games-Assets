@@ -1,0 +1,13 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#8fb3c9">
+<canvas id="c" width="1200" height="420"></canvas>
+<script type="module">
+import { dibujarMoto, EQUIPOS } from '../js/moto.js';
+const ctx = document.getElementById('c').getContext('2d');
+const poses = [{ incl: 0 }, { incl: -1 }, { incl: 1 }, { incl: 0, agache: 1 }];
+poses.forEach((p, i) => {
+  ctx.save(); ctx.translate(150 + i * 300, 260); ctx.scale(110, -110);
+  dibujarMoto(ctx, { rx: -0.72, ry: -0.42, fx: 0.74, fy: -0.42, giro0: i, giro1: i * 2, colores: EQUIPOS[i], numero: [1, 7, 23, 88][i], pose: p });
+  ctx.restore();
+});
+document.title = 'ok';
+</script>

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#16120d">
+<title>BARRO · Motocross</title>
+<link rel="stylesheet" href="barro.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="lienzo"></canvas>
+  <div id="hud" class="oculto">
+    <div class="h-arriba">
+      <div class="placa-puesto"><span id="h-puesto">1º</span></div>
+      <div class="h-centro"><div id="h-barra" class="barra"></div><div id="h-tiempo" class="h-tiempo">0:00.0</div></div>
+      <button id="b-pausa" class="b-pausa" aria-label="pausa"><i></i><i></i></button>
+    </div>
+  </div>
+  <div id="cuenta" class="cuenta"></div>
+  <div id="aviso"></div>
+  <div id="controles" class="oculto"></div>
+  <div id="pantalla" class="pantalla"></div>
+  <div id="cargando"><span>BARRO</span></div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
