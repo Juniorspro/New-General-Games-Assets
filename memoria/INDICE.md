@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 30/09/2026 (Grumo, plataformas de plastilina en stop motion).
+Última puesta al día: 06/10/2026 (Trapito, gimnasia de trapo en 3D, entregado fuera del repo).
 Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 
 ## Reglas que no se discuten
@@ -17,7 +17,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 - Pidió limpiar el repo porque "come tokens" (30/09/2026): no volver a llenarlo de builds, binarios ni proyectos que no use.
 - Sus juegos son de **JXSTUDIOS** y arrancan con su intro (30/09/2026): sola, sin tocar nada; **en el estilo de cada juego** (la de pixel art en el juego pixel le gustó; no siempre negro y cromo); y después del logo, **elegir el idioma** (la primera vez). → [cripta](cripta.md), [vibora](vibora.md), [isla](isla.md), [globo](globo.md), [morfi](morfi.md)
 - Cuando pasa capturas de un juego ajeno, se hace uno original del mismo género, de JXSTUDIOS, y se le dice (30/09/2026).
-- Si pide portear un APK ajeno "tal cual": se mira con qué está hecho (zip + nombres de la metadata, sin ejecutar nada), se le dice si se puede, y no se copian el arte ni el código de otro; se ofrece uno propio del género (06/10/2026).
+- Si pide portear un APK ajeno "tal cual": se mira con qué está hecho (zip + nombres de la metadata, sin ejecutar nada), se le dice si se puede, y no se copian el arte ni el código de otro; se ofrece uno propio del género (06/10/2026). Con NoomiClone dijo "hacé uno exacto, es una idea libre": salió Trapito, la misma mecánica con todo propio; lo pidió "pa mí nomás", así que el juego se entrega como archivo y no entra al repo (lo aprendido sí). → [trapito](trapito.md)
 - Con sus llaves decide él: si una pasó por el chat se le avisa una vez y, si dice que se use, se usa, siempre fuera del repo (01/10/2026, Kaggle).
 - No banca esperas largas: con la animación de la JX-1 cortó a la hora y media de render ("ya fue", 01/10/2026). Primero algo rápido que se pueda ver; después, si quiere, la versión pesada. Antes de un render largo se mide un cuadro.
 - Quiere juegos **simples y terminados**, rápido: con Grumo se quejó "te pedí un juego simple" porque se validaba cada nivel durante horas (30/09/2026). Alcanza con que cada nivel se pueda ganar y una prueba de humo; el ajuste fino, si lo pide. → [grumo](grumo.md)
@@ -35,6 +35,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | [vibora](vibora.md) | juego .io de víboras: cuerpo en anillo, comida en grilla, bots, teléfono acostado, trampas de pausa y de dedos |
 | [globo](globo.md) | física propia 2D (Box2D-lite: pilas, dormir por islas, molinete, péndulo), medir la dificultad con un piloto, la intro de colores |
 | [morfi](morfi.md) | hilos con Verlet (la correa, el hilo liviano, el pedazo cortado que no tira), diseñar niveles poniendo al personaje donde más perdona, el look de papel, la intro de papel |
+| [trapito](trapito.md) | muñeco de trapo con Verlet (músculos como torques que no inventan energía), medir si un salto se puede con bots, brazos que buscan la barra, three.js metido en el HTML |
 | [grumo](grumo.md) | plataformas con trampas (tipo Level Devil): mundo a 12 fps y física a 120, trampas como datos, zonas de disparo, bolas que escupe la puerta, el resolvedor por jugadas |
 | [diario](diario.md) | querés saber qué se hizo en cada sesión y qué quedó pendiente |
 

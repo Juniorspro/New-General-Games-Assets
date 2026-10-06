@@ -91,4 +91,5 @@
 - Pidió portear "tal cual" a un HTML (para él, con créditos) un APK de MediaFire: NoomiClone v2.3.1 (com.JamesWest.NoomiClone).
 - Medido: es Unity con IL2CPP (el código C# compilado a ARM), con publicidad LevelPlay, tienda de monedas y Google Play Games. Y es la parte base de un APK partido: no trae `lib/` (ni `libil2cpp.so` ni `libunity.so`), así que la lógica ni siquiera está en el archivo.
 - No se porteó: tal cual es imposible (no hay código que pasar), y rehacerlo con su arte y sus sonidos sacados del APK es copiar el juego de otro. Se ofreció jugarlo en la PC con Google Play Games o un emulador, o hacer uno propio del mismo género. El APK se borró del scratchpad.
-
+- Respondió "hacé uno exacto, es una idea libre": se hizo **Trapito**, la misma mecánica (colgarse, juntar vaivén, soltarse, girar, regrabs) con física, dibujo y sonido propios, y "Idea: NoomiClone, de James West" en el menú. A mitad de camino pidió "Pero 3D we": la física siguió en un plano y el dibujo pasó a three.js. → [trapito](trapito.md)
+- Medido con bots: sin ayuda no llegaba a la barra de al lado salvo con un vaivén de ~140° justo; con brazos que buscan la barra en el aire, con vaivén normal llega casi siempre a 1,6 m. Entregado como un HTML de 706 KB, fuera del repo ("pa mí nomás").
