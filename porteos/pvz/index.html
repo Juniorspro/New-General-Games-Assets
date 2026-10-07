@@ -9,52 +9,91 @@
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
   /* El id lo usa el juego: su casilla "Pantalla completa" pide fullscreen sobre #canvas-container. */
-  #canvas-container { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #000; }
+  #canvas-container { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #000; transition: transform .15s; }
   #canvas { display: block; outline: none; touch-action: none; }
-  #carga { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-    background: radial-gradient(circle at 50% 40%, #1d3b12, #050a03 70%); color: #e9f7cf; font: 600 16px system-ui, sans-serif; text-align: center; padding: 24px; }
-  #carga b { font-size: 22px; letter-spacing: .02em; color: #b8f070; text-shadow: 0 2px 0 #1a3008; }
-  #barra { width: min(70vw, 420px); height: 14px; border-radius: 8px; background: #16290d; border: 2px solid #5e9a2c; overflow: hidden; }
-  #barra i { display: block; height: 100%; width: 0; background: linear-gradient(#a8ec62, #4fae29); transition: width .15s; }
-  #carga small { opacity: .75; font-weight: 500; }
+  /* Si la intro termina antes que la carga: negro y una barra finita, como en FNaF 2. */
+  #carga { position: fixed; inset: 0; z-index: 5; display: none; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px;
+    padding-bottom: max(24px, 8vh); background: #000; color: #8d8d8d; font: 13px/1 'Courier New', monospace; letter-spacing: .12em; }
+  #carga.visible { display: flex; }
+  #barra { width: min(260px, 50vw); height: 3px; background: #222; }
+  #barra i { display: block; height: 100%; width: 0; background: #fff; transition: width .15s; }
   #fin { position: fixed; inset: 0; z-index: 6; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
     background: #050a03; color: #e9f7cf; font: 600 17px system-ui, sans-serif; }
   #fin button { font: 700 17px system-ui, sans-serif; color: #0b1a05; background: #9be15d; border: 0; border-radius: 22px; padding: 12px 26px; }
-  /* El juego abre el teclado del teléfono enfocando este campo (Dialog.cpp / Input.cpp,
-     id fijo). Invisible pero enfocable; 16px para que iOS no haga zoom al enfocarlo. */
+  /* El juego enfoca este campo cuando pide texto (Input.cpp, id fijo) y lee de ahí el teclado
+     físico. En un teléfono no abre el del sistema (inputmode=none): va el teclado propio. */
   #pvz-soft-keyboard { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; resize: none; font-size: 16px; }
+  /* El teclado propio: piedra y letras doradas, como el cuadro "New User" del juego. Ocupa el
+     40% de abajo y deja a la vista el campo del nombre (que el juego dibuja a media altura). */
+  #teclado { position: fixed; left: 50%; bottom: 0; z-index: 7; transform: translateX(-50%); width: min(100%, 720px); box-sizing: border-box;
+    padding: 6px 6px max(6px, env(safe-area-inset-bottom)); display: grid; gap: 5px; background: linear-gradient(#4a5063, #2c3040);
+    border: 2px solid #8a90a6; border-bottom: 0; border-radius: 14px 14px 0 0; box-shadow: 0 -6px 18px rgba(0,0,0,.6); touch-action: none; }
+  #teclado[hidden] { display: none; }
+  #teclado .fila { display: flex; gap: 5px; justify-content: center; }
+  #teclado button { flex: 1 1 0; min-width: 0; height: clamp(30px, 9.5vh, 46px); padding: 0; border: 2px solid #23262f; border-radius: 8px;
+    background: linear-gradient(#b9bfcf, #8a90a3); color: #1d1f26; font: 700 clamp(14px, 4.4vh, 20px)/1 'Trebuchet MS', system-ui, sans-serif;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 2px 0 #1b1d24; touch-action: none; }
+  #teclado button.especial { background: linear-gradient(#6b5228, #4a3818); color: #f2c94c; border-color: #2b2010; }
+  #teclado button.ancha { flex-grow: 1.6; }
+  #teclado button.espacio { flex-grow: 5; }
+  #teclado button.ok { flex-grow: 2; background: linear-gradient(#5f9a2e, #3f6d1a); color: #f2f2c4; border-color: #1f3609; }
+  #teclado button.apretada { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.3); filter: brightness(1.15); }
+  #teclado button.activa { color: #fff; filter: brightness(1.25); }
 </style>
 </head>
 <body>
 <div id="canvas-container"><canvas id="canvas" width="800" height="600" tabindex="0"></canvas></div>
-<div id="carga"><b>Plantas vs. Zombies</b><div id="barra"><i></i></div><small id="estado">Preparando…</small></div>
+<div id="carga"><small id="estado">Cargando…</small><div id="barra"><i></i></div></div>
 <div id="fin"><span>¡Gracias por jugar!</span><button id="otra">Volver a jugar</button></div>
+<div id="teclado" hidden></div>
 <textarea id="pvz-soft-keyboard" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done"></textarea>
 
 <script src="porteo-web.js"></script>
+<script src="porteo-intro.js"></script>
 <script>
 'use strict';
 (function () {
   var lienzo = document.getElementById('canvas');
   var barra = document.querySelector('#barra i');
   var estado = document.getElementById('estado');
+  var carga = document.getElementById('carga');
   var listo = false;
+  var tactil = matchMedia('(pointer: coarse)').matches;
+
+  // ---- la intro de JXStudios tapa la carga; si termina antes, queda la barra finita ----
+  Porteo.intro({ aviso: {
+    es: 'Port no oficial, para uso personal, de «Plants vs. Zombies» de PopCap Games. El juego, sus personajes, imágenes y sonidos son de sus autores.',
+    en: 'Unofficial personal-use port of "Plants vs. Zombies" by PopCap Games. The game, its characters, images and sounds belong to their authors.',
+    pt: 'Port não oficial, para uso pessoal, de "Plants vs. Zombies" da PopCap Games. O jogo, seus personagens, imagens e sons pertencem aos seus autores.'
+  } }).then(function () { if (!listo) carga.classList.add('visible'); });
 
   function progreso(p, txt) {
     if (p != null) barra.style.width = Math.round(p * 100) + '%';
     if (txt) estado.textContent = txt;
   }
 
-  // ---- el juego dibuja a 800×600: se escala entero, sin deformar, con bandas negras ----
-  // innerWidth/innerHeight los traduce web.js cuando el teléfono está parado y la
-  // página va girada: el lienzo se acomoda al lado "lógico" sin saber del giro.
+  // ---- el juego dibuja a 800×600, o más ancho con el césped (pantalla ancha, abajo) ----
+  // Se escala entero, sin deformar, con bandas negras. innerWidth/innerHeight los traduce
+  // web.js cuando el teléfono está parado y la página va girada.
   function ajustar() {
-    var e = Math.min(innerWidth / 800, innerHeight / 600);
-    lienzo.style.width = Math.floor(800 * e) + 'px';
-    lienzo.style.height = Math.floor(600 * e) + 'px';
+    var w = lienzo.width, h = lienzo.height;
+    var e = Math.min(innerWidth / w, innerHeight / h);
+    lienzo.style.width = Math.floor(w * e) + 'px';
+    lienzo.style.height = Math.floor(h * e) + 'px';
   }
   addEventListener('resize', ajustar);
+  // el motor agranda el lienzo al entrar al jardín y lo achica al salir (SDL_SetWindowSize)
+  new MutationObserver(ajustar).observe(lienzo, { attributes: true, attributeFilter: ['width', 'height'] });
   ajustar();
+
+  // Pantalla ancha: mientras se juega, el motor muestra a la izquierda la casa que el fondo
+  // trae y el original tapaba (hasta 220 píxeles: LawnApp::AjustarPantalla). Se le dice cuánto
+  // entra según la forma de la pantalla; en una 4:3 queda como el original.
+  function anchoExtra() {
+    if (!Module._porteo_ancho_extra) return;
+    Module._porteo_ancho_extra(Math.max(0, Math.min(220, Math.round(600 * innerWidth / innerHeight) - 800)));
+  }
+  addEventListener('resize', anchoExtra);
 
   // ---- el motor (Emscripten) ----
   var Module = window.Module = {
@@ -70,27 +109,31 @@
 
   function fallo(e) {
     console.error(e);
-    document.getElementById('carga').style.display = 'flex';
+    carga.classList.add('visible');
     progreso(null, 'No se pudo arrancar: ' + (e && e.message || e));
   }
 
-  // main.pak son 25 MB: se baja con progreso para que no parezca colgado.
+  // main.pak son 25 MB: se baja con progreso para que no parezca colgado. En el .html único
+  // (un-archivo.py) ya está adentro de la página: se toma sin copiarlo.
   async function bajar(ruta, desde, hasta) {
+    var aMano = window.__porteoArchivo && window.__porteoArchivo(ruta, function (van, total) {
+      progreso(desde + (hasta - desde) * van / total);
+    });
+    if (aMano) return await aMano;
     var r = await fetch(ruta);
     if (!r.ok) throw new Error(ruta + ': ' + r.status);
     var total = +r.headers.get('content-length') || 0;
     if (!r.body || !total) return new Uint8Array(await r.arrayBuffer());
-    var lector = r.body.getReader(), partes = [], van = 0;
+    var lector = r.body.getReader(), datos = new Uint8Array(total), van = 0;
     for (;;) {
       var p = await lector.read();
       if (p.done) break;
-      partes.push(p.value);
+      if (van + p.value.length > total) { var mas = new Uint8Array(van + p.value.length); mas.set(datos.subarray(0, van)); datos = mas; total = datos.length; }
+      datos.set(p.value, van);
       van += p.value.length;
-      progreso(desde + (hasta - desde) * van / total, 'Cargando el juego… ' + Math.round(van / 1048576) + ' de ' + Math.round(total / 1048576) + ' MB');
+      progreso(desde + (hasta - desde) * van / total);
     }
-    var datos = new Uint8Array(van), o = 0;
-    partes.forEach(function (c) { datos.set(c, o); o += c.length; });
-    return datos;
+    return van === datos.length ? datos : datos.subarray(0, van);
   }
 
   // ---- partidas guardadas: /saves vive en IndexedDB ----
@@ -110,24 +153,25 @@
 
   async function arrancar() {
     var FS = Module.FS;
-    progreso(0.02, 'Cargando el juego…');
+    anchoExtra();
+    progreso(0.02);
     // properties/: lo que el juego original tenía suelto al lado del .exe
     try { FS.mkdir('/properties'); } catch (_) {}
     var sueltos = ['partner.xml', 'partner_logo.jpg'];
     for (var i = 0; i < sueltos.length; i++) {
-      try { FS.writeFile('/properties/' + sueltos[i], await bajar('properties/' + sueltos[i], 0, 0)); } catch (_) {}
+      try { FS.writeFile('/properties/' + sueltos[i], await bajar('properties/' + sueltos[i], 0, 0), { canOwn: true }); } catch (_) {}
     }
-    FS.writeFile('/main.pak', await bajar('main.pak', 0.03, 0.95));
-    progreso(0.96, 'Recuperando partidas guardadas…');
+    // canOwn: el sistema de archivos se queda con estos mismos bytes, sin otra copia de 25 MB.
+    // El motor va en modo de poca memoria (LOW_MEMORY) y lee main.pak de acá cuando lo necesita.
+    FS.writeFile('/main.pak', await bajar('main.pak', 0.03, 0.95), { canOwn: true });
+    progreso(0.96);
     try { FS.mkdir('/saves'); } catch (_) {}
     FS.mount(FS.filesystems.IDBFS, {}, '/saves');
     await new Promise(function (ok) { FS.syncfs(true, function (err) { if (err) console.warn(err); ok(); }); });
-    progreso(1, 'Listo');
+    progreso(1);
     listo = true;
     setInterval(guardar, 5000);
-    document.getElementById('carga').style.display = 'none';
-    // El motor va compilado en modo de poca memoria (LOW_MEMORY): lee main.pak de acá a
-    // medida que lo necesita, en vez de copiarlo entero adentro. No se borra.
+    carga.classList.remove('visible');
     Module.callMain([]);
   }
 
@@ -144,18 +188,87 @@
   // El navegador arranca el audio suspendido hasta el primer toque.
   addEventListener('pointerdown', function () { var ctx = contexto(); if (ctx && ctx.state === 'suspended' && !document.hidden) ctx.resume(); }, true);
 
-  // ---- teclado del teléfono para el nombre del jugador ----
-  // El juego enfoca el campo desde su bucle (Input.cpp), fuera del toque, y Android
-  // e iOS sólo abren el teclado si el foco se pide ADENTRO de un gesto. Mientras el
-  // juego espera texto, cada toque lo vuelve a enfocar dentro del gesto: el primer
-  // toque sobre el cuadro del nombre abre el teclado.
+  // ---- el teclado propio, para el nombre del jugador ----
+  // El juego junta lo que se escribe en dos colas (Input.cpp: pendingChars, códigos de los
+  // caracteres; pendingKeys, teclas: 8 borrar, 13 Enter, 27 Escape) y las vacía en cada
+  // cuadro. Las teclas de acá escriben directo en esas colas. Con mouse, no aparece: se usa
+  // el teclado físico, que llega por el campo oculto.
   var campo = document.getElementById('pvz-soft-keyboard');
-  addEventListener('pointerup', function () {
-    var st = Module.wasmSoftKeyboardState;
-    if (!st || !st.active) return;
-    if (document.activeElement === campo) campo.blur();
-    campo.focus();
-  }, true);
+  var teclado = document.getElementById('teclado');
+  if (tactil) campo.setAttribute('inputmode', 'none');
+  var LETRAS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+  var SIMBOLOS = ['1234567890', "-_.,!?'&", '()+=@#'];
+  var mayus = true, numeros = false, repetir = null;
+
+  function cola() { return Module.wasmSoftKeyboardState; }
+  function caracter(c) {
+    var st = cola(); if (!st || !st.active) return;
+    st.pendingChars.push(c.charCodeAt(0));
+    if (mayus) { mayus = false; dibujar(); }
+  }
+  function tecla(k) { var st = cola(); if (st && st.active) st.pendingKeys.push(k); }
+
+  function boton(texto, clase, accion, repite) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = texto;
+    if (clase) b.className = clase;
+    b.addEventListener('pointerdown', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      b.classList.add('apretada');
+      if (navigator.vibrate) try { navigator.vibrate(8); } catch (_) {}
+      accion();
+      if (repite) { clearInterval(repetir); var n = 0; repetir = setInterval(function () { if (++n > 5) accion(); }, 70); }
+    });
+    var soltar = function () { b.classList.remove('apretada'); clearInterval(repetir); };
+    b.addEventListener('pointerup', soltar);
+    b.addEventListener('pointercancel', soltar);
+    b.addEventListener('pointerleave', soltar);
+    return b;
+  }
+  function fila(hijos) { var f = document.createElement('div'); f.className = 'fila'; hijos.forEach(function (h) { f.appendChild(h); }); return f; }
+
+  function dibujar() {
+    teclado.textContent = '';
+    var filas = numeros ? SIMBOLOS : LETRAS;
+    var letras = function (s) {
+      return s.split('').map(function (c) { var v = !numeros && mayus ? c.toUpperCase() : c; return boton(v, '', function () { caracter(v); }); });
+    };
+    teclado.appendChild(fila(letras(filas[0])));
+    teclado.appendChild(fila(letras(filas[1]).concat([boton('⌫', 'especial ancha', function () { tecla(8); }, true)])));
+    var tercera = letras(filas[2]);
+    if (!numeros) tercera.unshift(boton('⇧', 'especial ancha' + (mayus ? ' activa' : ''), function () { mayus = !mayus; dibujar(); }));
+    teclado.appendChild(fila(tercera));
+    teclado.appendChild(fila([
+      boton('✕', 'especial', function () { tecla(27); }),
+      boton(numeros ? 'ABC' : '123', 'especial ancha', function () { numeros = !numeros; dibujar(); }),
+      boton('espacio', 'espacio', function () { caracter(' '); }),
+      boton('OK', 'ok', function () { tecla(13); })
+    ]));
+  }
+  // Con el teclado abierto se sube el juego lo justo para que el campo del nombre (el juego lo
+  // dibuja en y≈300–330 de 600) quede arriba del teclado. En unidades lógicas: con el teléfono
+  // parado la página va girada (web.js) y los rectángulos de la pantalla vendrían girados.
+  var contenedor = document.getElementById('canvas-container');
+  function subirJuego() {
+    var alto = parseFloat(lienzo.style.height) || 0, arriba = (innerHeight - alto) / 2;
+    var falta = arriba + 345 * alto / 600 - (innerHeight - teclado.offsetHeight - 6);
+    contenedor.style.transform = abierto && falta > 0 ? 'translateY(' + -Math.ceil(falta) + 'px)' : '';
+  }
+  // se muestra mientras el juego espera texto (Input.cpp: wasmSoftKeyboardState.active)
+  var abierto = false;
+  (function mirar() {
+    var st = cola(), quiere = tactil && !!(st && st.active);
+    if (quiere !== abierto) {
+      abierto = quiere;
+      if (quiere) { mayus = true; numeros = false; dibujar(); }
+      teclado.hidden = !quiere;
+      clearInterval(repetir);
+      subirJuego();
+    }
+    requestAnimationFrame(mirar);
+  })();
+  addEventListener('resize', subirJuego);
 
   // "Salir" del menú del juego: en una página no hay ventana que cerrar.
   window.onGameExit = function () {

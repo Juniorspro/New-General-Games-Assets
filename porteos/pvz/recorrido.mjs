@@ -21,19 +21,32 @@ fs.mkdirSync(SAL, { recursive: true });
 const LISTA = (process.argv[3] || "1-5,1-10,2-5,2-10,3-1,3-5,3-10,4-1,4-5,4-10,5-1,5-5,5-10,C1,C6,C11,C16,C17,C18,C20,C23,C24,C26,C27,C30,C35,C41,C43,C51,C61,C50").split(",");
 const nav = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium",
   args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--autoplay-policy=no-user-gesture-required"] });
-const c = await nav.newContext({ viewport: { width: 800, height: 600 } });
+// ANCHO=1020 recorre todo con la pantalla ancha (la casa a la izquierda del jardín)
+const c = await nav.newContext({ viewport: { width: +(process.env.ANCHO || 800), height: 600 } });
 const pg = await c.newPage();
 let errores = [];
-pg.on("pageerror", (e) => errores.push(e.message));
+pg.on("pageerror", (e) => errores.push(process.env.PILA ? e.stack : e.message));
 await pg.addInitScript(() => { window.__pvzLog = []; });
 await pg.goto(URL);
 const est = async () => { try { return JSON.parse(await pg.evaluate(() => Module.UTF8ToString(Module._porteo_estado()))); } catch (_) { return {}; } };
 const esperar = async (f, ms) => { const fin = Date.now() + ms; while (Date.now() < fin) { const e = await est(); if (f(e)) return e; await pg.waitForTimeout(250); } return null; };
 const malos = () => pg.evaluate(() => window.__pvzLog.filter((l) => /assert|Can't find track|missing resource|Failed to load|not found/i.test(l)));
 const celda = ([col, fila]) => [40 + col * 80 + 40, 80 + fila * 100 + 50];
+// clic en coordenadas del juego: el lienzo se centra, y con el jardín la vista es más ancha
+const clic = async (gx, gy) => {
+  const [x, y] = await pg.evaluate(([gx, gy]) => {
+    const r = document.getElementById("canvas").getBoundingClientRect();
+    let L = 0, A = 800;
+    try { const v = JSON.parse(Module.UTF8ToString(Module._porteo_estado())).vista; if (v) [L, A] = v; } catch (_) {}
+    return [r.left + (gx - L) * r.width / A, r.top + gy * r.height / 600];
+  }, [gx, gy]);
+  await pg.mouse.click(x, y);
+};
 
 await esperar((e) => e.pantalla === "titulo" && e.cargado === 1, 90000);
-await pg.mouse.click(400, 560);
+// la intro de JXStudios (4,3 s) puede seguir arriba: un clic ahí la saltea y no le llega al juego
+for (let i = 0; i < 40 && await pg.evaluate(() => !!document.getElementById("porteo-intro")); i++) await pg.waitForTimeout(150);
+await clic(400, 560);
 await esperar((e) => e.pantalla === "menu" && e.dialogos > 0, 20000);
 await pg.keyboard.type("Recorrido", { delay: 30 });
 await pg.keyboard.press("Enter");
@@ -41,7 +54,7 @@ await esperar((e) => e.pantalla === "menu" && e.dialogos === 0, 20000);
 await pg.waitForTimeout(2500);
 await pg.keyboard.press("u");             // atajo: todo desbloqueado
 await pg.waitForTimeout(800);
-await pg.mouse.click(560, 130);
+await clic(560, 130);
 await esperar((e) => e.pantalla === "tablero", 60000);
 await pg.waitForTimeout(3000);
 
@@ -64,17 +77,17 @@ for (const n of LISTA) {
     const s = await est();
     if (s.escena === 3 && s.dave === 0 && s.dialogos === 0) { e = s; break; }
     if (s.dialogos > 0) await pg.keyboard.press("Enter");
-    else if (s.dave > 0) await pg.mouse.click(400, 300);
+    else if (s.dave > 0) await clic(400, 300);
     else if (s.escena === 2 && (s.plantas || []).length) {
       // (el selector ya existe aunque no se vea: la pantalla figura "elegir")
-      await pg.mouse.click(644, 32);                    // la pala
+      await clic(644, 32);                              // la pala
       await pg.waitForTimeout(300);
-      await pg.mouse.click(...celda(s.plantas[0]));
+      await clic(...celda(s.plantas[0]));
     } else if (s.pantalla === "elegir" && Date.now() - eligio > 5000) {
       // sobres de las tres primeras filas hasta llenar los casilleros (en Last Stand
       // el girasol no se puede elegir); los toques de más no hacen nada
-      for (const y of [160, 235, 308]) for (const x of [45, 97, 150, 205, 257, 310, 363, 415]) { await pg.mouse.click(x, y); await pg.waitForTimeout(120); }
-      await pg.mouse.click(232, 565);
+      for (const y of [160, 235, 308]) for (const x of [45, 97, 150, 205, 257, 310, 363, 415]) { await clic(x, y); await pg.waitForTimeout(120); }
+      await clic(232, 565);
       eligio = Date.now();
     }
     await pg.waitForTimeout(700);

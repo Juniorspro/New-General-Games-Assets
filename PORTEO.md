@@ -42,7 +42,7 @@ python3 -m http.server 8810 --bind 127.0.0.1 --directory <carpeta-html5>
 # 5. web instalable que anda sin red, y la versión de un solo archivo
 python3 herramientas/porteo/pwa.py <carpeta-html5> --nombre "..." --corto "..." \
     --orientacion landscape --icono icono.png --color "#000000"
-python3 herramientas/porteo/un-archivo.py <carpeta-html5> --salida juego.html
+python3 herramientas/porteo/un-archivo.py <carpeta-html5> --salida juego.html [--al-final datos/grande.pak]
 
 # 6. APK
 python3 herramientas/porteo/apk/armar.py <carpeta-html5> --nombre "..." \
@@ -202,8 +202,8 @@ que funcione en un teléfono.**
 | rueda del mouse | botones +/− o pellizco |
 | hover / tooltips | se muestran al tocar |
 | pointer lock | no existe en táctil: se usa arrastre relativo |
-| tipear texto | se enfoca un `<input>` real para que salga el teclado del teléfono |
-| resolución fija (800×600) | `Porteo.pantalla({ encajar: 'canvas' })`: escala con bandas, sin tocar la resolución interna |
+| tipear texto | un teclado propio con el estilo del juego (PvZ: `porteos/pvz/index.html`); si no, se enfoca un `<input>` real para que salga el del teléfono |
+| resolución fija (800×600) | `Porteo.pantalla({ encajar: 'canvas' })`: escala con bandas, sin tocar la resolución interna. Si se compila el motor y el fondo es más ancho, se muestra más mundo en vez de bandas (PvZ: hasta 1020×600 en el jardín) |
 | orientación cualquiera | la que el juego necesita: se traba en el APK y en pantalla completa; si no se puede (giro automático bloqueado, iPhone, visor de HTML), **el juego se gira solo 90°** con `web.js`. El cartel de "girá el teléfono" queda sólo con `girar: false` |
 
 ### Cómo se tiene que sentir
@@ -245,6 +245,22 @@ alguien está tocando el teclado, así que **no hay que reescribir su entrada**.
   siempre.
 - `Porteo.eje` da el valor analógico del joystick (−1 a 1) para quien lo quiera.
 - Si el juego escucha en el canvas y no en `document`: `objetivo: canvas`.
+
+**`herramientas/porteo/intro.js`** — la intro de la marca: la moneda de
+JXStudios de FNaF 2, en vez de la pantalla de carga del juego. Va entera en el
+archivo (la moneda también), así anda igual en el `.html` único.
+
+```html
+<script src="porteo-intro.js"></script>
+<script>
+  Porteo.intro({ aviso: { es: 'Port no oficial de «…»…', en: '…', pt: '…' } })
+    .then(function () { /* si el juego todavía carga, mostrar una barra */ });
+</script>
+```
+
+- Dura 4,3 s. Un toque la saltea, y ese toque no le llega al juego.
+- "presenta" y el aviso salen en el idioma del teléfono (es, en o pt).
+- El juego arranca por detrás al mismo tiempo, no al terminar.
 
 **`herramientas/porteo/web.js`** — lo que hacía la parte nativa (§6).
 
@@ -502,6 +518,12 @@ créditos ni se tapa al autor.
 | dejar "fuera de cuadro" una pantalla que no se usa | la de logros se seguía dibujando con imágenes vacías: 15 700 llamadas por cuadro y el menú colgado | que no se dibuje (`mVisible = false`) cuando no existe |
 | tocar "click to start" apenas aparece el título | no pasa nada: el título acepta el toque recién cuando la barra de carga llegó al final | esperar ese estado (`cargado` en `porteo_estado`), no un tiempo fijo |
 | audio de SDL en una pestaña oculta | sin cuadros el juego se frena, pero el audio sigue sonando desde su hilo | `audioContext.suspend()` en `visibilitychange` (y `resume()` al volver y al primer toque) |
+| buscar el bloque de datos con `document.currentScript.previousElementSibling` mientras la página se lee | el juego agrega scripts al `<body>` en medio de la lectura: el "anterior" era el suyo y el pak salía roto ("invalid stored block lengths") | numerar los bloques (`data-i`) y buscarlos por número (`un-archivo.py`) |
+| tocar la pantalla en una prueba mientras está la intro de la marca | el toque saltea la intro y no le llega al juego: "click to start" no pasaba | esperar a que no esté `#porteo-intro` |
+| cargar las animaciones de PvZ-Portable recién cuando se usan | el juego dibuja 137 `IMAGE_REANIM_*` directamente y una partida guardada puede restaurar cualquiera: el 1-5 se cerraba ("table index is out of bounds") | precargarlas todas como el original, de a una con el título en pantalla |
+| sacar Asyncify para achicar el wasm | los cuadros de diálogo de PvZ esperan con `emscripten_sleep` (`Dialog::WaitForResult`): sin Asyncify no andan | dejarlo (cuesta 2,4 MB de wasm y ~2 s con CPU ÷4) |
+| preguntarle al disco por cada nombre posible de una imagen | en Emscripten cada archivo que no existe es una excepción de JS: ~25 000 consultas, 1,2 s de la carga con CPU ÷4 | leer cada carpeta una vez y no preguntar por lo que no está (`PakInterface::PuedeAbrirse`) |
+| meter un binario en un `.html` con base64 | +33 % de tamaño, y leerlo es más lento | UTF-16 con BOM: dos bytes por carácter y sólo se escapa lo que el HTML no deja pasar (+3 %) |
 
 ## 14. Registro de porteos
 
@@ -622,12 +644,14 @@ Estrategia: PvZ-Portable (reimplementación LGPL en C++/SDL2/GLES2) → WebAssem
             con los datos del dueño y un parche para que lea los de 2009
 Fidelidad: 1:1 — la lógica del juego y los datos originales; sin logros ni Zombatar,
            que no existían en 2009
-Tamaños: el juego instalado 26,9 MB (exe 3 + pak 23,9) → web 30,4 MB (pak 23,0 + motor 6,8 + carcasa)
-         · APK 25,4 MB · un archivo 33,7 MB · zip 24,0 MB
-Memoria: 206 MB del módulo jugando (modo de poca memoria; el normal, 264)
-Pruebas: 32/32 (prueba.mjs: toques reales, girado, sin red, un archivo)
-         · recorrido 31/31 (recorrido.mjs) · bailarín 6/6 (bailarin.mjs)
-         · no se pudo probar en un teléfono real
+Tamaños: el juego instalado 26,9 MB (exe 3 + pak 23,9) → web 31,2 MB (pak 23,0 + motor 7,6 + carcasa)
+         · APK 25,6 MB · un archivo 24,8 MB (era 33,7) · zip 24,2 MB
+Memoria: 172 MB del módulo jugando el 1-1 (modo de poca memoria; el normal, 264)
+Carga (Chrome, CPU ÷4 como un teléfono): "click to start" a los 10,9 s (era 15,1);
+         el archivo único, 11,6 s (era 19,5)
+Pruebas: 39/39 (prueba.mjs: toques reales, intro, teclado propio, pantalla ancha,
+         girado, sin red, un archivo) · recorrido 31/31 con la pantalla ancha
+         (recorrido.mjs) · bailarín 6/6 (bailarin.mjs) · no se pudo probar en un teléfono real
 ```
 
 - **Qué hizo falta** (detalle en [`porteos/pvz/LEEME.md`](porteos/pvz/LEEME.md)):
@@ -639,30 +663,45 @@ Pruebas: 32/32 (prueba.mjs: toques reales, girado, sin red, un archivo)
     el original.
 - **Controles:** los del original con el dedo como mouse: tocar el sobre,
   tocar el pasto, tocar los soles, la pala, los menús. El nombre del jugador se
-  escribe con el teclado del teléfono. Atrás abre el menú del juego (dos
-  seguidos salen). Parado, el juego se gira solo.
+  escribe con un teclado propio, de piedra y letras doradas como el juego.
+  Atrás abre el menú del juego (dos seguidos salen). Parado, el juego se gira
+  solo.
+- **Pantalla:** en el jardín se ve más ancho, hasta 1020×600: la casa que el
+  original tapaba, a la izquierda. A la derecha no, porque ahí nacen los
+  zombis. Los menús siguen en 800×600.
+- **Arranque:** la intro de JXStudios (la de FNaF 2) en lugar de la pantalla
+  de carga verde; el juego carga por detrás.
 - **Optimización:**
+  - la carga va de a pedazos con el logo y el título animados, en vez de
+    congelar la pantalla; se sacaron ~25 000 consultas al disco que no hacían
+    falta (1,2 s con CPU ÷4) y la segunda decodificación de la música (1,5 s),
+    con un resultado idéntico byte a byte;
+  - el archivo único va en UTF-16 y no en base64, con el pak al final y
+    descomprimido en otro hilo: 33,7 → 24,8 MB;
   - modo de poca memoria del motor (sonidos bajo demanda, sin copia en RAM de
-    las texturas): 264 → 206 MB y "click to start" 0,8 s antes;
+    las texturas): 264 → 206 MB al medirlo (la versión de ahora: 172) y
+    "click to start" 0,8 s antes;
   - PNG y JPG del pak recomprimidos sin pérdida y verificados píxel por píxel
     (−0,84 MB; PopCap ya comprimía bien);
   - el audio se suspende en segundo plano; las partidas se vuelcan a
     IndexedDB cada 5 s y al salir.
 - **Probado:**
-  - título → perfil (teclado) → 1-1 → plantar (sol 150 → 50) → juntar sol
-    (+25) → atrás → segundo plano → recargar con el perfil guardado;
+  - intro (se saltea con un toque) → título → perfil con el teclado propio →
+    1-1 con la pantalla ancha → plantar (sol 150 → 50) → juntar sol (+25) →
+    atrás → segundo plano → recargar con el perfil guardado;
   - lo mismo con el teléfono parado (girado);
   - sin red y el archivo único;
   - recorrido de 31 niveles y minijuegos (pileta, niebla, techo, jefe final,
-    Zen, Árbol de la Sabiduría, Vasebreaker, I-Zombie, Zombiquarium…) sin un
-    error, assert ni recurso faltante, siempre en 206 MB;
+    Zen, Árbol de la Sabiduría, Vasebreaker, I-Zombie, Zombiquarium…) con la
+    pantalla ancha, sin un error, assert ni recurso faltante, siempre en 206 MB
+    (la variante de depuración);
+  - el archivo único arma `main.pak` y el wasm idénticos byte a byte;
   - el bailarín de 2009 en el 2-8: moonwalk, llama a los coristas, pierde
     brazo y cabeza.
 - **Problemas conocidos:**
   - no se probó en un teléfono real ni en Safari;
-  - pantalla 4:3 con bandas negras a los costados (el juego es de 800×600);
-  - la carga del título congela la pantalla unos segundos (el motor carga
-    todo de una vez en el hilo principal);
+  - menús, almanaque y tienda siguen en 4:3 con bandas (están dibujados para
+    800×600); al elegir plantas mirando la calle, el selector queda corrido;
   - el juego está en inglés, como el original que llegó;
   - el APK es otra app (`ar.juniors.pvz`).
 - **Rearmarlo:** `porteos/pvz/portear.sh RUTA/plantas.rar [SALIDA] [--un-archivo] [--depuracion]`.

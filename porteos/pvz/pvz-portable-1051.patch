@@ -28,6 +28,61 @@ index b70d712..afeccc4 100644
  		"SHELL:-sINVOKE_RUN=0"
  		"SHELL:-lidbfs.js"
  		"SHELL:--shell-file ${CMAKE_CURRENT_SOURCE_DIR}/wasm/shell.html"
+diff --git a/src/Lawn/Board.cpp b/src/Lawn/Board.cpp
+index da1c054..843c97c 100644
+--- a/src/Lawn/Board.cpp
++++ b/src/Lawn/Board.cpp
+@@ -69,6 +69,23 @@ constexpr const int FLAG_RAISE_TIME = 100;
+ 
+ bool gShownMoreSunTutorial = false;
+ 
++#ifdef __EMSCRIPTEN__
++// porteo: con la pantalla ancha (LawnApp::AjustarPantalla) lo que tapa "toda la pantalla" tiene que
++// tapar también la franja de la izquierda; con 4:3 queda el rectángulo de siempre.
++static Rect ConFranja(const Board* theBoard, const Rect& theRect)
++{
++	const Rect& aPantalla = theBoard->mApp->mScreenBounds;
++	if (aPantalla.mWidth <= BOARD_WIDTH)
++		return theRect;
++	const int aIzq = std::min(theRect.mX, aPantalla.mX - theBoard->mX);
++	const int aDer = std::max(theRect.mX + theRect.mWidth, aPantalla.mX - theBoard->mX + aPantalla.mWidth);
++	return Rect(aIzq, theRect.mY, aDer - aIzq, theRect.mHeight);
++}
++#define PANTALLA_ENTERA(x, y, w, h) ConFranja(this, Rect(x, y, w, h))
++#else
++#define PANTALLA_ENTERA(x, y, w, h) Rect(x, y, w, h)
++#endif
++
+ Board::Board(LawnApp* theApp)
+ {
+ 	mApp = theApp;
+@@ -7105,7 +7122,7 @@ void Board::DrawFadeOut(Graphics* g)
+ 	{
+ 		g->SetColor(Color(255, 255, 255, anAlpha));
+ 	}
+-	g->FillRect(0, 0, mWidth, mHeight);
++	g->FillRect(PANTALLA_ENTERA(0, 0, mWidth, mHeight));
+ }
+ 
+ void Board::DrawTopRightUI(Graphics* g)
+@@ -7380,7 +7397,7 @@ void Board::DrawUITop(Graphics* g)
+ 	if (mTimeStopCounter > 0)
+ 	{
+ 		g->SetColor(Color(200, 200, 200, 210));
+-		g->FillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
++		g->FillRect(PANTALLA_ENTERA(0, 0, BOARD_WIDTH, BOARD_HEIGHT));
+ 	}
+ 
+ 	if (mApp->mGameScene == GameScenes::SCENE_PLAYING || mApp->mGameMode == GameMode::GAMEMODE_TREE_OF_WISDOM)
+@@ -7396,7 +7413,7 @@ void Board::DrawUITop(Graphics* g)
+ 	if ((mApp->mGameMode == GameMode::GAMEMODE_UPSELL || mApp->mGameMode == GameMode::GAMEMODE_INTRO) && mCutScene->mUpsellHideBoard)
+ 	{
+ 		g->SetColor(Color(0, 0, 0));
+-		g->FillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
++		g->FillRect(PANTALLA_ENTERA(0, 0, BOARD_WIDTH, BOARD_HEIGHT));
+ 	}
+ 
+ 	if (mApp->mGameMode == GameMode::GAMEMODE_UPSELL)
 diff --git a/src/Lawn/Widget/AchievementsScreen.cpp b/src/Lawn/Widget/AchievementsScreen.cpp
 index 904cff2..22d8949 100644
 --- a/src/Lawn/Widget/AchievementsScreen.cpp
@@ -106,12 +161,34 @@ index e30bd35..81dc7c9 100644
  		break;
  	}
  }
+diff --git a/src/Lawn/Widget/TitleScreen.cpp b/src/Lawn/Widget/TitleScreen.cpp
+index 85ab277..1e4a7eb 100644
+--- a/src/Lawn/Widget/TitleScreen.cpp
++++ b/src/Lawn/Widget/TitleScreen.cpp
+@@ -225,7 +225,11 @@ void TitleScreen::Update()
+ 
+ 	if (mTitleState == TitleState::TITLESTATE_WAITING_FOR_FIRST_DRAW)
+ 	{
++#ifndef __EMSCRIPTEN__
+ 		mApp->mMusic->MusicTitleScreenInit();
++#endif
++		// porteo (web): la música del título la carga LawnApp::CargaPorPartes con el logo
++		// ya entero y quieto, porque decodificar el MO3 frena la pantalla 2,5 s en un teléfono.
+ 		mApp->StartLoadingThread();
+ 
+ 		mTitleState = TitleState::TITLESTATE_POPCAP_LOGO;
 diff --git a/src/LawnApp.cpp b/src/LawnApp.cpp
-index 48ee9ff..dcc092d 100644
+index 48ee9ff..a9096e1 100644
 --- a/src/LawnApp.cpp
 +++ b/src/LawnApp.cpp
-@@ -29,6 +29,8 @@
+@@ -27,8 +27,14 @@
+ #include "Resources.h"
+ #include "Lawn/LawnCommon.h"
  #include "Lawn/Board.h"
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++#include "graphics/GLInterface.h"
++#endif
  #include "Lawn/Plant.h"
  #include "Lawn/Zombie.h"
 +#include "Lawn/Coin.h"
@@ -119,7 +196,7 @@ index 48ee9ff..dcc092d 100644
  #include "Lawn/Cutscene.h"
  #include "GameConstants.h"
  #include "ProjectVersion.h"
-@@ -75,6 +77,7 @@
+@@ -75,6 +81,7 @@
  #include "SexyAppFramework/resource.h"
  
  bool gIsPartnerBuild = false;
@@ -127,7 +204,7 @@ index 48ee9ff..dcc092d 100644
  bool gSlowMo = false;
  bool gFastMo = false;
  LawnApp* gLawnApp = nullptr;
-@@ -82,7 +85,8 @@ int gSlowMoCounter = 0;
+@@ -82,7 +89,8 @@ int gSlowMoCounter = 0;
  
  static bool HasUnshownAchievements(PlayerInfo* thePlayerInfo)
  {
@@ -137,7 +214,7 @@ index 48ee9ff..dcc092d 100644
  	{
  		return false;
  	}
-@@ -1179,6 +1183,10 @@ void LawnApp::Init()
+@@ -1179,6 +1187,10 @@ void LawnApp::Init()
  		ShowResourceError(true);
  		return;
  	}
@@ -148,13 +225,230 @@ index 48ee9ff..dcc092d 100644
  
  	if (!PvzpLoadResources("Init"))
  	{
-@@ -3266,3 +3274,64 @@ void LawnApp::UpdateRegisterInfo()
+@@ -1708,6 +1720,209 @@ void LawnApp::LoadingThreadProc()
+ 	LoadGroup("LoadingSounds", 54);
+ }
+ 
++#ifdef __EMSCRIPTEN__
++// porteo: lo mismo que LoadingThreadProc y en el mismo orden, pero de a un recurso por vez.
++// Entre co_yield y co_yield el bucle principal dibuja el logo y la barra de carga, como cuando
++// esto corría en un hilo. Medido en un teléfono simulado (CPU ÷4): de una vez, la pantalla
++// quedaba negra o congelada ~12 s y recién después corrían 3 s de logo y título.
++TareaDeCarga LawnApp::CargaPorPartes()
++{
++	if (!PvzpLoadResources("LoaderBar"))
++		co_return;
++
++	PvzpStringListLoad("Properties/LawnStrings.txt");
++	PvzpStringListReadFile("Properties/ZombatarTOS.txt");
++	LoadProperties("properties/default.xml", false, false);
++	LoadProperties("properties/Layout.xml", false, false);
++	LoadProperties("properties/pvz-portable.xml", false, false);
++	if (mTitleScreen)
++		mTitleScreen->mLoaderScreenIsLoaded = true;
++
++	const char* aGrupos[] = { "LoadingFonts", "LoadingImages", "LoadingSounds" };
++	int aPesos[] = { 54, 9, 54 };
++	for (int i = 0; i < 3; i++)
++		mNumLoadingThreadTasks += mResourceManager->GetNumResources(aGrupos[i]) * aPesos[i];
++	mNumLoadingThreadTasks += 636;
++	mNumLoadingThreadTasks += GetNumPreloadingTasks();
++	mNumLoadingThreadTasks += Music::MUSIC_LOADING_TASKS;
++	constexpr int PESO_ANIMACION = 40;
++	mNumLoadingThreadTasks += ReanimatorCantidadDeDefiniciones() * PESO_ANIMACION;
++	co_yield TareaDeCarga::SEGUIR;
++
++	// La música no se puede partir: cada mainmusic.mo3 son 20 MB de muestras Vorbis a
++	// decodificar (2,5 s en un teléfono), y hay dos (melodía y batería). Se cargan con el logo
++	// de PopCap ya entero y quieto, que es cuando una espera no se nota.
++	while (mTitleScreen && mTitleScreen->mTitleState == TitleState::TITLESTATE_POPCAP_LOGO &&
++		mTitleScreen->mTitleStateCounter > mTitleScreen->mTitleStateDuration - 50)
++		co_yield TareaDeCarga::ESPERAR;
++	mMusic->MusicTitleScreenInit();
++	co_yield TareaDeCarga::SEGUIR;
++	mMusic->MusicInit();
++	co_yield TareaDeCarga::SEGUIR;
++
++	static constexpr std::pair<const char*, int> aGruposIniciales[] = { { "LoadingImages", 9 }, { "LoadingFonts", 54 } };
++	for (const auto& [aGrupo, aPeso] : aGruposIniciales)
++	{
++		mResourceManager->StartLoadResources(aGrupo);
++		while (!mShutdown && !mCloseRequest && !mLoadingFailed && PvzpLoadNextResource())
++		{
++			mCompletedLoadingThreadTasks += aPeso;
++			co_yield TareaDeCarga::SEGUIR;
++		}
++		if (mShutdown || mCloseRequest)
++			co_return;
++		if (mResourceManager->HadError() || !ExtractResourcesByName(mResourceManager.get(), aGrupo))
++		{
++			ShowResourceError();
++			mLoadingFailed = true;
++		}
++	}
++	if (mLoadingFailed || mShutdown || mCloseRequest)
++		co_return;
++	mDefaultFont = FONT_PICO129;
++
++	mPoolEffect = std::make_unique<PoolEffect>();
++	mPoolEffect->PoolEffectInitialize();
++	mZenGarden = std::make_unique<ZenGarden>();
++	mReanimatorCache = std::make_unique<ReanimatorCache>();
++	mReanimatorCache->ReanimatorCacheInitialize();
++	PvzpFoleyInitialize(gLawnFoleyParamArray, LENGTH(gLawnFoleyParamArray));
++	co_yield TareaDeCarga::SEGUIR;
++
++	TrailLoadDefinitions(gLawnTrailArray, LENGTH(gLawnTrailArray));
++	co_yield TareaDeCarga::SEGUIR;
++
++	PvzpParticleBeginLoadDefinitions(gLawnParticleArray, LENGTH(gLawnParticleArray));
++	for (int i = 0; i < static_cast<int>(LENGTH(gLawnParticleArray)); i++)
++	{
++		PvzpParticleLoadDefinition(i);
++		co_yield TareaDeCarga::SEGUIR;
++	}
++
++	// PreloadForUser, de a una animación, planta o zombi
++	int aNumTasks = mCompletedLoadingThreadTasks + GetNumPreloadingTasks();
++	if (mTitleScreen && mTitleScreen->mQuickLoadKey != KeyCode::KEYCODE_UNKNOWN)
++	{
++		mNumLoadingThreadTasks = aNumTasks;
++	}
++	else
++	{
++		static constexpr std::pair<ReanimationType, int> aFijas[] = {
++			{ ReanimationType::REANIM_PUFF, 0 }, { ReanimationType::REANIM_LAWN_MOWERED_ZOMBIE, 0 },
++			{ ReanimationType::REANIM_READYSETPLANT, 68 }, { ReanimationType::REANIM_FINAL_WAVE, 0 },
++			{ ReanimationType::REANIM_SUN, 0 }, { ReanimationType::REANIM_TEXT_FADE_ON, 68 },
++			{ ReanimationType::REANIM_ZOMBIE, 68 }, { ReanimationType::REANIM_ZOMBIE_NEWSPAPER, 68 },
++			{ ReanimationType::REANIM_SELECTOR_SCREEN, 340 }, { ReanimationType::REANIM_ZOMBIE_HAND, 68 }
++		};
++		for (const auto& [aTipo, aPeso] : aFijas)
++		{
++			ReanimatorEnsureDefinitionLoaded(aTipo, true);
++			mCompletedLoadingThreadTasks += aPeso;
++			co_yield TareaDeCarga::SEGUIR;
++		}
++
++		if (mPlayerInfo)
++		{
++			for (SeedType i = SeedType::SEED_PEASHOOTER; i < SeedType::NUM_SEED_TYPES; i = static_cast<SeedType>(static_cast<int>(i) + 1))
++			{
++				if (!HasSeedType(i) && !HasFinishedAdventure())
++					continue;
++				Plant::PreloadPlantResources(i);
++				if (mCompletedLoadingThreadTasks < aNumTasks)
++					mCompletedLoadingThreadTasks += 68;
++				if (mShutdown || mCloseRequest)
++					co_return;
++				co_yield TareaDeCarga::SEGUIR;
++			}
++
++			for (ZombieType i = ZombieType::ZOMBIE_NORMAL; i < ZombieType::NUM_ZOMBIE_TYPES; i = static_cast<ZombieType>(static_cast<int>(i) + 1))
++			{
++				if (!HasFinishedAdventure() && mPlayerInfo->mLevel < GetZombieDefinition(i).mStartingLevel)
++					continue;
++				if (i == ZombieType::ZOMBIE_BOSS || i == ZombieType::ZOMBIE_CATAPULT || i == ZombieType::ZOMBIE_GARGANTUAR ||
++					i == ZombieType::ZOMBIE_DIGGER || i == ZombieType::ZOMBIE_ZAMBONI)
++					continue;
++				Zombie::PreloadZombieResources(i);
++				if (mCompletedLoadingThreadTasks < aNumTasks)
++					mCompletedLoadingThreadTasks += 68;
++				if (mShutdown || mCloseRequest)
++					co_return;
++				co_yield TareaDeCarga::SEGUIR;
++			}
++		}
++		mCompletedLoadingThreadTasks = aNumTasks;
++	}
++
++	// Las animaciones con sus imágenes, como las precargaba el original al arrancar
++	// (ReanimatorLoadDefinitions): de a una, con el título en pantalla.
++	for (int i = 0; i < ReanimatorCantidadDeDefiniciones(); i++)
++	{
++		ReanimatorPrecargarDefinicion(i);
++		mCompletedLoadingThreadTasks += PESO_ANIMACION;
++		if (mShutdown || mCloseRequest)
++			co_return;
++		co_yield TareaDeCarga::SEGUIR;
++	}
++
++	mResourceManager->StartLoadResources("LoadingSounds");
++	while (!mShutdown && !mCloseRequest && !mLoadingFailed && PvzpLoadNextResource())
++	{
++		mCompletedLoadingThreadTasks += 54;
++		co_yield TareaDeCarga::SEGUIR;
++	}
++	if (mShutdown || mCloseRequest)
++		co_return;
++	if (mResourceManager->HadError() || !ExtractResourcesByName(mResourceManager.get(), "LoadingSounds"))
++	{
++		ShowResourceError();
++		mLoadingFailed = true;
++	}
++}
++
++// porteo: la pantalla ancha. Los fondos del jardín miden 1400 de ancho y el juego muestra 800:
++// a la izquierda del césped queda la casa (BOARD_OFFSET = 220 píxeles). En un teléfono apaisado
++// el 4:3 deja dos franjas negras enormes; mientras se ve el jardín, la pantalla se agranda hacia
++// la izquierda hasta gAnchoExtraMax (lo pide la carcasa según la forma de la pantalla) y muestra
++// la casa. A la derecha no: los zombis nacen apenas pasando el borde (x = 780…880) y con más
++// pantalla se los vería aparecer de golpe en la calle. El juego no cambia: sólo se ve más fondo.
++// Es una cámara: cuando el tablero se corre a la derecha (al empezar se mira la casa), la franja
++// no se pasa del borde del fondo y lo de más queda a la derecha.
++static int gAnchoExtraMax = 0;
++
++void LawnApp::AjustarPantalla()
++{
++	int aExtra = 0;
++	if (gAnchoExtraMax > 0 && mBoard && mBoard->mParent && mBoard->mVisible && !mAwardScreen && !mCreditScreen &&
++		mBoard->mBackground >= BackgroundType::BACKGROUND_1_DAY && mBoard->mBackground <= BackgroundType::BACKGROUND_6_BOSS)
++		aExtra = gAnchoExtraMax;
++
++	if (mGLInterface->mWidth != mWidth + aExtra)
++	{
++		SDL_SetWindowSize(static_cast<SDL_Window*>(mWindow), mWidth + aExtra, mHeight);
++		mGLInterface->CambiarAncho(mWidth + aExtra);
++		mWidgetManager->MarkAllDirty();
++	}
++	const int aCorrimiento = aExtra ? std::max(mBoard->mX - BOARD_OFFSET, -aExtra) : 0;
++	mScreenBounds = Rect(aCorrimiento, 0, mWidth + aExtra, mHeight);
++}
++
++bool LawnApp::AvanzarCarga(double theHasta)
++{
++	if (!mCargaPorPartes)
++		mCargaPorPartes = std::make_unique<TareaDeCarga>(CargaPorPartes());
++	// emscripten_get_now y no SDL_GetTicks: ésta pasa por gettimeofday y Date.now, y con
++	// miles de pasos chicos eran 0,13 s de la carga en un teléfono (CPU ÷4). Si la carga
++	// espera al logo, se corta el cuadro: si no, daba vueltas en el lugar los 50 ms.
++	while (!mCargaPorPartes->Avanzar())
++	{
++		if (mCargaPorPartes->Esperando() || emscripten_get_now() >= theHasta)
++			return false;
++	}
++	mCargaPorPartes.reset();
++	return true;
++}
++#endif
++
+ void LawnApp::FastLoad(GameMode theGameMode)
+ {
+ 	if (!mShutdown)
+@@ -3266,3 +3481,73 @@ void LawnApp::UpdateRegisterInfo()
  {
  
  }
 +
 +#ifdef __EMSCRIPTEN__
 +#include <emscripten.h>
++
++// porteo: cuánto se puede agrandar la pantalla a la izquierda (lo calcula la carcasa con la forma
++// de la pantalla; 0 = 4:3 como el original). Ver LawnApp::AjustarPantalla.
++extern "C" EMSCRIPTEN_KEEPALIVE void porteo_ancho_extra(int theExtra)
++{
++	gAnchoExtraMax = std::clamp(theExtra, 0, BOARD_OFFSET);
++}
 +
 +// porteo: el estado del juego para las pruebas automáticas (porteos/pvz/prueba.mjs).
 +// Medir "sol 150 → 50 al plantar" vale más que "no hubo errores en la consola".
@@ -182,6 +476,8 @@ index 48ee9ff..dcc092d 100644
 +		(int)aApp->mGameMode, aApp->mMusic ? (int)aApp->mMusic->mCurMusicTune : -1);
 +	// memoria del módulo (páginas de 64 KiB): en un teléfono es lo primero que se acaba
 +	aJson += std::format(",\"memoria_mb\":{}", (int)(__builtin_wasm_memory_size(0) * 65536ULL / 1048576ULL));
++	// lo que muestra la pantalla en coordenadas del juego: x de su borde izquierdo y ancho (pantalla ancha)
++	aJson += std::format(",\"vista\":[{},{}]", aApp->mScreenBounds.mX, aApp->mScreenBounds.mWidth);
 +	// escena 3 = jugando; dave > 0 = Crazy Dave en pantalla (se avanza tocando)
 +	aJson += std::format(",\"escena\":{},\"dave\":{}", (int)aApp->mGameScene, (int)aApp->mCrazyDaveState);
 +	if (aApp->mPlayerInfo)
@@ -214,10 +510,76 @@ index 48ee9ff..dcc092d 100644
 +}
 +#endif
 diff --git a/src/LawnApp.h b/src/LawnApp.h
-index 80ba516..e7fed74 100644
+index 80ba516..7ac84a5 100644
 --- a/src/LawnApp.h
 +++ b/src/LawnApp.h
-@@ -335,6 +335,8 @@ bool								LawnHasUsedCheatKeys();
+@@ -26,6 +26,52 @@
+ #include "SexyAppFramework/SexyApp.h"
+ #include "PvzpLib/PvzpFoley.h"
+ #include <memory>
++#ifdef __EMSCRIPTEN__
++#include <coroutine>
++#include <utility>
++
++// porteo: una corrutina mínima. La carga del juego queda escrita de corrido, como en el hilo
++// de carga del original, pero se suspende en cada co_yield y el bucle principal la retoma
++// en el cuadro siguiente (en la web no hay hilos).
++class TareaDeCarga
++{
++public:
++	struct promise_type
++	{
++		TareaDeCarga get_return_object() { return TareaDeCarga(std::coroutine_handle<promise_type>::from_promise(*this)); }
++		std::suspend_always initial_suspend() noexcept { return {}; }
++		std::suspend_always final_suspend() noexcept { return {}; }
++		std::suspend_always yield_value(int theValor) noexcept { mEsperando = theValor == ESPERAR; return {}; }
++		void return_void() noexcept {}
++		void unhandled_exception() { throw; }
++		bool mEsperando = false;
++	};
++
++	// co_yield SEGUIR: hizo un pedazo de trabajo y puede seguir en este cuadro.
++	// co_yield ESPERAR: espera algo que trae el tiempo (el logo quieto): nada más por este cuadro.
++	static constexpr int SEGUIR = 0, ESPERAR = 1;
++
++	explicit TareaDeCarga(std::coroutine_handle<promise_type> theManija) : mManija(theManija) {}
++	TareaDeCarga(TareaDeCarga&& theOtra) noexcept : mManija(std::exchange(theOtra.mManija, {})) {}
++	TareaDeCarga(const TareaDeCarga&) = delete;
++	TareaDeCarga& operator=(const TareaDeCarga&) = delete;
++	~TareaDeCarga() { if (mManija) mManija.destroy(); }
++
++	// Corre hasta el próximo co_yield; true cuando ya no queda nada.
++	bool Avanzar()
++	{
++		if (mManija && !mManija.done())
++			mManija.resume();
++		return !mManija || mManija.done();
++	}
++
++	// El último co_yield fue ESPERAR.
++	bool Esperando() const { return mManija && !mManija.done() && mManija.promise().mEsperando; }
++
++private:
++	std::coroutine_handle<promise_type> mManija;
++};
++#endif
+ 
+ class Board;
+ class GameSelector;
+@@ -148,6 +194,12 @@ public:
+ 	void							WriteToRegistry() override;
+ 	void							ReadFromRegistry() override;
+ 	void							LoadingThreadProc() override;
++#ifdef __EMSCRIPTEN__
++	std::unique_ptr<TareaDeCarga>	mCargaPorPartes;
++	TareaDeCarga					CargaPorPartes();
++	bool							AvanzarCarga(double theHasta) override;
++	void							AjustarPantalla() override;
++#endif
+ 	virtual void					LoadingCompleted();
+ 	void							LoadingThreadCompleted() override;
+ 	void							URLOpenFailed(const std::string& theURL) override;
+@@ -335,6 +387,8 @@ bool								LawnHasUsedCheatKeys();
  void								BetaSubmitFunc();
  
  extern bool gIsPartnerBuild;
@@ -281,8 +643,69 @@ index 14d8338..27c2cf8 100644
  	}
  
  	size_t aUncompressedSize;
+diff --git a/src/PvzpLib/PvzpParticle.cpp b/src/PvzpLib/PvzpParticle.cpp
+index cf9356b..ce151a5 100644
+--- a/src/PvzpLib/PvzpParticle.cpp
++++ b/src/PvzpLib/PvzpParticle.cpp
+@@ -200,25 +200,33 @@ bool PvzpParticleLoadADef(PvzpParticleDefinition* theParticleDef, const char* th
+ 	}
+ }
+ 
+-void PvzpParticleLoadDefinitions(const ParticleParams* theParticleParamArray, int theParticleParamArraySize)
++void PvzpParticleBeginLoadDefinitions(const ParticleParams* theParticleParamArray, int theParticleParamArraySize)
+ {
+-	PvzpHesitationBracket aHesitiation("PvzpParticleLoadDefinitions");
+ 	PVZP_ASSERT(!gParticleParamArray && !gParticleDefArray);
+ 	gParticleParamArraySize = theParticleParamArraySize;
+ 	gParticleParamArray = theParticleParamArray;
+ 	gParticleDefCount = theParticleParamArraySize;
+ 	gParticleDefArray = std::make_unique<PvzpParticleDefinition[]>(theParticleParamArraySize);
++}
+ 
+-	for (int i = 0; i < gParticleParamArraySize; i++)
++// porteo: una definición por llamada, para que la carga web pueda repartirlas entre cuadros
++void PvzpParticleLoadDefinition(int theIndex)
++{
++	const ParticleParams& aParticleParams = gParticleParamArray[theIndex];
++	PVZP_ASSERT(aParticleParams.mParticleEffect == theIndex);
++	if (!PvzpParticleLoadADef(&gParticleDefArray[theIndex], aParticleParams.mParticleFileName))
+ 	{
+-		const ParticleParams& aParticleParams = gParticleParamArray[i];
+-		PVZP_ASSERT(aParticleParams.mParticleEffect == i);
+-		if (!PvzpParticleLoadADef(&gParticleDefArray[i], aParticleParams.mParticleFileName))
+-		{
+-			PvzpErrorMessageBox(std::format("Failed to load particle '{}'", aParticleParams.mParticleFileName), "Error");
+-		}
+-		gSexyAppBase->mCompletedLoadingThreadTasks += 6;
++		PvzpErrorMessageBox(std::format("Failed to load particle '{}'", aParticleParams.mParticleFileName), "Error");
+ 	}
++	gSexyAppBase->mCompletedLoadingThreadTasks += 6;
++}
++
++void PvzpParticleLoadDefinitions(const ParticleParams* theParticleParamArray, int theParticleParamArraySize)
++{
++	PvzpHesitationBracket aHesitiation("PvzpParticleLoadDefinitions");
++	PvzpParticleBeginLoadDefinitions(theParticleParamArray, theParticleParamArraySize);
++	for (int i = 0; i < gParticleParamArraySize; i++)
++		PvzpParticleLoadDefinition(i);
+ }
+ 
+ void PvzpParticleFreeDefinitions()
+diff --git a/src/PvzpLib/PvzpParticle.h b/src/PvzpLib/PvzpParticle.h
+index 2a8d602..a309c89 100644
+--- a/src/PvzpLib/PvzpParticle.h
++++ b/src/PvzpLib/PvzpParticle.h
+@@ -194,6 +194,8 @@ extern const ParticleParams* gParticleParamArray;
+ 
+ bool                            PvzpParticleLoadADef(PvzpParticleDefinition* theParticleDef, const char* theParticleFileName);
+ void                            PvzpParticleLoadDefinitions(const ParticleParams* theParticleParamArray, int theParticleParamArraySize);
++void                            PvzpParticleBeginLoadDefinitions(const ParticleParams* theParticleParamArray, int theParticleParamArraySize);
++void                            PvzpParticleLoadDefinition(int theIndex);
+ void                            PvzpParticleFreeDefinitions();
+ 
+ extern const ParticleParams gLawnParticleArray[static_cast<int>(ParticleEffect::NUM_PARTICLES)];  // 0x6A0FF0
 diff --git a/src/PvzpLib/Reanimator.cpp b/src/PvzpLib/Reanimator.cpp
-index d57d25d..41982f2 100644
+index d57d25d..e29b64a 100644
 --- a/src/PvzpLib/Reanimator.cpp
 +++ b/src/PvzpLib/Reanimator.cpp
 @@ -33,6 +33,7 @@
@@ -328,7 +751,7 @@ index d57d25d..41982f2 100644
  	PvzpLogLn("Can't find track '{}'", theTrackName);
  	return 0;
  }
-@@ -1212,6 +1235,25 @@ void ReanimatorLoadDefinitions(const ReanimationParams* theReanimationParamArray
+@@ -1212,9 +1235,29 @@ void ReanimatorLoadDefinitions(const ReanimationParams* theReanimationParamArray
  	PVZP_ASSERT(!gReanimationParamArray && !gReanimatorDefArray);
  	gReanimationParamArraySize = theReanimationParamArraySize;
  	gReanimationParamArray = theReanimationParamArray;
@@ -354,7 +777,41 @@ index d57d25d..41982f2 100644
  	gReanimatorDefCount = theReanimationParamArraySize;
  	gReanimatorDefArray = std::make_unique<ReanimatorDefinition[]>(theReanimationParamArraySize);
  
-@@ -1273,6 +1315,10 @@ void Reanimation::AssignRenderGroupToTrack(const char* theTrackName, int theRend
++#ifndef __EMSCRIPTEN__
+ 	for (unsigned int i = 0; i < gReanimationParamArraySize; i++)
+ 	{
+ 		const ReanimationParams* aReanimationParams = &theReanimationParamArray[i];
+@@ -1222,8 +1265,29 @@ void ReanimatorLoadDefinitions(const ReanimationParams* theReanimationParamArray
+ 		if (DefinitionIsCompiled(aReanimationParams->mReanimFileName))
+ 			ReanimatorEnsureDefinitionLoaded(aReanimationParams->mReanimationType, true);
+ 	}
++#else
++	// porteo: en la web esta precarga (143 animaciones con ~1600 imágenes) no se hace acá, antes
++	// del primer cuadro: eran 4,5 s de pantalla negra en un teléfono. La hace igual, de a una,
++	// LawnApp::CargaPorPartes con el título en pantalla (ReanimatorPrecargarDefinicion). Hace
++	// falta: el juego dibuja muchas de esas imágenes directo (IMAGE_REANIM_*), sin animación.
++#endif
++}
++
++#ifdef __EMSCRIPTEN__
++int ReanimatorCantidadDeDefiniciones()
++{
++	return static_cast<int>(gReanimationParamArraySize);
+ }
+ 
++// porteo: un paso de la precarga de ReanimatorLoadDefinitions (ver ahí)
++void ReanimatorPrecargarDefinicion(int theIndice)
++{
++	const ReanimationParams* aReanimationParams = &gReanimationParamArray[theIndice];
++	if (DefinitionIsCompiled(aReanimationParams->mReanimFileName))
++		ReanimatorEnsureDefinitionLoaded(aReanimationParams->mReanimationType, true);
++}
++#endif
++
+ void ReanimatorFreeDefinitions()
+ {
+ 	for (unsigned int i = 0; i < gReanimatorDefCount; i++)
+@@ -1273,6 +1337,10 @@ void Reanimation::AssignRenderGroupToTrack(const char* theTrackName, int theRend
  			mTrackInstances[i].mRenderGroup = theRenderGroup;  // only the first exact match
  			return;
  		}
@@ -365,6 +822,21 @@ index d57d25d..41982f2 100644
  }
  
  void Reanimation::AssignRenderGroupToPrefix(const char* theTrackName, int theRenderGroup)
+diff --git a/src/PvzpLib/Reanimator.h b/src/PvzpLib/Reanimator.h
+index 4a8f57c..a3c8bf9 100644
+--- a/src/PvzpLib/Reanimator.h
++++ b/src/PvzpLib/Reanimator.h
+@@ -106,6 +106,10 @@ inline void                         ReanimationFillInMissingData(void*& thePrev,
+ bool                                ReanimationLoadDefinition(const std::string& theFileName, ReanimatorDefinition* theDefinition);
+ void                                ReanimationFreeDefinition(ReanimatorDefinition* theDefinition);
+ void                                ReanimatorEnsureDefinitionLoaded(ReanimationType theReanimType, bool theIsPreloading);
++#ifdef __EMSCRIPTEN__
++int                                 ReanimatorCantidadDeDefiniciones();
++void                                ReanimatorPrecargarDefinicion(int theIndice);
++#endif
+ void                                ReanimatorLoadDefinitions(const ReanimationParams* theReanimationParamArray, int theReanimationParamArraySize);
+ void                                ReanimatorFreeDefinitions();
+ 
 diff --git a/src/Resources.cpp b/src/Resources.cpp
 index a4784e5..e4719a1 100644
 --- a/src/Resources.cpp
@@ -979,6 +1451,175 @@ index a4784e5..e4719a1 100644
  		SOUND_AWOOGA = aMgr.GetSoundThrow("SOUND_AWOOGA");
  		SOUND_BALLOONINFLATE = aMgr.GetSoundThrow("SOUND_BALLOONINFLATE");
  		SOUND_BALLOON_POP = aMgr.GetSoundThrow("SOUND_BALLOON_POP");
+diff --git a/src/SexyAppFramework/SexyAppBase.cpp b/src/SexyAppFramework/SexyAppBase.cpp
+index 6bdb0d4..860a7bf 100644
+--- a/src/SexyAppFramework/SexyAppBase.cpp
++++ b/src/SexyAppFramework/SexyAppBase.cpp
+@@ -2301,6 +2301,15 @@ void SexyAppBase::LoadingThreadProc()
+ {
+ }
+ 
++#ifdef __EMSCRIPTEN__
++bool SexyAppBase::AvanzarCarga([[maybe_unused]] double theHasta)
++{
++	// Una app que no sabe cargar de a pedazos carga todo de una vez, como antes.
++	LoadingThreadProc();
++	return true;
++}
++#endif
++
+ void SexyAppBase::LoadingThreadCompleted()
+ {
+ }
+@@ -2323,7 +2332,10 @@ void SexyAppBase::StartLoadingThread()
+ 		mYieldMainThread = true;
+ 		mLoadingThreadStarted = true;
+ #ifdef __EMSCRIPTEN__
+-		LoadingThreadProcStub(this);
++		// porteo: sin hilos, la carga la va corriendo AvanzarCarga() desde el bucle principal
++		// (EmscriptenMainLoopCallback) mientras se animan el logo y el título, como el hilo de
++		// carga del original. Hecha de una vez acá, congelaba la pantalla: 12 s en un teléfono.
++		mYieldMainThread = false;
+ #else
+ 		mLoadingThread = std::thread(LoadingThreadProcStub, this); // keep joinable: detach() throws on devkitA64/libnx
+ #endif
+@@ -2783,6 +2795,7 @@ void SexyAppBase::EmscriptenMainLoopCallback()
+ 	SexyAppBase* app = Sexy::gSexyAppBase;
+ 	if (app->mWindow != nullptr && app->mGLInterface != nullptr)
+ 	{
++		app->AjustarPantalla();
+ 		app->mGLInterface->UpdateViewport();
+ 		app->mWidgetManager->Resize(app->mScreenBounds, app->mGLInterface->mPresentationRect);
+ 	}
+@@ -2807,6 +2820,17 @@ void SexyAppBase::EmscriptenMainLoopCallback()
+ 	if (app->mExitToTop)
+ 		app->mExitToTop = false;
+ 
++	// porteo: hasta 50 ms de carga por cuadro. El original también espaciaba los cuadros a
++	// ~50 ms mientras cargaba (mNextDrawTick) y le dejaba al hilo de carga dos tercios de la CPU.
++	if (app->mLoadingThreadStarted && !app->mLoadingThreadCompleted)
++	{
++		if (app->AvanzarCarga(emscripten_get_now() + 50))
++		{
++			Sexy::LogInfoLn("Resource Loading Time: {}", (SDL_GetTicks() - app->mTimeLoaded));
++			app->mLoadingThreadCompleted = true;
++		}
++	}
++
+ 	bool updated = false;
+ 	if (!app->UpdateAppStep(&updated))
+ 		return;
+diff --git a/src/SexyAppFramework/SexyAppBase.h b/src/SexyAppFramework/SexyAppBase.h
+index 50fef32..3453170 100644
+--- a/src/SexyAppFramework/SexyAppBase.h
++++ b/src/SexyAppFramework/SexyAppBase.h
+@@ -430,6 +430,13 @@ public:
+ 	virtual void			ShutdownHook();
+ 	virtual void			PreTerminate();
+ 	virtual void			LoadingThreadProc();
++#ifdef __EMSCRIPTEN__
++	// porteo: en la web no hay hilos. La carga avanza de a pedazos desde el bucle principal
++	// hasta el instante theHasta (emscripten_get_now, en ms); true cuando terminó.
++	virtual bool			AvanzarCarga(double theHasta);
++	// porteo: antes de cada cuadro, la app puede cambiar el tamaño de la pantalla (mScreenBounds)
++	virtual void			AjustarPantalla() {}
++#endif
+ 	virtual void			WriteToRegistry();
+ 	virtual void			ReadFromRegistry();
+ 	virtual Dialog*			NewDialog(int theDialogId, bool isModal, const std::string& theDialogHeader, const std::string& theDialogLines, const std::string& theDialogFooter, int theButtonMode);
+diff --git a/src/SexyAppFramework/graphics/GLInterface.cpp b/src/SexyAppFramework/graphics/GLInterface.cpp
+index 6f7077c..8de6cec 100644
+--- a/src/SexyAppFramework/graphics/GLInterface.cpp
++++ b/src/SexyAppFramework/graphics/GLInterface.cpp
+@@ -1155,6 +1155,23 @@ void GLInterface::Remove3DData(MemoryImage* theImage)
+ 
+ GLImage* GLInterface::GetScreenImage() { return mScreenImage.get(); }
+ 
++#ifdef __EMSCRIPTEN__
++void GLInterface::CambiarAncho(int theAncho)
++{
++	if (theAncho == mWidth)
++		return;
++	mWidth = theAncho;
++	mDisplayWidth = theAncho;
++	if (mScreenImage)
++		mScreenImage->mWidth = theAncho;  // la pantalla recorta a su tamaño (Graphics)
++	glUseProgram(gProgram);
++	float ortho[16];
++	MakeOrthoMatrix(0, (float)mWidth, (float)mHeight, 0, -10, 10, ortho);
++	glUniformMatrix4fv(gUfViewProjMtx, 1, GL_FALSE, ortho);
++	UpdateViewport();
++}
++#endif
++
+ void GLInterface::UpdateViewport()
+ {
+ 	int vx = 0, vy = 0, vw, vh;
+@@ -1168,15 +1185,15 @@ void GLInterface::UpdateViewport()
+ 
+ 	vw = width; vh = height;
+ 
+-	// Letterbox to 4:3
+-	if (width * 3 > height * 4)
++	// Letterbox to the screen's aspect (4:3; porteo: wider on the web while the lawn is shown)
++	if (width * mHeight > height * mWidth)
+ 	{
+-		vw = height * 4 / 3;
++		vw = height * mWidth / mHeight;
+ 		vx = (width - vw) / 2;
+ 	}
+-	else if (width * 3 < height * 4)
++	else if (width * mHeight < height * mWidth)
+ 	{
+-		vh = width * 3 / 4;
++		vh = width * mHeight / mWidth;
+ 		vy = (height - vh) / 2;
+ 	}
+ 
+diff --git a/src/SexyAppFramework/graphics/GLInterface.h b/src/SexyAppFramework/graphics/GLInterface.h
+index 245f337..e9ff739 100644
+--- a/src/SexyAppFramework/graphics/GLInterface.h
++++ b/src/SexyAppFramework/graphics/GLInterface.h
+@@ -218,6 +218,10 @@ public:
+ 
+ 	GLImage*				GetScreenImage();
+ 	void					UpdateViewport();
++#ifdef __EMSCRIPTEN__
++	// porteo: la pantalla del juego más ancha que 800 (ver LawnApp::AjustarPantalla)
++	void					CambiarAncho(int theAncho);
++#endif
+ 	int						Init(bool IsWindowed);
+ 	bool					Redraw(Rect* theClipRect = nullptr);
+ 	void					SetVideoOnlyDraw(bool videoOnly);
+diff --git a/src/SexyAppFramework/imagelib/ImageLib.cpp b/src/SexyAppFramework/imagelib/ImageLib.cpp
+index 20e06e1..0aea357 100644
+--- a/src/SexyAppFramework/imagelib/ImageLib.cpp
++++ b/src/SexyAppFramework/imagelib/ImageLib.cpp
+@@ -1158,6 +1158,10 @@ static bool CheckSinglePath(std::string_view thePath)
+ 	{
+ 		if (gPakInterface->mPakRecordMap.contains(PakInterface::NormalizePakPath(thePath)))
+ 			return true;
++#ifdef __EMSCRIPTEN__
++		if (!gPakInterface->PuedeAbrirse(thePath))  // porteo: ver PakInterface::PuedeAbrirse
++			return false;
++#endif
+ 	}
+ 
+ 	const std::string aPathString(thePath);
+@@ -1221,7 +1225,12 @@ static Image* TryLoadByExt(const std::string& theBaseName, std::string_view theE
+ 	{
+ 		if (theExt.empty() || EqualsIgnoreCase(theExt, aKnownExt))
+ 		{
+-			if (Image* aImage = aLoader(theBaseName + std::string(aKnownExt)))
++			const std::string aFileName = theBaseName + std::string(aKnownExt);
++#ifdef __EMSCRIPTEN__
++			if (gPakInterface && !gPakInterface->PuedeAbrirse(aFileName))  // porteo: ver PakInterface::PuedeAbrirse
++				continue;
++#endif
++			if (Image* aImage = aLoader(aFileName))
+ 				return aImage;
+ 		}
+ 	}
 diff --git a/src/SexyAppFramework/misc/ResourceManager.cpp b/src/SexyAppFramework/misc/ResourceManager.cpp
 index af5f56d..9f1946d 100644
 --- a/src/SexyAppFramework/misc/ResourceManager.cpp
@@ -1008,3 +1649,378 @@ index 5ecd241..657c9e4 100644
  
  	int						GetNumImages(const std::string &theGroup);
  	int						GetNumSounds(const std::string &theGroup);
+diff --git a/src/SexyAppFramework/paklib/PakInterface.cpp b/src/SexyAppFramework/paklib/PakInterface.cpp
+index 42c09d8..340695f 100644
+--- a/src/SexyAppFramework/paklib/PakInterface.cpp
++++ b/src/SexyAppFramework/paklib/PakInterface.cpp
+@@ -24,6 +24,11 @@
+ 
+ #include <algorithm>
+ #include <filesystem>
++#ifdef __EMSCRIPTEN__
++#include <cctype>
++#include <optional>
++#include <unordered_map>
++#endif
+ #include "Common.h"
+ #include "PakInterface.h"
+ #include "fcaseopen/fcaseopen.h"
+@@ -261,6 +266,86 @@ PFILE* PakInterface::FOpen(const char* theFileName, const char* anAccess)
+ 	return aPFP;
+ }
+ 
++#ifdef __EMSCRIPTEN__
++// porteo: en la web los recursos están en main.pak y en el disco (MEMFS) queda sólo lo que
++// escribe la carcasa (main.pak, properties/) y las partidas. Pero cada imagen de una animación
++// se busca en tres carpetas, con cuatro extensiones y dos nombres de alfa, y lo que no está en
++// el pak se va a buscar al disco: ~25 000 consultas a MEMFS, 1,2 s de la carga en un teléfono
++// (CPU ÷4). Los recursos no se escriben mientras se juega, así que alcanza con leer una vez
++// cada carpeta: si el nombre no está ni con otras mayúsculas (fcaseopen no las distingue), no
++// hace falta preguntar. Si está, se sigue por el camino de siempre.
++namespace
++{
++struct CarpetaEnDisco
++{
++	std::string										mRuta;		// como se llama en el disco
++	std::unordered_map<std::string, std::string>	mEntradas;	// nombre en minúsculas → como se llama
++};
++
++std::string Minusculas(std::string_view theTexto)
++{
++	std::string aTexto(theTexto);
++	for (char& c : aTexto)
++		c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
++	return aTexto;
++}
++
++// theCarpeta: ruta absoluta en minúsculas sin barra final ("" es la raíz). nullptr si no existe.
++const CarpetaEnDisco* LeerCarpeta(const std::string& theCarpeta)
++{
++	static std::unordered_map<std::string, std::optional<CarpetaEnDisco>> aLeidas;
++	if (auto anItr = aLeidas.find(theCarpeta); anItr != aLeidas.end())
++		return anItr->second ? &*anItr->second : nullptr;
++
++	std::string aRuta;
++	if (theCarpeta.empty())
++		aRuta = "/";
++	else
++	{
++		const size_t aBarra = theCarpeta.rfind('/');
++		if (const CarpetaEnDisco* aMadre = LeerCarpeta(theCarpeta.substr(0, aBarra)))
++		{
++			auto anEntrada = aMadre->mEntradas.find(theCarpeta.substr(aBarra + 1));
++			if (anEntrada != aMadre->mEntradas.end())
++				aRuta = (aMadre->mRuta == "/" ? "/" : aMadre->mRuta + "/") + anEntrada->second;
++		}
++	}
++
++	std::optional<CarpetaEnDisco> aCarpeta;
++	std::error_code ec;
++	if (!aRuta.empty() && std::filesystem::is_directory(aRuta, ec))
++	{
++		aCarpeta.emplace();
++		aCarpeta->mRuta = aRuta;
++		for (const auto& anEntrada : std::filesystem::directory_iterator(aRuta, ec))
++		{
++			std::string aNombre = anEntrada.path().filename().string();
++			aCarpeta->mEntradas.emplace(Minusculas(aNombre), aNombre);
++		}
++	}
++	auto anItr = aLeidas.emplace(theCarpeta, std::move(aCarpeta)).first;
++	return anItr->second ? &*anItr->second : nullptr;
++}
++}
++
++bool PakInterface::PuedeAbrirse(std::string_view theFileName)
++{
++	if (mPakRecordMap.contains(NormalizePakPath(theFileName)))
++		return true;
++
++	std::string aRuta = Sexy::IsPathRooted(theFileName) ? std::string(theFileName) : Sexy::GetResourcePath(theFileName);
++	std::replace(aRuta.begin(), aRuta.end(), '\\', '/');
++	aRuta = Minusculas(aRuta);
++	// "." y ".." (y "//") los resuelve el sistema de archivos: con eso no se adivina
++	const size_t aBarra = aRuta.rfind('/');
++	if (aRuta.empty() || aRuta[0] != '/' || aRuta.find("/.") != std::string::npos ||
++		aRuta.find("//") != std::string::npos || aBarra == aRuta.size() - 1)
++		return true;
++	const CarpetaEnDisco* aCarpeta = LeerCarpeta(aRuta.substr(0, aBarra));
++	return aCarpeta && aCarpeta->mEntradas.contains(aRuta.substr(aBarra + 1));
++}
++#endif
++
+ int PakInterface::FClose(PFILE* theFile)
+ {
+ 	if (theFile->mRecord == nullptr)
+diff --git a/src/SexyAppFramework/paklib/PakInterface.h b/src/SexyAppFramework/paklib/PakInterface.h
+index edcbdfa..e55ecca 100644
+--- a/src/SexyAppFramework/paklib/PakInterface.h
++++ b/src/SexyAppFramework/paklib/PakInterface.h
+@@ -136,6 +136,11 @@ public:
+ 	char*					FGetS(char* thePtr, int theSize, PFILE* theFile) override;
+ 	int						FEof(PFILE* theFile) override;
+ 
++#ifdef __EMSCRIPTEN__
++	// porteo: false si es seguro que FOpen(theFileName, "rb") no lo encontraría (ver el .cpp).
++	// Sólo para recursos (imágenes, sonidos): no sirve para lo que el juego escribe.
++	bool					PuedeAbrirse(std::string_view theFileName);
++#endif
+ };
+ 
+ extern PakInterface* gPakInterface;
+diff --git a/src/SexyAppFramework/sound/SDLSoundManager.cpp b/src/SexyAppFramework/sound/SDLSoundManager.cpp
+index 8fb3c6b..0dae7bd 100644
+--- a/src/SexyAppFramework/sound/SDLSoundManager.cpp
++++ b/src/SexyAppFramework/sound/SDLSoundManager.cpp
+@@ -258,19 +258,23 @@ bool SDLSoundManager::LoadSound(intptr_t theSfxID, const std::string& theFilenam
+ 	mSourceFileNames[theSfxID] = theFilename;
+ 
+ #ifdef LOW_MEMORY
++	auto Existe = [](const std::string& theName) {
++#ifdef __EMSCRIPTEN__
++		if (!gPakInterface->PuedeAbrirse(theName))  // porteo: ver PakInterface::PuedeAbrirse
++			return false;
++#endif
++		PFILE* fp = p_fopen(theName.c_str(), "rb");
++		if (fp)
++			p_fclose(fp);
++		return fp != nullptr;
++	};
+ 	for (const char* aFormat : gSoundFormats)
+ 	{
+-		if (PFILE* fp = p_fopen((theFilename + aFormat).c_str(), "rb"))
+-		{
+-			p_fclose(fp);
++		if (Existe(theFilename + aFormat))
+ 			return true;
+-		}
+ 	}
+-	if (PFILE* fp = p_fopen((theFilename + ".au").c_str(), "rb"))
+-	{
+-		p_fclose(fp);
++	if (Existe(theFilename + ".au"))
+ 		return true;
+-	}
+ 	mSourceFileNames[theSfxID].clear();
+ 	return false;
+ #else
+@@ -284,6 +288,10 @@ bool SDLSoundManager::DecodeSound(intptr_t theSfxID, const std::string& theFilen
+ 	{
+ 		std::string aFilename = theFilename + aFormat;
+ 
++#ifdef __EMSCRIPTEN__
++		if (!gPakInterface->PuedeAbrirse(aFilename))  // porteo: ver PakInterface::PuedeAbrirse
++			continue;
++#endif
+ 		PFILE *fp = p_fopen(aFilename.c_str(), "rb");
+ 		if (!fp)
+ 			continue;
+diff --git a/src/SexyAppFramework/widget/WidgetManager.cpp b/src/SexyAppFramework/widget/WidgetManager.cpp
+index fcbfb82..ceb577f 100644
+--- a/src/SexyAppFramework/widget/WidgetManager.cpp
++++ b/src/SexyAppFramework/widget/WidgetManager.cpp
+@@ -329,8 +329,15 @@ void WidgetManager::RemoveBaseModal(Widget* theWidget)
+ 
+ void WidgetManager::Resize(const Rect& theMouseDestRect, const Rect& theMouseSourceRect)
+ {
++#ifdef __EMSCRIPTEN__
++	// porteo: con la pantalla ancha, lo agregado va sólo a la izquierda (LawnApp::AjustarPantalla)
++	// y la cuenta de abajo (que supone márgenes iguales a los dos lados) daría de menos.
++	mWidth = mApp->mWidth;
++	mHeight = mApp->mHeight;
++#else
+ 	mWidth = theMouseDestRect.mWidth + 2 * theMouseDestRect.mX;
+ 	mHeight = theMouseDestRect.mHeight + 2 * theMouseDestRect.mY;
++#endif
+ 	mMouseDestRect = theMouseDestRect;
+ 	mMouseSourceRect = theMouseSourceRect;
+ }
+diff --git a/wasm/build-wasm.sh b/wasm/build-wasm.sh
+index 06d86a3..337063e 100644
+--- a/wasm/build-wasm.sh
++++ b/wasm/build-wasm.sh
+@@ -39,19 +39,19 @@ OPENMPT_PREFIX="${BUILD_DIR}/openmpt-prefix"
+ # Build libopenmpt if --deps is passed
+ if [[ "${1:-}" == "--deps" ]]; then
+     OPENMPT_SRC="${BUILD_DIR}/libopenmpt-src"
++    # Porteo: versión fija (la del parche) y libopenmpt-porteo.patch aplicado: -O3 en vez
++    # de -Oz y las muestras Vorbis del MO3 decodificadas una sola vez (la música se carga
++    # dos veces al arrancar). Se recompila cuando cambia el parche: la marca guarda su hash.
++    OPENMPT_TAG="0.8.9"
++    PARCHE="${SCRIPT_DIR}/libopenmpt-porteo.patch"
++    MARCA="$(sha256sum "${PARCHE}" | cut -c1-64) ${OPENMPT_TAG}"
+ 
+-    if [ ! -f "${OPENMPT_PREFIX}/lib/libopenmpt.a" ]; then
+-        echo "Building libopenmpt for Emscripten..."
+-        OPENMPT_TAG=$(git ls-remote --tags https://github.com/OpenMPT/openmpt.git 'refs/tags/libopenmpt-*' \
+-            | grep -v '\^{}' | sed 's|.*refs/tags/libopenmpt-||' \
+-            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+-        if [ -z "$OPENMPT_TAG" ]; then
+-            OPENMPT_TAG="0.8.4" # Fallback to a known stable version if tag retrieval fails
+-        fi
+-        echo "Using libopenmpt version: $OPENMPT_TAG"
+-        if [ ! -d "${OPENMPT_SRC}" ]; then
+-            git clone --depth=1 --branch "libopenmpt-${OPENMPT_TAG}" https://github.com/OpenMPT/openmpt.git "${OPENMPT_SRC}"
+-        fi
++    if [ "$(cat "${OPENMPT_PREFIX}/.porteo" 2>/dev/null)" != "${MARCA}" ]; then
++        echo "Building libopenmpt ${OPENMPT_TAG} for Emscripten..."
++        rm -rf "${OPENMPT_SRC}" "${OPENMPT_PREFIX}"
++        git -c advice.detachedHead=false clone --depth=1 --branch "libopenmpt-${OPENMPT_TAG}" \
++            https://github.com/OpenMPT/openmpt.git "${OPENMPT_SRC}"
++        git -C "${OPENMPT_SRC}" apply "${PARCHE}"
+         cd "${OPENMPT_SRC}"
+         emmake make CONFIG=emscripten \
+             STATIC_LIB=1 SHARED_LIB=0 \
+@@ -64,6 +64,7 @@ if [[ "${1:-}" == "--deps" ]]; then
+             STATIC_LIB=1 SHARED_LIB=0 \
+             EXAMPLES=0 OPENMPT123=0 TEST=0 \
+             PREFIX="${OPENMPT_PREFIX}" install
++        echo "${MARCA}" > "${OPENMPT_PREFIX}/.porteo"
+         echo "libopenmpt installed to ${OPENMPT_PREFIX}"
+     else
+         echo "libopenmpt already built, skipping."
+diff --git a/wasm/libopenmpt-porteo.patch b/wasm/libopenmpt-porteo.patch
+new file mode 100644
+index 0000000..a16aed5
+--- /dev/null
++++ b/wasm/libopenmpt-porteo.patch
+@@ -0,0 +1,139 @@
++diff --git a/build/make/config-emscripten.mk b/build/make/config-emscripten.mk
++index 775ae3e..c290a55 100644
++--- a/build/make/config-emscripten.mk
+++++ b/build/make/config-emscripten.mk
++@@ -68,9 +68,11 @@ NO_MINIMP3=1
++ NO_STBVORBIS=1
++ endif
++ 
++-CXXFLAGS += -Oz
++-CFLAGS   += -Oz
++-LDFLAGS  += -Oz
+++# porteo (PvZ-Portable): -O3 y no -Oz. Decodificar la música (Vorbis) es la parte más pesada
+++# de la carga del juego, y con -Oz iba ~1,5 veces más lento. El resultado es el mismo.
+++CXXFLAGS += -O3
+++CFLAGS   += -O3
+++LDFLAGS  += -O3
++ 
++ # Enable LTO as recommended by Emscripten
++ #CXXFLAGS += -flto=thin
++diff --git a/soundlib/Load_mo3.cpp b/soundlib/Load_mo3.cpp
++index dbea105..1a32cf1 100644
++--- a/soundlib/Load_mo3.cpp
+++++ b/soundlib/Load_mo3.cpp
++@@ -59,6 +59,12 @@
++ #include "openmpt/soundbase/Copy.hpp"
++ #endif  // MPT_WITH_STBVORBIS
++ 
+++#if defined(MPT_WITH_STBVORBIS) && defined(__EMSCRIPTEN__)
+++#include <cstring>
+++#include <map>
+++#include <vector>
+++#endif
+++
++ 
++ OPENMPT_NAMESPACE_BEGIN
++ 
++@@ -835,6 +841,29 @@ CSoundFile::ProbeResult CSoundFile::ProbeFileHeaderMO3(MemoryFileReader file, co
++ }
++ 
++ 
+++#if defined(MPT_WITH_STBVORBIS) && !(defined(MPT_WITH_VORBIS) && defined(MPT_WITH_VORBISFILE)) && defined(__EMSCRIPTEN__)
+++// porteo (PvZ-Portable en la web): el juego carga mainmusic.mo3 dos veces (melodía y batería,
+++// que suenan en lugares distintos de la canción) y cada carga decodificaba las mismas 149
+++// muestras Vorbis: 1,5 s de la carga en un teléfono. La primera carga guarda cada muestra
+++// decodificada junto con los bytes exactos de los que salió; si la segunda pide una muestra
+++// con los mismos bytes, la copia. stb_vorbis es determinista: el resultado es idéntico byte a
+++// byte, y los lectores quedan en la misma posición. Lo guardado se suelta al usarse, y lo que
+++// una carga no usó lo suelta la siguiente: no queda memoria tomada.
+++#define PORTEO_MO3_GUARDADAS 1
+++struct MO3Guardada
+++{
+++	std::vector<std::byte> muestra;
+++	FileReader::pos_type posCabecera = 0, posDatos = 0;
+++	bool vieja = false;
+++};
+++static std::map<std::vector<std::byte>, MO3Guardada> &MO3Guardadas()
+++{
+++	static std::map<std::vector<std::byte>, MO3Guardada> guardadas;
+++	return guardadas;
+++}
+++#endif
+++
+++
++ bool CSoundFile::ReadMO3(FileReader &file, ModLoadingFlags loadFlags)
++ {
++ 	file.Rewind();
++@@ -1596,6 +1625,10 @@ bool CSoundFile::ReadMO3(FileReader &file, ModLoadingFlags loadFlags)
++ 	}
++ 
++ 	bool unsupportedSamples = false;
+++#ifdef PORTEO_MO3_GUARDADAS
+++	for(auto &guardada : MO3Guardadas())
+++		guardada.second.vieja = true;
+++#endif
++ 	for(SAMPLEINDEX smp = 1; smp <= m_nSamples; smp++)
++ 	{
++ 		MO3SampleInfo &smpInfo = sampleInfos[smp - 1];
++@@ -1927,6 +1960,33 @@ bool CSoundFile::ReadMO3(FileReader &file, ModLoadingFlags loadFlags)
++ 			// beginning. MO3 files with this property are yet to be spotted in the
++ 			// wild, thus, this behaviour is currently not problematic.
++ 
+++#ifdef PORTEO_MO3_GUARDADAS
+++			// porteo: ver MO3Guardadas
+++			std::vector<std::byte> clave;
+++			{
+++				const uint32 forma[] = {sample.nLength, numChannels, sample.uFlags[CHN_16BIT] ? 16u : 8u, sharedHeader ? 1u : 0u};
+++				const std::byte *f = reinterpret_cast<const std::byte *>(forma);
+++				clave.assign(f, f + sizeof(forma));
+++				if(sharedHeader)
+++				{
+++					FileReader::PinnedView cabecera = headerChunk.GetPinnedView(initialRead);
+++					clave.insert(clave.end(), cabecera.data(), cabecera.data() + cabecera.size());
+++				}
+++				FileReader::PinnedView datos = sampleData.GetPinnedView();
+++				clave.insert(clave.end(), datos.data(), datos.data() + datos.size());
+++			}
+++			if(auto guardada = MO3Guardadas().find(clave); guardada != MO3Guardadas().end())
+++			{
+++				if(sample.AllocateSample() && guardada->second.muestra.size() == sample.GetSampleSizeInBytes())
+++				{
+++					std::memcpy(sample.samplev(), guardada->second.muestra.data(), guardada->second.muestra.size());
+++					headerChunk.Seek(guardada->second.posCabecera);
+++					sampleData.Seek(guardada->second.posDatos);
+++					MO3Guardadas().erase(guardada);
+++					continue;
+++				}
+++			}
+++#endif
++ 			int consumed = 0, error = 0;
++ 			stb_vorbis *vorb = nullptr;
++ 			if(sharedHeader)
++@@ -1974,6 +2034,16 @@ bool CSoundFile::ReadMO3(FileReader &file, ModLoadingFlags loadFlags)
++ 					error = stb_vorbis_get_error(vorb);
++ 				}
++ 				stb_vorbis_close(vorb);
+++#ifdef PORTEO_MO3_GUARDADAS
+++				if(sample.HasSampleData())
+++				{
+++					MO3Guardada &guardada = MO3Guardadas()[std::move(clave)];
+++					guardada.muestra.assign(sample.sampleb(), sample.sampleb() + sample.GetSampleSizeInBytes());
+++					guardada.posCabecera = headerChunk.GetPosition();
+++					guardada.posDatos = sampleData.GetPosition();
+++					guardada.vieja = false;
+++				}
+++#endif
++ 			} else
++ 			{
++ 				unsupportedSamples = true;
++@@ -2035,6 +2105,10 @@ bool CSoundFile::ReadMO3(FileReader &file, ModLoadingFlags loadFlags)
++ 		AddToLog(LogWarning, U_("Some compressed samples could not be loaded because they use an unsupported codec."));
++ 	}
++ 
+++#ifdef PORTEO_MO3_GUARDADAS
+++	std::erase_if(MO3Guardadas(), [](const auto &guardada) { return guardada.second.vieja; });
+++#endif
+++
++ 	return true;
++ }
++ 

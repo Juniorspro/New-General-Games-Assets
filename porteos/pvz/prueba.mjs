@@ -55,56 +55,102 @@ async function esperar(pg, cond, ms = 20000, paso = 200) {
   }
 }
 
-// Coordenadas del juego (800×600) → pantalla física. Con el teléfono parado la
-// página va girada (web.js) y el rectángulo del lienzo que ve la página es el
-// "lógico": se deshace el giro para saber dónde apoya el dedo.
-const fisico = (pg, gx, gy) => pg.evaluate(([gx, gy]) => {
-  const r = document.getElementById("canvas").getBoundingClientRect();
-  const lx = r.left + gx * r.width / 800, ly = r.top + gy * r.height / 600;
+// Coordenadas del juego (800×600) → pantalla física. Con el césped la pantalla es más
+// ancha (porteo_estado().vista = [x del borde izquierdo, ancho]: muestra la casa). Con el
+// teléfono parado la página va girada (web.js) y el rectángulo del lienzo que ve la página
+// es el "lógico": se deshace el giro para saber dónde apoya el dedo.
+const deshacerGiro = (lx, ly) => {
   const g = window.Porteo && Porteo.girar && Porteo.girar("landscape");
   if (!g || !g.activo()) return [lx, ly];
   const [W, H] = g.fisico();
   return g.sentido() > 0 ? [W - ly, lx] : [ly, H - lx];
-}, [gx, gy]);
-async function tocar(t, gx, gy, ms = 60) {
-  const [x, y] = await fisico(t.pg, gx, gy);
+};
+const fisico = (pg, gx, gy) => pg.evaluate(([gx, gy, deshacer]) => {
+  const r = document.getElementById("canvas").getBoundingClientRect();
+  let L = 0, A = 800;
+  try { const v = JSON.parse(Module.UTF8ToString(Module._porteo_estado())).vista; if (v) [L, A] = v; } catch (_) {}
+  // getBoundingClientRect ya viene girado: se toma el lado lógico con offset*
+  const c = document.getElementById("canvas"), alto = parseFloat(c.style.height), ancho = parseFloat(c.style.width);
+  const cont = document.getElementById("canvas-container"), m = /translateY\((-?[\d.]+)px\)/.exec(cont.style.transform || "");
+  const izq = (innerWidth - ancho) / 2, arriba = (innerHeight - alto) / 2 + (m ? +m[1] : 0);
+  return eval(deshacer)(izq + (gx - L) * ancho / A, arriba + gy * alto / 600);
+}, [gx, gy, `(${deshacerGiro})`]);
+async function tocarAhi(t, x, y, ms = 60) {
   await t.cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y, id: 1 }] });
   await t.pg.waitForTimeout(ms);
   await t.cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 }
+async function tocar(t, gx, gy, ms = 60) {
+  const [x, y] = await fisico(t.pg, gx, gy);
+  await tocarAhi(t, x, y, ms);
+}
+// Una tecla del teclado propio, por lo que dice (también girado).
+async function tecla(t, texto) {
+  const xy = await t.pg.evaluate(([texto, deshacer]) => {
+    const b = [...document.querySelectorAll("#teclado button")].find((b) => b.textContent === texto);
+    if (!b) return null;
+    let x = b.offsetWidth / 2, y = b.offsetHeight / 2;
+    for (let e = b; e && e !== document.body; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; }
+    const k = document.getElementById("teclado");  // centrado con translateX(-50%)
+    x -= k.offsetWidth / 2;
+    return eval(deshacer)(x, y);
+  }, [texto, `(${deshacerGiro})`]);
+  if (!xy) return false;
+  await tocarAhi(t, xy[0], xy[1]);
+  await t.pg.waitForTimeout(90);
+  return true;
+}
 
 // Del título a la primera partida: lo mismo que haría alguien la primera vez.
 async function hastaElTablero(t, etiqueta) {
+  const intro = await t.pg.evaluate(() => !!document.getElementById("porteo-intro"));
+  ch(`${etiqueta}: arranca con la intro de JXStudios`, intro);
   const tit = await esperar(t.pg, (e) => e.pantalla === "titulo", 60000);
   ch(`${etiqueta}: carga hasta el título`, !!tit, `${((Date.now() - t.t0) / 1000).toFixed(1)} s`);
   // el título termina de cargar recursos antes de aceptar el toque
   // "click to start" recién acepta el toque cuando la barra de carga llegó al final
   const cargo = await esperar(t.pg, (e) => e.pantalla === "titulo" && e.cargado === 1, 60000);
   ch(`${etiqueta}: termina de cargar ("click to start")`, !!cargo, `${((Date.now() - t.t0) / 1000).toFixed(1)} s`);
+  // la intro (4,3 s) puede seguir arriba: un toque ahí la saltea y no le llega al juego
+  for (let i = 0; i < 40 && await t.pg.evaluate(() => !!document.getElementById("porteo-intro")); i++) await t.pg.waitForTimeout(150);
   await tocar(t, 400, 560);
   const nuevo = await esperar(t.pg, (e) => e.pantalla === "menu" && e.dialogos > 0, 20000);
   ch(`${etiqueta}: un toque en "click to start" pasa al menú y pide el nombre`, !!nuevo);
-  const foco = await t.pg.evaluate(() => document.activeElement && document.activeElement.id);
-  ch(`${etiqueta}: el cuadro de nombre abre el teclado del teléfono`, foco === "pvz-soft-keyboard", foco);
-  // En Android/iOS el foco que pide el juego desde su bucle no abre el teclado: la
-  // carcasa lo vuelve a pedir dentro del toque. Se simula el teclado cerrado.
-  await t.pg.evaluate(() => document.activeElement && document.activeElement.blur());
-  await tocar(t, 395, 313);
-  const foco2 = await t.pg.evaluate(() => document.activeElement && document.activeElement.id);
-  ch(`${etiqueta}: con el teclado cerrado, tocar el cuadro del nombre lo vuelve a abrir`, foco2 === "pvz-soft-keyboard", foco2);
-  await t.pg.keyboard.type("Juniors", { delay: 40 });
-  await t.pg.keyboard.press("Enter");
+  await t.pg.waitForTimeout(400);
+  const kb = await t.pg.evaluate(() => {
+    const k = document.getElementById("teclado"), c = document.getElementById("canvas");
+    const m = /translateY\((-?[\d.]+)px\)/.exec(document.getElementById("canvas-container").style.transform || "");
+    const alto = parseFloat(c.style.height), campo = (innerHeight - alto) / 2 + (m ? +m[1] : 0) + 330 * alto / 600;
+    return { visible: !k.hidden, campoArriba: campo <= innerHeight - k.offsetHeight, modo: document.getElementById("pvz-soft-keyboard").getAttribute("inputmode") };
+  });
+  ch(`${etiqueta}: el cuadro del nombre abre el teclado propio (no el del sistema)`, kb.visible && kb.modo === "none", JSON.stringify(kb));
+  ch(`${etiqueta}: el campo del nombre queda a la vista, arriba del teclado`, kb.campoArriba);
+  // la primera letra sale mayúscula sola
+  for (const c of "Juniors") await tecla(t, c);
+  await tecla(t, "OK");
   const menu = await esperar(t.pg, (e) => e.pantalla === "menu" && e.dialogos === 0 && e.jugador === "Juniors", 30000);
-  ch(`${etiqueta}: el perfil "Juniors" queda creado`, !!menu, menu ? "" : JSON.stringify(await estado(t.pg)).slice(0, 200));
+  ch(`${etiqueta}: escrito con el teclado propio, el perfil "Juniors" queda creado`, !!menu, menu ? "" : JSON.stringify(await estado(t.pg)).slice(0, 200));
+  ch(`${etiqueta}: con el nombre puesto, el teclado se va`, await t.pg.evaluate(() => document.getElementById("teclado").hidden));
   await t.pg.waitForTimeout(2500);
   await tocar(t, 560, 130);
   const tab = await esperar(t.pg, (e) => e.pantalla === "tablero" && e.nivel === 1, 30000);
   ch(`${etiqueta}: "Start Adventure" abre el nivel 1-1`, !!tab);
+  // pantalla ancha: en un teléfono apaisado el jardín muestra la casa (220 más a la izquierda)
+  const ancho = await esperar(t.pg, (e) => e.vista && e.vista[1] === 1020, 5000);
+  const lz = await t.pg.evaluate(() => { const c = document.getElementById("canvas"); return [c.width, c.height, parseFloat(c.style.width), parseFloat(c.style.height)]; });
+  ch(`${etiqueta}: en el jardín la pantalla se agranda hacia la casa (1020×600, sin deformar)`, !!ancho && lz[0] === 1020 && Math.abs(lz[2] / lz[3] - 1020 / 600) < 0.01,
+     `vista ${JSON.stringify(ancho && ancho.vista)}, lienzo ${lz.join(",")}`);
   return tab;
 }
 
 console.log("A. Teléfono horizontal (844×390, dedos de verdad)");
 {
+  const t0 = await abrir(WEB);
+  await t0.pg.waitForTimeout(1200);
+  await tocarAhi(t0, 422, 195);
+  await t0.pg.waitForTimeout(800);
+  ch("A: un toque saltea la intro", !(await t0.pg.evaluate(() => !!document.getElementById("porteo-intro"))));
+  await t0.c.close();
   const t = await abrir(WEB);
   await hastaElTablero(t, "A");
   // el tutorial habilita el sobre recién cuando termina la intro
@@ -151,6 +197,7 @@ console.log("A. Teléfono horizontal (844×390, dedos de verdad)");
   await t.pg.reload();
   const vuelta = await esperar(t.pg, (e) => e.pantalla === "titulo", 60000);
   await esperar(t.pg, (e) => e.pantalla === "titulo" && e.cargado === 1, 60000);
+  for (let i = 0; i < 40 && await t.pg.evaluate(() => !!document.getElementById("porteo-intro")); i++) await t.pg.waitForTimeout(150);
   await tocar(t, 400, 560);
   const sigue = await esperar(t.pg, (e) => e.pantalla === "menu" && e.jugador === "Juniors", 20000);
   ch("A: al volver a abrir, el perfil sigue ahí (guardado en el teléfono)", !!vuelta && !!sigue && sigue.dialogos === 0);
@@ -163,8 +210,8 @@ console.log("\nB. Teléfono parado (390×844): el juego se gira solo 90°");
   const girado = await t.pg.evaluate(() => document.documentElement.classList.contains("porteo-girado"));
   ch("B: la página va girada", girado);
   await hastaElTablero(t, "B");
-  const lienzo = await t.pg.evaluate(() => { const r = document.getElementById("canvas").getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; });
-  ch("B: el lienzo ocupa el alto lógico entero (4:3)", lienzo[1] === 390 && lienzo[0] === 520, lienzo.join("×"));
+  const lienzo = await t.pg.evaluate(() => { const c = document.getElementById("canvas"); return [Math.round(parseFloat(c.style.width)), Math.round(parseFloat(c.style.height))]; });
+  ch("B: el lienzo ocupa el alto lógico entero (con la casa: 1020×600)", lienzo[1] === 390 && lienzo[0] === 663, lienzo.join("×"));
   await esperar(t.pg, (e) => e.pantalla === "tablero" && e.sol === 150 && e.dialogos === 0, 40000);
   await t.pg.waitForTimeout(4000);
   await tocar(t, 112, 42);
@@ -204,6 +251,7 @@ if (ARCHIVO) {
   const t = await abrir(ARCHIVO);
   const tit = await esperar(t.pg, (e) => e.pantalla === "titulo" && e.cargado === 1, 120000);
   ch("D: abre desde el disco hasta \"click to start\"", !!tit, `${((Date.now() - t.t0) / 1000).toFixed(1)} s`);
+  for (let i = 0; i < 40 && await t.pg.evaluate(() => !!document.getElementById("porteo-intro")); i++) await t.pg.waitForTimeout(150);
   await tocar(t, 400, 560);
   const nuevo = await esperar(t.pg, (e) => e.pantalla === "menu" && e.dialogos > 0, 20000);
   ch("D: el toque pasa al menú", !!nuevo);

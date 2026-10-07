@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Plantas vs. Zombies (PC, PopCap): del juego de PC al porteo móvil completo, en un comando.
 #
-#   porteos/pvz/portear.sh JUEGO [CARPETA_DE_ENTREGA] [--un-archivo]
+#   porteos/pvz/portear.sh JUEGO [CARPETA_DE_ENTREGA] [--un-archivo] [--depuracion]
 #
 # JUEGO: el .rar/.zip/.7z del juego, o la carpeta donde están main.pak y properties/.
 # Anda con el original de 2009 (1.0.0.1051, el probado) y con la GOTY.
@@ -10,7 +10,7 @@
 #   pvz/          versión web (PWA: se instala y anda sin red)
 #   pvz.apk       APK nuevo (ar.juniors.pvz)
 #   pvz-web.zip   la carpeta web comprimida, para subir a un hosting
-#   pvz.html      con --un-archivo: todo en un .html (~34 MB; pesado para un teléfono)
+#   pvz.html      con --un-archivo: todo en un .html (~25 MB) que se abre con doble clic
 #   pvz-depuracion/  con --depuracion: el motor con los atajos de PopCap (-cheat), para
 #                 recorrido.mjs y bailarin.mjs. NO se entrega.
 #
@@ -19,7 +19,8 @@
 #   - el motor es PvZ-Portable (LGPL-3.0, https://github.com/wszqkzqk/PvZ-Portable),
 #     una reimplementación en C++ que compila a WebAssembly. Se baja en la versión
 #     fijada abajo y se le aplica pvz-portable-1051.patch (lo nuestro: leer los datos
-#     de 2009, el bailarín original, y el estado para las pruebas).
+#     de 2009, el bailarín original, la carga por partes, la pantalla ancha, libopenmpt
+#     con su parche, y el estado para las pruebas).
 #
 # Lo pesado se guarda en $PVZ_TRABAJO (default ~/.porteo/pvz): el SDK de Emscripten
 # (~1 GB) y la compilación. La primera vez tarda ~15 min; después, segundos.
@@ -113,6 +114,8 @@ echo "motor: $(du -h "$M/build-wasm/pvz-portable.wasm" | cut -f1) de WebAssembly
 W="$SALIDA/pvz"
 rm -rf "$W"; mkdir -p "$W/properties"
 cp "$AQUI/index.html" "$W/"
+# La intro de la marca (la moneda de JXStudios), la misma de los otros porteos.
+cp "$H/porteo/intro.js" "$W/porteo-intro.js"
 cp "$M/build-wasm/pvz-portable.js" "$M/build-wasm/pvz-portable.wasm" "$W/"
 # Sin pérdida y verificado píxel por píxel (~0,8 MB menos). oxipng y Pillow van en un
 # entorno aparte; si no se pueden instalar, va el pak original tal cual.
@@ -142,7 +145,9 @@ python3 "$H/porteo/apk/armar.py" "$W" --nombre "Plantas vs. Zombies" --paquete a
     --orientacion horizontal --icono "$ICONO" --version 1.0.0.1051 --salida "$SALIDA/pvz.apk"
 (cd "$SALIDA" && rm -f pvz-web.zip && zip -qr -9 pvz-web.zip pvz)
 if [[ $UN_ARCHIVO == 1 ]]; then
-  python3 "$H/porteo/un-archivo.py" "$W" --salida "$SALIDA/pvz.html"
+  # main.pak (24 MB) va al final: el motor compila mientras el navegador todavía lee
+  # la página, y el pak se descomprime en otro hilo.
+  python3 "$H/porteo/un-archivo.py" "$W" --salida "$SALIDA/pvz.html" --al-final main.pak
 fi
 # La variante de depuración: PVZ_DEBUG (asserts y atajos: "l" salta de nivel, "m" trae
 # un bailarín, "9" da sol) y arranca con -cheat. Sirve para probar todo el juego en
@@ -153,7 +158,7 @@ if [[ $DEPURACION == 1 ]]; then
       >> "$TRABAJO/compilar.log" 2>&1 || { tail -30 "$TRABAJO/compilar.log"; exit 1; }
   WD="$SALIDA/pvz-depuracion"
   rm -rf "$WD"; mkdir -p "$WD"
-  cp -r "$W/properties" "$W/main.pak" "$W/porteo-web.js" "$WD/"
+  cp -r "$W/properties" "$W/main.pak" "$W/porteo-web.js" "$W/porteo-intro.js" "$WD/"
   cp "$M/build-depuracion/pvz-portable.js" "$M/build-depuracion/pvz-portable.wasm" "$WD/"
   sed -e 's/Module.callMain(\[\]);/Module.callMain(["-cheat"]);/' \
       -e "s/Porteo.web({ orientacion/Porteo.web({ offline: false, orientacion/" "$AQUI/index.html" > "$WD/index.html"

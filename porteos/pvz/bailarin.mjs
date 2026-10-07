@@ -25,6 +25,8 @@ let ok = 0, mal = 0;
 const ch = (n, c, d = "") => { c ? ok++ : mal++; console.log(`  ${c ? "✓" : "✗"} ${n}${d ? " — " + d : ""}`); };
 
 await esperar((e) => e.pantalla === "titulo" && e.cargado === 1, 90000);
+// la intro de JXStudios (4,3 s) puede seguir arriba: un clic ahí la saltea y no le llega al juego
+for (let i = 0; i < 40 && await pg.evaluate(() => !!document.getElementById("porteo-intro")); i++) await pg.waitForTimeout(150);
 await pg.mouse.click(400, 560);
 await esperar((e) => e.pantalla === "menu" && e.dialogos > 0, 20000);
 await pg.keyboard.type("Bailarin", { delay: 40 });
