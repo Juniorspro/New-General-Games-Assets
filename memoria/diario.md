@@ -12,6 +12,8 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
     (Higgsfield `95a6115b…`). Falta probarlo en el celu.
   - Pidió los 5 en zip, uno por juego: `python3 herramientas/empaquetar_juegos.py salamanca filete nebulosa tajo dorado`
     (jugar/, fuente/, LEEME y la portada adentro; la guía de TikTok ahora es opcional). Mandados.
+  - Pidió arreglar un HTML de PvZ que Rezona mostraba como texto: es PvZ Portable con el `main.pak` original (de EA,
+    se vende). No se arregló para publicarlo; se ofreció un juego propio de defensa por carriles.
 
 - **07/10/2026 · `claude/fijate-iszyer`:**
   - Portada 9:16 de Plants vs. Zombies (fan art, pidió "real": render realista): Higgsfield `d8a0ec9e…` + título Bebas
