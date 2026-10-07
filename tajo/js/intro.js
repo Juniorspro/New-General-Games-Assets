@@ -1,123 +1,121 @@
 /* ============================================================================
-   La intro de JXSTUDIOS en tinta sumi-e: trazo caligráfico con pincel mojado,
-   sello rojo japonés que se estampa con un golpe, agua que cae.
+   La intro de JXSTUDIOS a pincel: misma coreografía que la de La Cripta, otro
+   material. La pantalla negra se abre con un tajo de luz y aparece el papel de
+   arroz; el monograma JXS se pinta con tinta (aguada corrida + trazo seco),
+   en el golpe cae el sello rojo con salpicón de tinta, y JXSTUDIOS se escribe
+   en serif entintada. La música: un glissando de koto, el taiko en el golpe y
+   una nota larga de shakuhachi.
    ========================================================================== */
 
-function trazoSuave(g, puntos, grosor, alfa) {
-  if (puntos.length < 2) return;
-  g.globalAlpha = alfa || 1;
-  g.strokeStyle = 'rgba(21, 18, 16, 0.8)';
-  g.lineWidth = grosor;
-  g.lineCap = 'round';
-  g.lineJoin = 'round';
-  g.beginPath();
-  g.moveTo(puntos[0].x, puntos[0].y);
-  for (let i = 1; i < puntos.length; i++) {
-    const p = puntos[i], pp = puntos[i - 1];
-    const cx = (pp.x + p.x) / 2, cy = (pp.y + p.y) / 2;
-    g.quadraticCurveTo(pp.x, pp.y, cx, cy);
+/* el papel de arroz: tono cálido, fibras, motas y una aguada de montañas en la niebla */
+function papelWashi(Wl, Hl, semilla, montes) {
+  const [c, g] = lienzoHD(Wl, Hl), r = rngSemilla(semilla || 7);
+  const gr = g.createLinearGradient(0, 0, 0, Hl); gr.addColorStop(0, '#f3ead6'); gr.addColorStop(1, '#e8dcc0');
+  g.fillStyle = gr; g.fillRect(0, 0, Wl, Hl);
+  for (let i = 0; i < 260; i++) {
+    const x = r() * Wl, y = r() * Hl, l = 6 + r() * 26, a = r() * Math.PI;
+    g.strokeStyle = r() < 0.5 ? 'rgba(120,96,60,0.08)' : 'rgba(255,255,255,0.22)'; g.lineWidth = 0.4 + r() * 0.6;
+    g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a) * l * 0.5 + (r() - 0.5) * 6, y + Math.sin(a) * l * 0.5 + (r() - 0.5) * 6, x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
   }
-  g.stroke();
+  for (let i = 0; i < 180; i++) { g.fillStyle = 'rgba(90,70,40,' + (0.04 + r() * 0.08) + ')'; g.fillRect(r() * Wl, r() * Hl, 0.8, 0.8); }
+  if (montes) {
+    // tres capas de montes, cada una más clara y más alta (perspectiva de niebla)
+    for (let k = 0; k < 3; k++) {
+      const base = Hl * (0.98 - k * 0.07), alto = Hl * (0.16 + k * 0.05), tono = 0.16 - k * 0.045;
+      g.beginPath(); g.moveTo(0, Hl);
+      for (let x = 0; x <= Wl + 6; x += 6) g.lineTo(x, base - alto * (0.45 + 0.35 * Math.sin(x * 0.011 + k * 2.1 + semilla) + 0.2 * Math.sin(x * 0.037 + k)) );
+      g.lineTo(Wl, Hl); g.closePath();
+      const m = g.createLinearGradient(0, base - alto, 0, base + 30); m.addColorStop(0, 'rgba(30,24,20,' + tono + ')'); m.addColorStop(1, 'rgba(30,24,20,0)');
+      g.fillStyle = m; g.fill();
+    }
+  }
+  // un viñeteado tibio en los bordes, como papel viejo
+  const v = g.createRadialGradient(Wl / 2, Hl / 2, Math.min(Wl, Hl) * 0.4, Wl / 2, Hl / 2, Math.max(Wl, Hl) * 0.75);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(110,80,40,0.22)');
+  g.fillStyle = v; g.fillRect(0, 0, Wl, Hl);
+  return c;
 }
 
-function selloRojo(g, cx, cy, r, presion) {
-  g.save();
-  g.globalAlpha = Math.min(1, presion * 2);
-  g.fillStyle = '#c41e3a';
-
-  g.translate(cx, cy);
-  g.rotate(Math.random() * 0.2 - 0.1);
-
-  for (let i = 0; i < 3; i++) {
-    const rr = r - i * 4;
-    g.globalAlpha = Math.min(1, presion * 2) * (1 - i * 0.3);
-    g.fillRect(-rr, -rr, rr * 2, rr * 2);
+/* el sello rojo (hanko): cuadrado de bordes comidos con las letras en blanco */
+function hanko(g, x, y, tam, txt, ang, alfa) {
+  g.save(); g.translate(x, y); g.rotate(ang || 0); g.globalAlpha = alfa == null ? 1 : alfa;
+  const r = rngSemilla(31), s = tam / 2;
+  g.fillStyle = BERMELLON; g.beginPath();
+  const pts = [];
+  for (let i = 0; i < 4; i++) for (let k = 0; k < 6; k++) {
+    const e = k / 6, d = (r() - 0.5) * tam * 0.06;
+    const [ax, ay, bx, by] = [[-s, -s, s, -s], [s, -s, s, s], [s, s, -s, s], [-s, s, -s, -s]][i];
+    pts.push([ax + (bx - ax) * e + (i % 2 ? d : 0), ay + (by - ay) * e + (i % 2 ? 0 : d)]);
   }
-
-  g.globalAlpha = Math.min(1, presion * 2) * 0.6;
-  g.fillStyle = '#8b0000';
-  g.fillRect(-r * 0.4, -r * 0.1, r * 0.8, r * 0.2);
-  g.fillRect(-r * 0.1, -r * 0.4, r * 0.2, r * 0.8);
-
+  g.moveTo(pts[0][0], pts[0][1]); for (const p of pts) g.lineTo(p[0], p[1]); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(244,234,214,0.9)'; g.lineWidth = tam * 0.05; g.strokeRect(-s * 0.8, -s * 0.8, s * 1.6, s * 1.6);
+  g.font = 'bold ' + Math.round(tam * (txt.length > 2 ? 0.34 : 0.5)) + 'px ' + SERIF; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#f6eedc'; g.fillText(txt, 0, tam * 0.04);
+  // la tinta que no agarró: motas claras
+  g.fillStyle = 'rgba(244,234,214,0.55)'; for (let i = 0; i < 14; i++) g.fillRect((r() - 0.5) * tam * 0.9, (r() - 0.5) * tam * 0.9, 1 + r() * 1.5, 1 + r());
   g.restore();
 }
 
+/* un salpicón de tinta (gota grande + gotitas en una dirección) */
+function salpicon(g, x, y, tam, col, rnd, ang, alfa) {
+  g.fillStyle = col; g.globalAlpha = alfa == null ? 1 : alfa;
+  g.beginPath();
+  for (let i = 0; i < 18; i++) { const a = (i / 18) * Math.PI * 2, rr = tam * (0.75 + rnd() * 0.45); i ? g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : g.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+  g.closePath(); g.fill();
+  for (let i = 0; i < 9; i++) {
+    const a = (ang == null ? rnd() * Math.PI * 2 : ang + (rnd() - 0.5) * 1.6), d = tam * (1.2 + rnd() * 2.2), rr = tam * (0.08 + rnd() * 0.22);
+    g.beginPath(); g.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, rr, 0, Math.PI * 2); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+
 const ESTILO_SUMI = {
-  negro: '#f5f5f0',
-  chispa: 1,
-  anchoLogo: (Wl) => Math.round(Wl * 0.7),
-  puntas: ['#151210', '#4a4540', '#7a6f68'],
-  golpe: ['#c41e3a', '#8b0000', '#ff6b6b', '#ff8c8c', '#ffa8a8'],
-  destello: 'rgba(0,0,0,0.1)',
-  fondo(Wl, Hl) {
-    const [c, g] = lienzoHD(Wl, Hl);
-    const gr = g.createLinearGradient(0, 0, 0, Hl);
-    gr.addColorStop(0, '#faf8f4');
-    gr.addColorStop(0.5, '#f5f3f0');
-    gr.addColorStop(1, '#f0ede8');
-    g.fillStyle = gr;
-    g.fillRect(0, 0, Wl, Hl);
-
-    for (let i = 0; i < 20; i++) {
-      g.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.03) + ')';
-      g.fillRect(Math.random() * Wl, Math.random() * Hl, 50 + Math.random() * 100, 1);
-    }
-    return c;
-  },
+  negro: '#120e0b',
+  chispa: 2,
+  anchoLogo: (Wl) => Math.round(Wl * 0.62),
+  puntas: ['#16110d', '#2a221c', '#4a4038'],
+  golpe: ['#16110d', '#16110d', '#2a221c', BERMELLON],
+  destello: 'rgba(200,50,30,0.28)',
+  fondo: (Wl, Hl) => papelWashi(Wl, Hl, 3, true),
   logo(g, i) {
-    const t = i.avance, golpe = i.golpe ? i.tGolpe : 0;
-    const ox = i.x0, oy = i.y0;
-
-    if (t < 0.3) {
-      const tt = t / 0.3;
-      const puntos = [];
-      const pasos = Math.floor(tt * 20);
-      for (let j = 0; j <= pasos; j++) {
-        const tt2 = j / 20;
-        puntos.push({
-          x: ox - i.esc * 40 + tt2 * i.esc * 80,
-          y: oy - i.esc * 20 + Math.sin(tt2 * 3.14) * i.esc * 20
-        });
-      }
-      trazoSuave(g, puntos, i.esc * 8, tt);
-    } else if (t < 0.6) {
-      const tt = (t - 0.3) / 0.3;
-      const puntos = [];
-      for (let j = 0; j <= 20; j++) {
-        const tt2 = j / 20;
-        puntos.push({
-          x: ox - i.esc * 40 + tt2 * i.esc * 80,
-          y: oy - i.esc * 20 + Math.sin(tt2 * 3.14) * i.esc * 20
-        });
-      }
-      trazoSuave(g, puntos, i.esc * 8, 1 - tt * 0.3);
+    const G = 14.5 * i.esc;
+    for (const capa of [0, 1]) for (const tz of i.TRAZOS) {
+      if (tz.capa !== capa) continue;
+      const p = i.camino2d(tz, i.esc, i.x0, i.y0), l = i.largo(tz) * i.esc;
+      g.save();
+      if (i.avance < 1) g.setLineDash([Math.max(0.01, l * i.avance), l + 20]);
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      // la tinta que se corre en el papel, el trazo y el pincel seco por encima
+      g.strokeStyle = 'rgba(22,17,13,0.13)'; g.lineWidth = G * 1.55; g.stroke(p);
+      g.strokeStyle = 'rgba(22,17,13,0.92)'; g.lineWidth = G; g.stroke(p);
+      g.strokeStyle = 'rgba(239,229,207,0.3)'; g.lineWidth = G * 0.12;
+      g.save(); g.translate(G * 0.2, -G * 0.12); g.stroke(p); g.restore();
+      g.save(); g.translate(-G * 0.18, G * 0.22); g.lineWidth = G * 0.07; g.stroke(p); g.restore();
+      g.restore();
     }
-
-    if (t > 0.5) {
-      selloRojo(g, i.cx, i.y0 + i.esc * 50, i.esc * 20, Math.min(1, (t - 0.5) * 2));
-    }
-
-    if (i.golpe && golpe < 0.3) {
-      g.globalAlpha = (1 - golpe / 0.3) * 0.4;
-      g.fillStyle = '#c41e3a';
-      g.fillRect(i.x0 - i.esc * 80, i.y0 - i.esc * 40, i.esc * 160, i.esc * 120);
+    if (i.golpe) {
+      // el sello cae grande y se asienta con un rebote
+      const k = clamp(i.tGolpe / 0.18, 0, 1), esc = 1 + (1 - salida(k)) * 0.9, tam = 34 * esc;
+      const x = i.x0 + i.ancho * 0.96, y = i.y0 + i.ancho * 0.44;
+      if (i.tGolpe < 0.5) { const r = rngSemilla(5); salpicon(g, x - 6, y + 4, 9, TINTA, r, Math.PI * 0.9, 0.85 * clamp(i.tGolpe * 8, 0, 1)); }
+      hanko(g, x, y, tam, 'JX', -0.08, clamp(k * 1.4, 0, 1));
     }
   },
   letras(g, parte, I, t, y) {
-    const tam = 28;
-    g.globalAlpha = Math.min(1, Math.max(0, (t - 0.4) * 3));
-    texto(g, parte, I.cx, y, { tam, alin: 'center', col: '#151210', cursiva: false, peso: 'bold' });
+    const tam = 25, total = medir(g, 'JXSTUDIOS', tam), x = I.cx - total / 2;
+    texto(g, parte, x, y + 14, { tam, alin: 'left', col: TINTA });
   },
-  presentaTxt(g, txt, I, t, y) {
-    g.globalAlpha = Math.min(1, Math.max(0, (t - 0.55) * 2));
-    texto(g, txt.toUpperCase(), I.cx, y + 30, { tam: 12, col: '#7a6f68', cursiva: false, peso: '700' });
-  },
+  presentaTxt(g, txt, I, t, y) { texto(g, txt.toUpperCase(), I.cx, y + 42, { tam: 12, col: BERMELLON, peso: '700' }); },
   jingle(ctx, bus, t0, tg, h) {
-    const { tono, soplo, T } = h;
-    tono('sine', 82, 0, 1.5, 30, t0 + 0.2);
-    soplo(0.3, 0.2, 'lowpass', 4000, 800, t0 + 0.2);
-    [0, 3, 7].forEach((d, i) => {
-      tono('triangle', 164 * Math.pow(2, d / 12), 0, 0.8, 0.3, tg + i * 0.15);
-    });
+    const { tono, soplo, f, T } = h;
+    soplo(0.18, 0.18, 'bandpass', 900, 6000, t0);                                   // el tajo de luz
+    // el glissando de koto en la escala "in" (mi y si bemoles)
+    [['D4', 1], ['E4', 0.944], ['G4', 1], ['A4', 1], ['B4', 0.944], ['D5', 1], ['E5', 0.944], ['G5', 1]]
+      .forEach(([n, b], k) => tono('triangle', f(n) * b, 0, 0.55, 0.07, t0 + 0.32 + k * 0.06, 0.003));
+    tono('sine', 150, 40, 0.8, 0.7, tg, 0.003); soplo(0.3, 0.3, 'lowpass', 600, 120, tg);  // el taiko con el sello
+    tono('sine', f('D3'), 0, 1.6, 0.12, tg + 0.02);
+    tono('sine', f('A4'), 0, 1.3, 0.07, t0 + T.T_LETRAS + 0.1, 0.15);              // el shakuhachi
+    soplo(1.0, 0.04, 'bandpass', 880, 1000, t0 + T.T_LETRAS + 0.1);
+    for (let k = 0; k < 9; k++) tono('sine', 1800 + (k % 3) * 120, 0, 0.03, 0.025, t0 + T.T_LETRAS + k * 0.04);
   },
 };

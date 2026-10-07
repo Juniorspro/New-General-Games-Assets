@@ -1,0 +1,5 @@
+{
+  "salida": "tajo.html",
+  "css": ["tajo/tajo.css"],
+  "js": ["motor2d/fuente.js", "motor2d/intro-jxs.js", "tajo/js/base.js", "tajo/js/frutas.js", "tajo/js/fisica.js", "tajo/js/sonido.js", "tajo/js/intro.js", "tajo/js/juego.js"]
+}
