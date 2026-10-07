@@ -16,6 +16,8 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
     dedo personalizables, intro e idioma ([justshoot](justshoot.md)). Mandado. Se puede sumar mapas de la Classic.
   - Pidió portada 9:16 siempre con cada juego (regla en INDICE). Hecha la de Just Shoot (Higgsfield `99d9602c…` +
     Bebas inclinada, `scratchpad/portadas/`, fuera del repo).
+  - Portada 9:16 de FNaF 4 (HTML subido por el usuario): Higgsfield `19624051…` (cuarto oscuro, pesadilla en el
+    pasillo) + título SpecialElite como la de FNaF2 y la moneda. Mandada.
   - Slendytubbies: intro JXStudios, sin pantalla de carga, idioma sobre el menú difuminado (HTML mandado).
   - Portadas 9:16 de FNaF 2 y Slendytubbies: arte con Higgsfield (`nano_banana_2`, jobs `cf4a8b9f…` y `48f56c26…`)
     + título y moneda compuestos con PIL (`scratchpad/portadas/componer.py`, fuera del repo: es fan art). Mandadas.
