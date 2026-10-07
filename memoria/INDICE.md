@@ -79,6 +79,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [brillo-rendimiento](brillo-rendimiento.md) | BRILLO: qué lo hacía lento, la cámara más cerca, las cinemáticas de charla y la calidad automática |
 | [brillo-trailer](brillo-trailer.md) | el tráiler de TikTok de BRILLO: tomas con reloj propio, Remotion, la música y sus trampas |
 | [baldi](baldi.md) | Baldi's Basics Classic (Unity 2018) a HTML: el Unity chiquito en JS, clips de sprites, TextMeshPro, navmesh, controles de celu |
+| [justshoot](justshoot.md) | Just Shoot: la demo web (BananaBread/Emscripten) a un solo HTML, texturas DXT, paquetes de Emscripten, controles de dedo |
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR y los dúos de los seis de un archivo): tomas con bots, voz, subtítulos, montaje en Remotion, portadas |
 | [barro](barro.md) | BARRO: motocross tipo Mad Skills (de cero): física de la moto, rivales, pistas, la tierra en tiras, el arte de Rezona |
 | [bus-stop](bus-stop.md) | port de un juego de Unity 4.5 ajeno (Bus Stop Simulator) a APK sin el editor: UnityPy, el IL de los scripts, la luz de Unity 4 en three, lo que no entra al repo |
