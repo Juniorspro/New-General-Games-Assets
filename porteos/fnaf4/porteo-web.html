@@ -11,8 +11,9 @@
     // segundo sale: una noche de 6 minutos no se pierde por rozar el borde.
     atras: function () {},
     textoSalir: 'Atrás otra vez para salir',
-    // FNaF 4 no tiene pausa: mientras el teléfono está parado y el cartel tapa
-    // la pantalla, el juego y el sonido se congelan.
+    // Con el teléfono parado el juego se gira solo (web.js). Si alguna vez se
+    // usa el cartel en su lugar (girar: false), como FNaF 4 no tiene pausa,
+    // mientras el cartel tapa se congelan el juego y el sonido.
     alGirarMal: function () { if (ct()) { ct().congelar = true; ct().motor.sonido.pausar(true); } },
     alGirarBien: function () { if (ct()) { ct().congelar = false; ct().motor.sonido.pausar(false); } },
   });

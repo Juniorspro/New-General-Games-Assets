@@ -137,18 +137,34 @@ for (const [w, h, nombre] of [[640, 360, "chico 640×360"], [915, 412, "alto 915
   ch(`${nombre}: sin errores`, !errores.length, errores.slice(0, 2).join(" | "));
   await pg.context().close();
 }
-console.log("\nC. teléfono parado (390×844)");
+console.log("\nC. teléfono parado (390×844): el juego se gira solo");
 {
-  const { pg, cdp, errores } = await abrir(WEB, { w: 844, h: 390 });
-  await aLaNoche(pg, cdp);
-  await pg.setViewportSize({ width: 390, height: 844 }); await pg.waitForTimeout(600);
-  const g = await pg.evaluate(() => { const e = document.getElementById("porteo-girar"); return e && getComputedStyle(e).display !== "none" ? e.innerText : null; });
-  const l0 = await pg.evaluate(() => window.__ct.motor.F.loop); await pg.waitForTimeout(1500); const l1 = await pg.evaluate(() => window.__ct.motor.F.loop);
-  ch("parado: pide girar el teléfono", !!g, JSON.stringify(g));
-  ch("parado: la noche se congela (FNaF 4 no tiene pausa)", l1 === l0, `cuadros ${l0} → ${l1}`);
-  await pg.setViewportSize({ width: 844, height: 390 }); await pg.waitForTimeout(1500);
-  const l2 = await pg.evaluate(() => window.__ct.motor.F.loop);
-  ch("acostado otra vez: sigue", l2 > l1, `cuadros ${l1} → ${l2}`);
+  // Con el teléfono parado (o el giro automático bloqueado) el juego se gira
+  // solo 90° y se juega igual: los toques van a donde cae el dedo en el vidrio.
+  const { pg, cdp, errores } = await abrir(WEB, { w: 390, h: 844 });
+  const info = await pg.evaluate(() => ({ iw: innerWidth, ih: innerHeight, girado: document.documentElement.classList.contains("porteo-girado"), cartel: !!document.getElementById("porteo-girar") }));
+  ch("parado: el juego se gira (sin cartel)", info.girado && !info.cartel && info.iw === 844 && info.ih === 390, JSON.stringify(info));
+  const dedo = (gx, gy) => pg.evaluate(([gx, gy]) => { const r = document.querySelector("#juego").getBoundingClientRect(); const lx = r.left + gx / 800 * r.width, ly = r.top + gy / 480 * r.height; const g = Porteo.girar(), [W, H] = g.fisico(); return g.sentido() > 0 ? [W - ly, lx] : [ly, H - lx]; }, [gx, gy]);
+  const tocarG = async (n, ms = 120) => { const [gx, gy] = await centro(pg, n); const [x, y] = await dedo(gx, gy); await toque(cdp, "touchStart", [[x, y, 1]]); await pg.waitForTimeout(ms); await toque(cdp, "touchEnd", []); };
+  const mantenerG = async (n) => { const [gx, gy] = await centro(pg, n); const [x, y] = await dedo(gx, gy); await toque(cdp, "touchStart", [[x, y, 1]]); };
+  await esperarFrame(pg, "titlescreen"); await pg.waitForTimeout(3500);
+  await tocarG("New Game");
+  await esperarFrame(pg, "level"); await pg.waitForTimeout(2000);
+  const l0 = await pg.evaluate(() => window.__ct.motor.F.loop); await pg.waitForTimeout(1000); const l1 = await pg.evaluate(() => window.__ct.motor.F.loop);
+  ch("parado: New Game → la noche corre", l1 > l0, `cuadros ${l0} → ${l1}`);
+  const e0 = await estado(pg);
+  await mantenerG("right zone fast"); await pg.waitForTimeout(1200); const e1 = await estado(pg); await soltar(cdp);
+  ch("parado: mantener a la derecha mueve la vista", e1.camX > e0.camX, `camX ${e0.camX} → ${e1.camX}`);
+  await tocarG("run to right", 60); await pg.waitForTimeout(120); await tocarG("run to right", 60); await pg.waitForTimeout(2500);
+  const e2 = await estado(pg);
+  ch("parado: doble toque corre a la puerta", e2.follow !== e1.follow, `follow ${e1.follow} → ${e2.follow}`);
+  await mantenerG("flashlight"); await pg.waitForTimeout(700); const e3 = await estado(pg);
+  await pg.screenshot({ path: `${CAPTURAS}/fnaf4-parado.png` });
+  await soltar(cdp); await pg.waitForTimeout(400); const e4 = await estado(pg);
+  ch("parado: la linterna se prende y se apaga", e3.linterna === 1 && e4.linterna === 0, `${e3.linterna} → ${e4.linterna}`);
+  await pg.setViewportSize({ width: 844, height: 390 }); await pg.waitForTimeout(600);
+  const r = await pg.evaluate(() => { const c = document.querySelector("#juego").getBoundingClientRect(); return { girado: document.documentElement.classList.contains("porteo-girado"), c: [c.x, c.y, c.width, c.height].map(Math.round) }; });
+  ch("acostado otra vez: se endereza", !r.girado && r.c.join() === "97,0,650,390", JSON.stringify(r));
   ch("sin errores", !errores.length, errores.slice(0, 2).join(" | "));
   await pg.context().close();
 }

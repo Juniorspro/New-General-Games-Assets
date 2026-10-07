@@ -201,7 +201,7 @@ que funcione en un teléfono.**
 | pointer lock | no existe en táctil: se usa arrastre relativo |
 | tipear texto | se enfoca un `<input>` real para que salga el teclado del teléfono |
 | resolución fija (800×600) | `Porteo.pantalla({ encajar: 'canvas' })`: escala con bandas, sin tocar la resolución interna |
-| orientación cualquiera | la que el juego necesita: se traba en el APK y en pantalla completa; si no se puede, cartel de "girá el teléfono" |
+| orientación cualquiera | la que el juego necesita: se traba en el APK y en pantalla completa; si no se puede (giro automático bloqueado, iPhone, visor de HTML), **el juego se gira solo 90°** con `web.js`. El cartel de "girá el teléfono" queda sólo con `girar: false` |
 
 ### Cómo se tiene que sentir
 
@@ -263,7 +263,7 @@ Lo habitual, y cómo lo devuelve `web.js`:
 |---|---|
 | `addJavascriptInterface(...)` (vibrar, guardar, compartir) | se busca cómo lo llama el JS; casi siempre ya trae un plan B (`navigator.vibrate`). Si no, se escribe un objeto con el mismo nombre y los mismos métodos |
 | atrás → Escape, dos atrás → salir | entrada de historial de colchón: el primer atrás manda Escape, el segundo (dentro de 2 s) sale |
-| `screenOrientation` | `screen.orientation.lock()` al entrar en pantalla completa; si no se puede, cartel de "girá el teléfono" + `alGirarMal` (pausar) |
+| `screenOrientation` | `screen.orientation.lock()` al entrar en pantalla completa; si no se puede, **`P.girar`**: la página se rota 90° y, para el código del juego, todo es horizontal (`innerWidth/innerHeight`, coordenadas de los toques, rectángulos y medidas `vw/vh` traducidos), así anda también con juegos ajenos. El sentido sale del acelerómetro |
 | `FLAG_KEEP_SCREEN_ON` | Wake Lock API |
 | pantalla completa inmersiva | `requestFullscreen()` al primer toque |
 | `onPause` pausa todo | el juego suele escuchar `visibilitychange`; si no, se agrega |
@@ -272,7 +272,7 @@ Lo habitual, y cómo lo devuelve `web.js`:
 ```html
 <script src="web.js"></script>
 <script>
-  Porteo.web({ orientacion: 'landscape', alGirarMal: () => miJuego.pausar() });
+  Porteo.web({ orientacion: 'landscape' });   // parado: se gira solo
 </script>
 ```
 
@@ -483,7 +483,9 @@ créditos ni se tapa al autor.
 | ignorar el NO en condiciones que no son de objeto | "NO mouse apretado" = "mouse apretado": la linterna se apaga mientras se la sostiene | el NO se aplica en todas |
 | ignorar la marca de doble clic | un toque simple te hace correr a la puerta | byte alto del parámetro 32 + detector de doble toque (450 ms, 40 px) |
 | crear el audio recién en el primer toque | lo que el juego pide antes (la música del título) se pierde: título mudo | crear el contexto al cargar, suspendido; arranca con el toque |
-| juego sin pausa + cartel de "girá el teléfono" | en vertical la noche sigue corriendo detrás del cartel y te matan | `alGirarMal`/`alGirarBien` congelan y sueltan el juego |
+| cartel de "girá el teléfono" | con el giro automático bloqueado (lo más común) el navegador se queda en vertical y el cartel no se va nunca; en un juego sin pausa, encima, la noche sigue detrás | **girar el juego** (`P.girar`, el default de `web.js`); el cartel, con `alGirarMal`/`alGirarBien`, queda sólo para `girar: false` |
+| girar la página con CSS y nada más | el juego mide la pantalla parada y los toques le llegan cruzados | traducir `innerWidth/innerHeight`, `clientX/clientY` (mouse y touch), `getBoundingClientRect` y las medidas `vw/vh` del CSS |
+| guardar el estilo original con `if (!antes)` | `''` es falso: se volvía a guardar ya girado y al enderezar se restauraba el giro | `antes === null` |
 | `decode()` de todas las imágenes de una pantalla | 270 MB de píxeles sólo en el nivel de FNaF 4: el teléfono cierra la pestaña | pedir los archivos y dejar que el navegador decodifique al dibujar |
 
 ## 14. Registro de porteos
@@ -496,7 +498,7 @@ Motor: HTML5 + three.js dentro de un WebView (Kotlin + androidx WebViewAssetLoad
 Estrategia: sacar assets/ tal cual + web.js para lo que hacía la parte Android
 Fidelidad: 1:1 — escena, modelos, texturas, sonidos, lógica, UI y créditos intactos
 Tamaños: APK original 6,67 MB → web 8,17 MB (zip 5,33 MB) · un archivo 7,08 MB · APK nuevo 5,34 MB (−20 %)
-Pruebas: 41/41 (porteos/bus-stop/prueba.mjs) · no se pudo probar en un teléfono real
+Pruebas: 43/43 (porteos/bus-stop/prueba.mjs) · no se pudo probar en un teléfono real
 ```
 
 - **El juego:** port a Android del juego de Game Jolt de Magnus Jungersen
@@ -506,7 +508,7 @@ Pruebas: 41/41 (porteos/bus-stop/prueba.mjs) · no se pudo probar en un teléfon
   (`window.BusStopNativo.vibrar`; el juego ya caía a `navigator.vibrate`), atrás
   → Escape (colchón de historial), pantalla completa (al primer toque),
   pantalla prendida (Wake Lock), `sensorLandscape` (traba en pantalla completa
-  + cartel de "girá el teléfono" que pausa y habla el idioma del juego) y 60 Hz
+  y, si no se puede, el juego se gira solo con el teléfono parado) y 60 Hz
   (en el APK nuevo, `--hz 60`).
 - **Controles móviles:** los propios del juego, que ya eran buenos y se
   conservan: joystick a la izquierda, mirar arrastrando a la derecha, CORRER,
@@ -518,7 +520,7 @@ Pruebas: 41/41 (porteos/bus-stop/prueba.mjs) · no se pudo probar en un teléfon
   Opus mono **ya venían optimizados**: recomprimirlos sólo habría bajado la
   calidad, así que no se tocaron. La calidad gráfica automática ("media" en
   táctil) es la del juego original.
-- **Probado (41/41):**
+- **Probado (43/43):**
   - carga;
   - idioma → menú → JUGAR sólo tocando;
   - camina, corre (más rápido con dos dedos), mira mientras camina, salta
@@ -527,7 +529,7 @@ Pruebas: 41/41 (porteos/bus-stop/prueba.mjs) · no se pudo probar en un teléfon
   - dos atrás salen;
   - el guardado sobrevive;
   - los controles entran y no se pisan en 844×390, 640×360, 915×412 y 1024×600;
-  - parado: el cartel aparece y pausa;
+  - parado: el juego se gira solo, se entra a jugar y el joystick camina con el dedo donde se ve;
   - sin red después de la primera visita;
   - el archivo único abre desde el disco, se juega, carga la fuente y los 4
     audios;
@@ -543,8 +545,8 @@ Pruebas: 41/41 (porteos/bus-stop/prueba.mjs) · no se pudo probar en un teléfon
     original, y el progreso del original no pasa al nuevo.
   - Firmado con una clave de esta sesión: para que una versión futura se
     instale encima, hace falta guardar la clave (§7).
-  - En iPhone no hay pantalla completa ni traba de orientación (sólo el
-    cartel), y el audio Opus pide iOS 17 o más nuevo: **no probado en Safari**.
+  - En iPhone no hay pantalla completa ni traba de orientación (el juego se
+    gira solo), y el audio Opus pide iOS 17 o más nuevo: **no probado en Safari**.
 - **Rearmarlo:** `porteos/bus-stop/portear.sh RUTA/bus-stop-simulator.apk`.
   **Probarlo:** `node porteos/bus-stop/prueba.mjs http://127.0.0.1:8811/ file:///…/bus-stop-simulator.html`.
 - **No va al repo** (§11): `bus-stop/` y `entrega-*/` están en `.gitignore`.
@@ -557,7 +559,7 @@ Motor: Clickteam Fusion 2.5, runtime de Android (res/raw/application.ccn + 60 WA
 Estrategia: extraer los datos originales y correr sus eventos en herramientas/clickteam/motor.js
 Fidelidad: 1:1 — 16 pantallas, 772 grupos de eventos, 228 objetos, 534 imágenes, 60 sonidos; la UI táctil es la de Android
 Tamaños: APK original 44,6 MB → web 7,2 MB · un archivo 9,35 MB · APK nuevo 7,24 MB (−84 %)
-Pruebas: 36/36 (porteos/fnaf4/prueba.mjs) · no se pudo probar en un teléfono real
+Pruebas: 39/39 (porteos/fnaf4/prueba.mjs) · no se pudo probar en un teléfono real
 ```
 
 - **Cobertura:** 1.575 condiciones, 1.508 acciones y 2.331 tokens de expresión:
@@ -568,8 +570,8 @@ Pruebas: 36/36 (porteos/fnaf4/prueba.mjs) · no se pudo probar en un teléfono r
   - mantener LINTERNA y CLOSE DOOR;
   - tocar abajo para darse vuelta o volver.
 
-  Más el atrás de Android (el primero avisa, el segundo sale) y el teléfono
-  parado, que congela la noche porque el juego no tiene pausa.
+  Más el atrás de Android (el primero avisa, el segundo sale) y, con el
+  teléfono parado, el juego girado 90° y jugable.
 - **Optimización:**
   - imágenes: 20 MB de píxeles zlib → 5,6 MB en WebP;
   - sonidos: 24 MB de WAV → 2,9 MB en Opus;
@@ -583,7 +585,8 @@ Pruebas: 36/36 (porteos/fnaf4/prueba.mjs) · no se pudo probar en un teléfono r
   - el reloj a 1,00× (hora = 60 s);
   - perder (game over de 7 s → título) y ganar (6 AM → night win → Plushtrap);
   - las 16 pantallas sin errores;
-  - cuatro tamaños de pantalla, vertical congela;
+  - cuatro tamaños de pantalla;
+  - parado: se gira solo y se juega igual (mirar, doble toque, linterna);
   - sin red, y el archivo único desde el disco.
 - **Problemas conocidos:**
   - no se probó en un teléfono real;

@@ -175,23 +175,31 @@ for (const [w, h, nombre] of [[640, 360, "chico 640×360"], [1024, 600, "tablet 
 }
 
 // ───────────────────────── C. teléfono parado ─────────────────────────
-console.log("\nC. teléfono parado (390×844)");
+// Con el teléfono parado (o el giro automático bloqueado) el juego se gira
+// solo 90°: no hay cartel y se juega igual. Los toques se mandan donde cae el
+// dedo en el vidrio (coordenadas físicas) y el juego los tiene que entender.
+console.log("\nC. teléfono parado (390×844): el juego se gira solo");
 {
-  const { pg, errores } = await abrir(WEB, { w: 390, h: 844 });
-  const g = await pg.evaluate(() => { const e = document.getElementById("porteo-girar"); return e && getComputedStyle(e).display !== "none" ? e.innerText : null; });
-  ch("parado: pide girar el teléfono", !!g, JSON.stringify(g));
-  await pg.screenshot({ path: `${CAPTURAS}/bus-parado.png` });
-  await pg.setViewportSize({ width: 844, height: 390 }); await espera(pg, 500);
-  const g2 = await pg.evaluate(() => getComputedStyle(document.getElementById("porteo-girar")).display);
-  ch("acostado: el cartel se va", g2 === "none");
+  const { pg, cdp, errores } = await abrir(WEB, { w: 390, h: 844 });
+  const info = await pg.evaluate(() => ({ iw: innerWidth, ih: innerHeight, girado: document.documentElement.classList.contains("porteo-girado"), cartel: !!document.getElementById("porteo-girar") }));
+  ch("parado: el juego se gira (sin cartel)", info.girado && !info.cartel && info.iw > info.ih, JSON.stringify(info));
+  const fisico = (lx, ly) => pg.evaluate(([lx, ly]) => { const g = Porteo.girar(), [W, H] = g.fisico(); return g.sentido() > 0 ? [W - ly, lx] : [ly, H - lx]; }, [lx, ly]);
+  const centroL = (sel) => pg.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }, sel);
   await jugar(pg);
-  await pg.setViewportSize({ width: 390, height: 844 }); await espera(pg, 700);
-  ch("girarlo a parado en plena partida: se pausa", await pausado(pg));
-  await pg.evaluate(() => { localStorage.setItem("busstop.v1", JSON.stringify({ ...JSON.parse(localStorage.getItem("busstop.v1")), idioma: "en" })); });
-  await pg.setViewportSize({ width: 844, height: 390 }); await espera(pg, 300);
-  await pg.setViewportSize({ width: 390, height: 844 }); await espera(pg, 300);
-  const en = await pg.evaluate(() => document.getElementById("porteo-girar").innerText);
-  ch("el cartel sigue el idioma del juego", /Turn your phone/.test(en), JSON.stringify(en));
+  ch("parado: se entra a jugar tocando", (await est(pg)).modo === "jugando");
+  await controlesAdentro(pg, 844, 390, "parado (girado)");
+  const [jx, jy] = await centroL("#tactil .c-joy");
+  const a = await est(pg);
+  const [px, py] = await fisico(jx, jy);
+  await toque(cdp, "touchStart", [[px, py, 1]]);
+  for (let i = 1; i <= 6; i++) { const [qx, qy] = await fisico(jx, jy - 9 * i); await toque(cdp, "touchMove", [[qx, qy, 1]]); await espera(pg, 25); }
+  await espera(pg, 1200); await toque(cdp, "touchEnd", []); await espera(pg, 300);
+  const b = await est(pg);
+  ch("parado: el joystick camina (el dedo va donde se ve)", distancia(a, b) > 0.5, `${distancia(a, b).toFixed(2)} m`);
+  await pg.screenshot({ path: `${CAPTURAS}/bus-parado.png` });
+  await pg.setViewportSize({ width: 844, height: 390 }); await espera(pg, 600);
+  const info2 = await pg.evaluate(() => ({ iw: innerWidth, ih: innerHeight, girado: document.documentElement.classList.contains("porteo-girado") }));
+  ch("acostado otra vez: se endereza y sigue la partida", !info2.girado && info2.iw === 844 && (await est(pg)).modo === "jugando", JSON.stringify(info2));
   ch("sin errores", !errores.length, errores.slice(0, 2).join(" | "));
   await pg.context().close();
 }

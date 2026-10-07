@@ -15,7 +15,8 @@
   function t(i) { return (T[idioma()] || T.es)[i]; }
   Porteo.web({
     orientacion: 'landscape',
-    // Igual que el APK: si lo ponen vertical a mitad de partida, se pausa.
+    // Parado, el juego se gira solo (web.js). Con el cartel (girar: false),
+    // como en el APK: si lo ponen vertical a mitad de partida, se pausa.
     alGirarMal: function () { window.__bus && window.__bus.pausar(); },
     textoGirar: function () { return t(0); },
     textoSalir: function () { return t(1); },
