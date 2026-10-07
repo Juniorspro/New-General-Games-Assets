@@ -7,6 +7,8 @@ solo el código; la base es el motor de [pizza-delivery](pizza-delivery.md) (que
 
 ## Lo nuevo
 
+- **Arranca directo en JUGAR** (pedido del 07/10, solo este juego): sin pantalla de idioma al abrir; el texto
+  sale en el idioma del celu y al tocar JUGAR se elige idioma y entra al menú. Prueba: `pruebas/inicio.mjs`.
 - **MediaFire se baja con curl**: la página trae `href="https://download…"`; ese link anda (subir, no).
 - **La lógica, decompilada a C#** con `ilspycmd` (dotnet tool, con el .NET 10 del scratchpad:
   `DOTNET_ROOT=… DOTNET_ROLL_FORWARD=Major`). 2600 líneas legibles en vez de IL crudo: vale la pena siempre.

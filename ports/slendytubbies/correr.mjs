@@ -1,4 +1,4 @@
-// Prueba con el navegador: abre dist/, elige idioma, toca empezar y sigue unos pasos.
+// Prueba con el navegador: abre dist/, toca JUGAR, elige idioma y sigue unos pasos.
 //   PASOS='[[seg,"eval","código"],[seg,"foto","nombre"],[seg,"tecla","KeyF",ms],[seg,"clic",x,y]]' SEG=10 node correr.mjs
 // x,y del clic en fracciones de la pantalla. Las fotos van a pruebas/salida/.
 import { createRequire } from 'node:module';
@@ -21,7 +21,7 @@ p.on('console', (m) => { const t = m.text(); if (m.type() === 'error' && !/favic
 await p.addInitScript((idioma) => { localStorage.setItem('slendy.v1', JSON.stringify({ idioma, ajustes: { calidad: 'baja' } })); }, process.env.IDIOMA || 'es');
 await p.goto(process.env.ARCHIVO ? 'file://' + path.join(AQUI, 'salida/slendytubbies.html') : `http://127.0.0.1:${PUERTO}/index.html`);
 await p.waitForFunction(() => window.__slendy?.listo, null, { timeout: 120000 });
-await p.click('[data-b="empezar"]');
+await p.click('[data-b="empezar"]'); await p.click('[data-i="' + (process.env.IDIOMA || 'es') + '"]');
 if (process.env.RAPIDO) await p.evaluate(() => { window.__slendy.congelar = 'dibujo'; });
 await p.waitForFunction(() => window.__slendy.J?.S && !window.__slendy.J.cargando, null, { timeout: 120000 });
 const pasos = JSON.parse(process.env.PASOS || '[]');

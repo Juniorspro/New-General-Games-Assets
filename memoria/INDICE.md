@@ -37,6 +37,8 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 - Quiere calidad visual alta ("goty", "AAA"), con números detrás.
 - **En todo juego, antes del menú, se elige idioma: español, inglés o
   portugués**, siempre, y con todo traducido (menús, historia, diálogos).
+  (Slendytubbies es la excepción: el idioma se pide al tocar JUGAR.) Un pedido sin nombre de juego
+  habla del último que se le mandó; si hay duda entre dos, preguntar antes.
 - **Cada juego con estilo propio**: otros botones, otro orden de menú, otras
   transiciones y otros efectos. No reusar el diseño del juego anterior.
 - **Controles de dedo personalizables, "sí o sí"** (23/09): que el jugador

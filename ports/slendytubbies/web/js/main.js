@@ -29,7 +29,7 @@ let R = null, J = null, listo = false, modo = 'inicio', pausado = false;
 const A = {
   sonido, controles,
   alIdioma: () => { document.documentElement.lang = D.idioma; R?.idiomaCambio(); U.reidiomar(); },
-  trasIdioma: () => U.mostrar('tocar'),
+  trasIdioma: () => entrar(),
   alCalidad: () => ajustarTam(),
   alBrillo: () => { if (R) R.uMundo.uBrillo.value = D.ajustes.brillo; },
   empezar, seguir, alMenu, volver,
@@ -51,6 +51,7 @@ function ajustarTam() {
 addEventListener('resize', ajustarTam);
 
 async function arrancar() {
+  if (!D.idioma) { const l = (navigator.language || 'es').toLowerCase(); D.idioma = l.startsWith('pt') ? 'pt' : l.startsWith('en') ? 'en' : 'es'; document.documentElement.lang = D.idioma; }
   U.mostrar('cargando');
   await prepararEmbebidos((x) => U.avance(x * 0.6));
   R = await cargarComun(BASE, renderer, (x) => U.avance(0.6 + x * 0.3));
@@ -65,12 +66,15 @@ async function arrancar() {
   ajustarTam();
   // los sonidos son pocos: se cargan todos de una
   listo = true; window.__slendy.listo = true;
-  U.mostrar(D.idioma ? 'tocar' : 'idioma');
+  U.mostrar('tocar'); // arranca directo: el idioma se pide al tocar JUGAR
 }
 
-async function empezar() { // (el toque que habilita el audio)
+function empezar() { // JUGAR (el toque que habilita el audio) → idioma → menú
   if (!listo) return;
   sonido.iniciar();
+  U.mostrar('idioma');
+}
+async function entrar() {
   U.mostrar('cargando');
   await sonido.cargar(BASE, Object.keys(R.C.audios));
   modo = 'menu';

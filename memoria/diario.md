@@ -5,6 +5,10 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
 - **07/10/2026 · `claude/fijate-iszyer`:**
+  - Slendytubbies: arranca directo en JUGAR y el idioma se pide al tocarlo (HTML mandado). "El juego"
+    sin nombre era el último mandado, no TJOC (lo había hecho en TJOC y se volvió atrás).
+  - TJOC capítulo 2 (LivingRoom), a medias: falta `CharacterMovement` en `COMP_DE_ACTOR`, `MovementMode` y
+    el movimiento caminando (`P.mover` en `jugador.js` no existe). `herr/codigo.py` muestra el código de una clase.
   - Pidió: portear Slendytubbies V2 Beta "al 100 y en HTML". Salió un solo HTML de 11 MB con las 11 escenas,
     la lógica de sus scripts, multijugador por código de sala y es/en/pt ([slendytubbies](slendytubbies.md)).
   - Antes: el APK de TJOC no le llegaba; se reenvió (MediaFire no se puede: pide su cuenta).
