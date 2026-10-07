@@ -78,6 +78,56 @@ JUEGOS = {
         'deps': None,  # trae su propio package.json en bosque/
         'como': 'cd bosque\nnpm install\nnode herramientas/armar.mjs   # → dist/ y bosque-en-un-archivo.html',
     },
+    'salamanca': {
+        'titulo': 'SALAMANCA',
+        'que': 'Roguelite vertical en pixel art tipo Archero en la cueva de la Salamanca: 4 pisos con jefe, cartas, altar, desafío del día, 3 idiomas.',
+        'carpetas': ['motor2d', 'salamanca'],
+        'html': 'salamanca/salamanca.html',
+        'portada': 'salamanca/portada-salamanca.jpg',
+        'armar': ['node', 'motor2d/armar.mjs', 'salamanca'],
+        'deps': [],
+        'como': 'node motor2d/armar.mjs salamanca        # → salamanca/salamanca.html (no hace falta instalar nada)',
+    },
+    'filete': {
+        'titulo': 'FILETE',
+        'que': 'Rompecabezas de bloques tipo Block Blast en filete porteño: tango sintetizado, 30 niveles por barrios, desafío del día, 3 idiomas.',
+        'carpetas': ['motor2d', 'filete'],
+        'html': 'filete/filete.html',
+        'portada': 'filete/portada-filete.jpg',
+        'armar': ['node', 'motor2d/armar.mjs', 'filete'],
+        'deps': [],
+        'como': 'node motor2d/armar.mjs filete        # → filete/filete.html (no hace falta instalar nada)',
+    },
+    'nebulosa': {
+        'titulo': 'NEBULOSA',
+        'que': 'Fusionar cuerpos celestes con física (tipo Suika), del polvo estelar al agujero negro, en neón synthwave: 3 modos, catálogo, 3 idiomas.',
+        'carpetas': ['motor2d', 'nebulosa'],
+        'html': 'nebulosa/nebulosa.html',
+        'portada': 'nebulosa/portada-nebulosa.jpg',
+        'armar': ['node', 'motor2d/armar.mjs', 'nebulosa'],
+        'deps': [],
+        'como': 'node motor2d/armar.mjs nebulosa        # → nebulosa/nebulosa.html (no hace falta instalar nada)',
+    },
+    'tajo': {
+        'titulo': 'TAJO',
+        'que': 'Cortar fruta con el dedo en tinta sumi-e: 4 modos, combos, bombas, poderes, dojo de filos, koto sintetizado, 3 idiomas.',
+        'carpetas': ['motor2d', 'tajo'],
+        'html': 'tajo/tajo.html',
+        'portada': 'tajo/portada-tajo.jpg',
+        'armar': ['node', 'motor2d/armar.mjs', 'tajo'],
+        'deps': [],
+        'como': 'node motor2d/armar.mjs tajo        # → tajo/tajo.html (no hace falta instalar nada)',
+    },
+    'dorado': {
+        'titulo': 'DORADO',
+        'que': 'Pinball vertical en Art Déco, el Gran Hotel de los años 20: misiones y rangos, multibola, jazz sintetizado, 3 modos, 3 idiomas.',
+        'carpetas': ['motor2d', 'dorado'],
+        'html': 'dorado/dorado.html',
+        'portada': 'dorado/portada-dorado.jpg',
+        'armar': ['node', 'motor2d/armar.mjs', 'dorado'],
+        'deps': [],
+        'como': 'node motor2d/armar.mjs dorado        # → dorado/dorado.html (no hace falta instalar nada)',
+    },
 }
 
 
@@ -89,7 +139,7 @@ def armar(j):
     print('  ' + (r.stdout.strip().splitlines() or ['armado'])[-1])
 
 
-def leeme(id_, j):
+def leeme(id_, j, con_guia=True):
     html = os.path.basename(j['html'])
     return f"""# {j['titulo']}
 
@@ -110,11 +160,16 @@ cd fuente
 {j['como']}
 ```
 
+""" + ("""
 ## Portar
 
 `PORTAR-A-TIKTOK.md` dice qué se lleva tal cual y qué hay que rehacer para el
 runtime nativo de TikTok Mini Games.
-"""
+""" if con_guia else '') + ("""
+## Portada
+
+`portada.jpg`: la portada 9:16 del juego.
+""" if j.get('portada') else '')
 
 
 def empaquetar(id_):
@@ -123,11 +178,13 @@ def empaquetar(id_):
     armar(j)
     os.makedirs(SALIDA, exist_ok=True)
     destino = os.path.join(SALIDA, f'{id_}.zip')
-    guia = open(os.path.join(TIKTOK, 'comun.md'), encoding='utf-8').read() + '\n' + open(os.path.join(TIKTOK, f'{id_}.md'), encoding='utf-8').read()
+    propia = os.path.join(TIKTOK, f'{id_}.md')
+    guia = open(os.path.join(TIKTOK, 'comun.md'), encoding='utf-8').read() + '\n' + open(propia, encoding='utf-8').read() if os.path.exists(propia) else None
     with zipfile.ZipFile(destino, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         base = id_
-        z.writestr(f'{base}/LEEME.md', leeme(id_, j))
-        z.writestr(f'{base}/PORTAR-A-TIKTOK.md', guia)
+        z.writestr(f'{base}/LEEME.md', leeme(id_, j, guia is not None))
+        if guia: z.writestr(f'{base}/PORTAR-A-TIKTOK.md', guia)
+        if j.get('portada'): z.write(os.path.join(RAIZ, j['portada']), f'{base}/portada' + os.path.splitext(j['portada'])[1])
         z.write(os.path.join(RAIZ, j['html']), f'{base}/jugar/{os.path.basename(j["html"])}')
         if j['deps']:
             pkg = {'name': id_, 'private': True, 'type': 'module', 'devDependencies': {d: '^' + VERSIONES[d] for d in j['deps']}}
@@ -141,6 +198,8 @@ def empaquetar(id_):
                     rel = os.path.relpath(ruta, RAIZ)
                     if rel == j['html'] and id_ == 'bosque':
                         continue  # el de un archivo ya va en jugar/ (13 MB): no se duplica
+                    if rel == j.get('portada'):
+                        continue  # ya va arriba como portada
                     z.write(ruta, f'{base}/fuente/{rel}')
                     n += 1
     print(f'  entregas/{id_}.zip · {os.path.getsize(destino) / 1048576:.1f} MB · {n} archivos de fuente')
