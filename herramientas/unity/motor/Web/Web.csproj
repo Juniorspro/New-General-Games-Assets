@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <!-- El juego en el navegador: el IL original del juego (de JUEGO, la carpeta Managed del APK)
+       sobre el motor (UnityEngine.CoreModule y las fachadas), con .NET para WebAssembly.
+         dotnet publish -c Release -p:JUEGO=.../assets/bin/Data/Managed [-p:RunAOTCompilation=true] -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Porteo</AssemblyName>
+    <RootNamespace>Porteo</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <WasmEnableSIMD>true</WasmEnableSIMD>
+    <!-- se recorta sólo la biblioteca de .NET: el juego y el motor quedan como están (Unity llama
+         por reflexión a Awake, Update... y la propagación de constantes del recortador se rompe
+         con el IL de UnityEngine.UI) -->
+    <TrimMode>partial</TrimMode>
+    <_ExtraTrimmerArgs>$(_ExtraTrimmerArgs) --disable-opt ipconstprop --disable-opt unreachablebodies</_ExtraTrimmerArgs>
+    <NoWarn>$(NoWarn);MSB3277;CS1701;CS1702;IL2026;IL2075;IL2072;IL2070;IL2067;IL2057</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../UnityEngine/UnityEngine.CoreModule.csproj" />
+    <ProjectReference Include="../Fachadas/*/*.csproj" />
+  </ItemGroup>
+  <!-- el código del juego, tal cual viene en el APK -->
+  <ItemGroup Condition="'$(JUEGO)' != ''">
+    <Reference Include="Assembly-CSharp"><HintPath>$(JUEGO)/Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="Assembly-UnityScript"><HintPath>$(JUEGO)/Assembly-UnityScript.dll</HintPath></Reference>
+    <Reference Include="Logger"><HintPath>$(JUEGO)/Logger.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(JUEGO)/UnityEngine.UI.dll</HintPath></Reference>
+    <!-- el recorte de .NET no puede adivinar lo que Unity llama por reflexión (Awake, Update...) -->
+    <TrimmerRootAssembly Include="Assembly-CSharp;Assembly-UnityScript;Logger;UnityEngine.UI;UnityEngine.CoreModule" />
+  </ItemGroup>
+</Project>

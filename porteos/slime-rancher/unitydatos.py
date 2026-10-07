@@ -259,51 +259,60 @@ class Shaders:
 
 # ── texturas ─────────────────────────────────────────────────────────────────
 class Texturas:
-    """Las texturas en WebP, de abajo hacia arriba como las quiere Unity (y WebGL sin dar vuelta).
-    Las de color van con pérdida. Las de datos (máscaras por canal, normales, profundidad,
-    ruido, rampas) van sin pérdida: el WebP con pérdida submuestrea el color (4:2:0) y mezcla
-    los canales, y una máscara RGBA de Recolor x8 deja de separar sus colores."""
+    """Las texturas de abajo hacia arriba, como las quiere Unity (y WebGL sin dar vuelta), en
+    el formato que conviene a cada uso (lo dice el nombre de la propiedad del material):
+      - máscaras (Recolor x8 elige 1 de 8 colores por canal): WebP sin pérdida;
+      - datos (normales, oclusión, profundidad, ruido, trazos, rampas): AVIF 4:4:4. Sin
+        submuestreo de croma cada canal queda en su lugar (error medio de 1 a 3 sobre 255)
+        y pesa un tercio del WebP sin pérdida;
+      - color: AVIF con pérdida (la mitad que WebP a calidad pareja).
+    Si una textura se usa de dos formas, gana la más exigente."""
 
-    DATOS = ("mask", "normal", "bump", "depth", "noise", "stroke", "occlusion", "override", "ramp", "specular",
-             "gloss", "height", "parallax", "flow", "dissolve", "lut", "detail")
+    MASCARAS = ("mask", "override")
+    DATOS = ("normal", "bump", "depth", "noise", "stroke", "occlusion", "ramp", "specular", "gloss", "height",
+             "parallax", "flow", "dissolve", "lut")
+    EXIGENCIA = {"color": 0, "dato": 1, "mascara": 2}
 
-    def __init__(self, carpeta, tex_max, calidad=88, tex_max_datos=None):
+    def __init__(self, carpeta, tex_max, calidad_color=60, calidad_datos=70):
         self.carpeta = Path(carpeta)
         self.carpeta.mkdir(parents=True, exist_ok=True)
         self.tex_max = tex_max
-        self.tex_max_datos = tex_max_datos or tex_max
-        self.calidad = calidad
+        self.calidad_color, self.calidad_datos = calidad_color, calidad_datos
         self.lista = []
         self.por_clave = {}
 
     @classmethod
-    def es_dato(cls, propiedad):
+    def clase(cls, propiedad):
         p = propiedad.lower()
-        return any(d in p for d in cls.DATOS)
+        if any(d in p for d in cls.MASCARAS) and "noisemask" not in p:
+            return "mascara"
+        if any(d in p for d in cls.DATOS) or "noisemask" in p:
+            return "dato"
+        return "color"
 
     def indice(self, o, propiedad=""):
         if o is None:
             return None
         k = (o.assets_file.name, o.path_id)
-        dato = self.es_dato(propiedad)
+        clase = self.clase(propiedad)
         if k in self.por_clave:
             i = self.por_clave[k]
-            if i is not None and dato and not self.lista[i]["sin_perdida"]:
-                self._guardar(o, i, True)  # ya estaba con pérdida y ahora se usa como dato
+            if i is not None and self.EXIGENCIA[clase] > self.EXIGENCIA[self.lista[i]["clase"]]:
+                self._guardar(o, i, clase)  # ya estaba y ahora se usa de una forma más exigente
             return i
         if o.type.name != "Texture2D":
             self.por_clave[k] = None  # cubemaps y render textures: aparte
             return None
         self.lista.append(None)
         i = len(self.lista) - 1
-        if not self._guardar(o, i, dato):
+        if not self._guardar(o, i, clase):
             self.lista.pop()
             self.por_clave[k] = None
             return None
         self.por_clave[k] = i
         return i
 
-    def _guardar(self, o, i, dato):
+    def _guardar(self, o, i, clase):
         t = o.read()
         try:
             img = t.image
@@ -311,8 +320,7 @@ class Texturas:
             log("  textura sin leer:", t.m_Name, e)
             return False
         w, h = img.size
-        maximo = self.tex_max_datos if dato else self.tex_max
-        escala = min(1.0, maximo / max(w, h))
+        escala = min(1.0, self.tex_max / max(w, h))
         if escala < 1:
             img = img.resize((max(1, round(w * escala)), max(1, round(h * escala))), resample=3)
         img = img.transpose(1)
@@ -321,15 +329,22 @@ class Texturas:
             img = img.convert("RGBA" if alfa else "RGB")
         if not alfa and img.mode == "RGBA":
             img = img.convert("RGB")
-        nombre = f"{i:04d}.webp"
-        if dato:
+        anterior = self.lista[i]["archivo"] if self.lista[i] else None
+        if clase == "mascara":
+            nombre = f"{i:04d}.webp"
             img.save(self.carpeta / nombre, "WEBP", lossless=True, quality=100, method=6, exact=True)
         else:
-            img.save(self.carpeta / nombre, "WEBP", quality=self.calidad, method=6, exact=alfa)
+            nombre = f"{i:04d}.avif"
+            if clase == "dato":
+                img.save(self.carpeta / nombre, "AVIF", quality=self.calidad_datos, subsampling="4:4:4", speed=4)
+            else:
+                img.save(self.carpeta / nombre, "AVIF", quality=self.calidad_color, speed=4)
+        if anterior and anterior != nombre:
+            (self.carpeta / anterior).unlink(missing_ok=True)
         ts = t.m_TextureSettings
         self.lista[i] = {"archivo": nombre, "nombre": t.m_Name, "w": img.size[0], "h": img.size[1],
                          "wrap": [ts.m_WrapU, ts.m_WrapV], "filtro": ts.m_FilterMode, "mips": t.m_MipCount > 1,
-                         "alfa": bool(alfa), "sin_perdida": dato}
+                         "alfa": bool(alfa), "clase": clase}
         return True
 
 

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Qué usa del motor y de .NET el código compilado de un juego de Unity (Mono): cada tipo y
+       miembro referenciado, por ensamblado. Es la lista de lo que un motor de reemplazo tiene
+       que implementar, con las firmas exactas.
+         dotnet run -c Release (y después: MANAGED salida.json [Assembly-CSharp.dll ...]) -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+  </ItemGroup>
+</Project>
