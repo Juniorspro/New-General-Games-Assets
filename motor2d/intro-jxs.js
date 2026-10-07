@@ -15,6 +15,16 @@
      un toque: intro.saltar();  ¿terminó?: intro.listo
      con el audio andando (después de un toque no se puede antes): jingleJXS(ctx, destino)
      transiciones: irisJXS(g, W, H, cx, cy, r)
+
+   Cada juego la viste a su estilo ("con su intro respectiva a su estilo", 07/10) con `estilo`:
+   la misma coreografía, otro material. Todo es opcional (sin estilo = La Cripta):
+     metal: [8 colores de arriba a abajo], filo, bisel, borde: '#rrggbb'
+     sombra: { dx, dy, col }                  el monograma proyecta una sombra plana (filete)
+     fondo(W, H, cx, cy) → lienzo             el fondo (por defecto la fibra de carbono)
+     puntas: [colores], golpe: [colores], destello: 'rgba(...)'
+     palabra: { col, borde }, presenta: color, negro: color del fondo
+     antes(g, t, I) / despues(g, t, I)        dibujar algo más (I.cx, I.cy, I.ancho, I.yPalabra)
+     jingle(ctx, bus, t0, tg, h)              otra música; h = { tono, soplo, f, T }
    ========================================================================== */
 
 const IntroJXS_ = (() => {
@@ -73,7 +83,8 @@ const IntroJXS_ = (() => {
   }
   // el monograma en píxeles: se traza chico, se separa metal de borde por color y se
   // repinta en escalones de cromo con filo de luz y bisel en sombra
-  function monogramaPixel(anchoPx, avance) {
+  function monogramaPixel(anchoPx, avance, E) {
+    E = E || {};
     const esc = anchoPx / CAJA.w, alto = Math.ceil(CAJA.h * esc) + 4, ancho = Math.ceil(anchoPx) + 4;
     const c = document.createElement('canvas');
     c.width = ancho; c.height = alto;
@@ -94,21 +105,33 @@ const IntroJXS_ = (() => {
       if (d[i * 4 + 3] < 90) continue;
       if (d[i * 4 + 1] > 110) metal[i] = 1; else if (d[i * 4] > 110) borde[i] = 1;
     }
-    const ESCALON = ['#f4f5f8', '#d9dbe1', '#b7bbc4', '#8d929c', '#a9adb6', '#d3d6dc', '#9ea3ad', '#767b85'];
+    const ESCALON = E.metal || ['#f4f5f8', '#d9dbe1', '#b7bbc4', '#8d929c', '#a9adb6', '#d3d6dc', '#9ea3ad', '#767b85'];
+    const FILO = E.filo || '#ffffff', BISEL = E.bisel || '#5b5f68', BO = parseInt((E.borde || '#050608').slice(1), 16);
     for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
       const i = y * ancho + x, k = i * 4;
       if (metal[i]) {
         const arriba = y > 0 && metal[i - ancho], abajo = y < alto - 1 && metal[i + ancho];
         const izq = x > 0 && metal[i - 1], der = x < ancho - 1 && metal[i + 1];
         let col = ESCALON[Math.min(ESCALON.length - 1, Math.floor(((y - 2) / (alto - 4)) * ESCALON.length))];
-        if (!arriba || !izq) col = '#ffffff';
-        else if (!abajo || !der) col = '#5b5f68';
+        if (!arriba || !izq) col = FILO;
+        else if (!abajo || !der) col = BISEL;
         const n = parseInt(col.slice(1), 16);
         d[k] = n >> 16; d[k + 1] = (n >> 8) & 255; d[k + 2] = n & 255; d[k + 3] = 255;
-      } else if (borde[i]) { d[k] = 5; d[k + 1] = 6; d[k + 2] = 8; d[k + 3] = 255; }
+      } else if (borde[i]) { d[k] = BO >> 16; d[k + 1] = (BO >> 8) & 255; d[k + 2] = BO & 255; d[k + 3] = 255; }
       else d[k + 3] = 0;
     }
     g.putImageData(img, 0, 0);
+    if (E.sombra) {   // una sombra plana corrida, debajo del dibujo
+      const s = document.createElement('canvas'); s.width = ancho + Math.abs(E.sombra.dx); s.height = alto + Math.abs(E.sombra.dy);
+      const sg = s.getContext('2d');
+      sg.drawImage(c, E.sombra.dx, E.sombra.dy); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = E.sombra.col; sg.fillRect(0, 0, s.width, s.height);
+      sg.globalCompositeOperation = 'source-over'; sg.drawImage(c, 0, 0);
+      g.clearRect(0, 0, ancho, alto); c.width = s.width; c.height = s.height; c.getContext('2d').drawImage(s, 0, 0);
+      const m2 = new Uint8Array(c.width * c.height);
+      for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) m2[y * c.width + x] = metal[y * ancho + x];
+      c.mascara = m2; c.esc = esc;
+      return c;
+    }
     c.mascara = metal; c.esc = esc;
     return c;
   }
@@ -154,19 +177,20 @@ const IntroJXS_ = (() => {
   const T_BRILLO = [0.95, 1.35], T_LETRAS = 1.02, T_FIN = 2.1;
 
   function crear(o) {
-    const W = o.W, H = o.H, cx = W >> 1, cy = Math.round(H * 0.42);
+    const W = o.W, H = o.H, cx = W >> 1, cy = Math.round(H * 0.42), E = o.estilo || {};
     const ancho = Math.round(Math.min(W * 0.66, H * 0.9, 120));
-    const fondo = fondoCarbono(W, H, cx, cy, Math.min(W, H) * 0.44);
+    const fondo = E.fondo ? E.fondo(W, H, cx, cy) : fondoCarbono(W, H, cx, cy, Math.min(W, H) * 0.44);
+    const PUNTAS = E.puntas || ['#ffffff', '#ffd27a'], GOLPE = E.golpe || ['#ffffff', '#ffd27a', '#c9ccd4', '#7ad7ff'];
     let chispas = [], sacudida = 0, golpeado = false, letras = 0, pts = null, cache = { avance: -1, c: null };
     const I = {
-      t: 0, listo: false,
+      t: 0, listo: false, cx, cy, ancho, yPalabra: Math.round(cy + ancho * 0.29 + 4), W, H,
       saltar() { if (I.t > 0.35) I.listo = true; },
       pasar(dt) {
         I.t += dt;
         if (I.t > T_TRAZA0 && I.t < T_TRAZA1 && pts) {
           for (const [x, y] of pts) for (let k = 0; k < 2; k++) {
             const a = Math.random() * Math.PI * 2, v = 20 + Math.random() * 50;
-            chispas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, t: 0, vida: 0.25 + Math.random() * 0.2, col: Math.random() < 0.5 ? '#ffffff' : '#ffd27a' });
+            chispas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, t: 0, vida: 0.25 + Math.random() * 0.2, col: PUNTAS[(Math.random() * PUNTAS.length) | 0] });
           }
         }
         if (!golpeado && I.t >= T_GOLPE) {
@@ -174,7 +198,7 @@ const IntroJXS_ = (() => {
           if (o.vibrar) o.vibrar([30, 20, 40]);
           for (let k = 0; k < 70; k++) {
             const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 120;
-            chispas.push({ x: cx + (Math.random() - 0.5) * ancho, y: cy + (Math.random() - 0.5) * ancho * 0.4, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 20, t: 0, vida: 0.5 + Math.random() * 0.5, col: ['#ffffff', '#ffd27a', '#c9ccd4', '#7ad7ff'][k % 4] });
+            chispas.push({ x: cx + (Math.random() - 0.5) * ancho, y: cy + (Math.random() - 0.5) * ancho * 0.4, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 20, t: 0, vida: 0.5 + Math.random() * 0.5, col: GOLPE[k % GOLPE.length] });
           }
         }
         letras = clamp(Math.floor((I.t - T_LETRAS) / 0.04) + 1, 0, 9);
@@ -185,7 +209,7 @@ const IntroJXS_ = (() => {
       },
       dibujar(g) {
         const t = I.t;
-        g.fillStyle = '#05040b'; g.fillRect(0, 0, W, H);
+        g.fillStyle = E.negro || '#05040b'; g.fillRect(0, 0, W, H);
         const s = Math.round(sacudida), sx = s ? Math.round((Math.random() * 2 - 1) * s) : 0, sy = s ? Math.round((Math.random() * 2 - 1) * s) : 0;
         if (t < T_CORTE) {
           const w = Math.round(W * t / T_CORTE);
@@ -193,16 +217,16 @@ const IntroJXS_ = (() => {
           return;
         }
         const abre = clamp((t - T_CORTE) / (T_ABRE - T_CORTE), 0, 1), alto = Math.round((Math.max(cy, H - cy) + 4) * salidaAtras(abre));
-        g.save(); g.beginPath(); g.rect(0, cy - alto, W, alto * 2); g.clip(); g.drawImage(fondo, sx, sy); g.restore();
+        g.save(); g.beginPath(); g.rect(0, cy - alto, W, alto * 2); g.clip(); g.drawImage(fondo, sx, sy); if (E.antes) E.antes(g, t, I); g.restore();
         if (abre < 1) { g.fillStyle = '#d9dce3'; g.fillRect(0, cy - alto, W, 1); g.fillRect(0, cy + alto - 1, W, 1); }
         const avance = clamp((t - T_TRAZA0) / (T_TRAZA1 - T_TRAZA0), 0, 1);
         if (avance > 0) {
           const a = Math.round(avance * 40) / 40;
-          if (cache.avance !== a) cache = { avance: a, c: monogramaPixel(ancho, a) };
+          if (cache.avance !== a) cache = { avance: a, c: monogramaPixel(ancho, a, E) };
           const m = cache.c, x0 = Math.round(cx - m.width / 2) + sx, y0 = Math.round(cy - m.height / 2) + sy;
           pts = avance < 1 ? puntas(avance).map(([px, py]) => [x0 + 2 + px * m.esc, y0 + 2 + py * m.esc]) : null;
           g.drawImage(m, x0, y0);
-          if (t >= T_GOLPE && t < T_GOLPE + 0.06) { g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, W, H); }
+          if (t >= T_GOLPE && t < T_GOLPE + 0.06) { g.fillStyle = E.destello || 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, W, H); }
           if (t > T_BRILLO[0] && t < T_BRILLO[1]) {
             const k = (t - T_BRILLO[0]) / (T_BRILLO[1] - T_BRILLO[0]), bx = Math.round(-10 + k * (m.width + 20));
             g.fillStyle = 'rgba(255,255,255,0.6)';
@@ -216,10 +240,12 @@ const IntroJXS_ = (() => {
           const esc = W >= 200 ? 2 : 1, palabra = 'JXSTUDIOS', an = anchoTexto(palabra) * esc;
           const x = Math.round(cx - an / 2), y = Math.round(cy + ancho * 0.29 + 4);
           const parte = palabra.slice(0, letras);
-          textoPx(g, parte, x + sx, y + sy, { col: '#e4e6ec', borde: '#3d4048', escala: esc });
+          if (E.palabraFondo) E.palabraFondo(g, t, I, letras);
+          textoPx(g, parte, x + sx, y + sy, { col: (E.palabra && E.palabra.col) || '#e4e6ec', borde: (E.palabra && E.palabra.borde) || '#3d4048', escala: esc });
           if (letras < 9 && ((t * 20) | 0) % 2) { g.fillStyle = '#f6f3ff'; g.fillRect(x + anchoTexto(parte) * esc + esc, y, esc, 7 * esc); }
-          if (t > T_LETRAS + 0.5) textoPx(g, o.presenta || 'PRESENTA', cx, y + 12 * esc, { alin: 'centro', col: '#8d88ad', borde: 'no' });
+          if (t > T_LETRAS + 0.5) textoPx(g, o.presenta || 'PRESENTA', cx, y + 12 * esc, { alin: 'centro', col: E.presenta || '#8d88ad', borde: 'no' });
         }
+        if (E.despues) E.despues(g, t, I);
         for (const c of chispas) {
           if (c.t > c.vida * 0.7 && ((c.t * 30) | 0) % 2) continue;
           g.fillStyle = c.col; g.fillRect(Math.round(c.x), Math.round(c.y), 1, 1);
@@ -232,7 +258,7 @@ const IntroJXS_ = (() => {
   // la música de la intro, agendada con el reloj del audio para que cada golpe caiga con su
   // cuadro: el corte (soplido), el metal que se escribe (cuatro zumbidos), el golpe (bombo grave +
   // campana de metal), el brillo (arpegio), las letras (tics) y un acorde que queda sonando
-  function jingle(ctx, destino) {
+  function jingle(ctx, destino, E) {
     if (!ctx || ctx.state !== 'running') return null;
     const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(destino || ctx.destination);
     const f = (n) => 440 * Math.pow(2, ({ C: -9, D: -7, E: -5, F: -4, G: -2, A: 0, B: 2 }[n[0]] + (+n.slice(1) - 4) * 12) / 12);
@@ -252,6 +278,7 @@ const IntroJXS_ = (() => {
       s.connect(fl); fl.connect(gn); gn.connect(bus); s.start(t); s.stop(t + dur + 0.05);
     };
     const t0 = ctx.currentTime + 0.03, tg = t0 + T_GOLPE;
+    if (E && E.jingle) { E.jingle(ctx, bus, t0, tg, { tono, soplo, f, T: { T_LETRAS, T_GOLPE, T_FIN } }); return { cortar: () => bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05) }; }
     soplo(0.2, 0.12, 'bandpass', 700, 5200, t0);
     [0.3, 0.38, 0.46, 0.54].forEach((d, k) => tono('square', 240 + k * 70, 1300 + k * 240, 0.16, 0.035, t0 + d));
     tono('sine', 115, 30, 0.95, 0.55, tg);

@@ -1,0 +1,3 @@
+html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+body { background: radial-gradient(ellipse at 50% 40%, #241a20 0%, #0d0b10 70%); }
+#lienzo { position: absolute; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; outline: none; }

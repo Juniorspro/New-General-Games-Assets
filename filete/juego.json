@@ -1,0 +1,5 @@
+{
+  "salida": "filete.html",
+  "css": ["filete/filete.css"],
+  "js": ["motor2d/fuente.js", "motor2d/intro-jxs.js", "filete/js/base.js", "filete/js/arte.js", "filete/js/tablero.js", "filete/js/sonido.js", "filete/js/intro.js", "filete/js/juego.js"]
+}
