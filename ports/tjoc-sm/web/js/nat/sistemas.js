@@ -80,7 +80,7 @@ Mundo.prototype.contenidoComp = function (c) {
   if (/SkeletalMeshComponent/.test(c.nat) && p.SkeletalMesh?.asset) {
     this.cambiarMalla(c, this.asset(p.SkeletalMesh.asset, 'SkeletalMesh'), p.OverrideMaterials);
     const ad = p.AnimationData || {};
-    c.nodoAnim = { modo: (p.AnimationMode || '').split('::').pop() || 'AnimationBlueprint', anim: ad.AnimToPlay?.asset, loop: ad.bSavedLooping ?? true, tocando: ad.bSavedPlaying ?? true };
+    c.nodoAnim = { modo: (p.AnimationMode || '').split('::').pop() || 'AnimationBlueprint', anim: ad.AnimToPlay?.asset, loop: ad.bSavedLooping ?? true, tocando: ad.bSavedPlaying ?? true, animbp: p.AnimClass?.asset || p.AnimBlueprintGeneratedClass?.asset };
   }
   if (/LightComponent/.test(c.nat)) {
     const tipo = c.nat.replace('LightComponent', '');

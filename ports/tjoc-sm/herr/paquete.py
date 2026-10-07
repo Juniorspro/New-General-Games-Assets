@@ -44,6 +44,7 @@ pend = []
 for n, lv in N.items():
     pend.append(n + '_C')
     pend += [a['clase'] for a in lv['actores'] if a['clase'].endswith('_C')]
+    pend += [nd['animbp'].split('.')[-1] for nd in lv['nodos'] if nd.get('animbp')]  # (las AnimBP de los esqueletos)
     ws = [a for a in lv['actores'] if a['clase'] == 'WorldSettings']
     if ws and ((ws[0].get('props') or {}).get('DefaultGameMode') or {}).get('asset'): pend.append(ws[0]['props']['DefaultGameMode']['asset'].split('.')[-1])
 usadas = set()
@@ -59,7 +60,7 @@ while pend:
             for v in x: rec(v)
         elif isinstance(x, dict):
             if isinstance(x.get('clase'), str): pend.append(x['clase'])
-            if x.get('tipo') in ('BlueprintGeneratedClass', 'WidgetBlueprintGeneratedClass') and x.get('asset'): pend.append(x['asset'].split('.')[-1])
+            if x.get('tipo') in ('BlueprintGeneratedClass', 'WidgetBlueprintGeneratedClass', 'AnimBlueprintGeneratedClass') and x.get('asset'): pend.append(x['asset'].split('.')[-1])
             if x.get('tipo', '').endswith('_C') and 'n' in x: pend.append(x['tipo'])
             for v in x.values(): rec(v)
     rec(c.get('funcs')); rec(c.get('cdo')); rec(c.get('plantillas')); rec(c.get('widgets')); rec(c.get('scs'))
@@ -67,7 +68,7 @@ while pend:
 print('clases usadas', len(usadas))
 
 # ---------- 3) assets ----------
-A = {k: set() for k in ('malla', 'mat', 'tex', 'ui', 'snd', 'anim', 'fuente')}
+A = {k: set() for k in ('malla', 'mat', 'tex', 'ui', 'snd', 'anim', 'fuente', 'bs')}
 def asset_ref(x, ctx=''):
     if isinstance(x, list):
         for v in x: asset_ref(v, ctx)
@@ -79,6 +80,7 @@ def asset_ref(x, ctx=''):
             elif t in ('Texture2D', 'TextureRenderTarget2D'): (A['ui'] if ctx == 'ui' else A['tex']).add(a)
             elif t.startswith('Sound') and t != 'SoundAttenuation' and t != 'SoundClass' and t != 'SoundMix': A['snd'].add(a)
             elif t in ('AnimSequence', 'AnimMontage'): A['anim'].add(a)
+            elif t.startswith('BlendSpace') or t.startswith('AimOffset'): A['bs'].add(a)
             elif t == 'Font': A['fuente'].add(a)
         for k, v in x.items(): asset_ref(v, 'ui' if k in ('Brush', 'WidgetStyle', 'Background', 'Normal', 'Hovered', 'Pressed', 'ResourceObject') or ctx == 'ui' else ctx)
 for n in usadas:
@@ -152,6 +154,22 @@ for r in sorted(rutas_sec):
             for v in x.values(): assets_sec(v)
     assets_sec(ms)
 guardar_json(os.path.join(DATOS, 'secuencias.json'), SECS)
+# blend spaces (los usan las AnimBP): muestras animación → valor de los ejes
+BS = cargar_json(os.path.join(DATOS, 'bs.json'), {})
+for r in sorted(A['bs']):
+    d = P.paquete(r.split('.')[0])
+    o = next((e for e in d or [] if e['Type'].startswith('BlendSpace') or e['Type'].startswith('AimOffset')), None)
+    if not o: continue
+    pr = o.get('Properties') or {}
+    mu = []
+    for sd in pr.get('SampleData') or []:
+        an = ref_val_sec(sd.get('Animation'))
+        if isinstance(an, dict) and an.get('asset'):
+            A['anim'].add(an['asset']); v = sd.get('SampleValue') or {}
+            mu.append([an['asset'], v.get('X', 0), v.get('Y', 0), sd.get('RateScale', 1)])
+    BS[r] = {'tipo': o['Type'], 'muestras': mu, 'ejes': [{'min': b.get('Min', 0), 'max': b.get('Max', 100)} for b in pr.get('BlendParameters') or []] if isinstance(pr.get('BlendParameters'), list) else None}
+guardar_json(os.path.join(DATOS, 'bs.json'), BS)
+print('blend spaces', len(BS))
 print('secuencias', len(rutas_sec))
 A['malla'] = {m for m in A['malla'] if not m.startswith('Engine/Content/EditorMeshes')}
 print({k: len(v) for k, v in A.items()})
@@ -369,7 +387,10 @@ for r in sorted(A['anim']):
     ae = next((x for x in d if x['Type'] in ('AnimSequence', 'AnimMontage')), None)
     for nf in ((ae or {}).get('Properties') or {}).get('Notifies') or []:
         ne = P.obj(nf.get('Notify')) if nf.get('Notify') else None
-        if not ne: continue
+        t = nf.get('LinkValue', nf.get('DisplayTime_DEPRECATED', 0))
+        if not ne:  # (un notify con nombre: la AnimBP recibe el evento AnimNotify_<nombre>)
+            if nf.get('NotifyName') and nf['NotifyName'] != 'None': nots.append({'t': t, 'nombre': nf['NotifyName']})
+            continue
         np_ = ne.get('Properties') or {}
         t = nf.get('LinkValue', nf.get('DisplayTime_DEPRECATED', 0))
         if ne['Type'] == 'AnimNotify_PlaySound' and np_.get('Sound'):

@@ -39,6 +39,12 @@ Con eso salieron solos el menú 3D, las cinemáticas, la IA de los animatrónico
 
 ## Falta (capítulos siguientes)
 
+**En pausa hasta nuevo aviso (07/10)**: no seguir sin que lo pida. Quedó a medias el capítulo 2 (LivingRoom):
+ya están los AnimBP (`bs.json` de BlendSpace, `tickBP` en `anim.js`, notifies con nombre) y `herr/codigo.py`
+(muestra el código de una clase empaquetada). Para retomar: `CharacterMovement` en `COMP_DE_ACTOR` (`mundo.js`),
+`MovementMode` en `PROPS.CharacterMovementComponent`, y escribir `P.mover` en `jugador.js` (hoy no existe: el
+jugador no camina). Datos por capítulo en `web/datos-c1|c2` (`web/datos` es un enlace al que se arma).
+
 LivingRoom, Office, Basement, Attic, sus cinemáticas, diarios, final y extras. SM_Outside pesa (SM_house2,
 193k triángulos que no se simplifican: vértices sin compartir); por ahora se reemplaza por SMMenu. AnimBP de
 Freddy/Chica/Foxy, partículas (no se dibujan). El juego entero no entra en 30 MiB: APK por capítulo.

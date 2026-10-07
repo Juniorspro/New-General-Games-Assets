@@ -1,13 +1,20 @@
 /* Animación esquelética: clips exportados (muestreados por cuadro, ya en espacio three) → THREE.AnimationClip.
    SkeletalMeshComponent en modo "single node": PlayAnimation, SetAnimation, SetPosition, SetPlayRate, Play/Stop.
-   Matinee y LevelSequence fijan clip y tiempo a mano (controlado = true). Notifies de sonido incluidos. */
+   Matinee y LevelSequence fijan clip y tiempo a mano (controlado = true). Notifies de sonido incluidos.
+   Modo AnimationBlueprint: la AnimBP es un objeto de la VM (corre BlueprintUpdateAnimation y los
+   EvaluateGraphExposedInputs que copian variables a los nodos) y su grafo, que vive en el CDO como
+   AnimGraphNode_*, se evalúa acá: SequencePlayer y BlendSpacePlayer (mezcla de las dos muestras vecinas). */
 import * as THREE from 'three';
 import { Mundo } from '../mundo.js';
 import { METODOS } from './motor.js';
+import { UObj } from '../vm.js';
 
 export class Animaciones {
   constructor(M, base) { this.M = M; this.base = base; this.indice = {}; this.clips = new Map(); this.pend = new Map(); this.comps = new Set(); }
-  async cargarIndice() { try { this.indice = await (await fetch(this.base + 'anims.json')).json(); } catch { this.indice = {}; } }
+  async cargarIndice() {
+    try { this.indice = await (await fetch(this.base + 'anims.json')).json(); } catch { this.indice = {}; }
+    try { this.bs = await (await fetch(this.base + 'bs.json')).json(); } catch { this.bs = {}; }
+  }
   async cargar(ruta) {
     if (!ruta) return null;
     if (this.clips.has(ruta)) return this.clips.get(ruta);
@@ -44,7 +51,65 @@ export class Animaciones {
     const m = c.malla; if (!m) return;
     c.anim = { mixer: new THREE.AnimationMixer(m), accion: null, ruta: null, loop: n?.loop ?? true, tocando: n?.tocando ?? true, vel: n?.vel ?? 1, t: 0, modo: n?.modo || 'AnimationBlueprint' };
     if (n?.anim && (n.modo === 'AnimationSingleNode' || !n.modo)) { c.anim.inicial = n.anim; }
+    if (n?.animbp && !/SingleNode/.test(n.modo || '')) this.ponerBP(c, n.animbp.split('.').pop());
     this.comps.add(c);
+  }
+  /* ---- AnimBP */
+  ponerBP(c, nombre) {
+    const M = this.M, cl = M.vm.claseSync(nombre);
+    if (!cl) { M.vm.falta?.('animbp ' + nombre); return; }
+    const ai = new UObj(cl, 'AnimInstance'); ai.nat = 'AnimInstance'; ai.comp = c; ai.nombre = nombre;
+    M.vm.iniciarVars(ai, cl, (v) => M.resolverValor(v));
+    c.animInst = ai;
+    const nodos = {};
+    for (let k = cl; k; k = k.superClase) for (const [nn, v] of Object.entries(k.j.cdo || {})) if (nn.startsWith('AnimGraphNode_') && !(nn in nodos)) nodos[nn] = v;
+    const evals = []; for (let k = cl; k; k = k.superClase) for (const f of Object.keys(k.funcs)) if (f.startsWith('EvaluateGraphExposedInputs_')) evals.push(f);
+    // el nodo de salida: lo que el Root tiene enchufado (con un solo nodo de pose, es ese)
+    const poses = Object.keys(nodos).filter((nn) => /^AnimGraphNode_(SequencePlayer|BlendSpacePlayer)_/.test(nn));
+    c.anim.bp = { ai, evals, salida: poses.length === 1 ? poses[0] : poses[0] || null, tn: 0, acciones: new Map() };
+    c.anim.modo = 'AnimationBlueprint';
+  }
+  tickBP(c, dt) {
+    const M = this.M, b = c.anim.bp, ai = b.ai;
+    try {
+      if (M.vm.tiene(ai, 'BlueprintUpdateAnimation')) M.vm.llamar(ai, 'BlueprintUpdateAnimation', [dt]);
+      for (const f of b.evals) M.vm.llamar(ai, f, []);
+    } catch (e) { M.log?.('animbp', e?.message || e); }
+    if (!b.salida) return;
+    const nodo = ai.v[b.salida] || {};
+    // las muestras con su peso
+    let muestras = [];
+    if (b.salida.includes('SequencePlayer')) { const r = nodo.Sequence?.asset; if (r) muestras = [[r, 1, 1]]; }
+    else {
+      const bs = this.bs?.[nodo.BlendSpace?.asset];
+      if (bs?.muestras?.length) {
+        const x = +nodo.X || 0, l = [...bs.muestras].sort((p, q) => p[1] - q[1]);
+        if (x <= l[0][1]) muestras = [[l[0][0], 1, l[0][3]]];
+        else if (x >= l[l.length - 1][1]) muestras = [[l[l.length - 1][0], 1, l[l.length - 1][3]]];
+        else for (let k = 0; k < l.length - 1; k++) if (x >= l[k][1] && x <= l[k + 1][1]) { const f = (x - l[k][1]) / Math.max(1e-6, l[k + 1][1] - l[k][1]); muestras = [[l[k][0], 1 - f, l[k][3]], [l[k + 1][0], f, l[k + 1][3]]]; break; }
+      }
+    }
+    if (!muestras.length) return;
+    if (c.anim.accion) { c.anim.accion.stop(); c.anim.accion = null; } // (venía de una animación suelta)
+    // el tiempo va normalizado (las muestras de un blend space andan sincronizadas)
+    const clips = muestras.map(([r]) => this.clips.get(r));
+    if (clips.some((x) => !x)) { for (const [r] of muestras) this.cargar(r); return; }
+    const durMedia = muestras.reduce((s2, [, w], i) => s2 + w * clips[i].duration, 0) || 1;
+    const vel = (nodo.PlayRate ?? 1) * muestras.reduce((s2, [, w, rs]) => s2 + w * (rs || 1), 0);
+    const antes = b.tn;
+    b.tn = (b.tn + dt * vel / durMedia) % 1;
+    const usadas = new Set();
+    muestras.forEach(([r, w], i) => {
+      const cl = clips[i]; usadas.add(r);
+      let ac = b.acciones.get(r);
+      if (!ac) { ac = c.anim.mixer.clipAction(cl); ac.setLoop(THREE.LoopRepeat, Infinity); ac.play(); ac.paused = true; b.acciones.set(r, ac); }
+      ac.enabled = true; if (!ac.isScheduled()) { ac.play(); ac.paused = true; }
+      ac.setEffectiveWeight(w); ac.time = b.tn * cl.duration;
+      // notifies de la muestra que más pesa
+      if (w >= 0.5) for (const nf of cl.userData.notifies || []) { const tt = nf.t / Math.max(1e-6, cl.duration); if ((antes < tt && b.tn >= tt) || (b.tn < antes && (tt >= antes || tt <= b.tn))) this.notificar(c, nf); }
+    });
+    for (const [r, ac] of b.acciones) if (!usadas.has(r)) { ac.setEffectiveWeight(0); ac.enabled = false; }
+    c.anim.mixer.update(0);
   }
   arrancarInicial(c) { const a = c.anim; if (a?.inicial && a.tocando) this.poner(c, a.inicial, a.loop, true); else if (a?.inicial) this.poner(c, a.inicial, a.loop, false); }
   poner(c, ruta, loop, tocar, t0 = 0) {
@@ -62,7 +127,9 @@ export class Animaciones {
   }
   tick(dt) {
     for (const c of this.comps) {
-      const a = c.anim; if (!a?.accion || c.vivo === false) continue;
+      const a = c.anim; if (!a || c.vivo === false) continue;
+      if (a.bp && a.modo === 'AnimationBlueprint' && !a.controlado) { this.tickBP(c, dt); continue; }
+      if (!a.accion) continue;
       if (a.controlado) { a.accion.time = a.t; a.mixer.update(0); continue; }
       if (!a.tocando) continue;
       if (c.malla && !c.malla.visible && !a.siempre) { a.t += dt * a.vel; continue; }
@@ -76,13 +143,14 @@ export class Animaciones {
     }
   }
   notificar(c, nf) {
+    if (nf.nombre && c.animInst) { const ev = 'AnimNotify_' + nf.nombre; if (this.M.vm.tiene(c.animInst, ev)) try { this.M.vm.llamar(c.animInst, ev, []); } catch (e) { this.M.log?.(ev, e?.message || e); } }
     if (nf.sonido) { const s = this.M.asset(nf.sonido, 'SoundBase'); this.M.audio?.arrancar(s, { vol: nf.vol ?? 1, tono: nf.tono ?? 1, pos: nf.seguir === false ? null : null, comp: c }); }
   }
   quitar(c) { this.comps.delete(c); }
 }
 
 Object.assign(METODOS.SkeletalMeshComponent = METODOS.SkeletalMeshComponent || {}, {
-  PlayAnimation(c, [anim, loop]) { if (!anim) return; c.anim && (c.anim.modo = 'AnimationSingleNode'); this.animar?.poner(c, anim.asset, loop, true); },
+  PlayAnimation(c, [anim, loop]) { if (!anim) return; if (c.anim) { c.anim.modo = 'AnimationSingleNode'; for (const ac of c.anim.bp?.acciones.values() || []) { ac.setEffectiveWeight(0); ac.enabled = false; } } this.animar?.poner(c, anim.asset, loop, true); },
   SetAnimation(c, [anim]) { if (!anim || !c.anim) return; this.animar?.poner(c, anim.asset, c.anim.loop, c.anim.tocando); },
   SetAnimationMode(c, [m]) { if (c.anim) c.anim.modo = ['AnimationBlueprint', 'AnimationSingleNode', 'AnimationCustomMode'][m] || 'AnimationSingleNode'; },
   Play(c, [loop]) { if (!c.anim) return; c.anim.loop = !!loop; c.anim.tocando = true; if (c.anim.fin) { c.anim.t = 0; c.anim.fin = false; } },
@@ -93,6 +161,7 @@ Object.assign(METODOS.SkeletalMeshComponent = METODOS.SkeletalMeshComponent || {
   SetPlayRate(c, [r]) { if (c.anim) c.anim.vel = r; },
   GetPlayRate(c) { return c.anim?.vel ?? 1; },
   GetAnimInstance(c) { return c.animInst || (c.animInst = { __ref: true, nat: 'AnimInstance', comp: c, v: {}, id: 'ai' + c.id }); },
+  SetAnimInstanceClass(c, [cl]) { const n = cl?.n || cl?.asset?.split('.').pop(); if (n && c.anim) this.animar?.ponerBP(c, n); },
   SetSkeletalMesh(c, [m]) { this.cambiarMalla?.(c, m); },
   SetMorphTarget() {}, ClearMorphTargets() {},
   GetBoneLocation(c, [n]) { const b = c.malla?.skeleton?.bones.find((x) => x.name === n); if (!b) return { X: 0, Y: 0, Z: 0 }; const p = b.getWorldPosition(new THREE.Vector3()); return { X: p.x * 100, Y: p.z * 100, Z: p.y * 100 }; },
@@ -100,6 +169,7 @@ Object.assign(METODOS.SkeletalMeshComponent = METODOS.SkeletalMeshComponent || {
 });
 Object.assign(METODOS.AnimInstance = METODOS.AnimInstance || {}, {
   GetOwningActor(ai) { return ai.comp?.actor || null; },
+  TryGetPawnOwner(ai) { const a = ai.comp?.actor; return a && /Pawn|Character/.test(a.nat || '') ? a : null; },
   GetOwningComponent(ai) { return ai.comp || null; },
   GetRelevantAnimTimeRemaining(ai) { const a = ai.comp?.anim; return a ? Math.max(0, (a.dur || 0) - a.t) : 0; },
   GetInstanceAssetPlayerTimeFromEnd(ai) { const a = ai.comp?.anim; return a ? Math.max(0, (a.dur || 0) - a.t) : 0; },
