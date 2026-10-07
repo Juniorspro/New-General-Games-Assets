@@ -27,3 +27,18 @@ Los datos (`assets/bin/Data`) se sacan a la carpeta de trabajo y pueden pasar de
   memoria. Una escena gigante no entra en una pestaña de teléfono (~1–2 GB).
 
 Ejemplo: [`porteos/slime-rancher/ANALISIS.md`](../../porteos/slime-rancher/ANALISIS.md).
+
+## Reconstruir el proyecto y saber si compila
+
+- **`ripear/`**: AssetRipper sin interfaz. Exporta los datos de un APK como proyecto de Unity,
+  con los scripts decompilados y los shaders en YAML. En YAML conservan sus programas
+  compilados; los de Android (GLES2/GLES3) son los mismos que usa WebGL. Se compila contra
+  un clon de AssetRipper: `dotnet build ripear/Ripear.csproj -p:ASSETRIPPER=/ruta/AssetRipper`.
+- **`verificar/`**: compila los scripts del proyecto como lo haría Unity 2018.4 (C# 7.3,
+  ".NET 4.x"), sin abrir Unity:
+  - **contra qué:** las DLL completas del editor; las del APK vienen recortadas y dan
+    errores falsos;
+  - **cómo:** `juego/` como WebGL (o como editor, con `-p:EXTRA_DEFINES=UNITY_EDITOR`), y
+    `editor/` para los scripts de editor.
+
+Ejemplo completo: [`porteos/slime-rancher/portear.sh`](../../porteos/slime-rancher/portear.sh).

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Los scripts de Assets/**/Editor, como Assembly-CSharp-Editor. Compilar antes ../juego/Juego.csproj. -->
+  <PropertyGroup>
+    <TargetFramework>net471</TargetFramework>
+    <AssemblyName>Assembly-CSharp-Editor</AssemblyName>
+    <LangVersion>7.3</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DefineConstants>UNITY_EDITOR;UNITY_2017_1_OR_NEWER;UNITY_2018_4_OR_NEWER;UNITY_WEBGL</DefineConstants>
+    <NoWarn>0618;1701;1702</NoWarn>
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+    <BCL>$(UNITY)/MonoBleedingEdge/lib/mono/4.7.1-api</BCL>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(PROYECTO)/Assets/**/Editor/**/*.cs" />
+    <Reference Include="$(BCL)/mscorlib.dll;$(BCL)/System.dll;$(BCL)/System.Core.dll;$(BCL)/Facades/*.dll" Private="false" />
+    <Reference Include="$(UNITY)/Managed/UnityEngine/*.dll;$(UNITY)/Managed/UnityEditor.dll" Private="false" />
+    <Reference Include="../juego/bin/Release/net471/Assembly-CSharp.dll" Private="false" />
+  </ItemGroup>
+</Project>

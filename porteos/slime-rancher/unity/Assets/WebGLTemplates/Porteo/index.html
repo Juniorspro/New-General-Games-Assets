@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>%UNITY_WEB_NAME%</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  /* El juego ocupa la ventana entera; Unity ajusta el lienzo al tamaño del contenedor. */
+  #gameContainer { position: fixed; inset: 0; width: 100% !important; height: 100% !important; }
+  #gameContainer canvas { display: block; width: 100%; height: 100%; }
+  /* Después de la intro, si el juego todavía carga: negro y una barra finita, como en FNaF 2. */
+  #carga { position: fixed; inset: 0; z-index: 5; display: none; flex-direction: column; align-items: center; justify-content: flex-end;
+    gap: 10px; padding: 0 16px max(24px, 8vh); background: #000; color: #8d8d8d; text-align: center;
+    font: 13px/1.5 'Courier New', monospace; letter-spacing: .1em; }
+  #carga.visible { display: flex; }
+  #barra { width: min(320px, 60vw); height: 3px; background: #222; }
+  #barra i { display: block; height: 100%; width: 0; background: #fff; transition: width .2s; }
+  #carga button { font: 600 14px system-ui, sans-serif; color: #000; background: #ddd; border: 0; border-radius: 18px; padding: 9px 20px; }
+</style>
+<script src="TemplateData/porteo-intro.js"></script>
+<script src="%UNITY_WEBGL_LOADER_URL%"></script>
+</head>
+<body>
+<div id="gameContainer"></div>
+<div id="carga"><small id="estado">Cargando…</small><div id="barra"><i></i></div></div>
+<script>
+'use strict';
+(function () {
+  var carga = document.getElementById('carga');
+  var estado = document.getElementById('estado');
+  var barra = document.querySelector('#barra i');
+  var listo = false, intro = true, juego = null;
+
+  function mostrar(texto, p) {
+    if (texto != null) estado.textContent = texto;
+    if (p != null) barra.style.width = Math.round(p * 100) + '%';
+    if (!intro && !listo) carga.classList.add('visible');
+  }
+
+  // La intro de JXStudios tapa el arranque; el juego se baja por detrás al mismo tiempo.
+  Porteo.intro({ aviso: {
+    es: 'Port no oficial, para uso personal, de «Slime Rancher» de Monomi Park. El juego, sus personajes, imágenes y sonidos son de sus autores.',
+    en: 'Unofficial personal-use port of "Slime Rancher" by Monomi Park. The game, its characters, images and sounds belong to their authors.',
+    pt: 'Port não oficial, para uso pessoal, de "Slime Rancher" da Monomi Park. O jogo, seus personagens, imagens e sons pertencem aos seus autores.'
+  } }).then(function () { intro = false; mostrar(); });
+
+  // Lo llama el juego (Assets/Porteo/Porteo.cs → Porteo.jslib) cuando ya arrancó.
+  window.porteoAlArrancar = function () { listo = true; carga.classList.remove('visible'); };
+
+  function arrancar() {
+    juego = UnityLoader.instantiate('gameContainer', '%UNITY_WEBGL_BUILD_URL%', {
+      onProgress: function (instancia, p) {
+        // Unity informa la bajada de 0 a 0,9 y después descomprime y prepara el motor.
+        if (p < 0.9) mostrar('Bajando el juego… ' + Math.round(p / 0.9 * 100) + ' % (la primera vez son varios cientos de MB)', p);
+        else mostrar('Preparando el mundo…', p);
+      },
+      compatibilityCheck: function (instancia, bien, mal) {
+        if (!UnityLoader.SystemInfo.hasWebGL) { mostrar('Este navegador no tiene WebGL: hace falta Chrome, Edge o Firefox actualizados.'); return mal(); }
+        if (!UnityLoader.SystemInfo.mobile) return bien();
+        // El mundo es una sola escena enorme: en un teléfono no entra en la memoria de una pestaña.
+        mostrar('Slime Rancher en el navegador necesita una PC: en un teléfono no entra en la memoria de una pestaña.');
+        var b = document.createElement('button');
+        b.textContent = 'Probar igual';
+        b.onclick = function () { b.remove(); bien(); };
+        carga.appendChild(b);
+        carga.classList.add('visible');
+      }
+    });
+  }
+  arrancar();
+
+  // El navegador no avisa al cerrar la pestaña: se guarda cada vez que se oculta.
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && listo && juego) {
+      try { juego.SendMessage('Porteo', 'AlOcultarse'); } catch (e) { console.warn(e); }
+    }
+  });
+})();
+</script>
+</body>
+</html>

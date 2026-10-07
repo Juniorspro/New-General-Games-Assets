@@ -524,6 +524,11 @@ créditos ni se tapa al autor.
 | sacar Asyncify para achicar el wasm | los cuadros de diálogo de PvZ esperan con `emscripten_sleep` (`Dialog::WaitForResult`): sin Asyncify no andan | dejarlo (cuesta 2,4 MB de wasm y ~2 s con CPU ÷4) |
 | preguntarle al disco por cada nombre posible de una imagen | en Emscripten cada archivo que no existe es una excepción de JS: ~25 000 consultas, 1,2 s de la carga con CPU ÷4 | leer cada carpeta una vez y no preguntar por lo que no está (`PakInterface::PuedeAbrirse`) |
 | meter un binario en un `.html` con base64 | +33 % de tamaño, y leerlo es más lento | UTF-16 con BOM: dos bytes por carácter y sólo se escapa lo que el HTML no deja pasar (+3 %) |
+| compilar el C# decompilado contra las DLL de Unity que trae el APK | vienen recortadas (*managed stripping*): faltan setters de atributos y miembros que el juego no usaba, y salen errores que en Unity no existen (22 en Slime Rancher) | compilar contra las DLL completas del editor de la misma versión (`herramientas/unity/verificar`) |
+| el recorte del build en el código del juego | saca la mitad de un par de operadores (`==` sin `!=`) o un constructor: el decompilado no compila | agregar la otra mitad como la negación de la que quedó (`porteos/slime-rancher/arreglar.py`) |
+| un port de Android de un juego de PC | quien lo porteó puede **reemplazar** el teclado y el mouse por controles de pantalla: en la web de PC no se puede jugar | buscar si la entrada original sigue en el código (en Slime Rancher, `SRInput` con todas sus teclas) y que el control táctil consulte también a la de PC |
+| AssetRipper gratis con los shaders | no los decompila: en "dummy" todo se ve difuso y plano | exportarlos en YAML: conservan sus programas compilados, y los GLES2/GLES3 de Android son los mismos que usa WebGL |
+| `pkill -f patrón` o `pgrep -f patrón` en el mismo comando que menciona el patrón | mata la propia shell (sale con 144) | anclar el patrón al proceso: `pgrep -f "^python3 -m http.server"`, o matar por PID |
 
 ## 14. Registro de porteos
 
@@ -719,15 +724,35 @@ Un intérprete de Clickteam en JS que corre los datos originales.
 
 Detalle, mediciones y lo que falta en [`porteos/fnaf2/ANALISIS.md`](porteos/fnaf2/ANALISIS.md).
 
-### Slime Rancher (APK no oficial, "v1.2") — analizado
+### Slime Rancher (APK no oficial, "v1.2") — proyecto listo para WebGL (falta compilar con licencia)
 
 Un port de Android hecho por alguien en 2023: Slime Rancher 1.2.3 de PC recompilado con Unity
 2018.4.36f1 (Mono, sólo 32 bits, controles táctiles agregados). No se encontró nada raro.
-- **A la web, fiel:** recompilarlo para WebGL con la misma versión de Unity, que pide licencia.
-  En PC es viable con trabajo.
-- **En un teléfono, entero, no entra en una pestaña:** el mundo es una escena de 357 mil objetos,
-  la música decodificada son 3,0 GB y las texturas ETC no tienen equivalente en WebGL de Unity 2018.
-- Detalle, números y plan en [`porteos/slime-rancher/ANALISIS.md`](porteos/slime-rancher/ANALISIS.md).
+
+```
+Origen: Slime Rancher v1.2 - espacioapk.com.apk (382,7 MB, sha256 bc7eab70…57e0), por link de MediaFire
+Motor: Unity 2018.4.36f1, Mono (el C# viene entero en Managed/)
+Estrategia: AssetRipper → proyecto de Unity → arreglos (arreglar.py) → WebGL con la misma versión
+Fidelidad: 1:1 (su C#, su física, su mundo); en PC, con teclado y mouse como el original
+Estado: el proyecto compila sin errores (WebGL y editor); falta compilarlo con Unity, que pide licencia
+```
+
+- **Qué hizo falta** (detalle en [`porteos/slime-rancher/LEEME.md`](porteos/slime-rancher/LEEME.md)):
+  - 9 arreglos al C# decompilado;
+  - sin hilos en WebGL (SECTR);
+  - partidas en IndexedDB;
+  - soltar la música que no suena;
+  - créditos fuera del AssetBundle;
+  - volver a conectar teclado y mouse, que el port de Android había cambiado por controles
+    de pantalla.
+- **Para compilarlo:**
+  - en una PC: Unity 2018.4.36f1 con WebGL y menú Porteo → Compilar WebGL;
+  - o acá, con la licencia del dueño como secreto (`UNITY_LICENSE`).
+- **En un teléfono, entero, no entra en una pestaña:** el mundo es una escena de 357 mil
+  objetos, la música decodificada son 3,0 GB y las texturas ETC no tienen equivalente en el
+  WebGL de Unity 2018. Para el teléfono, con este proyecto sale un APK de 64 bits.
+- **Rearmarlo:** `porteos/slime-rancher/portear.sh RUTA/slime.apk [SALIDA]`. Análisis y
+  números: [`porteos/slime-rancher/ANALISIS.md`](porteos/slime-rancher/ANALISIS.md).
 
 ---
 

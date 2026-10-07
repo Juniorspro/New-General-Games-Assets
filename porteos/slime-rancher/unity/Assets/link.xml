@@ -1,0 +1,7 @@
+<!-- porteo: en WebGL (IL2CPP) el linker saca lo que no ve usado. El código del juego es
+     decompilado y usa reflexión (InControl busca sus perfiles de mando por tipo): se conserva
+     entero. -->
+<linker>
+  <assembly fullname="Assembly-CSharp" preserve="all" />
+  <assembly fullname="Logger" preserve="all" />
+</linker>

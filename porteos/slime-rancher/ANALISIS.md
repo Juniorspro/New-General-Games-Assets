@@ -77,16 +77,23 @@ Lo que traba o pesa, de mayor a menor:
 Comparado con lo que ya se porteó: FNaF 2, FNaF 4 y PvZ son juegos 2D de 20–35 MB.
 Este es un mundo 3D de 1 GB en Unity.
 
-## Plan
+## Reconstruido (lo que salió al hacerlo)
 
-1. **Acá, sin licencia:** reconstruir el proyecto y compilar el C# decompilado
-   contra las DLL de Unity 2018.4.36f1 (para eso alcanza el compilador, no hace
-   falta el editor). Eso dice cuánto trabajo da el código.
-2. **Vos, o una licencia activada:** Unity Hub + 2018.4.36f1 + módulo WebGL, abrir
-   el proyecto y compilar.
-3. Audio por `<audio>`, partidas en IndexedDB, medir memoria en Chrome; y para el
-   teléfono, decidir entre zonas, subir de Unity o la versión lite, con los números
-   en la mano.
+El paso 1 del plan está hecho y salió mejor de lo esperado. El detalle y cómo compilarlo
+están en [`LEEME.md`](LEEME.md).
+
+- **El proyecto sale entero del APK:** AssetRipper, 2 minutos, 1,5 GB. Son 4 escenas, 1.430
+  scripts, 159 shaders y 1.270 sonidos.
+- **El C# decompilado compila sin errores** contra las DLL de Unity 2018.4.36f1, con 9
+  arreglos chicos. El recorte del build había sacado operadores y un constructor, y sobraba
+  un `AssemblyInfo`.
+- **Los shaders traen sus programas GLES2 y GLES3,** que son los que usa WebGL, y no piden
+  nada que WebGL no tenga.
+- **El port de Android cambió el teclado y el mouse por controles de pantalla.** La entrada
+  de PC seguía con todas sus teclas; ahora vuelven las dos.
+- **Hilos:** sólo los de oclusión del mundo (SECTR), que tiene un camino sin hilos.
+- **Falta compilarlo.** Unity no compila sin una licencia activada: o en la PC del dueño, o
+  acá con su licencia como secreto del entorno (`UNITY_LICENSE`).
 
 ## Reproducir
 

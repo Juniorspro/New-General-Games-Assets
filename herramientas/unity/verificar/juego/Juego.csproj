@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- ¿Compilan los scripts de un proyecto de Unity 2018.4 (".NET 4.x", C# 7.3)? Contra las DLL
+       completas del editor (las del APK vienen recortadas y dan errores falsos). No produce nada
+       que se use: es para saber si el proyecto abre sin errores.
+         dotnet build Juego.csproj -p:PROYECTO=.../ExportedProject -p:UNITY=.../Editor/Data [-p:EXTRA_DEFINES=UNITY_EDITOR] -->
+  <PropertyGroup>
+    <TargetFramework>net471</TargetFramework>
+    <AssemblyName>Assembly-CSharp</AssemblyName>
+    <LangVersion>7.3</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>0618;0612;0649;0169;0414;0219;0162;0168;1998;0108;0114;0109;0067;0659;0661;0660;0628;0693;1701;1702</NoWarn>
+    <!-- como en un build de WebGL; con EXTRA_DEFINES=UNITY_EDITOR, como en el editor -->
+    <DefineConstants>UNITY_2018_4_OR_NEWER;UNITY_WEBGL;$(EXTRA_DEFINES)</DefineConstants>
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+    <BCL>$(UNITY)/MonoBleedingEdge/lib/mono/4.7.1-api</BCL>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- todo Assets/ menos lo de editor (Unity lo compila aparte, ver Editor.csproj) -->
+    <Compile Include="$(PROYECTO)/Assets/**/*.cs" Exclude="$(PROYECTO)/Assets/**/Editor/**" />
+    <Reference Include="$(BCL)/mscorlib.dll;$(BCL)/System.dll;$(BCL)/System.Core.dll;$(BCL)/System.Runtime.Serialization.dll;$(BCL)/System.Xml.dll;$(BCL)/System.Xml.Linq.dll;$(BCL)/System.Numerics.dll;$(BCL)/System.Net.Http.dll;$(BCL)/System.IO.Compression.dll;$(BCL)/Microsoft.CSharp.dll;$(BCL)/System.Data.dll;$(BCL)/Facades/*.dll" Private="false" />
+    <Reference Include="$(UNITY)/Managed/UnityEngine/*.dll" Private="false" />
+    <Reference Include="$(UNITY)/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(PROYECTO)/Assets/Plugins/*.dll" Private="false" />
+  </ItemGroup>
+</Project>

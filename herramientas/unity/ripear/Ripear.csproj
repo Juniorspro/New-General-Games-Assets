@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- AssetRipper sin interfaz: dotnet build -p:ASSETRIPPER=/ruta/a/AssetRipper (el clon de git) -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(ASSETRIPPER)/Source/AssetRipper.Export.UnityProjects/AssetRipper.Export.UnityProjects.csproj" />
+  </ItemGroup>
+</Project>
