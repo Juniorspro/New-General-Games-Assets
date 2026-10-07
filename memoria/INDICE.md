@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 06/10/2026 (Trapito, gimnasia de trapo en 3D, entregado fuera del repo).
+Última puesta al día: 07/10/2026 (el botón «mute call» del port de FNaF 2, arreglado fuera del repo).
 Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 
 ## Reglas que no se discuten
@@ -35,6 +35,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | [vibora](vibora.md) | juego .io de víboras: cuerpo en anillo, comida en grilla, bots, teléfono acostado, trampas de pausa y de dedos |
 | [globo](globo.md) | física propia 2D (Box2D-lite: pilas, dormir por islas, molinete, péndulo), medir la dificultad con un piloto, la intro de colores |
 | [morfi](morfi.md) | hilos con Verlet (la correa, el hilo liviano, el pedazo cortado que no tira), diseñar niveles poniendo al personaje donde más perdona, el look de papel, la intro de papel |
+| [clickteam](clickteam.md) | arreglar un port de un juego de Clickteam Fusion (FNaF 2): esqueleto sin base64, eventos crudos, tinta semitransparente, temporizadores de tiempo real |
 | [trapito](trapito.md) | muñeco de trapo con Verlet (músculos como torques que no inventan energía), medir si un salto se puede con bots, brazos que buscan la barra, three.js metido en el HTML |
 | [grumo](grumo.md) | plataformas con trampas (tipo Level Devil): mundo a 12 fps y física a 120, trampas como datos, zonas de disparo, bolas que escupe la puerta, el resolvedor por jugadas |
 | [diario](diario.md) | querés saber qué se hizo en cada sesión y qué quedó pendiente |
