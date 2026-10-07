@@ -1,0 +1,86 @@
+/* Slendytubbies V2 (port): negro, letra escrita a mano como los carteles del juego y el rojo del
+   "BETA V2" del título. Las ventanas del OnGUI imitan la piel por defecto de Unity 4 (gris oscuro). */
+@font-face { font-family: 'Mano'; src: local('Patrick Hand'), url('letra.ttf') format('truetype'); font-display: swap; }
+:root { --fondo: #000; --tinta: #f1f1f1; --tenue: #9b9b9b; --rojo: #d4141c; --unity: rgba(32, 32, 32, .86); --unity-borde: rgba(255, 255, 255, .22); }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--fondo); color: var(--tinta); font-family: 'Mano', 'Comic Sans MS', 'Segoe Print', cursive; user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none; }
+#lienzo { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+
+/* el OnGUI del original: las imágenes estiradas a toda la pantalla, como GUI.DrawTexture */
+#gui { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+#gui img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
+#ventanas { position: fixed; inset: 0; z-index: 5; pointer-events: none; font-family: Arial, Helvetica, sans-serif; font-size: 13px; }
+#ventanas .unity { pointer-events: auto; }
+.unity button { font: inherit; color: #e8e8e8; background: linear-gradient(#5b5b5b, #3c3c3c); border: 1px solid #222; border-radius: 3px; padding: 4px 10px; cursor: pointer; }
+.unity button:active, .unity button.si { background: linear-gradient(#7a7a7a, #555); }
+.caja-u { background: var(--unity); border: 1px solid var(--unity-borde); border-radius: 4px; padding: 6px 10px 10px; color: #ddd; }
+.caja-u p { margin: 0 0 8px; text-align: center; }
+.unity.volver { position: absolute; left: 0; right: 0; top: 0; }
+.unity.volver button { width: 100%; max-width: 800px; display: block; }
+.unity.calidad { position: absolute; left: 10px; top: 10px; }
+.unity.calidad .caja-u { width: 200px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.unity.calidad button { width: 110px; }
+.unity.personalizar { position: absolute; left: 10px; bottom: max(10px, env(safe-area-inset-bottom)); display: flex; flex-direction: column-reverse; gap: 8px; align-items: flex-start; }
+.unity.personalizar .ven { display: grid; grid-template-columns: auto auto; gap: 6px 8px; align-items: center; max-width: 94vw; }
+.unity.personalizar .ven p { grid-column: 1 / -1; }
+.unity.personalizar .ven div { display: flex; flex-wrap: wrap; gap: 4px; }
+.unity.personalizar .ven button { border-left: 6px solid var(--c); padding: 3px 7px; }
+.unity.red { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.unity.red input, .unity.chat input { font: inherit; background: #1d1d1d; color: #eee; border: 1px solid #555; border-radius: 3px; padding: 5px 8px; width: 210px; }
+.unity.red .estado { color: #ccc; max-width: 70vw; }
+.unity.botonchat { position: absolute; right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); }
+.unity.chat { position: absolute; left: 50px; top: 50px; width: 220px; height: 300px; display: flex; flex-direction: column; }
+.unity.chat .lineas { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
+.unity.chat .lineas span { background: rgba(0, 0, 0, .35); border-radius: 3px; padding: 2px 6px; max-width: 85%; }
+.unity.chat .lineas .mio { align-self: flex-start; } .unity.chat .lineas .otro { align-self: flex-end; color: #fbd38b; }
+
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+#ayuda { position: absolute; left: 50%; top: calc(max(10px, env(safe-area-inset-top)) + 13vh); transform: translateX(-50%); max-width: 80vw; text-align: center; font-size: clamp(13px, 2.3vmin, 18px); color: #ddd; text-shadow: 0 0 6px #000, 0 0 2px #000; opacity: 0; transition: opacity .6s; }
+#ayuda.ve { opacity: 1; }
+body.en-menu #ayuda { display: none; }
+
+/* el engranaje: ajustes en el menú, pausa en la partida */
+#engranaje { position: fixed; z-index: 7; right: max(10px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); width: 42px; height: 42px; padding: 8px; border-radius: 50%; color: #fff; background: rgba(0, 0, 0, .45); border: 1px solid rgba(255, 255, 255, .35); cursor: pointer; opacity: .8; }
+#engranaje svg { width: 100%; height: 100%; display: block; }
+body:not(.en-menu) #engranaje { display: none; }
+body.con-pantalla #engranaje { display: none; }
+
+/* controles táctiles */
+#tactil { position: fixed; inset: 0; z-index: 4; touch-action: none; }
+#tactil.sin-tactil .ctl, .ctl.oculto { display: none; }
+#tactil.editando { background: rgba(0, 0, 0, .35); }
+#tactil.editando .ctl { display: flex !important; }
+.ctl { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; background: rgba(0, 0, 0, .45); border: 2px solid rgba(255, 255, 255, .45); pointer-events: none; transition: transform .06s; font-family: Arial, sans-serif; }
+.ctl svg { width: 46%; height: 46%; }
+.ctl b { font-size: 1.6em; }
+.ctl.apretado { transform: scale(.92); background: rgba(212, 20, 28, .5); }
+.c-joy { background: rgba(0, 0, 0, .25); border-style: dashed; }
+.c-joy .perilla { width: 44%; height: 44%; border-radius: 50%; background: rgba(255, 255, 255, .35); border: 2px solid rgba(255, 255, 255, .7); }
+.ctl.elegido { outline: 3px solid var(--rojo); outline-offset: 4px; }
+
+/* pantallas del port */
+#pantallas { position: fixed; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; pointer-events: none; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+#pantallas > .caja { pointer-events: auto; width: min(560px, 100%); max-height: 100%; overflow-y: auto; text-align: center; padding: 8px 6px; }
+#pantallas.p-idioma, #pantallas.p-tocar, #pantallas.p-cargando { background: #000; }
+#pantallas.p-pausa, #pantallas.p-ajustes { background: rgba(0, 0, 0, .82); }
+#pantallas.p-controles { align-items: flex-end; }
+#pantallas.p-controles > .caja { background: rgba(0, 0, 0, .88); border: 1px solid rgba(255, 255, 255, .2); border-radius: 6px; }
+.logo { font-size: clamp(38px, 10vmin, 84px); letter-spacing: .02em; line-height: 1; margin-bottom: 18px; color: #fff; text-shadow: 0 0 22px rgba(255, 255, 255, .25); }
+.logo em { font-style: normal; color: var(--rojo); font-size: .55em; vertical-align: super; }
+.aviso { margin: 0 auto 10px; max-width: 480px; color: #cfcfcf; font-size: clamp(14px, 2.4vmin, 18px); line-height: 1.35; }
+.aviso.rojo { color: #ff6b6b; }
+h2 { margin: 6px 0 14px; font-weight: normal; font-size: clamp(30px, 6.5vmin, 52px); color: var(--rojo); }
+.botones { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 8px; }
+.botones.fila2 { flex-direction: row; justify-content: center; }
+#pantallas button { font: inherit; font-size: clamp(18px, 3.2vmin, 24px); color: var(--tinta); background: #000; border: 2px solid #fff; border-radius: 2px; padding: 8px 26px; min-width: min(260px, 70vw); cursor: pointer; letter-spacing: .04em; }
+#pantallas button:active, #pantallas button:hover { background: #1a1a1a; border-color: var(--rojo); color: #fff; }
+.panel { display: flex; flex-direction: column; gap: 8px; text-align: left; margin: 0 auto; max-width: 460px; }
+.fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: clamp(16px, 2.8vmin, 20px); }
+.fila input[type=range] { width: 50%; accent-color: var(--rojo); }
+#pantallas .sino, #pantallas .opc { min-width: 0; padding: 3px 12px; font-size: 16px; border-width: 1px; }
+#pantallas .sino.si, #pantallas .opc.si { border-color: var(--rojo); color: #fff; background: #2a0507; }
+.grupo { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.cargando { font-size: clamp(22px, 4.5vmin, 34px); color: #ddd; }
+.barra { display: block; width: min(320px, 70vw); height: 4px; margin: 14px auto 0; background: #222; }
+.barra i { display: block; height: 100%; background: var(--rojo); transition: width .2s; }
+.editor p { margin: 4px 0 8px; font-size: 16px; }

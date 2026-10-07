@@ -1,0 +1,12 @@
+# Nada del juego original entra al repo: ni el descargado, ni lo exportado (escenas, mallas, texturas,
+# sonidos, scripts decompilados), ni los carteles traducidos, ni lo armado (el HTML lleva todo adentro).
+juego/
+descarga/
+crudo/
+traduccion/
+web/datos/
+dist/
+salida/
+pruebas/salida/
+*.html
+!web/index.html

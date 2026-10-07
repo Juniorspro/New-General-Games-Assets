@@ -1,0 +1,62 @@
+/* Los textos del port en español, inglés y portugués. Los carteles del juego son imágenes: sus
+   versiones traducidas vienen en datos/ (texs[id].l), que no se guardan en el repo. */
+import { D } from './guardado.js';
+
+const T = {
+  es: {
+    conectar: 'Conectar como víctima', hostVictima: 'Crear sala como víctima', hostTinky: 'Crear sala como Slendytubby', codigo: 'Código de sala (4 letras)', solo: 'Jugar solo',
+    conectando: 'Conectando…', sinRed: 'Sin conexión: podés jugar solo.', codigoMalo: 'El código tiene 4 letras.', enSala: 'Sala {X}: pasales el código a tus amigos (mismo modo y mapa).',
+    verChat: 'Mostrar chat', ocultarChat: 'Ocultar chat', chat: 'Chat', chatSala: 'Sala {X}',
+    cargando: 'cargando…', tocar: 'TOCÁ PARA EMPEZAR', seguir: 'SEGUIR', ajustes: 'AJUSTES', controles: 'CONTROLES', menu: 'MENÚ PRINCIPAL',
+    volver: 'VOLVER', pausa: 'PAUSA', listo: 'LISTO', reiniciar: 'EMPEZAR DE NUEVO',
+    aviso: 'Port no oficial de <b>Slendytubbies V2 Beta</b>, de <b>ZeoWorks</b> (Sean Toman), para jugar en el navegador o en el celu. Los Teletubbies son de Ragdoll Productions.',
+    terror: 'Juego de terror: oscuridad, sustos y ruidos fuertes. Mejor con auriculares.',
+    sens: 'Sensibilidad', invertir: 'Invertir vertical', brillo: 'Brillo', calidad: 'Calidad', baja: 'Baja', media: 'Media', alta: 'Alta',
+    volumen: 'Volumen', vibrar: 'Vibración', idioma: 'Idioma', si: 'Sí', no: 'No',
+    editor: 'Tocá un botón y arrastralo. Abajo cambiás su tamaño.', tam: 'Tamaño', opacidad: 'Transparencia', zurdo: 'Zurdo', fabrica: 'Como venía',
+    ayudaTacto: 'Izquierda: caminar · Derecha: mirar · Juntá las 10 natillas sin mirar al Tinky Winky',
+    ayudaTeclas: 'WASD: caminar · Mouse: mirar · F o clic derecho: linterna · Shift: correr · C: agacharse · M: mapa · Esc: pausa',
+    empezar: 'EMPEZAR', calidadUnity: 'Resolución de gráficos', calidades: ['Muy rápida', 'Rápida', 'Simple', 'Buena', 'Hermosa', 'Fantástica'],
+    volverMenu: 'Volver al menú principal', personalizar: 'Personalizar personaje / Confirmar', personaje: 'Personalización del personaje',
+    partes: ['Cuerpo', 'Cabeza', 'Antena', 'Brazos', 'Piernas'], colores: ['Rojo', 'Violeta', 'Verde', 'Amarillo', 'Blanco'],
+    atrapado: 'Te atraparon…', papeles: 'Natillas',
+  },
+  en: {
+    conectar: 'Connect as Victim', hostVictima: 'Host as Victim', hostTinky: 'Host as Slendytubby', codigo: 'Room code (4 letters)', solo: 'Play alone',
+    conectando: 'Connecting…', sinRed: 'No connection: you can play alone.', codigoMalo: 'The code has 4 letters.', enSala: 'Room {X}: give your friends the code (same mode and map).',
+    verChat: 'Show Chat', ocultarChat: 'Hide Chat', chat: 'Chat', chatSala: 'Room {X}',
+    cargando: 'loading…', tocar: 'TAP TO START', seguir: 'RESUME', ajustes: 'SETTINGS', controles: 'CONTROLS', menu: 'MAIN MENU',
+    volver: 'BACK', pausa: 'PAUSED', listo: 'DONE', reiniciar: 'START OVER',
+    aviso: 'Unofficial port of <b>Slendytubbies V2 Beta</b> by <b>ZeoWorks</b> (Sean Toman), to play in the browser or on your phone. The Teletubbies belong to Ragdoll Productions.',
+    terror: 'Horror game: darkness, jump scares and loud noises. Best with headphones.',
+    sens: 'Sensitivity', invertir: 'Invert vertical', brillo: 'Brightness', calidad: 'Quality', baja: 'Low', media: 'Medium', alta: 'High',
+    volumen: 'Volume', vibrar: 'Vibration', idioma: 'Language', si: 'Yes', no: 'No',
+    editor: 'Tap a button and drag it. Change its size below.', tam: 'Size', opacidad: 'Transparency', zurdo: 'Left-handed', fabrica: 'Reset',
+    ayudaTacto: 'Left: walk · Right: look · Collect the 10 custards without looking at Tinky Winky',
+    ayudaTeclas: 'WASD: walk · Mouse: look · F or right click: flashlight · Shift: run · C: crouch · M: map · Esc: pause',
+    empezar: 'START', calidadUnity: 'Graphics Resolution', calidades: ['Fastest', 'Fast', 'Simple', 'Good', 'Beautiful', 'Fantastic'],
+    volverMenu: 'Return to the main menu', personalizar: 'Character Customization/Confirm', personaje: 'Character Customization',
+    partes: ['Body/Torso', 'Head', 'Hat', 'Arms', 'Legs'], colores: ['Red', 'Purple', 'Green', 'Yellow', 'White'],
+    atrapado: 'You were caught…', papeles: 'Custards',
+  },
+  pt: {
+    conectar: 'Conectar como vítima', hostVictima: 'Criar sala como vítima', hostTinky: 'Criar sala como Slendytubby', codigo: 'Código da sala (4 letras)', solo: 'Jogar sozinho',
+    conectando: 'Conectando…', sinRed: 'Sem conexão: você pode jogar sozinho.', codigoMalo: 'O código tem 4 letras.', enSala: 'Sala {X}: passe o código para seus amigos (mesmo modo e mapa).',
+    verChat: 'Mostrar chat', ocultarChat: 'Esconder chat', chat: 'Chat', chatSala: 'Sala {X}',
+    cargando: 'carregando…', tocar: 'TOQUE PARA COMEÇAR', seguir: 'CONTINUAR', ajustes: 'AJUSTES', controles: 'CONTROLES', menu: 'MENU PRINCIPAL',
+    volver: 'VOLTAR', pausa: 'PAUSA', listo: 'PRONTO', reiniciar: 'COMEÇAR DE NOVO',
+    aviso: 'Port não oficial de <b>Slendytubbies V2 Beta</b>, da <b>ZeoWorks</b> (Sean Toman), para jogar no navegador ou no celular. Os Teletubbies são da Ragdoll Productions.',
+    terror: 'Jogo de terror: escuridão, sustos e barulhos altos. Melhor com fones de ouvido.',
+    sens: 'Sensibilidade', invertir: 'Inverter vertical', brillo: 'Brilho', calidad: 'Qualidade', baja: 'Baixa', media: 'Média', alta: 'Alta',
+    volumen: 'Volume', vibrar: 'Vibração', idioma: 'Idioma', si: 'Sim', no: 'Não',
+    editor: 'Toque num botão e arraste. Embaixo você muda o tamanho.', tam: 'Tamanho', opacidad: 'Transparência', zurdo: 'Canhoto', fabrica: 'Como vinha',
+    ayudaTacto: 'Esquerda: andar · Direita: olhar · Junte os 10 pudins sem olhar para o Tinky Winky',
+    ayudaTeclas: 'WASD: andar · Mouse: olhar · F ou clique direito: lanterna · Shift: correr · C: agachar · M: mapa · Esc: pausa',
+    empezar: 'COMEÇAR', calidadUnity: 'Resolução gráfica', calidades: ['Muito rápida', 'Rápida', 'Simples', 'Boa', 'Bonita', 'Fantástica'],
+    volverMenu: 'Voltar ao menu principal', personalizar: 'Personalizar personagem / Confirmar', personaje: 'Personalização do personagem',
+    partes: ['Corpo', 'Cabeça', 'Antena', 'Braços', 'Pernas'], colores: ['Vermelho', 'Roxo', 'Verde', 'Amarelo', 'Branco'],
+    atrapado: 'Você foi pego…', papeles: 'Pudins',
+  },
+};
+export const IDIOMAS = ['es', 'en', 'pt'];
+export function t(k) { return (T[D.idioma] || T.es)[k] ?? T.es[k] ?? k; }

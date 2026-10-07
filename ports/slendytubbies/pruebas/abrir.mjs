@@ -1,0 +1,10 @@
+import { createRequire } from 'node:module';
+const { chromium } = createRequire('/opt/node22/lib/node_modules/playwright/')('playwright');
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const p = await b.newPage({ viewport: { width: 640, height: 360 } });
+p.on('console', (m) => console.log(m.type(), m.text().slice(0, 300)));
+p.on('pageerror', (e) => console.log('PAGEERROR', e.message.slice(0, 300)));
+await p.goto('file://' + process.argv[2]);
+await p.waitForTimeout(15000);
+console.log(await p.evaluate(() => [!!window.__slendy, window.__slendy?.listo, document.querySelector('#pantallas')?.innerText?.slice(0, 200)]));
+await b.close();

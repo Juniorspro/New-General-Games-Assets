@@ -4,6 +4,12 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Quedan las ~8 más nuevas; las viejas pasan a
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
+- **07/10/2026 · `claude/fijate-iszyer`:**
+  - Pidió: portear Slendytubbies V2 Beta "al 100 y en HTML". Salió un solo HTML de 11 MB con las 11 escenas,
+    la lógica de sus scripts, multijugador por código de sala y es/en/pt ([slendytubbies](slendytubbies.md)).
+  - Antes: el APK de TJOC no le llegaba; se reenvió (MediaFire no se puede: pide su cuenta).
+  - Falta: probarlo en su celu y con amigos por el broker público.
+
 - **06/10/2026 · `claude/fijate-iszyer`:**
   - Pidió: portear TJOC: Story Mode (gamejolt). Es UE 4.16: se hizo el motor que ejecuta su Blueprint
     ([tjoc](tjoc.md)). Se entregó el capítulo 1 (APK 18 MB, es/en/pt, imágenes con texto traducidas).
