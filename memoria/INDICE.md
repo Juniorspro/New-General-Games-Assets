@@ -82,6 +82,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [brillo-trailer](brillo-trailer.md) | el tráiler de TikTok de BRILLO: tomas con reloj propio, Remotion, la música y sus trampas |
 | [baldi](baldi.md) | Baldi's Basics Classic (Unity 2018) a HTML: el Unity chiquito en JS, clips de sprites, TextMeshPro, navmesh, controles de celu |
 | [justshoot](justshoot.md) | Just Shoot: la demo web (BananaBread/Emscripten) a un solo HTML, texturas DXT, paquetes de Emscripten, controles de dedo |
+| [salamanca](salamanca.md) | SALAMANCA: el roguelite vertical en pixel art (tipo Archero, 182 KB): arte en texto, chacarera sintetizada, el bot de prueba y sus trampas |
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR y los dúos de los seis de un archivo): tomas con bots, voz, subtítulos, montaje en Remotion, portadas |
 | [barro](barro.md) | BARRO: motocross tipo Mad Skills (de cero): física de la moto, rivales, pistas, la tierra en tiras, el arte de Rezona |
 | [bus-stop](bus-stop.md) | port de un juego de Unity 4.5 ajeno (Bus Stop Simulator) a APK sin el editor: UnityPy, el IL de los scripts, la luz de Unity 4 en three, lo que no entra al repo |
@@ -110,6 +111,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | `kuntur/` | KUNTUR: 2.5D de papel tipo Paper Mario, 7 capítulos con historia, 3 idiomas | [kuntur](kuntur.md) |
 | `brillo/` | BRILLO: plataformas 2D Frutiger Aero, 6 mundos con historia, pixel art de 288 de alto | [brillo](brillo.md) · `brillo/README.md` |
 | `barro/` | BARRO: motocross de costado tipo Mad Skills, 20 pistas en 4 sedes, Jam del día, contrarreloj, un archivo | [barro](barro.md) · `barro/README.md` |
+| `salamanca/` | SALAMANCA: roguelite vertical en pixel art tipo Archero, 4 pisos con jefe, cartas, altar, desafío del día, un archivo de 182 KB | [salamanca](salamanca.md) · `salamanca/README.md` |
 | `ports/bus-stop/` | port de *Bus Stop Simulator* (Unity 4.5, de otros) a three.js y APK: solo el código y las herramientas; lo del juego sale de su zip | [bus-stop](bus-stop.md) · `ports/bus-stop/README.md` |
 | `ports/slendytubbies/` | port de *Slendytubbies V2 Beta* (Unity 4.0, de otros) a un solo HTML con multijugador: solo el código y las herramientas | [slendytubbies](slendytubbies.md) · `ports/slendytubbies/README.md` |
 | `ports/tjoc-sm/` | port de *The Joy of Creation: Story Mode* (UE 4.16, de otros) a three.js y APK, por capítulos: solo el código y las herramientas | [tjoc](tjoc.md) · `ports/tjoc-sm/README.md` |

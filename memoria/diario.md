@@ -5,6 +5,8 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
 - **07/10/2026 · `claude/fijate-iszyer`:**
+  - SALAMANCA, juego propio pedido "pixel art, vertical, liviano, adictivo": roguelite tipo Archero de 182 KB
+    ([salamanca](salamanca.md)). Mandado con su portada 9:16 (Higgsfield `0c5a020f…`). Falta probarlo en un celu.
   - Baldi's Basics Classic 1.4.3 (Unity 2018, gratis) portado a un solo HTML de 13,5 MB y mandado ([baldi](baldi.md)):
     un Unity chiquito en JS con los guiones del juego pasados de C#; intro JXStudios, idioma, controles de celu.
     Falta probar a fondo objetos, la cuerda de Playtime, el final y la escena secreta.

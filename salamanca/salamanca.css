@@ -1,0 +1,9 @@
+html, body { margin: 0; height: 100%; background: #07040a; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+body { background: radial-gradient(ellipse at 50% 60%, #1c0e14 0%, #07040a 70%); }
+#lienzo { position: absolute; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; outline: none; }
+#intro { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #07040a; transition: opacity .55s; font-family: system-ui, sans-serif; color: #d8c8e8; }
+#intro img { width: min(64vw, 330px); animation: moneda 1.4s cubic-bezier(.2,.8,.2,1) both; filter: drop-shadow(0 0 24px rgba(255,190,80,.25)); }
+#intro .presenta { margin: 0; letter-spacing: .45em; text-transform: uppercase; font-size: 12px; opacity: 0; animation: aparece .8s .8s forwards; }
+#intro.fuera { opacity: 0; pointer-events: none; }
+@keyframes moneda { from { transform: scale(.7) rotateY(80deg); opacity: 0; filter: blur(8px); } to { transform: none; opacity: 1; } }
+@keyframes aparece { to { opacity: .8; } }

@@ -1,0 +1,5 @@
+{
+  "salida": "salamanca.html",
+  "css": ["salamanca/salamanca.css"],
+  "js": ["salamanca/js/moneda.js", "motor2d/fuente.js", "salamanca/js/base.js", "salamanca/js/cartas.js", "salamanca/js/arte.js", "salamanca/js/sonido.js", "salamanca/js/entrada.js", "salamanca/js/sala.js", "salamanca/js/mundo.js", "salamanca/js/dibujo.js", "salamanca/js/juego.js"]
+}
