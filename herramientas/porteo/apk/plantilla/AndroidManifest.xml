@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="__PAQUETE__"
+    android:versionCode="__VERSION_CODIGO__"
+    android:versionName="__VERSION__">
+
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="35" />
+    <uses-feature android:glEsVersion="0x00020000" android:required="true" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.gamepad" android:required="false" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+__PERMISO_RED__
+    <application
+        android:label="@string/nombre"
+        android:icon="@mipmap/icono"
+        android:allowBackup="true"
+        android:hardwareAccelerated="true"
+        android:largeHeap="true"
+        android:isGame="true"
+        android:appCategory="game"
+        android:theme="@style/Pantalla">
+        <activity
+            android:name=".Juego"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="__ORIENTACION__"
+            android:resizeableActivity="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

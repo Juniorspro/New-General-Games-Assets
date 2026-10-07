@@ -27,8 +27,9 @@ clonado y **se borra cuando termina la sesión**.
 - **El disco es una cuota fija.** `df` miente: "Avail" en 0 con poco "Used"
   quiere decir que se acabó la cuota, no que la máquina esté rota. Borrar
   archivos grandes libera espacio al instante.
-- **No hay SDK de Android** y no entra (pesa 2-3 GB, quedan ~2,4 GB). O sea:
-  **acá no se puede compilar un APK.** Si hace falta una app, se hace web.
+- **El SDK de Android entero no hace falta.** Con el mínimo (build-tools +
+  platform 35, ≈130 MB) **sí se compilan APKs**: `herramientas/porteo/instalar-sdk.sh`
+  y después `herramientas/porteo/apk/armar.py`. Ver [`PORTEO.md`](PORTEO.md).
 
 ### Lo que sí está puesto
 

@@ -7,6 +7,9 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 > (la máquina, las trampas ya pagadas, cómo se despliega). [`ESTADO.md`](ESTADO.md)
 > dice **qué hay construido** (cada página, cada endpoint, cada tabla).
 > Una sesión nueva debería leer los dos, en ese orden.
+>
+> **¿Llegó un juego?** [`PORTEO.md`](PORTEO.md) es la orden: no se decide si
+> vale la pena, se portea a móvil (HTML5 → APK) y se entrega.
 
 ## Qué hay
 
