@@ -84,7 +84,7 @@ const MAPA = {
   rio: [[-5, -80], [8, -20], [30, 40], [48, 95], [44, 150], [70, 230], [110, 320], [120, 420], [150, 560], [140, 900]],
   anchoRio: 11,
   // Cascadas que caen al lago desde los acantilados del norte (x, z, alto, ancho).
-  cascadas: [{ x: -95, z: -300, alto: 70, ancho: 9 }, { x: 150, z: -285, alto: 55, ancho: 7 }, { x: -230, z: -250, alto: 38, ancho: 5 }],
+  cascadas: [{ x: -95, z: -300, alto: 70, ancho: 9 }, { x: 205, z: -284, alto: 88, ancho: 6 }, { x: -230, z: -250, alto: 38, ancho: 5 }],
   // Las dos altas del cerro grande (como en la referencia): nacen a ~700 m y bajan por las canaletas.
   cascadasAltas: [{ x: -170, z: -640, ancho: 7 }, { x: 130, z: -620, ancho: 6 }],
   // Ruta de tierra: entra por el sur y llega al claro; ramales al aserradero, la mina y el cementerio.

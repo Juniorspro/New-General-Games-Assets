@@ -32,9 +32,10 @@ const Terreno = (() => {
     h += 700 * Math.exp(-((x - 40) ** 2 + (z + 800) ** 2) / (2 * 240 ** 2));
     h += 430 * Math.exp(-((x + 470) ** 2 + (z + 640) ** 2) / (2 * 200 ** 2));
     h += 400 * Math.exp(-((x - 560) ** 2 + (z + 560) ** 2) / (2 * 190 ** 2));
-    // El acantilado del norte del lago, de donde caen las cascadas.
-    const esc = suave(-262, -300, z) * suave(420, 250, Math.abs(x));
-    h += esc * (58 + 18 * Ruido.fbm(x / 60, z / 60, 3));
+    // El acantilado del norte del lago, de donde caen las cascadas: casi vertical (70 m en
+    // 16 m), como en la referencia. Con 38 m de rampa las cascadas eran toboganes.
+    const esc = suave(-262, -278, z) * suave(420, 250, Math.abs(x));
+    h += esc * (66 + 18 * Ruido.fbm(x / 60, z / 60, 3));
     // La ladera de la mina, al oeste.
     h += 90 * suave(-400, -470, x) * suave(260, 60, Math.abs(z + 50));
     return Math.max(h, 2.2);

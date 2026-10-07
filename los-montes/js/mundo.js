@@ -158,7 +158,8 @@ const Mundo = (() => {
     c.lerp(roca, suave(0.35, 0.62, pend + n * 0.08));
     if (h > 90) c.lerp(roca, suave(90, 170, h) * 0.8);
     // Nieve: arriba y en lo plano; en los paredones se ve la roca.
-    const kn = suave(230 + n * 60, 330, h) * (1 - suave(0.55, 0.85, pend));
+    // Cuanto más arriba, más frío: la nieve aguanta en pendientes más paradas.
+    const fr = suave(400, 950, h), kn = suave(230 + n * 60, 330, h) * (1 - suave(0.3 + 0.36 * fr, 0.5 + 0.36 * fr, pend + Ruido.fbm(x / 28 + 9, z / 28, 2) * 0.2));
     c.lerp(nieve, kn);
     // Donde hay monte (la misma densidad que usa crearBosque), el suelo es oscuro: de
     // lejos, donde ya no se dibujan los pinos, las laderas siguen viéndose de bosque.
@@ -174,6 +175,7 @@ const Mundo = (() => {
     const pos = geo.attributes.position, col = new Float32Array(pos.count * 3);
     for (let i = 0; i < pos.count; i++) pos.setY(i, Terreno.altura(pos.getX(i), pos.getZ(i)));
     geo.computeVertexNormals();
+    penascos(geo);
     const nor = geo.attributes.normal;
     for (let i = 0; i < pos.count; i++) {
       const c = colorSuelo(pos.getX(i), pos.getZ(i), pos.getY(i), 1 - nor.getY(i));
@@ -185,11 +187,15 @@ const Mundo = (() => {
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0 });
     mat.onBeforeCompile = (sh) => {
       sh.uniforms.uDet = { value: det };
-      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vMundo;").replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvMundo = (modelMatrix * vec4(transformed, 1.0)).xyz;");
-      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D uDet; varying vec3 vMundo;")
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vMundo; varying vec3 vNorMundo;").replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvMundo = (modelMatrix * vec4(transformed, 1.0)).xyz; vNorMundo = normalize(mat3(modelMatrix) * objectNormal);");
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D uDet; varying vec3 vMundo; varying vec3 vNorMundo;")
         .replace("#include <color_fragment>", `#include <color_fragment>
-          float d1 = texture2D(uDet, vMundo.xz * 0.21).r, d2 = texture2D(uDet, vMundo.xz * 0.037).r;
-          diffuseColor.rgb *= 0.55 + d1 * 0.55 + (d2 - 0.55) * 0.5;`);
+          // Triplanar: arriba en XZ, en los paredones en XY y ZY (con estratos más marcados).
+          vec3 w = pow(abs(normalize(vNorMundo)), vec3(4.0)); w /= (w.x + w.y + w.z);
+          float d1 = texture2D(uDet, vMundo.xz * 0.21).r * w.y + texture2D(uDet, vMundo.zy * 0.16).r * w.x + texture2D(uDet, vMundo.xy * 0.16).r * w.z;
+          float d2 = texture2D(uDet, vMundo.xz * 0.037).r * w.y + texture2D(uDet, vMundo.zy * 0.04).r * w.x + texture2D(uDet, vMundo.xy * 0.04).r * w.z;
+          float roca = 1.0 - w.y;
+          diffuseColor.rgb *= 0.55 + d1 * 0.55 + (d2 - 0.55) * (0.5 + roca * 0.7);`);
     };
     const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; m.name = "suelo";
     escena.add(m);
@@ -209,6 +215,24 @@ const Mundo = (() => {
     matSuelo = mat;
   }
 
+  // Roca de verdad en lo empinado: crestas chicas y estratos (repisas horizontales). Solo en
+  // la malla, no en Terreno.altura: por arriba de 45° no se camina (juego.js no deja subir),
+  // así que nadie pisa la diferencia. Antes los paredones eran toboganes lisos y grises.
+  // Puntos de los caminos de las cascadas (x, z, radio): ahí no hay peñascos.
+  const cauces = [];
+  function penascos(geo) {
+    const pos = geo.attributes.position, nor = geo.attributes.normal;
+    for (let i = 0; i < pos.count; i++) {
+      const k = suave(0.8, 0.5, nor.getY(i)); if (k <= 0) continue;
+      const x = pos.getX(i), z = pos.getZ(i), y = pos.getY(i);
+      if (Math.max(Math.abs(x), Math.abs(z)) > MAPA.lado / 2 - 12) continue; // el borde queda quieto: empalma con la cordillera
+      // Por el cauce de una cascada, la roca es lisa (el agua la gasta; y si no, la tapa).
+      if (cauces.some(([cx, cz, r]) => (x - cx) ** 2 + (z - cz) ** 2 < r * r)) continue;
+      const d = Ruido.crestas(x / 24 + 3.1, z / 24 - 1.7, 3) * 3 + Math.sin(y / 7 + Ruido.valor(x / 40, z / 40) * 4) * 0.7 * suave(0.1, 0.5, Ruido.valor(x / 60 + 5, z / 60));
+      pos.setX(i, x + nor.getX(i) * d * k); pos.setY(i, y + nor.getY(i) * d * k * 0.5); pos.setZ(i, z + nor.getZ(i) * d * k);
+    }
+    geo.computeVertexNormals();
+  }
   // ── La cordillera de afuera ──
   // El relieve sigue más allá del mapa (la misma función, así en el borde no hay costura)
   // y, cuanto más lejos, crestas más altas y nevadas: hasta ~2,5 km de alto a 3 km. Sin
@@ -280,18 +304,18 @@ const Mundo = (() => {
         let dx = q.x - o.x, dz = q.z - o.z; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
         if (k) largo += Math.hypot(p.x - camino[k - 1].x, p.y - camino[k - 1].y, p.z - camino[k - 1].z);
         // Más angosta arriba, se abre al caer.
-        const w = c.ancho * (c.alta ? 1.9 : 1.25) * (0.45 + 0.55 * (k / camino.length)), nrm = Terreno.normal(p.x, p.z, 2);
+        const w = c.ancho * (c.alta ? 2.4 : 1.8) * (0.45 + 0.55 * (k / camino.length)), nrm = Terreno.normal(p.x, p.z, 2);
         for (const s of [-1, 1]) P.push(p.x - dz * w * 0.5 * s + nrm.x * 1.1, p.y + nrm.y * 1.1, p.z + dx * w * 0.5 * s + nrm.z * 1.1), U.push(s * 0.5 + 0.5, largo / 14);
         if (k < camino.length - 1) { const a = k * 2; I.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
       });
       const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setAttribute("uv", new THREE.Float32BufferAttribute(U, 2)); g.setIndex(I);
       escena.add(new THREE.Mesh(g, matC));
       const pie = camino[camino.length - 1];
-      for (let k = 3; k < camino.length - 2; k += 6) { const p = camino[k]; rocio.push([p.x, p.y + 2, p.z, Math.random() * 100]); }
+      for (let k = 3; k < camino.length - 2; k += 3) { const p = camino[k]; rocio.push([p.x, p.y + 2, p.z, Math.random() * 100]); }
       cascadas.push({ tx, x: pie.x, z: pie.z, y: Math.max(0.2, pie.y), alto: camino[0].y - pie.y });
       for (let k = 0; k < 7; k++) rocio.push([pie.x + (Math.random() - 0.5) * c.ancho * 1.6, Math.max(0.2, pie.y) + 1 + k * 1.6, pie.z + (Math.random() - 0.5) * 6, Math.random() * 100]);
     }
-    bocanadas(rocio, { color: "#b9c6d6", cerca: [3, 14], lejos: [700, 1100], tam: [9, 12], aspecto: 0.8, alfa: 0.4, deriva: 0.15 });
+    bocanadas(rocio, { color: "#b9c6d6", cerca: [3, 14], lejos: [900, 1400], tam: [10, 14], aspecto: 0.8, alfa: 0.32, deriva: 0.15 });
   }
   // El camino del agua desde (x, z): pasos de 4 m cuesta abajo hasta el lago, el río o
   // un llano (donde se ensancharía en un arroyo que acá no hace falta).
@@ -526,6 +550,19 @@ const Mundo = (() => {
       grupos.get(clave).m.push(m4.clone()); n++;
       if (grande) Colision.circulo(x, z, 3.2 * tam, "roca"); else if (tam > 0.8) Colision.circulo(x, z, 0.95 * tam, "roca");
     }
+    // Peñascos: rocas de 5 a 11 m medio enterradas en las laderas empinadas, para que los
+    // paredones no sean un tobogán liso (la malla del suelo tiene 4,7 m de grilla).
+    const NG = { alta: 160, media: 100, baja: 50 }[calidad]; let ng = 0;
+    for (let k = 0; k < NG * 30 && ng < NG; k++) {
+      const a = r() * 6.28, rr = 150 + r() * 650, x = Math.cos(a) * rr, z = 40 + Math.sin(a) * rr; const h = Terreno.altura(x, z); if (h > 520 || h < 3) continue;
+      const ny = Terreno.normal(x, z, 3).y; if (ny > 0.8 || ny < 0.4) continue;
+      if (cauces.some(([cx, cz, rr]) => (x - cx) ** 2 + (z - cz) ** 2 < rr * rr)) continue;
+      const tam = 3 + r() * 4; e.set((r() - 0.5) * 0.8, r() * 6.28, (r() - 0.5) * 0.8); q.setFromEuler(e);
+      m4.compose(new THREE.Vector3(x, h - tam * 0.45, z), q, new THREE.Vector3(tam * (0.8 + r() * 0.5), tam * (0.7 + r() * 0.4), tam * (0.8 + r() * 0.5)));
+      const clave = Math.floor(x / PAR) + "," + Math.floor(z / PAR) + "c";
+      if (!grupos.has(clave)) grupos.set(clave, { cx: (Math.floor(x / PAR) + 0.5) * PAR, cz: (Math.floor(z / PAR) + 0.5) * PAR, grande: false, m: [] });
+      grupos.get(clave).m.push(m4.clone()); ng++;
+    }
     for (const gr of grupos.values()) {
       const f = gr.grande ? r2 : r1, im = new THREE.InstancedMesh(f.geo, f.mat, gr.m.length);
       gr.m.forEach((mm, i) => im.setMatrixAt(i, mm)); im.castShadow = true; im.receiveShadow = true; im.computeBoundingSphere(); escena.add(im);
@@ -546,6 +583,7 @@ const Mundo = (() => {
 
   function montar(esc, cal, R) {
     escena = esc; calidad = cal;
+    for (const c of [...MAPA.cascadas.map((c) => ({ x: c.x, z: c.z - 16, ancho: c.ancho })), ...MAPA.cascadasAltas.map((c) => ({ ...c, alta: true }))]) for (const p of bajada(c.x, c.z)) cauces.push([p.x, p.z, c.ancho * (c.alta ? 2.4 : 1.8) + 6]);
     crearLuces(); crearCielo(); crearSuelo(); crearCordillera(); crearAgua(); crearNieblas(); crearRocas();
     const n = crearBosque(R);
     return { arboles: n };

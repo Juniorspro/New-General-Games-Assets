@@ -429,6 +429,12 @@ const Juego = (() => {
     if (n > 0.05) { yo.dx = mx / m; yo.dz = mz / m; }
     const px = yo.x, pzz = yo.z;
     if (yo.vel > 0.01 && yo.dx !== undefined) { yo.x += yo.dx * yo.vel * dt; yo.z += yo.dz * yo.vel * dt; }
+    // Paredones: por arriba de 45° no se sube (las montañas cierran el valle, y en los
+    // peñascos la malla ya no es Terreno.altura). Se resbala por la curva de nivel.
+    if (yo.zona === "ext") {
+      const gx = (Terreno.altura(yo.x + 1, yo.z) - Terreno.altura(yo.x - 1, yo.z)) / 2, gz = (Terreno.altura(yo.x, yo.z + 1) - Terreno.altura(yo.x, yo.z - 1)) / 2, g = Math.hypot(gx, gz);
+      if (g > 1) { const ux = gx / g, uz = gz / g, sube = (yo.x - px) * ux + (yo.z - pzz) * uz; if (sube > 0) { yo.x -= ux * sube; yo.z -= uz * sube; } }
+    }
     // Choques y límites.
     pz.set(yo.x, 0, yo.z);
     Colision.resolver(pz, yo.radio, yo.zona, 0); Lugares.restringir(yo.zona, pz, yo.radio);

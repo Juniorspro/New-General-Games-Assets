@@ -192,7 +192,8 @@ const Lugares = (() => {
   // ── La mina: la entrada en la ladera y los túneles (zona "mina", bajo tierra) ──
   const MINA = { x: -700, z: -60, y: -60 }; // el interior está lejos y abajo: nada del valle se ve adentro
   function mina(r) {
-    const L = MAPA.lugares.mina, ex = L.x - 18, ez = L.z, ey = suelo(ex, ez), rumbo = Math.PI / 2;
+    // La boca, pegada a la ladera (empieza en x −452): antes quedaba 14 m adelante, sola en el llano.
+    const L = MAPA.lugares.mina, ex = L.x - 26, ez = L.z, ey = suelo(ex, ez), rumbo = Math.PI / 2;
     const ent = modeloO("mina_entrada", () => {
       const g = new THREE.Group();
       for (const s of [-1, 1]) cil(0.22, 0.25, 4.2, M.tronco, s * 1.8, 2.1, 0, g, 7);
@@ -234,9 +235,12 @@ const Lugares = (() => {
   // ── La cueva, detrás de la cascada chica ──
   const CUEVA = { x: 700, z: -300, y: -40 };
   function cueva(r) {
-    const C = MAPA.cascadas[1], ex = C.x + 10, ez = C.z + 6, ey = suelo(ex, ez);
-    caja(3, 3, 0.4, new THREE.MeshBasicMaterial({ color: "#000" }), ex, ey + 1.5, ez - 0.5, null);
-    puertas.push({ x: ex, z: ez + 1, rumbo: 0, zonaFuera: "ext", zonaDentro: "cueva", dentro: { x: CUEVA.x, z: CUEVA.z + 12 }, fuera: { x: ex, z: ez + 3.5 }, bajo: true, yawDentro: 0, yawFuera: Math.PI });
+    // La boca, al pie del paredón (x 205): la cascada chica cae justo delante y la tapa.
+    const L = MAPA.lugares.cueva, ex = L.x, ez = L.z - 16, ey = suelo(ex, ez);
+    // Boca negra con un marco de rocas, delante del paredón (a 1,5 m: si no, quedaba adentro de la roca).
+    caja(3.2, 3.4, 0.4, new THREE.MeshBasicMaterial({ color: "#000" }), ex, ey + 1.6, ez + 1.2, null);
+    const r1 = Modelos.clonar("roca1"); if (r1) { poner(r1, ex - 2.6, ez + 1.4, 0.4); r1.scale.setScalar(1.6); const r2 = Modelos.clonar("roca1"); poner(r2, ex + 2.7, ez + 1.2, 2.1); r2.scale.set(1.4, 2.1, 1.4); }
+    puertas.push({ x: ex, z: ez + 2.4, rumbo: 0, zonaFuera: "ext", zonaDentro: "cueva", dentro: { x: CUEVA.x, z: CUEVA.z + 12 }, fuera: { x: ex, z: ez + 5 }, bajo: true, yawDentro: 0, yawFuera: Math.PI });
     const g = new THREE.Group(); g.visible = false; escena.add(g);
     zonas.cueva = { tipo: "cueva", suelo: CUEVA.y, grupo: g, centro: [CUEVA.x, CUEVA.z], radio: 13 };
     const sala = new THREE.Mesh(new THREE.SphereGeometry(14, 20, 12, 0, 6.3, 0, 1.7), new THREE.MeshStandardMaterial({ color: "#3a3835", map: Texturas.piedra(), roughness: 1, side: THREE.BackSide }));
