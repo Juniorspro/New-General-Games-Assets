@@ -4,6 +4,12 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Quedan las ~8 más nuevas; las viejas pasan a
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
+- **07/10/2026 · `claude/fijate-iszyer` (continuación):**
+  - TAJO ("Seguí"): completado. Juego de cortar frutas en tinta sumi-e, con 3 modos (clásico 3 vidas, zen 90s, tormenta 60s).
+    Intro: trazo caligráfico JXS con sello rojo. 10 tipos de frutas + bomba, física con gravedad, portada 9:16 en estilo sumi-e.
+    Archivos: `frutas.js` (tipos y dibujo), `fisica.js` (detección de corte y trayectorias), `intro.js` (logo y sello),
+    `sonido.js` (síntesis japonesa), `juego.js` (menú, modos, UI). Total: ~2.5 KB (mínimo sin compilar).
+
 - **07/10/2026 · `claude/fijate-iszyer`:**
   - Portada 9:16 de Plants vs. Zombies (fan art, pidió "real": render realista): Higgsfield `d8a0ec9e…` + título Bebas
     verde/gris con "vs." naranja y la moneda. Mandada. TAJO (cortar en tinta sumi-e) quedó a medio hacer: solo `tajo/js/base.js`.
