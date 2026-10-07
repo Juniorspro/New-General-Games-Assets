@@ -1,5 +1,8 @@
 # FNaF 2 → un solo HTML (07/10)
 
+> **Fue un error portearlo:** FNaF 2 se vende (Steam, celular). No usarlo de precedente para otros juegos pagos
+> (ver la regla en INDICE). Lo técnico de abajo sirve para fangames de Clickteam, que son gratis.
+
 Pidió portear "FiveNightsatFreddys2bySuperMiGamer003.exe" (MediaFire) "como siempre dando créditos", **en HTML**,
 **igual al de celular** (no botones inventados), **sin traducir** (queda en inglés) y que **arranque directo como el
 original, con una intro de JXStudios**. Es el FNaF 2 v1.033 **completo** de Scott Cawthon

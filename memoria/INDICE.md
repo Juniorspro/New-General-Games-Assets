@@ -40,8 +40,9 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
   (Excepciones: Slendytubbies pide el idioma sobre el menú difuminado, después de la intro; FNaF 2 queda en inglés.)
   **Ports: arrancan directo como el original, con una intro de JXStudios (la moneda de `jxstudios/img/`) y los
   créditos; los controles de celu, como la versión de celular del juego si existe** (07/10).
-  No se portean copias de sitios piratas de juegos que hoy se venden (Poppy Playtime de espacioapk, 07/10: además
-  es Unreal 4 de más de 1 GB). Se ofrece un juego propio inspirado. Un pedido sin nombre de juego
+  **No se portean juegos que hoy se venden**, aunque sean versiones viejas o recortadas (Poppy Playtime y GTA SA Lite,
+  07/10). Sí fangames y juegos gratis. FNaF 2 fue un error (se vende en Steam y celular): no es precedente.
+  Se ofrece un juego propio inspirado. Un pedido sin nombre de juego
   habla del último que se le mandó; si hay duda entre dos, preguntar antes.
 - **Cada juego con estilo propio**: otros botones, otro orden de menú, otras
   transiciones y otros efectos. No reusar el diseño del juego anterior.
