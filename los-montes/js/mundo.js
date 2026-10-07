@@ -34,7 +34,7 @@ const NIEBLA = { base: 0, caida: 1 / 30, bruma: 0.00011, luna: [0.45, 0.42, -0.7
       // Densidad fogDensity·e^(−b·(y−base)): la integral sobre el rayo es cerrada.
       float fogB = ${n(NIEBLA.caida)}, fogDy = fogRay.y * fogB;
       float fogK = abs(fogDy) > 1e-3 ? (1.0 - exp(-fogDy)) / fogDy : 1.0;
-      float fogOpt = fogDensity * exp(-(cameraPosition.y - ${n(NIEBLA.base)}) * fogB) * fogK * fogDist + fogDist * ${n(NIEBLA.bruma)};
+      float fogOpt = fogDensity * exp(-max(cameraPosition.y - ${n(NIEBLA.base)}, 0.0) * fogB) * fogK * fogDist + fogDist * ${n(NIEBLA.bruma)};
       float fogFactor = 1.0 - exp(-fogOpt);
     #else
       float fogFactor = smoothstep(fogNear, fogFar, fogDist);
@@ -133,7 +133,7 @@ const Texturas = (() => {
 })();
 
 const Mundo = (() => {
-  let escena, calidad, luna, hemi, cielo, lagoMat, rioMat, matSuelo, cascadas = [], nieblas = [], tiempo = 0;
+  let densidad = 0.0068, escena, calidad, luna, hemi, cielo, lagoMat, rioMat, matSuelo, cascadas = [], nieblas = [], tiempo = 0;
   const LUNA_DIR = new THREE.Vector3(...NIEBLA.luna).normalize();
   // Trampa de iluminador: la luna se ve al nornoreste (arriba a la derecha del cerro, como
   // en la referencia) pero la luz viene del estesudeste. Con la luz de donde está el disco,
@@ -380,7 +380,8 @@ const Mundo = (() => {
     hemi = new THREE.HemisphereLight("#41557d", "#17150f", LUZ.hemi); escena.add(hemi);
     // Densidad a ras del lago (y = 0); a 30 m de altura es un tercio, a 90 m casi nada.
     // En baja, más espesa: tapa el borde donde se cortan los pinos.
-    escena.fog = new THREE.FogExp2(COLOR_NIEBLA, { alta: 0.0068, media: 0.0074, baja: 0.0095 }[calidad]);
+    densidad = { alta: 0.0068, media: 0.0074, baja: 0.0095 }[calidad];
+    escena.fog = new THREE.FogExp2(COLOR_NIEBLA, densidad);
     escena.background = COLOR_NIEBLA;
   }
 
@@ -603,5 +604,5 @@ const Mundo = (() => {
     const lejosPiedra = { alta: 420, media: 320, baja: 220 }[calidad];
     for (const p of piedras) p.im.visible = Math.hypot(p.cx - cam.position.x, p.cz - cam.position.z) < lejosPiedra;
   }
-  return { montar, actualizar, cascadas: () => cascadas, libre, LUNA_DIR, COLOR_NIEBLA, LUZ, bosque, get hemi() { return hemi; }, get luna() { return luna; } };
+  return { montar, actualizar, cascadas: () => cascadas, libre, LUNA_DIR, COLOR_NIEBLA, LUZ, bosque, get densidadNiebla() { return densidad; }, get hemi() { return hemi; }, get luna() { return luna; } };
 })();

@@ -403,7 +403,7 @@ const Lugares = (() => {
     objeto("hacha", L.claro.x - 3, L.claro.z + 6, "ext");
     objeto("pistola", ...enCabana(c0, -1.2, -0.2), c0.int.zona, { alto: 0.83, cant: 8 });
     objeto("bateria", ...enCabana(c0, -2.5, -2.4), c0.int.zona, { alto: 0.9 });
-    objeto("lata", ...enCabana(c0, -2.8, -2.4), c0.int.zona, { alto: 1.5 });
+    objeto("lata", ...enCabana(c0, -3.2, -2.1), c0.int.zona, { alto: 1.5 }); // a 0,3 m de la batería, E tomaba la otra
     objeto("botiquin", ...enCabana(c3, 1, -1), c3.int.zona);
     objeto("municion", ...enCabana(c3, -2, 1), c3.int.zona, { arma: "pistola", cant: 12 });
     objeto("herramientas", ...enCabana(c1, 2.8, 1.4), c1.int.zona, { alto: 0.85 });
@@ -432,7 +432,8 @@ const Lugares = (() => {
     pista("p4", ...enCabana(c3, 0.5, 1.5), c3.int.zona);           // diario del médico de la compañía, invierno 1963
     pista("p5", L.cementerio.x + 1, L.cementerio.z - 2);           // lista de cruces, 1963–1964
     pista("p6", L.aserradero.x - 3, L.aserradero.z - 2, "ext", 1.0); // recorte de diario: excursionistas perdidos, 1974
-    pista("p7", MAPA.lugares.torre.x + 2, MAPA.lugares.torre.z - 1); // libreta de guardaparques, 1989
+    pista("p7", MAPA.lugares.torre.x - 2.5, MAPA.lugares.torre.z + 3.5); // (afuera del choque de la torre caída: adentro no se alcanzaba)
+    // libreta de guardaparques, 1989
     pista("p8", ...enCabana(c1, 0.3, 1.0), c1.int.zona);           // fotos de gente que no volvió
     pista("p9", CUEVA.x + 2, CUEVA.z + 3, "cueva");                // dibujos en la roca: "la montaña pide"
     pista("p10", ...enCabana(c5, -1.2, -0.3), c5.int.zona, 0.84);  // denuncia de desaparición, 2003

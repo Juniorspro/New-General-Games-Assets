@@ -394,7 +394,7 @@ const Juego = (() => {
     luzLinterna(dt);
     Vehiculos.faros(farosPool);
     const oscuro = yo.zona !== "ext";
-    escena.fog.density = oscuro ? 0.035 : { alta: 0.0085, media: 0.0098, baja: 0.0125 }[calidad];
+    escena.fog.density = oscuro ? 0.035 : Mundo.densidadNiebla;
     Mundo.hemi.intensity = oscuro ? 0.08 : Mundo.LUZ.hemi; Mundo.luna.intensity = oscuro ? 0 : Mundo.LUZ.luna;
     if (dibujar) R.render(escena, cam);
     if (est.dano > 0) est.dano = Math.max(0, est.dano - dt * 1.6);
@@ -407,7 +407,9 @@ const Juego = (() => {
   const pz = new V();
   function actualizarJugador(dt) {
     if (!yo.vivo) { prota.grupo.position.set(yo.x, yo.y, yo.z); Personajes.animar(prota, dt, { vel: 0, muerto: true }); return; }
-    if (est.manejando || est.grua) { prota.grupo.visible = false; actualizarHUD(dt); return; }
+    // Manejando también se recalcula qué hace la E: si no, quedaba la de antes de subir
+    // ("Subir a la camioneta") y no se podía subir a la gente ni usar la grúa.
+    if (est.manejando || est.grua) { prota.grupo.visible = false; actual = interactuable(); est.accion = actual ? { texto: actual.texto, largo: !!actual.largo } : null; actualizarHUD(dt); return; }
     prota.grupo.visible = true;
     const t = entrada.teclas;
     let ax = (t.KeyD || t.ArrowRight ? 1 : 0) - (t.KeyA || t.ArrowLeft ? 1 : 0), az = (t.KeyW || t.ArrowUp ? 1 : 0) - (t.KeyS || t.ArrowDown ? 1 : 0);
@@ -563,7 +565,7 @@ const Juego = (() => {
     danarJugador, ruido, aviso, subtitulo, objetivo, escapar, setZona, alturaPies, get opc() { return opc; }, get tiempo() { return tiempo; }, get cam() { return cam; }, get escena() { return escena; }, get R() { return R; },
     pistasLeidas: () => pistasLeidas, datos: () => datos, prota: () => prota,
     // Para las pruebas: congelar el bucle y avanzar a mano.
-    congelar(v) { congelado = v; antes = performance.now(); }, simular(seg, paso1 = 1 / 30) { for (let t = 0; t < seg; t += paso1) paso(paso1, false); R.render(escena, cam); },
+    congelar(v) { congelado = v; antes = performance.now(); }, simular(seg, paso1 = 1 / 30, dibujar = true) { for (let t = 0; t < seg; t += paso1) paso(paso1, false); if (dibujar) R.render(escena, cam); },
   };
 })();
 const T = (k, v) => t(k, v);

@@ -71,3 +71,13 @@ Fuente: `PAPA-DEL-PATRON.md § 9`. Ver también: [imagenes](imagenes.md).
 ## Mientras tanto
 
 Para generar imágenes hay una vía que sí anda: [imagenes](imagenes.md).
+
+## Tandas grandes (Los Montes, 29/9)
+
+- `GENERATION_TOO_MANY_IN_FLIGHT`: el cupo en vuelo ronda los 20. `tanda.py` ahora
+  devuelve el pedido a la cola (antes lo perdía a los 3 min); `ESPERA_MAX` en segundos.
+- "生成服务暂时不可用" (servicio no disponible) es transitorio: reintentar la misma clave
+  con `tanda.py` (que reenvía los que tienen error; `uno.py` los saltea). La portada con
+  la foto de una persona como referencia falló dos veces; sin ella salió.
+- 28 modelos a 360 = 10.548 créditos; imágenes a 54. Modelos de Tripo: 3 texturas de
+  4096² (24 MB por modelo); a JPEG 1024/512 y sin metal/aspereza quedan 40–570 KB.

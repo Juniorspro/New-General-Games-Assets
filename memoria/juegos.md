@@ -291,6 +291,40 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
 - Falta con licencia aceptable: moto (se usa el motor de auto más agudo), mugido,
   relincho y cascos al paso (siguen sintetizados).
 
+## Survival horror 3D (Los Montes)
+
+`los-montes/` (LEEME ahí). Lo que costó y conviene saber (29/9–7/10/2026):
+
+- **GLB cuantizados + `geometry.applyMatrix4` = recorte a [−1, 1].** gltf-transform
+  `quantize()` deja posiciones en Int16 normalizado; `applyMatrix4` sobre ese atributo
+  escribe en el mismo entero y recorta: el pino de 22 m quedó en un cubo de 2 m. Para
+  hornear una transformación, leer vértice por vértice a Float32
+  (`Modelos.geoArbol`). Instanciar o clonar el Mesh sí anda.
+- **Personajes de Tripo (rig de Rezona) miran a +X**: `giro: −π/2`. No tienen `Neck`
+  (sí `NeckTwist01`). Escopeta y rifle vinieron apuntando a −Z; la grúa, plegada y
+  de una pieza (no sirve para subir la pluma: queda la de código). Medido con tiras de
+  4 vistas (cámara ortográfica a ±X, ±Z) en un HTML suelto que carga `datos.js`.
+- **Niebla de three es pareja**: FogExp2 tapaba el 94 % a 200 m y no había montañas.
+  Se reemplazó `fog_fragment` por niebla de altura integrada sobre el rayo (fórmula
+  cerrada, `cameraPosition` y la posición de mundo sacada de `mvPosition`, que anda
+  con instancias, esqueletos y sprites). La niebla se mezcla **después** del tone
+  mapping: el color va en sRGB y el horizonte del cielo tiene que ser ese mismo color.
+  Bajo tierra la altura de cámara se recorta a 0 o la mina quedaba blanca.
+- **Luces físicas de r160**: la difusa va dividida por π; luna 1,35 era como 0,43 de
+  antes. Quedó luna 2,9 y hemisferio 2,1, colores del suelo con albedo de día. Truco:
+  el disco de la luna al NNE (se ve sobre el cerro) y la luz desde el ESE (si no, la
+  cara del cerro que mira al valle quedaba a contraluz y negra).
+- **Bosque**: pino de Rezona cerca (≤46 m, ~70 instancias, 2.500 tri), más lejos un
+  impostor (foto del mismo pino en un render target, dos planos cruzados con normales
+  para arriba: con DoubleSide la cara de atrás sale negra) y el suelo teñido de monte.
+- Cosas que se veían mal y cómo se arreglaron: cascadas como plano vertical → cinta
+  que baja por la máxima pendiente; bocanadas de nube en las laderas → meseta gris
+  (se sacaron); estratos con `sin(y)` → pana a rayas (amplitud chica y por manchas).
+- Límite de 45° para trepar (juego.js): las montañas cierran el valle; se comprobó por
+  BFS en una grilla de 4 m que todos los lugares siguen alcanzables.
+- `prueba-completa.mjs` juega todo por la API (`__p.ir/usar/probarLados`) en ~10 min
+  de SwiftShader: correrlo en segundo plano.
+
 ## Probar
 
 - Con SwiftShader las animaciones CSS de entrada tardan ~4 s en llegar a

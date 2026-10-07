@@ -71,7 +71,7 @@ const Vehiculos = (() => {
   // ════ Manejo ════
   const pp = new V(), n = new V(), up = new V(0, 1, 0);
   function actualizar(dt, yo, entrada) {
-    for (const k of Lugares.camionetas) if (k.grua && !(enGrua && k === manejada) && (k === manejada || !k.ganchoPuesto)) { colgarGancho(k.grua, k); k.ganchoPuesto = true; }
+    for (const k of Lugares.camionetas) if (k.grua && !(enGrua && k === manejada) && (k === manejada || !k.ganchoPuesto)) { colgarGancho(k.grua, k, true); k.ganchoPuesto = true; }
     // La del motor caliente prende los faros sola, de noche, cuando no la mirás.
     const dC = Math.hypot(yo.x - kCaliente.g.position.x, yo.z - kCaliente.g.position.z);
     if (farosCaliente > 0) farosCaliente -= dt;
@@ -128,11 +128,14 @@ const Vehiculos = (() => {
   }
   // Pluma, gancho y cable según el estado de la grúa (también las que nadie maneja: si no,
   // el gancho quedaba en el origen del mapa, flotando en el valle).
-  function colgarGancho(G, k) {
-    G.base.rotation.y = Math.PI + G.giro; G.pluma.rotation.x = -G.alza;
+  function colgarGancho(G, k, reposo = false) {
+    // En reposo (sin usarla y sin nada colgado) va plegada hacia la cabina: levantada
+    // hacia atrás quedaba en el medio de la cámara al manejar.
+    if (reposo && !G.colgado) { G.base.rotation.y = 0; G.pluma.rotation.x = 0.06; }
+    else { G.base.rotation.y = Math.PI + G.giro; G.pluma.rotation.x = -G.alza; }
     k.g.updateMatrixWorld(true); G.punta.getWorldPosition(punta);
     const piso = Terreno.altura(punta.x, punta.z);
-    const gy2 = Math.max(piso + 0.3, punta.y - G.largo);
+    const gy2 = Math.max(piso + 0.3, punta.y - (reposo && !G.colgado ? 0.5 : G.largo));
     G.gancho.position.set(punta.x, gy2, punta.z);
     const med = (punta.y + gy2) / 2; G.cable.position.set(punta.x, med, punta.z); G.cable.scale.y = Math.max(0.1, punta.y - gy2);
     if (G.colgado) {
@@ -152,8 +155,11 @@ const Vehiculos = (() => {
       return;
     }
     // ¿Qué hay cerca del gancho? Un tronco o la jaula colgada del aserradero.
-    for (const o of Lugares.obstaculos) if (!o.suelto && Math.hypot(o.o.position.x - h.x, o.o.position.z - h.z) < 2.4 && Math.abs(o.o.position.y - h.y) < 2.5) { G.colgado = o; o.colgado = true; o.col.activo = false; Sonido.golpe("cadena"); Juego.aviso(T("av.enganchado"), "info"); return; }
-    for (const j of datos.jaulas) if (j.colgada && Math.hypot(j.x - h.x, j.z - h.z) < 2.5 && Math.abs(j.g.position.y + 2.2 - h.y) < 3) { G.colgado = { o: new THREE.Object3D(), jaula: j }; Sonido.golpe("cadena"); Juego.aviso(T("av.enganchado"), "info"); return; }
+    // Un tronco se engancha de cualquier parte (distancia al eje del tronco, no a su centro):
+    // pedir el medio exacto con la pluma era casi imposible.
+    const aEje = (o) => { const sx = Math.sin(o.rumbo), sz = Math.cos(o.rumbo), dx = h.x - o.o.position.x, dz = h.z - o.o.position.z, t = clamp(dx * sx + dz * sz, -3.8, 3.8); return Math.hypot(dx - sx * t, dz - sz * t); };
+    for (const o of Lugares.obstaculos) if (!o.suelto && aEje(o) < 2.0 && Math.abs(o.o.position.y - h.y) < 2.5) { G.colgado = o; o.colgado = true; o.col.activo = false; Sonido.golpe("cadena"); Juego.aviso(T("av.enganchado"), "info"); return; }
+    for (const j of datos.jaulas) if (j.colgada && Math.hypot(j.x - h.x, j.z - h.z) < 2.8 && Math.abs(j.g.position.y + 2.2 - h.y) < 4) { G.colgado = { o: new THREE.Object3D(), jaula: j }; Sonido.golpe("cadena"); Juego.aviso(T("av.enganchado"), "info"); return; }
     Juego.aviso(T("av.nadaQueEnganchar"), "mal", 2);
   }
   // ════ Cámara ════

@@ -144,7 +144,8 @@ const Enemigos = (() => {
     } else if (e.alerta > 0.35 && ["quieto", "patrulla", "vaga", "acechar"].includes(e.estado)) { e.estado = "investigar"; e.obj = e.visto || e.obj; e.tEstado = 0; }
     switch (e.estado) {
       case "quieto": { e.vel = lerp(e.vel, 0, dt * 4); if (Math.random() < dt * 0.1) e.rumbo += (Math.random() - 0.5) * 1.5; if (Math.hypot(e.x - e.casa.x, e.z - e.casa.z) > 1) mover(e, e.casa.x, e.casa.z, D.vc, dt); break; }
-      case "patrulla": { const p = e.ruta[e.iRuta]; if (mover(e, p[0], p[1], D.vc, dt) < 1) { e.iRuta = (e.iRuta + 1) % e.ruta.length; e.cd = 3; } if (e.cd > 0) e.vel = 0; break; }
+      case "patrulla": { if (!e.ruta) e.ruta = [[e.casa.x, e.casa.z], [e.casa.x + 10, e.casa.z + 4]]; // (las guardadas antes del 7/10 no traían la ruta)
+        const p = e.ruta[e.iRuta]; if (mover(e, p[0], p[1], D.vc, dt) < 1) { e.iRuta = (e.iRuta + 1) % e.ruta.length; e.cd = 3; } if (e.cd > 0) e.vel = 0; break; }
       case "vaga": { if (!e.obj || Math.hypot(e.obj.x - e.x, e.obj.z - e.z) < 2 || e.tEstado > 30) { const a = Math.random() * 6.28, r = 20 + Math.random() * 60; e.obj = { x: clamp(e.casa.x + Math.cos(a) * r, -600, 600), z: clamp(e.casa.z + Math.sin(a) * r, -380, 700) }; e.tEstado = 0; } mover(e, e.obj.x, e.obj.z, D.vc, dt); break; }
       case "investigar": {
         const hasta = mover(e, e.obj.x, e.obj.z, D.vc * 1.4, dt);
@@ -333,7 +334,7 @@ const Enemigos = (() => {
   function remoto(v) { esRemoto = v; }
   function porId(id) { return lista.find((e) => e.id === id); }
   function vivos() { return lista.filter((e) => !e.muerto && !e.aparicion); }
-  function guardar() { return lista.filter((e) => !e.aparicion).map((e) => ({ tipo: e.tipo, x: e.x, z: e.z, zona: e.zona, vida: e.vida, muerto: e.muerto, estado: e.inicial })); }
-  function cargar(g) { limpiar(); for (const s of g || []) { const e = crear(s.tipo, s.x, s.z, s.estado, s.zona); e.vida = s.vida; if (s.muerto) { e.muerto = true; e.pj.caida = 1; } } }
+  function guardar() { return lista.filter((e) => !e.aparicion).map((e) => ({ tipo: e.tipo, x: e.x, z: e.z, zona: e.zona, vida: e.vida, muerto: e.muerto, estado: e.inicial, ruta: e.ruta })); }
+  function cargar(g) { limpiar(); for (const s of g || []) { const e = crear(s.tipo, s.x, s.z, s.estado, s.zona, s.ruta); e.vida = s.vida; if (s.muerto) { e.muerto = true; e.pj.caida = 1; } } }
   return { montar, reiniciar, actualizar, foto, aplicar, remoto, porId, animarQuietos, impacto, herir, enArco, oir, empujar, cerca, alertaMax, aparicion, acechador, vivos, guardar, cargar, bajas: () => bajas, liderMuerto: () => liderMuerto, lista: () => lista, trampas: () => trampas, TIPOS };
 })();
