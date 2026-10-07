@@ -37,7 +37,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 - Quiere calidad visual alta ("goty", "AAA"), con números detrás.
 - **En todo juego, antes del menú, se elige idioma: español, inglés o
   portugués**, siempre, y con todo traducido (menús, historia, diálogos).
-  (Excepciones: Slendytubbies pide el idioma al tocar JUGAR; FNaF 2 queda en inglés, sin traducir.)
+  (Excepciones: Slendytubbies pide el idioma sobre el menú difuminado, después de la intro; FNaF 2 queda en inglés.)
   **Ports: arrancan directo como el original, con una intro de JXStudios (la moneda de `jxstudios/img/`) y los
   créditos; los controles de celu, como la versión de celular del juego si existe** (07/10). Un pedido sin nombre de juego
   habla del último que se le mandó; si hay duda entre dos, preguntar antes.

@@ -23,6 +23,7 @@ fs.writeFileSync(path.join(DIST, 'index.html'), html.replace('<script type="modu
 fs.writeFileSync(path.join(DIST, 'slendy.css'), css);
 if (fs.existsSync(LETRA)) fs.copyFileSync(LETRA, path.join(DIST, 'letra.ttf'));
 fs.symlinkSync(path.join(WEB, 'datos'), path.join(DIST, 'datos'));
+fs.cpSync(path.join(WEB, 'img'), path.join(DIST, 'img'), { recursive: true });
 let tot = 0; const pesar = (d) => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) pesar(p); else tot += fs.statSync(p).size; } }; pesar(DIST);
 console.log(`dist: ${(tot / 1048576).toFixed(1)} MB, juego.js ${(fs.statSync(path.join(DIST, 'juego.js')).size / 1024).toFixed(0)} KB`);
 
@@ -48,7 +49,7 @@ if (process.env.UNICO) {
   // (reemplazos con función: los $ del código minificado no son patrones)
   const cssU = css.replace(/src: local\('Patrick Hand'\), url\('letra\.ttf'\) format\('truetype'\);/, () => `src: local('Patrick Hand'), ${letra};`);
   const juego = fs.readFileSync(path.join(DIST, 'juego.js'), 'utf8').replace(/<\/script/gi, '<\\/script');
-  const pagina = html
+  const pagina = html.replace(/src="img\/([\w.-]+)"/g, (_, f) => `src="data:image/webp;base64,${fs.readFileSync(path.join(WEB, 'img', f)).toString('base64')}"`)
     .replace('<link rel="stylesheet" href="slendy.css">', () => `<style>${cssU}</style>`)
     .replace('<script type="module" src="js/main.js"></script>', () => `<script>window.__EMBEBIDOS=${JSON.stringify(emb)};</script>\n<script>${juego}</script>`);
   fs.mkdirSync(path.join(AQUI, 'salida'), { recursive: true });

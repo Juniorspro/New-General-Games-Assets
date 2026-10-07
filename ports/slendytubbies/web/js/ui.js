@@ -14,7 +14,7 @@ export function crearUI(A) {
   const sino = (id, v) => `<button class="sino ${v ? 'si' : ''}" data-s="${id}">${v ? t('si') : t('no')}</button>`;
   const PANT = {
     cargando: () => `<p class="cargando">${t('cargando')}<span class="barra"><i style="width:${Math.round((U.progreso || 0) * 100)}%"></i></span></p>`,
-    idioma: () => `<div class="logo">SLENDYTUBBIES <em>V2</em></div><div class="botones">${boton('es', 'ESPAÑOL', 'data-i="es"')}${boton('en', 'ENGLISH', 'data-i="en"')}${boton('pt', 'PORTUGUÊS', 'data-i="pt"')}</div>`,
+    idioma: () => `<div class="logo">SLENDYTUBBIES <em>V2</em></div><div class="botones">${boton('es', 'ESPAÑOL', 'data-i="es"')}${boton('en', 'ENGLISH', 'data-i="en"')}${boton('pt', 'PORTUGUÊS', 'data-i="pt"')}</div><p class="aviso chico">${t('aviso')}</p>`,
     tocar: () => `<div class="logo">SLENDYTUBBIES <em>V2</em></div><p class="aviso">${t('aviso')}</p><p class="aviso rojo">${t('terror')}</p><div class="botones">${boton('empezar', t('tocar'))}</div>`,
     pausa: () => `<h2>${t('pausa')}</h2><div class="botones">${boton('seguir', t('seguir'))}${boton('ajustes', t('ajustes'))}${boton('controles', t('controles'))}${boton('menu', t('menu'))}</div>`,
     ajustes: () => `<h2>${t('ajustes')}</h2><div class="panel">

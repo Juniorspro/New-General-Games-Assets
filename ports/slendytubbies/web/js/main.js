@@ -11,6 +11,7 @@ import { D, guardar } from './guardado.js';
 import { prepararEmbebidos, url } from './archivos.js';
 import { crearRed } from './red.js';
 import { P, revisarGiro, completa } from './pantalla.js';
+import { t } from './textos.js';
 
 const BASE = window.SLENDY_BASE || '';
 const tactil = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -30,7 +31,7 @@ let R = null, J = null, listo = false, modo = 'inicio', pausado = false;
 const A = {
   sonido, controles,
   alIdioma: () => { document.documentElement.lang = D.idioma; R?.idiomaCambio(); U.reidiomar(); },
-  trasIdioma: () => entrar(),
+  trasIdioma: () => elegido(),
   alCalidad: () => ajustarTam(),
   alBrillo: () => { if (R) R.uMundo.uBrillo.value = D.ajustes.brillo; },
   empezar, seguir, alMenu, volver,
@@ -52,11 +53,27 @@ function ajustarTam() {
 }
 addEventListener('resize', ajustarTam);
 
+/* Intro de JXStudios (unos 4 s; un toque la saltea). Mientras, se carga todo detrás, menú incluido. */
+function intro() {
+  return new Promise((ok) => {
+    const el = document.getElementById('intro'); el.hidden = false;
+    el.querySelector('.presenta').textContent = t('presenta');
+    el.querySelector('.creditos').innerHTML = t('aviso');
+    let hecho = false;
+    const salir = () => { if (hecho) return; hecho = true; el.classList.add('fuera'); setTimeout(() => { el.hidden = true; ok(); }, 550); };
+    const tm = setTimeout(salir, 4300);
+    el.addEventListener('pointerdown', () => { clearTimeout(tm); salir(); }, { once: true });
+  });
+}
+
+let eligiendo = true; // hasta elegir el idioma, el menú se ve difuminado detrás y no se toca
 async function arrancar() {
-  if (!D.idioma) { const l = (navigator.language || 'es').toLowerCase(); D.idioma = l.startsWith('pt') ? 'pt' : l.startsWith('en') ? 'en' : 'es'; document.documentElement.lang = D.idioma; }
-  U.mostrar('cargando');
-  await prepararEmbebidos((x) => U.avance(x * 0.6));
-  R = await cargarComun(BASE, renderer, (x) => U.avance(0.6 + x * 0.3));
+  if (!D.idioma) { const l = (navigator.language || 'es').toLowerCase(); D.idioma = l.startsWith('pt') ? 'pt' : l.startsWith('en') ? 'en' : 'es'; }
+  document.documentElement.lang = D.idioma;
+  const vIntro = intro();
+  sonido.iniciar(); // (en pausa hasta el primer toque)
+  await prepararEmbebidos(() => {});
+  R = await cargarComun(BASE, renderer, () => {});
   R.uMundo.uBrillo.value = D.ajustes.brillo;
   J = new Juego({ R, renderer, escena, sonido, post, ui: {
     cargando: (si) => { if (si) { U.limpiarGUI(); controles.mostrar(false); if (modo !== 'inicio') U.mostrar('cargando'); } },
@@ -66,27 +83,28 @@ async function arrancar() {
   } });
   J.red = crearRed(J, U);
   ajustarTam();
-  // los sonidos son pocos: se cargan todos de una
+  await sonido.cargar(BASE, Object.keys(R.C.audios));
   listo = true; window.__slendy.listo = true;
-  U.mostrar('tocar'); // arranca directo: el idioma se pide al tocar JUGAR
+  J.cargarNivel(0);
+  await vIntro;
+  if (eligiendo) U.mostrar('idioma');
 }
 
-function empezar() { // JUGAR (el toque que habilita el audio) → idioma → menú
+function empezar() { // (quedó por compatibilidad: ahora el idioma es lo único que se elige)
   if (!listo) return;
+  elegido();
+}
+function elegido() { // el toque en el idioma habilita el sonido y suelta el menú
   sonido.iniciar();
   completa();
-  U.mostrar('idioma');
-}
-async function entrar() {
-  U.mostrar('cargando');
-  await sonido.cargar(BASE, Object.keys(R.C.audios));
+  eligiendo = false;
   modo = 'menu';
-  J.cargarNivel(0);
+  U.mostrar(null);
 }
 
 function alNivel(n) {
   pausado = false; cursorLibre = false;
-  U.mostrar(null);
+  if (!eligiendo) U.mostrar(null);
   controles.soltarTodo();
   if (document.pointerLockElement) document.exitPointerLock(); // (hasta que aparezca el jugador, el mouse es para la GUI)
   if (n === 0 || n === 10) {

@@ -1,3 +1,4 @@
+[hidden] { display: none !important; }
 /* Slendytubbies V2 (port): negro, letra escrita a mano como los carteles del juego y el rojo del
    "BETA V2" del título. Las ventanas del OnGUI imitan la piel por defecto de Unity 4 (gris oscuro). */
 @font-face { font-family: 'Mano'; src: local('Patrick Hand'), url('letra.ttf') format('truetype'); font-display: swap; }
@@ -66,7 +67,10 @@ body.con-pantalla #engranaje { display: none; }
 /* pantallas del port */
 #pantallas { position: fixed; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; pointer-events: none; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 #pantallas > .caja { pointer-events: auto; width: min(560px, 100%); max-height: 100%; overflow-y: auto; text-align: center; padding: 8px 6px; }
-#pantallas.p-idioma, #pantallas.p-tocar, #pantallas.p-cargando { background: #000; }
+#pantallas.p-tocar, #pantallas.p-cargando { background: #000; }
+/* el idioma es lo único que se elige: encima del menú que ya corre, difuminado */
+#pantallas.p-idioma { pointer-events: auto; background: rgba(0, 0, 0, .3); -webkit-backdrop-filter: blur(9px) brightness(.72); backdrop-filter: blur(9px) brightness(.72); }
+#pantallas .aviso.chico { margin-top: 18px; font-size: 12px; opacity: .7; }
 #pantallas.p-pausa, #pantallas.p-ajustes { background: rgba(0, 0, 0, .82); }
 #pantallas.p-controles { align-items: flex-end; }
 #pantallas.p-controles > .caja { background: rgba(0, 0, 0, .88); border: 1px solid rgba(255, 255, 255, .2); border-radius: 6px; }
@@ -89,3 +93,22 @@ h2 { margin: 6px 0 14px; font-weight: normal; font-size: clamp(30px, 6.5vmin, 52
 .barra { display: block; width: min(320px, calc(70 * var(--vw))); height: 4px; margin: 14px auto 0; background: #222; }
 .barra i { display: block; height: 100%; background: var(--rojo); transition: width .2s; }
 .editor p { margin: 4px 0 8px; font-size: 16px; }
+
+/* intro de JXStudios: la moneda de metal entra girando, le pasa un brillo, el nombre y los créditos; se va con un
+   chispazo de estática (como los cortes de FNaF). Un toque la saltea. */
+#intro { font-family: system-ui, sans-serif; position: absolute; inset: 0; z-index: 12; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.4vmin; background: radial-gradient(ellipse at 50% 45%, #141414 0%, #000 62%); overflow: hidden; }
+#intro .moneda { position: relative; width: min(34vmin, 250px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; opacity: 0; transform: perspective(700px) rotateY(32deg) scale(.84); animation: moneda 1.5s cubic-bezier(.2,.7,.2,1) .3s forwards; box-shadow: 0 0 70px rgba(255,255,255,.09), 0 18px 40px rgba(0,0,0,.8); }
+#intro .moneda img { display: block; width: 100%; height: 100%; }
+#intro .moneda::after { content: ''; position: absolute; inset: -30%; background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.6) 50%, transparent 58%); transform: translateX(-130%); animation: brillo 1.1s ease-in-out 1.35s forwards; mix-blend-mode: screen; }
+#intro p { margin: 0; text-align: center; opacity: 0; }
+#intro .marca { font: 600 clamp(18px, 4.4vmin, 34px)/1 'Segoe UI', system-ui, sans-serif; letter-spacing: .55em; text-indent: .55em; background: linear-gradient(180deg, #fff 0%, #a8a8a8 52%, #e9e9e9 100%); -webkit-background-clip: text; background-clip: text; color: transparent; animation: aparecer .9s ease 1.05s forwards; }
+#intro .presenta { font: clamp(11px, 2.2vmin, 15px) 'Courier New', monospace; letter-spacing: .35em; color: #8d8d8d; animation: aparecer .8s ease 1.9s forwards; }
+#intro .creditos { position: absolute; left: 6%; right: 6%; bottom: max(10px, 3vmin); font: 11px/1.45 system-ui, sans-serif; color: #777; animation: aparecer .8s ease 2.3s forwards; }
+#intro .estatica { position: absolute; inset: -50%; pointer-events: none; opacity: 0; background: repeating-radial-gradient(circle at 31% 47%, #fff 0 1px, transparent 1px 3px), repeating-linear-gradient(0deg, rgba(255,255,255,.5) 0 1px, transparent 1px 2px); }
+#intro.fuera { animation: fuera .55s ease forwards; }
+#intro.fuera .estatica { animation: chispazo .55s steps(4) forwards; }
+@keyframes moneda { to { opacity: 1; transform: perspective(700px) rotateY(0) scale(1); } }
+@keyframes brillo { to { transform: translateX(130%); } }
+@keyframes aparecer { to { opacity: 1; } }
+@keyframes fuera { 0%, 45% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes chispazo { 0% { opacity: .5; transform: translate(0, 0); } 33% { opacity: .35; transform: translate(-4%, 3%); } 66% { opacity: .55; transform: translate(3%, -2%); } 100% { opacity: 0; } }

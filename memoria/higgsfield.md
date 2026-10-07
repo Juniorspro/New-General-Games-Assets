@@ -38,3 +38,6 @@ también: [rezona](rezona.md), [juegos](juegos.md).
     etiquetas: la herramienta no dice cuál es el usuario "Juni36".
 - Herramientas que se usaron: `generate_image_batch`, `remove_background`,
   `generate_3d`, `jobs_wait` y `balance`.
+- **Portadas 9:16 (07/10):** `generate_image` con `nano_banana_2` y `aspect_ratio` 9:16 da 768×1376 (corre como
+  `nano_banana_flash`). Pedir "no text, no logos" igual dejó un código de barras falso abajo: se tapa con el
+  degradé del logo. El título y la marca se componen aparte (las letras de la IA salen mal).

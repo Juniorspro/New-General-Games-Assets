@@ -7,10 +7,14 @@ solo el código; la base es el motor de [pizza-delivery](pizza-delivery.md) (que
 
 ## Lo nuevo
 
+- **Arranque (07/10, pedido):** intro de JXStudios (la moneda, «presenta» y créditos; un toque la saltea) mientras
+  se carga todo, menú incluido; **sin pantalla de carga**; después solo se elige el idioma, encima del menú que ya
+  corre, difuminado (`#pantallas.p-idioma` con `backdrop-filter`). Ya no hay botón JUGAR. Ojo: el CSS necesita
+  `[hidden] { display: none !important }` o la intro invisible tapa todo. Prueba: `pruebas/inicio.mjs`.
 - **Girado 90° con el celu parado** (07/10): `pantalla.js` gira `#raiz` por CSS (`body.girado`) y pasa los
   toques a coordenadas del juego (`P.ev(e)`, `P.W/P.H`); `vw/vh` del CSS van por `--vw/--vh`. Al tocar JUGAR
   pide pantalla completa apaisada. Prueba: `pruebas/girado.mjs` (toca el botón 3D girado y cambia la cámara).
-- **Arranca directo en JUGAR** (pedido del 07/10, solo este juego): sin pantalla de idioma al abrir; el texto
+- (reemplazado por lo de arriba) **Arrancaba directo en JUGAR** (pedido del 07/10, solo este juego): sin pantalla de idioma al abrir; el texto
   sale en el idioma del celu y al tocar JUGAR se elige idioma y entra al menú. Prueba: `pruebas/inicio.mjs`.
 - **MediaFire se baja con curl**: la página trae `href="https://download…"`; ese link anda (subir, no).
 - **La lógica, decompilada a C#** con `ilspycmd` (dotnet tool, con el .NET 10 del scratchpad:

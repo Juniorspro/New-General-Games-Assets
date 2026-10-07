@@ -12,7 +12,7 @@ await p.addInitScript(() => localStorage.setItem('slendy.v1', JSON.stringify({ a
 await p.goto('file://' + path.join(AQUI, 'salida/slendytubbies.html'));
 await p.waitForFunction(() => window.__slendy?.listo, null, { timeout: 120000 });
 console.log('girado:', await p.evaluate(() => document.body.classList.contains('girado')), 'lienzo:', await p.evaluate(() => { const c = document.getElementById('lienzo'); return c.width + '×' + c.height; }));
-await p.tap('[data-b="empezar"]'); await p.tap('[data-i="es"]');
+await p.tap('[data-i="es"]');
 await p.waitForFunction(() => window.__slendy.J?.S && !window.__slendy.J.cargando, null, { timeout: 120000 });
 await p.waitForTimeout(1500);
 await p.screenshot({ path: path.join(AQUI, 'pruebas/salida/girado-menu.jpg'), type: 'jpeg', quality: 50 });

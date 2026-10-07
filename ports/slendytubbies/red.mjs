@@ -27,7 +27,7 @@ async function pagina(nombre) {
   await p.addInitScript((pb) => { window.SLENDY_BROKER = 'ws://127.0.0.1:' + pb; localStorage.setItem('slendy.v1', JSON.stringify({ idioma: 'es', ajustes: { calidad: 'baja' } })); }, PB);
   await p.goto(`http://127.0.0.1:${PUERTO}/index.html`);
   await p.waitForFunction(() => window.__slendy?.listo, null, { timeout: 120000 });
-  await p.click('[data-b="empezar"]'); await p.click('[data-i="es"]');
+  await p.click('[data-i="es"]');
   await p.waitForFunction(() => window.__slendy.J?.S && !window.__slendy.J.cargando, null, { timeout: 120000 });
   await p.evaluate(() => { window.__slendy.congelar = 'dibujo'; });
   return p;
