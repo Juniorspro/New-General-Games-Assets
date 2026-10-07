@@ -1,0 +1,24 @@
+<!-- porteo:web — lo que hacía la parte Android (ar.jxstudios.busstop.MainActivity):
+     atrás = Escape, horizontal, pantalla prendida, pantalla completa. -->
+<script src="porteo-web.js"></script>
+<script>
+(function () {
+  function idioma() {
+    try { var g = JSON.parse(localStorage.getItem('busstop.v1')); if (g && g.idioma) return g.idioma; } catch (e) {}
+    return (document.documentElement.lang || navigator.language || 'es').slice(0, 2);
+  }
+  var T = {
+    es: ['Girá el teléfono', 'Atrás otra vez para salir'],
+    en: ['Turn your phone sideways', 'Back again to exit'],
+    pt: ['Gire o celular', 'Voltar de novo para sair'],
+  };
+  function t(i) { return (T[idioma()] || T.es)[i]; }
+  Porteo.web({
+    orientacion: 'landscape',
+    // Igual que el APK: si lo ponen vertical a mitad de partida, se pausa.
+    alGirarMal: function () { window.__bus && window.__bus.pausar(); },
+    textoGirar: function () { return t(0); },
+    textoSalir: function () { return t(1); },
+  });
+})();
+</script>

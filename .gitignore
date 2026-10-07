@@ -19,3 +19,4 @@ __pycache__/
 
 # juegos de terceros porteados: el repo es público y no se redistribuyen (ver PORTEO.md §11)
 /bus-stop/
+/entrega-*/

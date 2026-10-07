@@ -39,9 +39,17 @@ ls $J/orig/assets $J/orig/lib/* 2>/dev/null      # APK: ¿HTML5? ¿libunity? ¿l
 # 4. levantarlo en el navegador y probarlo como teléfono (§9)
 python3 -m http.server 8810 --bind 127.0.0.1 --directory <carpeta-html5>
 
-# 5. APK
+# 5. web instalable que anda sin red, y la versión de un solo archivo
+python3 herramientas/porteo/pwa.py <carpeta-html5> --nombre "..." --corto "..." \
+    --orientacion landscape --icono icono.png --color "#000000"
+python3 herramientas/porteo/un-archivo.py <carpeta-html5> --salida juego.html
+
+# 6. APK
 python3 herramientas/porteo/apk/armar.py <carpeta-html5> --nombre "..." \
     --paquete ar.juniors.<juego> --orientacion horizontal --icono icono.png
+
+# 7. dejarlo reproducible sin subir el juego (§11)
+#    porteos/<juego>/portear.sh  (original → todo)  +  porteos/<juego>/prueba.mjs  (§9)
 ```
 
 Después: §4 (estrategia) → §5 (táctil) → §8 (optimizar) → §9 (probar) →
@@ -390,12 +398,13 @@ salto de Bus Stop: el primer intento dio "falla" y el salto andaba perfecto.)
 
 Al terminar cada porteo se entrega, **como archivos** (no sólo una ruta):
 
-1. **HTML5** — carpeta lista para subir (con `manifest.webmanifest` + `sw.js`
-   para instalar y jugar sin red) y, cuando se pueda, **un solo `.html`** que se
-   abre con doble clic;
-2. **APK** firmado;
-3. **proyecto Android** = el comando de `armar.py` con sus opciones (se regenera
-   en segundos);
+1. **HTML5** — carpeta lista para subir, pasada por **`pwa.py`**
+   (`manifest.webmanifest` + `sw.js` + íconos: se instala desde Chrome y anda sin
+   red), también como `.zip`; y, cuando se pueda, **un solo `.html`** armado con
+   **`un-archivo.py`**, que se abre con doble clic sin servidor;
+2. **APK** firmado (`armar.py`);
+3. **proyecto Android** = `porteos/<juego>/portear.sh`, que rearma todo desde el
+   original en un comando (el APK sale en segundos);
 4. y un informe con este formato:
 
 ```
@@ -416,6 +425,15 @@ Problemas conocidos: <lista honesta, o "ninguno conocido">
 repo van sólo las herramientas y el código propio del porteo (adaptadores,
 configuración de controles, pruebas), que no contienen el juego. Las carpetas
 de juegos ajenos se agregan a `.gitignore` antes del primer commit.
+
+Para que el porteo no se pierda cuando se borra el contenedor, cada juego deja
+en **`porteos/<juego>/`** su receta, sin un solo byte del juego:
+
+| archivo | qué es |
+|---|---|
+| `portear.sh` | original del dueño → web + un archivo + APK + zip, en un comando. Anota el sha256 del original con el que se probó |
+| `prueba.mjs` | la lista de §9 para ese juego, midiendo en el estado del juego |
+| lo nuestro | los parches que se le aplican (p. ej. `porteo-web.html`) |
 
 Los créditos del original se conservan siempre: nunca se borra la pantalla de
 créditos ni se tapa al autor.
@@ -452,39 +470,74 @@ créditos ni se tapa al autor.
 | medir un salto a 6 cuadros/s | parece que no salta | medir el pico durante ~1 s |
 | sacar un juego de su APK | se pierden atrás, orientación, pantalla prendida y vibración | leer la Activity (§6) y devolver cada cosa con `web.js` |
 | teléfono de 120 Hz | el juego que avanza un paso por cuadro corre al doble de velocidad | `--hz 60` (el default de `armar.py`) |
+| `history.pushState` al cargar la página | Chrome se saltea con el botón atrás las entradas agregadas sin que el usuario haya tocado: el primer atrás se iba del juego | el colchón se pone en el primer toque (`web.js`) |
+| escuchar `pointerup` y `touchend` para la pantalla completa | dos pedidos por toque: el segundo falla y ensucia la consola | sólo `pointerup` y una marca de "pidiendo" |
+| botones del juego con `pointer-events: none` (los atiende una capa) | `page.tap()` de Playwright se niega a tocarlos | tocar con CDP en el centro, como un dedo |
+| espiar `fetch` en la versión de un archivo | el archivo sirve los datos sin pasar por el `fetch` de verdad: "0 de 0" | medir lo que el juego decodifica (`decodeAudioData`), no los pedidos |
+| abrir el `.html` desde el disco | `fetch`/XHR a los archivos de al lado están prohibidos en `file://` y `content://` | `un-archivo.py`: todo adentro y los pedidos interceptados |
 
 ## 14. Registro de porteos
 
-### Bus Stop Simulator — en curso
+### Bus Stop Simulator — terminado (falta la prueba en un teléfono de verdad)
 
-- **Llegó:** `bus-stop-simulator.apk` (6,99 MB), paquete `ar.jxstudios.busstop`.
-  Es un port a Android del juego de Game Jolt de Magnus Jungersen (@Sodakurt),
-  rearmado desde sus archivos. Los créditos se conservan.
-- **Motor:** HTML5 + three.js dentro de un WebView. Kotlin + androidx
-  `WebViewAssetLoader`. Adentro: `index.html`, `juego.js` (603 KB, con three.js
-  incluido), `bus.css` y `datos/` (escena, mallas, alturas, pasto, árboles,
-  20 texturas WebP, 4 audios Opus y una fuente).
-- **Lo nativo** (leído del dex): vibrar (`window.BusStopNativo.vibrar`, el JS ya
-  cae a `navigator.vibrate`), atrás → Escape, pantalla completa, pantalla
-  prendida y `screenOrientation=sensorLandscape`.
-- **Estrategia:** extraer `assets/` tal cual (1:1) + `web.js` para lo nativo +
-  PWA para jugar sin red + versión de un solo archivo + APK nuevo con
-  `armar.py`.
-- **Probado hasta ahora** (Chromium móvil 844×390, táctil por CDP):
-  - carga en 4,3 s, sin errores;
+```
+Origen: bus-stop-simulator.apk (6,67 MB, ar.jxstudios.busstop, sha256 b64a463a…f4a4)
+Motor: HTML5 + three.js dentro de un WebView (Kotlin + androidx WebViewAssetLoader)
+Estrategia: sacar assets/ tal cual + web.js para lo que hacía la parte Android
+Fidelidad: 1:1 — escena, modelos, texturas, sonidos, lógica, UI y créditos intactos
+Tamaños: APK original 6,67 MB → web 8,17 MB (zip 5,33 MB) · un archivo 7,08 MB · APK nuevo 5,34 MB (−20 %)
+Pruebas: 41/41 (porteos/bus-stop/prueba.mjs) · no se pudo probar en un teléfono real
+```
+
+- **El juego:** port a Android del juego de Game Jolt de Magnus Jungersen
+  (@Sodakurt), que nunca se terminó, rearmado desde sus archivos. Los créditos
+  se conservan tal cual.
+- **Lo nativo** (leído del dex) y cómo volvió en la web: vibrar
+  (`window.BusStopNativo.vibrar`; el juego ya caía a `navigator.vibrate`), atrás
+  → Escape (colchón de historial), pantalla completa (al primer toque),
+  pantalla prendida (Wake Lock), `sensorLandscape` (traba en pantalla completa
+  + cartel de "girá el teléfono" que pausa y habla el idioma del juego) y 60 Hz
+  (en el APK nuevo, `--hz 60`).
+- **Controles móviles:** los propios del juego, que ya eran buenos y se
+  conservan: joystick a la izquierda, mirar arrastrando a la derecha, CORRER,
+  SALTAR, LINTERNA, E (agarrar) y pausa, con editor de posición y tamaño adentro
+  del juego. Más el atrás de Android: pausa, y dos seguidos salen.
+- **Optimización:** el APK baja 20 % por no llevar androidx ni Kotlin (3,1 MB de
+  código). Los `.bin` y el `.json` viajan comprimidos (mallas 2,06 → 1,01 MB,
+  pasto 1,05 MB → 7,5 KB, escena 324 → 25 KB). Las texturas WebP y el audio
+  Opus mono **ya venían optimizados**: recomprimirlos sólo habría bajado la
+  calidad, así que no se tocaron. La calidad gráfica automática ("media" en
+  táctil) es la del juego original.
+- **Probado (41/41):**
+  - carga;
   - idioma → menú → JUGAR sólo tocando;
-  - el juego ya trae controles táctiles propios (joystick, correr, saltar,
-    linterna, usar, pausa);
-  - joystick: camina 2,8 m;
-  - mirar con un segundo dedo mientras camina: gira;
-  - saltar: sube 0,9 m, igual que la barra espaciadora;
-  - Escape: abre la pausa.
-- **Encontrado:** en vertical, el joystick queda cortado contra el borde. El
-  original lo evitaba trabando en horizontal: en web lo resuelve `web.js` con el
-  cartel de "girá el teléfono" y la pausa.
-- **Falta:** integrar `web.js`, manifest y `sw.js`; la versión de un solo
-  archivo; armar el APK; la pasada completa de §9; el informe final.
-- **No va al repo** (§11): `bus-stop/` está en `.gitignore`.
+  - camina, corre (más rápido con dos dedos), mira mientras camina, salta
+    0,85 m, linterna;
+  - pausa con el botón, con atrás y al salir de la app;
+  - dos atrás salen;
+  - el guardado sobrevive;
+  - los controles entran y no se pisan en 844×390, 640×360, 915×412 y 1024×600;
+  - parado: el cartel aparece y pausa;
+  - sin red después de la primera visita;
+  - el archivo único abre desde el disco, se juega, carga la fuente y los 4
+    audios;
+  - sin errores en consola.
+- **Encontrado y arreglado en el camino:** el atrás de Chrome se habría ido del
+  juego (colchón puesto antes del primer toque) y la pantalla completa se pedía
+  dos veces por toque. Ver §13.
+- **Problemas conocidos:**
+  - **No se probó en un teléfono real** (acá no hay emulador): el APK está
+    verificado por dentro (firma v2+v3, orientación, SDK, 38 archivos del
+    juego) y el mismo HTML pasó §9 en Chromium móvil.
+  - El APK nuevo es otra app (`ar.juniors.busstop`): se instala **al lado** del
+    original, y el progreso del original no pasa al nuevo.
+  - Firmado con una clave de esta sesión: para que una versión futura se
+    instale encima, hace falta guardar la clave (§7).
+  - En iPhone no hay pantalla completa ni traba de orientación (sólo el
+    cartel), y el audio Opus pide iOS 17 o más nuevo: **no probado en Safari**.
+- **Rearmarlo:** `porteos/bus-stop/portear.sh RUTA/bus-stop-simulator.apk`.
+  **Probarlo:** `node porteos/bus-stop/prueba.mjs http://127.0.0.1:8811/ file:///…/bus-stop-simulator.html`.
+- **No va al repo** (§11): `bus-stop/` y `entrega-*/` están en `.gitignore`.
 
 ---
 

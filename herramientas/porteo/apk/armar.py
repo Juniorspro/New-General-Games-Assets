@@ -55,6 +55,12 @@ def copiar_juego(origen: Path, destino: Path, quitar_basura: bool):
     except ImportError:
         brotli = None
     n = 0
+    # Lo que generó pwa.py sirve en la web y no en el APK (web.js no registra
+    # el service worker adentro del WebView). El de un juego propio se respeta.
+    sw = origen / "sw.js"
+    solo_web = set()
+    if sw.exists() and sw.read_text("utf-8", "replace").startswith("// Generado por herramientas/porteo/pwa.py"):
+        solo_web = {"sw.js", "manifest.webmanifest", "icono-512.png"}
     for raiz, dirs, archivos in os.walk(origen):
         if quitar_basura:
             dirs[:] = [d for d in dirs if d not in BASURA_DIRS]
@@ -63,6 +69,8 @@ def copiar_juego(origen: Path, destino: Path, quitar_basura: bool):
             if quitar_basura and (a in BASURA_ARCH or src.suffix.lower() in BASURA_EXT):
                 continue
             rel = src.relative_to(origen)
+            if rel.as_posix() in solo_web:
+                continue
             dst = destino / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             datos = None

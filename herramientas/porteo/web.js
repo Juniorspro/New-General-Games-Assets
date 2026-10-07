@@ -47,6 +47,10 @@
   }
   P.aviso = aviso;
 
+  // Un texto puede ser una función: así sigue el idioma que el jugador elija
+  // adentro del juego, que puede cambiar después de arrancar.
+  function texto(v, def) { try { return (typeof v === 'function' ? v() : v) || def; } catch (_) { return def; } }
+
   P.web = function (cfg) {
     cfg = cfg || {};
     var atras = cfg.atras || escape;
@@ -59,15 +63,25 @@
       if (ahora - ultimo < 2000) return 'salir';
       ultimo = ahora;
       atras();
-      aviso(cfg.textoSalir || 'Atrás otra vez para salir');
+      aviso(texto(cfg.textoSalir, 'Atrás otra vez para salir'));
       return true;
     };
     if (!enApk && history.pushState) {
       // En el navegador el gesto atrás es "volver de página". Se le pone una
       // entrada de historial de colchón: el primer atrás la gasta y pausa; el
       // segundo, dentro de 2 s, sí se va.
-      history.pushState({ porteo: 1 }, '');
+      // El colchón se pone en el PRIMER TOQUE y no al cargar: Chrome se saltea
+      // con el botón atrás las entradas que una página agrega sin que nadie la
+      // haya tocado (contra los sitios que secuestran el atrás). Puesto al
+      // cargar, el primer atrás se iba del juego en vez de pausar.
+      var colchon = false;
+      addEventListener('pointerup', function () {
+        if (colchon) return;
+        colchon = true;
+        history.pushState({ porteo: 1 }, '');
+      }, true);
       addEventListener('popstate', function () {
+        if (!colchon) return;
         if (window.porteoAtras() === 'salir') { history.back(); return; }
         history.pushState({ porteo: 1 }, '');
       });
@@ -75,21 +89,27 @@
 
     // ---- pantalla completa + orientación, al primer toque ----
     // Los navegadores sólo dejan pedirlas dentro de un gesto del usuario.
+    // Un solo pedido a la vez: el pedido gasta el permiso del gesto, y uno
+    // segundo mientras el primero está en curso falla y ensucia la consola.
+    var pidiendo = false;
     function completa() {
-      if (enApk || cfg.completa === false) return;
+      if (enApk || cfg.completa === false || pidiendo) return;
       var d = document.documentElement, f = d.requestFullscreen || d.webkitRequestFullscreen;
       if (!f || document.fullscreenElement || document.webkitFullscreenElement) return;
+      pidiendo = true;
       try {
         var p = f.call(d, { navigationUI: 'hide' });
-        if (p && p.then) p.then(trabar).catch(function () {});
-      } catch (_) {}
+        if (p && p.then) p.then(trabar, function () {}).then(function () { pidiendo = false; });
+        else pidiendo = false;
+      } catch (_) { pidiendo = false; }
     }
     function trabar() {
       if (cfg.orientacion && screen.orientation && screen.orientation.lock)
         screen.orientation.lock(cfg.orientacion).catch(function () {});
     }
+    // pointerup alcanza: todo navegador de teléfono que tenga pantalla completa
+    // tiene pointer events. Escuchar también touchend duplicaba el pedido.
     addEventListener('pointerup', completa, true);
-    addEventListener('touchend', completa, true);
 
     // ---- el cartel de "girá el teléfono", para donde no se puede trabar (iPhone) ----
     if (cfg.orientacion) {
@@ -106,10 +126,16 @@
       var g = document.createElement('div');
       g.id = 'porteo-girar';
       g.innerHTML = '<i></i><span></span>';
-      g.lastChild.textContent = cfg.textoGirar || (quiere === 'landscape' ? 'Girá el teléfono' : 'Poné el teléfono derecho');
+      var rotulo = function () {
+        g.lastChild.textContent = texto(cfg.textoGirar, quiere === 'landscape' ? 'Girá el teléfono' : 'Poné el teléfono derecho');
+      };
+      rotulo();
       document.body.appendChild(g);
       var mq = matchMedia('(orientation:' + contrario + ') and (pointer:coarse)');
-      var mal = function () { if (mq.matches && cfg.alGirarMal) try { cfg.alGirarMal(); } catch (_) {} };
+      var mal = function () {
+        rotulo();
+        if (mq.matches && cfg.alGirarMal) try { cfg.alGirarMal(); } catch (_) {}
+      };
       mq.addEventListener ? mq.addEventListener('change', mal) : mq.addListener(mal);
     }
 
