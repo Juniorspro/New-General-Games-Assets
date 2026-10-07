@@ -5,6 +5,10 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
 - **07/10/2026 · `claude/fijate-iszyer`:**
+  - Baldi's Basics Classic 1.4.3 (Unity 2018, gratis) portado a un solo HTML de 13,5 MB y mandado ([baldi](baldi.md)):
+    un Unity chiquito en JS con los guiones del juego pasados de C#; intro JXStudios, idioma, controles de celu.
+    Falta probar a fondo objetos, la cuerda de Playtime, el final y la escena secreta.
+  - Rechazados (se venden o tienen anuncios): Poppy Playtime, GTA SA Lite, Hypper Sandbox, Geometry Dash 2.2081.
   - Slendytubbies: intro JXStudios, sin pantalla de carga, idioma sobre el menú difuminado (HTML mandado).
   - Portadas 9:16 de FNaF 2 y Slendytubbies: arte con Higgsfield (`nano_banana_2`, jobs `cf4a8b9f…` y `48f56c26…`)
     + título y moneda compuestos con PIL (`scratchpad/portadas/componer.py`, fuera del repo: es fan art). Mandadas.

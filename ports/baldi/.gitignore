@@ -1,0 +1,11 @@
+# del juego original: no va al repo
+descarga/
+crudo/
+cs/
+web/datos/
+web/js/traduccion.js
+dist/
+salida/
+pruebas/salida/
+exportar.log
+usados.txt
