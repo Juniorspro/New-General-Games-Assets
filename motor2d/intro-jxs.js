@@ -27,7 +27,7 @@
      jingle(ctx, bus, t0, tg, h)              otra música; h = { tono, soplo, f, T }
    Para juegos que no son de píxeles (lienzo liso, con escala propia):
      anchoLogo(W, H) → ancho del monograma; logo(g, i) lo dibuja a mano (i = { avance, t, x0, y0, esc,
-     ancho, golpe, TRAZOS, camino2d, largo }); letras(g, parte, I, t, y) y presentaTxt(g, txt, I, t, y)
+     ancho, golpe, tGolpe, TRAZOS, camino2d, largo, muestrear }); letras(g, parte, I, t, y) y presentaTxt(g, txt, I, t, y)
      escriben con otra letra; chispa: px de las chispas (por defecto 1)
    ========================================================================== */
 
@@ -227,7 +227,7 @@ const IntroJXS_ = (() => {
         if (avance > 0 && E.logo) {
           const esc = ancho / CAJA.w, x0 = cx - ancho / 2 + sx, y0 = cy - CAJA.h * esc / 2 + sy;
           pts = avance < 1 ? puntas(avance).map(([px, py]) => [x0 + px * esc, y0 + py * esc]) : null;
-          E.logo(g, { avance, t, x0, y0, esc, ancho, golpe: t >= T_GOLPE, TRAZOS, camino2d, largo });
+          E.logo(g, { avance, t, x0, y0, esc, ancho, golpe: t >= T_GOLPE, tGolpe: t - T_GOLPE, TRAZOS, camino2d, largo, muestrear });
           if (t >= T_GOLPE && t < T_GOLPE + 0.06) { g.fillStyle = E.destello || 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, W, H); }
         } else if (avance > 0) {
           const a = Math.round(avance * 40) / 40;
