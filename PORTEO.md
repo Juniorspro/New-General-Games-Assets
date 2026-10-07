@@ -25,7 +25,7 @@ J=$SCRATCH/<juego>; mkdir -p $J/orig && cp <archivo> $J/
 
 # 2. desarmar, según lo que llegó
 unzip -q x.zip -d $J/orig          # ZIP
-unar -o $J/orig x.rar              # RAR (también: 7z x x.rar -o$J/orig)
+unar -o $J/orig x.rar              # RAR (con unar: el 7z de Debian no tiene el códec RAR)
 7z x x.7z -o$J/orig                # 7z
 unzip -q x.apk -d $J/orig          # APK
 git clone <repo> $J/orig           # repositorio
@@ -151,6 +151,7 @@ anda en cada etapa** en vez de esperar al final.
 | `renpy/`, `*.rpy`, `*.rpa` | **Ren'Py** |
 | `*.sb3` | **Scratch** |
 | `phaser`, `pixi`, `three`, `babylon` en el JS | HTML5 con esa biblioteca |
+| `main.pak` (todo con XOR 0xF7, magia `C04AC0BA`) + `properties/` + `.exe`; strings `SexyAppFramework`, `PopCap` | **PopCap / SexyApp** (PvZ, Zuma, Peggle, Bejeweled…). Se abre con `herramientas/popcap/pak.py` |
 | `*.exe` de DOS, `*.jar` de Java ME, ROMs | juego viejo: va por emulación |
 
 ### 4.2 Qué se hace con cada uno
@@ -172,6 +173,7 @@ anda en cada etapa** en vez de esperar al final.
 | DOS | **js-dos** + `tactil.js` | 1:1 (emulado) |
 | ROM o Java ME del dueño | emulador web (EmulatorJS / freej2me-web) + controles | 1:1 (emulado) |
 | **Unity Android sin proyecto** (IL2CPP) | no se puede pasar el binario a web. Se extraen los assets (AssetRipper/AssetStudio: modelos, texturas, audio, escenas) y se **rearma la lógica** en three.js. Si hay un build de PC Mono, las DLL se descompilan con ILSpy y la lógica se traduce leyendo el original | lo más cercano posible |
+| **juego de PC en C++ con una reimplementación abierta** (PvZ → PvZ-Portable, y las hay de muchos clásicos: OpenTTD, devilutionX, OpenRCT2…) | se compila la reimplementación a WebAssembly con Emscripten y corre con los **datos originales del dueño**. Si espera otra versión de los datos, se parchea el motor (no se inventan datos). Receta: `porteos/pvz/` | 1:1 (la lógica es la del juego; los datos, los del dueño) |
 | GameMaker / libGDX / Unreal sin fuente | igual: se extraen los assets y se rehace la lógica en HTML5 | lo más cercano posible |
 | código fuente de cualquier motor | se exporta a web desde el motor si se puede instalar acá; si no (Unity y Unreal necesitan editor con licencia), se rearma | según el caso |
 
@@ -445,9 +447,14 @@ créditos ni se tapa al autor.
   35 + platform 35 en `/opt/android-sdk`). `ARRANQUE.md` decía que no se podía
   compilar un APK porque el SDK entero no entraba. Con el mínimo sí se puede.
 - **Java 21, Node 22, Python 3, ffmpeg y Chromium** ya vienen en el entorno.
-- **Desarmar:** `unzip`, `7z` (también abre RAR) y `unar` (RAR, instalado con
-  `apt-get install -y unar`). Para APK: `aapt2 dump`, `dexdump` (en
-  build-tools) y `unzip`. Pillow y `brotli` de Python (`pip install brotli`).
+- **Desarmar:** `unzip`, `7z` y `unar` (RAR: el 7z de Debian **no** lo abre,
+  deja archivos de 0 bytes; `apt-get install -y unar`). Para APK: `aapt2 dump`,
+  `dexdump` (en build-tools) y `unzip`. Pillow y `brotli` de Python
+  (`pip install brotli`). Íconos de un `.exe`: `wrestool` + `icotool`
+  (`apt-get install -y icoutils`).
+- **Emscripten** (C/C++ → WebAssembly): lo instala `porteos/pvz/portear.sh` en
+  `~/.porteo/pvz/emsdk` (~1 GB, versión fijada). Detrás del proxy de estas
+  máquinas no baja zlib ni SDL2 de GitHub (403): la receta los clona con git.
 - **PC creativa** (ver `MONTAR-PC.md` del dueño): Blender, GIMP, Inkscape,
   Krita, Godot 3, Wine, Xvfb + XFCE. Godot y Blender sirven para portear;
   Wine, para abrir `.exe` livianos y sacarles los assets.
@@ -487,6 +494,13 @@ créditos ni se tapa al autor.
 | girar la página con CSS y nada más | el juego mide la pantalla parada y los toques le llegan cruzados | traducir `innerWidth/innerHeight`, `clientX/clientY` (mouse y touch), `getBoundingClientRect` y las medidas `vw/vh` del CSS |
 | guardar el estilo original con `if (!antes)` | `''` es falso: se volvía a guardar ya girado y al enderezar se restauraba el giro | `antes === null` |
 | `decode()` de todas las imágenes de una pantalla | 270 MB de píxeles sólo en el nivel de FNaF 4: el teléfono cierra la pestaña | pedir los archivos y dejar que el navegador decodifique al dibujar |
+| `7z x` con un `.rar` | el 7z de Debian no trae el códec RAR: deja archivos de **0 bytes** y falla al final | `unar` para RAR |
+| Emscripten baja zlib y SDL2 como `.tar.gz` de GitHub | detrás de un proxy que sólo deja `git` da 403 y la compilación se corta | clonarlos con `git` y dejarlos en su caché con la marca `.emscripten_url` (`porteos/pvz/portear.sh`) |
+| reimplementación hecha para OTRA versión de los datos | PvZ-Portable espera la GOTY: con el PvZ de 2009 faltan 256 recursos y 3 animaciones y el juego se cierra | cruzar lo que pide el código con lo que hay (`Resources.cpp` vs `resources.xml`), y parchear el motor para la versión del dueño; **nunca inventar datos** |
+| datos "compilados" de 32 bits (PopCap: `compiled/*.compiled`) | en 64 bits no se pueden leer; el motor quiere el XML, que el pak de 2009 no trae | en WebAssembly (32 bits) el formato coincide: se comprobó con el hash del esquema (`0xb393b4c0`) y se leen directo del pak |
+| dejar "fuera de cuadro" una pantalla que no se usa | la de logros se seguía dibujando con imágenes vacías: 15 700 llamadas por cuadro y el menú colgado | que no se dibuje (`mVisible = false`) cuando no existe |
+| tocar "click to start" apenas aparece el título | no pasa nada: el título acepta el toque recién cuando la barra de carga llegó al final | esperar ese estado (`cargado` en `porteo_estado`), no un tiempo fijo |
+| audio de SDL en una pestaña oculta | sin cuadros el juego se frena, pero el audio sigue sonando desde su hilo | `audioContext.suspend()` en `visibilitychange` (y `resume()` al volver y al primer toque) |
 
 ## 14. Registro de porteos
 
@@ -596,6 +610,63 @@ Pruebas: 39/39 (porteos/fnaf4/prueba.mjs) · no se pudo probar en un teléfono r
   - sin probar en Safari.
 - **Rearmarlo:** `porteos/fnaf4/portear.sh RUTA/fnaf4.apk`. **Probarlo:**
   `node porteos/fnaf4/prueba.mjs http://127.0.0.1:8821/ file:///…/fnaf4.html`.
+
+### Plantas vs. Zombies (PC, 2009) — terminado (falta la prueba en un teléfono de verdad)
+
+```
+Origen: plantas_y_zombies_by_coudvan.rar (41,8 MB, sha256 f6491706…276e), por link de MediaFire:
+        PlantsVsZombies.exe 1.0.0.1051 (el original de 2009, NO la GOTY) + main.pak 25 MB
+Motor: PopCap SexyAppFramework, C++ compilado para Windows/DirectX
+Estrategia: PvZ-Portable (reimplementación LGPL en C++/SDL2/GLES2) → WebAssembly,
+            con los datos del dueño y un parche para que lea los de 2009
+Fidelidad: 1:1 — la lógica del juego y los datos originales; sin logros ni Zombatar,
+           que no existían en 2009
+Tamaños: el juego instalado 26,9 MB (exe 3 + pak 23,9) → web 30,4 MB (pak 23,0 + motor 6,8 + carcasa)
+         · APK 25,4 MB · un archivo 33,7 MB · zip 24,0 MB
+Memoria: 206 MB del módulo jugando (modo de poca memoria; el normal, 264)
+Pruebas: 32/32 (prueba.mjs: toques reales, girado, sin red, un archivo)
+         · recorrido 31/31 (recorrido.mjs) · bailarín 6/6 (bailarin.mjs)
+         · no se pudo probar en un teléfono real
+```
+
+- **Qué hizo falta** (detalle en [`porteos/pvz/LEEME.md`](porteos/pvz/LEEME.md)):
+  - el pak de 2009 trae las animaciones sólo compiladas (32 bits): en
+    WebAssembly se leen tal cual (el hash del esquema coincide);
+  - el bailarín es el de 2009 (`Zombie_Jackson`): alias de archivo, pistas e
+    imágenes;
+  - 256 recursos de la GOTY no existen: esas pantallas no se ofrecen, como en
+    el original.
+- **Controles:** los del original con el dedo como mouse: tocar el sobre,
+  tocar el pasto, tocar los soles, la pala, los menús. El nombre del jugador se
+  escribe con el teclado del teléfono. Atrás abre el menú del juego (dos
+  seguidos salen). Parado, el juego se gira solo.
+- **Optimización:**
+  - modo de poca memoria del motor (sonidos bajo demanda, sin copia en RAM de
+    las texturas): 264 → 206 MB y "click to start" 0,8 s antes;
+  - PNG y JPG del pak recomprimidos sin pérdida y verificados píxel por píxel
+    (−0,84 MB; PopCap ya comprimía bien);
+  - el audio se suspende en segundo plano; las partidas se vuelcan a
+    IndexedDB cada 5 s y al salir.
+- **Probado:**
+  - título → perfil (teclado) → 1-1 → plantar (sol 150 → 50) → juntar sol
+    (+25) → atrás → segundo plano → recargar con el perfil guardado;
+  - lo mismo con el teléfono parado (girado);
+  - sin red y el archivo único;
+  - recorrido de 31 niveles y minijuegos (pileta, niebla, techo, jefe final,
+    Zen, Árbol de la Sabiduría, Vasebreaker, I-Zombie, Zombiquarium…) sin un
+    error, assert ni recurso faltante, siempre en 206 MB;
+  - el bailarín de 2009 en el 2-8: moonwalk, llama a los coristas, pierde
+    brazo y cabeza.
+- **Problemas conocidos:**
+  - no se probó en un teléfono real ni en Safari;
+  - pantalla 4:3 con bandas negras a los costados (el juego es de 800×600);
+  - la carga del título congela la pantalla unos segundos (el motor carga
+    todo de una vez en el hilo principal);
+  - el juego está en inglés, como el original que llegó;
+  - el APK es otra app (`ar.juniors.pvz`).
+- **Rearmarlo:** `porteos/pvz/portear.sh RUTA/plantas.rar [SALIDA] [--un-archivo] [--depuracion]`.
+  **Probarlo:** `node porteos/pvz/prueba.mjs http://127.0.0.1:8831/ file:///…/pvz.html`;
+  con `--depuracion`, también `recorrido.mjs` (31 niveles y minijuegos) y `bailarin.mjs`.
 
 ### FNaF 2 — port de otra sesión, analizado y corregido
 

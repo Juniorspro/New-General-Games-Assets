@@ -1,0 +1,1010 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b70d712..afeccc4 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -51,7 +51,15 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
+ 	src/Lawn/System/*.cpp
+ )
+ 
+-option(LOW_MEMORY "Enable low memory mode" OFF)
++# porteo: en el navegador (teléfonos) va el modo de poca memoria: sonidos bajo demanda
++# y sin la copia en RAM de las texturas ya subidas. Medido con PvZ 1.0.0.1051:
++# 264 → 206 MB de memoria y "click to start" 0,8 s antes, con los mismos cuadros/s.
++# FORCE: una carpeta de compilación vieja guarda OFF en su caché y option() no lo pisa.
++if(EMSCRIPTEN)
++	set(LOW_MEMORY ON CACHE BOOL "Enable low memory mode" FORCE)
++else()
++	option(LOW_MEMORY "Enable low memory mode" OFF)
++endif()
+ if(NINTENDO_SWITCH)
+ 	list(APPEND SOURCES
+ 		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/switch/Window.cpp
+@@ -223,7 +231,7 @@ if(EMSCRIPTEN)
+ 		"SHELL:-sMAXIMUM_MEMORY=1073741824"
+ 		"SHELL:-sGROWABLE_ARRAYBUFFERS=0"
+ 		"SHELL:-sFORCE_FILESYSTEM=1"
+-		"SHELL:-sEXPORTED_RUNTIME_METHODS=[\"FS\",\"callMain\"]"
++		"SHELL:-sEXPORTED_RUNTIME_METHODS=[\"FS\",\"callMain\",\"UTF8ToString\"]"
+ 		"SHELL:-sINVOKE_RUN=0"
+ 		"SHELL:-lidbfs.js"
+ 		"SHELL:--shell-file ${CMAKE_CURRENT_SOURCE_DIR}/wasm/shell.html"
+diff --git a/src/Lawn/Widget/AchievementsScreen.cpp b/src/Lawn/Widget/AchievementsScreen.cpp
+index 904cff2..22d8949 100644
+--- a/src/Lawn/Widget/AchievementsScreen.cpp
++++ b/src/Lawn/Widget/AchievementsScreen.cpp
+@@ -106,6 +106,11 @@ void AchievementsWidget::Update() {
+ }
+ 
+ void AchievementsWidget::Draw(Graphics* g) {
++	// porteo 1051: sin arte de logros esta pantalla no existe. Dibujarla igual (fuera de
++	// cuadro, con la imagen en blanco) eran miles de llamadas por cuadro y colgaba el menú.
++	if (gDatosOriginales)
++		return;
++
+ 	g->DrawImage(IMAGE_SELECTORSCREEN_ACHIEVEMENTS_BG, 0, 0);
+ 
+ 	int aHeight = IMAGE_SELECTORSCREEN_ACHIEVEMENTS_BG->mHeight;
+@@ -228,6 +233,14 @@ void ReportAchievement::GiveAchievement(LawnApp* theApp, int theAchievement, boo
+ 
+ 	theApp->mPlayerInfo->mEarnedAchievements[theAchievement] = true;
+ 
++	// porteo 1051: el juego de 2009 no tenía logros (ni su arte ni su sonido). Se anotan
++	// en silencio, ya "mostrados", para que la partida no se interrumpa con un cartel.
++	if (gDatosOriginales)
++	{
++		theApp->mPlayerInfo->mShownAchievements[theAchievement] = true;
++		return;
++	}
++
+ 	if (!theForceGive)
+ 		return;
+ 
+diff --git a/src/Lawn/Widget/GameSelector.cpp b/src/Lawn/Widget/GameSelector.cpp
+index e30bd35..81dc7c9 100644
+--- a/src/Lawn/Widget/GameSelector.cpp
++++ b/src/Lawn/Widget/GameSelector.cpp
+@@ -347,6 +347,12 @@ GameSelector::GameSelector(LawnApp* theApp)
+ 	mZombatarWidget = std::make_unique<ZombatarWidget>(this);
+ 	mAchievementsWidget = std::make_unique<AchievementsWidget>(this->mApp);
+ 	mAchievementsWidget->Move(0, mApp->mHeight);
++	if (gDatosOriginales)
++	{
++		// porteo 1051: pantallas GOTY sin datos; ni se dibujan ni reciben toques
++		mZombatarWidget->mVisible = false;
++		mAchievementsWidget->mVisible = false;
++	}
+ 
+ 	// Add as children in z-order (bottom to top).
+ 	AddWidget(mAchievementsButton);
+@@ -380,8 +386,12 @@ void GameSelector::SyncButtons()
+ 	mAlmanacButton->mVisible = aAlmanacAvailable;
+ 	mStoreButton->mDisabled = !aStoreOpen;
+ 	mStoreButton->mVisible = aStoreOpen;
+-	mZombatarButton->mDisabled = false;
+-	mZombatarButton->mVisible = true;
++	// porteo 1051: los datos de 2009 no traen Zombatar ni logros; sus botones no existen,
++	// como en el menú original.
++	mZombatarButton->mDisabled = gDatosOriginales;
++	mZombatarButton->mVisible = !gDatosOriginales;
++	mAchievementsButton->mDisabled = gDatosOriginales;
++	mAchievementsButton->mVisible = !gDatosOriginales;
+ 
+ 	Reanimation* aSelectorReanim = mApp->ReanimationGet(mSelectorReanimID);
+ 	if (aAlmanacAvailable)
+@@ -1249,10 +1259,12 @@ void GameSelector::ButtonDepress(int theId)
+ 			mApp->mZenGarden->SetupForZenTutorial();
+ 		break;
+ 	case GameSelector::GameSelector_Zombatar:
+-		ShowZombatarScreen();
++		if (!gDatosOriginales)
++			ShowZombatarScreen();
+ 		break;
+ 	case GameSelector::GameSelector_Achievements:
+-		ShowAchievementsScreen();
++		if (!gDatosOriginales)
++			ShowAchievementsScreen();
+ 		break;
+ 	}
+ }
+diff --git a/src/LawnApp.cpp b/src/LawnApp.cpp
+index 48ee9ff..dcc092d 100644
+--- a/src/LawnApp.cpp
++++ b/src/LawnApp.cpp
+@@ -29,6 +29,8 @@
+ #include "Lawn/Board.h"
+ #include "Lawn/Plant.h"
+ #include "Lawn/Zombie.h"
++#include "Lawn/Coin.h"
++#include "Lawn/CursorObject.h"
+ #include "Lawn/Cutscene.h"
+ #include "GameConstants.h"
+ #include "ProjectVersion.h"
+@@ -75,6 +77,7 @@
+ #include "SexyAppFramework/resource.h"
+ 
+ bool gIsPartnerBuild = false;
++bool gDatosOriginales = false;
+ bool gSlowMo = false;
+ bool gFastMo = false;
+ LawnApp* gLawnApp = nullptr;
+@@ -82,7 +85,8 @@ int gSlowMoCounter = 0;
+ 
+ static bool HasUnshownAchievements(PlayerInfo* thePlayerInfo)
+ {
+-	if (thePlayerInfo == nullptr)
++	// porteo 1051: sin el arte de los logros no hay pantalla de logros, como en el original
++	if (thePlayerInfo == nullptr || gDatosOriginales)
+ 	{
+ 		return false;
+ 	}
+@@ -1179,6 +1183,10 @@ void LawnApp::Init()
+ 		ShowResourceError(true);
+ 		return;
+ 	}
++	// porteo 1051: el main.pak de 2009 no declara los grupos que sumó la GOTY.
++	gDatosOriginales = !mResourceManager->ExisteGrupo("DelayLoad_Zombatar");
++	if (gDatosOriginales)
++		PvzpLogLn("porteo: datos originales (1.0.0.x), sin logros ni Zombatar");
+ 
+ 	if (!PvzpLoadResources("Init"))
+ 	{
+@@ -3266,3 +3274,64 @@ void LawnApp::UpdateRegisterInfo()
+ {
+ 
+ }
++
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++
++// porteo: el estado del juego para las pruebas automáticas (porteos/pvz/prueba.mjs).
++// Medir "sol 150 → 50 al plantar" vale más que "no hubo errores en la consola".
++extern "C" EMSCRIPTEN_KEEPALIVE const char* porteo_estado()
++{
++	static std::string aJson;
++	LawnApp* aApp = gLawnApp;
++	if (aApp == nullptr)
++		return "{}";
++	auto aTexto = [](const std::string& s) {
++		std::string r;
++		for (char c : s) { if (c == '"' || c == '\\') r += '\\'; if ((unsigned char)c >= 32) r += c; }
++		return r;
++	};
++	const char* aPantalla = "otro";
++	if (aApp->mTitleScreen) aPantalla = "titulo";
++	else if (aApp->mGameSelector) aPantalla = "menu";
++	else if (aApp->mAwardScreen) aPantalla = "premio";
++	else if (aApp->mCreditScreen) aPantalla = "creditos";
++	else if (aApp->mChallengeScreen) aPantalla = "desafios";
++	else if (aApp->mSeedChooserScreen) aPantalla = "elegir";
++	else if (aApp->mBoard) aPantalla = "tablero";
++	aJson = std::format("{{\"pantalla\":\"{}\",\"cargado\":{},\"dialogos\":{},\"dialogo\":{},\"modo\":{},\"musica\":{}",
++		aPantalla, aApp->mTitleScreen ? (aApp->mTitleScreen->mLoadingThreadComplete ? 1 : 0) : 1, aApp->mDialogMap.size(), aApp->mDialogMap.empty() ? -1 : aApp->mDialogMap.rbegin()->first,
++		(int)aApp->mGameMode, aApp->mMusic ? (int)aApp->mMusic->mCurMusicTune : -1);
++	// memoria del módulo (páginas de 64 KiB): en un teléfono es lo primero que se acaba
++	aJson += std::format(",\"memoria_mb\":{}", (int)(__builtin_wasm_memory_size(0) * 65536ULL / 1048576ULL));
++	// escena 3 = jugando; dave > 0 = Crazy Dave en pantalla (se avanza tocando)
++	aJson += std::format(",\"escena\":{},\"dave\":{}", (int)aApp->mGameScene, (int)aApp->mCrazyDaveState);
++	if (aApp->mPlayerInfo)
++		aJson += std::format(",\"jugador\":\"{}\",\"aventura\":{},\"monedas\":{}",
++			aTexto(aApp->mPlayerInfo->mName), aApp->mPlayerInfo->mLevel, aApp->mPlayerInfo->mCoins);
++	if (Board* aBoard = aApp->mBoard)
++	{
++		aJson += std::format(",\"nivel\":{},\"sol\":{},\"pausa\":{},\"completo\":{},\"cursor\":{},\"semilla\":{}",
++			aBoard->mLevel, aBoard->mSunMoney, aBoard->mPaused ? 1 : 0, aBoard->mLevelComplete ? 1 : 0,
++			aBoard->mCursorObject ? (int)aBoard->mCursorObject->mCursorType : -1,
++			aBoard->mCursorObject ? (int)aBoard->mCursorObject->mType : -1);
++		std::string aLista;
++		for (Plant* aPlant : aBoard->mPlants)
++			if (!aPlant->mDead)
++				aLista += std::format("{}[{},{},{}]", aLista.empty() ? "" : ",", aPlant->mPlantCol, aPlant->mRow, (int)aPlant->mSeedType);
++		aJson += ",\"plantas\":[" + aLista + "]";
++		aLista.clear();
++		for (Zombie* aZombie : aBoard->mZombies)
++			if (!aZombie->mDead)
++				aLista += std::format("{}[{},{},{}]", aLista.empty() ? "" : ",", (int)aZombie->mZombieType, (int)aZombie->mPosX, aZombie->mRow);
++		aJson += ",\"zombis\":[" + aLista + "]";
++		aLista.clear();
++		for (Coin* aCoin : aBoard->mCoins)
++			if (!aCoin->mDead && !aCoin->mIsBeingCollected)
++				aLista += std::format("{}[{},{},{}]", aLista.empty() ? "" : ",", (int)aCoin->mPosX, (int)aCoin->mPosY, (int)aCoin->mType);
++		aJson += ",\"soles\":[" + aLista + "]";
++	}
++	aJson += "}";
++	return aJson.c_str();
++}
++#endif
+diff --git a/src/LawnApp.h b/src/LawnApp.h
+index 80ba516..e7fed74 100644
+--- a/src/LawnApp.h
++++ b/src/LawnApp.h
+@@ -335,6 +335,8 @@ bool								LawnHasUsedCheatKeys();
+ void								BetaSubmitFunc();
+ 
+ extern bool gIsPartnerBuild;
++// porteo 1051: los datos son del juego original de 2009 (sin logros, Zombatar ni "más formas de jugar")
++extern bool gDatosOriginales;
+ extern bool gFastMo;
+ extern bool gSlowMo;
+ extern LawnApp* gLawnApp;
+diff --git a/src/PvzpLib/Definition.cpp b/src/PvzpLib/Definition.cpp
+index 14d8338..27c2cf8 100644
+--- a/src/PvzpLib/Definition.cpp
++++ b/src/PvzpLib/Definition.cpp
+@@ -587,17 +587,39 @@ bool DefinitionReadCompiledFile(const std::string& theCompiledFilePath, const De
+ 		aFileStream.open(Sexy::PathFromU8(theCompiledFilePath), std::ios::binary);
+ 	}
+ 
+-	if (!aFileStream) return false;
+-
+-	aFileStream.seekg(0, std::ios::end);
+-	size_t aCompressedSize = (size_t)aFileStream.tellg();
+-	aFileStream.seekg(0, std::ios::beg);
+-	std::vector<char> aCompressedBuffer(aCompressedSize);
+-	aFileStream.read(aCompressedBuffer.data(), (std::streamsize)aCompressedSize);
+-	bool aReadCompressedFailed = !aFileStream || (size_t)aFileStream.gcount() != aCompressedSize;
+-	if (aReadCompressedFailed) {
+-		PvzpLogLn("Failed to read compiled file: {}", theCompiledFilePath);
+-		return false;
++	std::vector<char> aCompressedBuffer;
++	size_t aCompressedSize = 0;
++	if (aFileStream)
++	{
++		aFileStream.seekg(0, std::ios::end);
++		aCompressedSize = (size_t)aFileStream.tellg();
++		aFileStream.seekg(0, std::ios::beg);
++		aCompressedBuffer.resize(aCompressedSize);
++		aFileStream.read(aCompressedBuffer.data(), (std::streamsize)aCompressedSize);
++		bool aReadCompressedFailed = !aFileStream || (size_t)aFileStream.gcount() != aCompressedSize;
++		if (aReadCompressedFailed) {
++			PvzpLogLn("Failed to read compiled file: {}", theCompiledFilePath);
++			return false;
++		}
++	}
++	else
++	{
++		// porteo 1051: el main.pak original (2009) trae las animaciones y partículas SOLO
++		// compiladas, sin el XML. En 32 bits (wasm32) su formato es idéntico al de este
++		// motor —el hash del esquema coincide—, así que se leen directo del pak.
++		PFILE* aPakFile = p_fopen(theCompiledFilePath.c_str(), "rb");
++		if (aPakFile == nullptr)
++			return false;
++		p_fseek(aPakFile, 0, SEEK_END);
++		aCompressedSize = (size_t)p_ftell(aPakFile);
++		p_fseek(aPakFile, 0, SEEK_SET);
++		aCompressedBuffer.resize(aCompressedSize);
++		size_t aLeido = p_fread(aCompressedBuffer.data(), 1, (int)aCompressedSize, aPakFile);
++		p_fclose(aPakFile);
++		if (aLeido != aCompressedSize) {
++			PvzpLogLn("Failed to read compiled file from pak: {}", theCompiledFilePath);
++			return false;
++		}
+ 	}
+ 
+ 	size_t aUncompressedSize;
+diff --git a/src/PvzpLib/Reanimator.cpp b/src/PvzpLib/Reanimator.cpp
+index d57d25d..41982f2 100644
+--- a/src/PvzpLib/Reanimator.cpp
++++ b/src/PvzpLib/Reanimator.cpp
+@@ -33,6 +33,7 @@
+ #include "misc/PerfTimer.h"
+ #include "graphics/MemoryImage.h"
+ #include <algorithm>
++#include <vector>
+ #include <format>
+ 
+ constexpr const int NO_BASE_POSE = -2;
+@@ -961,12 +962,34 @@ void Reanimation::DrawAllRenderGroups(Graphics* g)
+ 		DrawRenderGroup(g, aRenderGroup);
+ }
+ 
++// porteo 1051: el bailarín de 2009 (Zombie_Jackson / Zombie_dancer) nombra distinto las
++// pistas del brazo que el "disco" de la GOTY. Sin este alias el brazo caído usaba la
++// pista 0 (posición y imagen equivocadas).
++static const char* PistaLegada(const char* theTrackName)
++{
++	static constexpr const char* aAlias[][2] = {
++		{ "Zombie_disco_outerarm_lower", "Zombie_outerarm_lower" },
++		{ "Zombie_disco_outerarm_upper", "Zombie_Jackson_outerarm_upper" },
++		{ "Zombie_disco_outerhand", "Zombie_outerarm_hand" },
++		{ "Zombie_disco_outerhand_point", "Zombie_outerarm_hand" },
++	};
++	for (const auto& aPar : aAlias)
++		if (strcasecmp(theTrackName, aPar[0]) == 0)
++			return aPar[1];
++	return nullptr;
++}
++
+ int Reanimation::FindTrackIndex(const char* theTrackName)
+ {
+ 	for (int aTrackIndex = 0; aTrackIndex < mDefinition->mTracks.count; aTrackIndex++)
+ 		if (strcasecmp(mDefinition->mTracks.tracks[aTrackIndex].mName, theTrackName) == 0)
+ 			return aTrackIndex;
+ 
++	if (const char* aLegada = PistaLegada(theTrackName))
++		for (int aTrackIndex = 0; aTrackIndex < mDefinition->mTracks.count; aTrackIndex++)
++			if (strcasecmp(mDefinition->mTracks.tracks[aTrackIndex].mName, aLegada) == 0)
++				return aTrackIndex;
++
+ 	PvzpLogLn("Can't find track '{}'", theTrackName);
+ 	return 0;
+ }
+@@ -1212,6 +1235,25 @@ void ReanimatorLoadDefinitions(const ReanimationParams* theReanimationParamArray
+ 	PVZP_ASSERT(!gReanimationParamArray && !gReanimatorDefArray);
+ 	gReanimationParamArraySize = theReanimationParamArraySize;
+ 	gReanimationParamArray = theReanimationParamArray;
++
++	// porteo 1051: el main.pak de 2009 trae al bailarín original. Se cambia el archivo en la
++	// tabla (y no en cada carga) para que también lo encuentren los "attacher" de los créditos.
++	static std::vector<ReanimationParams> aParamsConAlias;
++	static constexpr const char* aArchivosLegados[][2] = {
++		{ "reanim/Zombie_disco.reanim", "reanim/Zombie_Jackson.reanim" },
++		{ "reanim/Zombie_backup.reanim", "reanim/Zombie_dancer.reanim" },
++	};
++	aParamsConAlias.assign(theReanimationParamArray, theReanimationParamArray + theReanimationParamArraySize);
++	for (ReanimationParams& aParams : aParamsConAlias)
++		for (const auto& aPar : aArchivosLegados)
++			if (strcasecmp(aParams.mReanimFileName, aPar[0]) == 0 && !DefinitionIsCompiled(aPar[0]) && DefinitionIsCompiled(aPar[1]))
++			{
++				PvzpLogLn("porteo: '{}' -> '{}'", aPar[0], aPar[1]);
++				aParams.mReanimFileName = aPar[1];
++			}
++	theReanimationParamArray = aParamsConAlias.data();
++	gReanimationParamArray = theReanimationParamArray;
++
+ 	gReanimatorDefCount = theReanimationParamArraySize;
+ 	gReanimatorDefArray = std::make_unique<ReanimatorDefinition[]>(theReanimationParamArraySize);
+ 
+@@ -1273,6 +1315,10 @@ void Reanimation::AssignRenderGroupToTrack(const char* theTrackName, int theRend
+ 			mTrackInstances[i].mRenderGroup = theRenderGroup;  // only the first exact match
+ 			return;
+ 		}
++
++	// porteo 1051: misma traducción de nombres que FindTrackIndex
++	if (const char* aLegada = PistaLegada(theTrackName))
++		AssignRenderGroupToTrack(aLegada, theRenderGroup);
+ }
+ 
+ void Reanimation::AssignRenderGroupToPrefix(const char* theTrackName, int theRenderGroup)
+diff --git a/src/Resources.cpp b/src/Resources.cpp
+index a4784e5..e4719a1 100644
+--- a/src/Resources.cpp
++++ b/src/Resources.cpp
+@@ -28,6 +28,36 @@ using namespace Sexy;
+ 
+ bool gNeedRecalcVariableToIdMap = false;
+ 
++extern bool gDatosOriginales;  // LawnApp.cpp
++
++// porteo 1051: el main.pak original (1.0.0.1051, 2009) no trae lo que sumó la GOTY (logros,
++// Zombatar, "más formas de jugar") y tiene al bailarín de 2009 en lugar del "disco".
++// Con esos datos, lo que falta queda en blanco (esas pantallas no se ofrecen) y el
++// bailarín usa sus propias imágenes. Con datos GOTY todo sigue siendo obligatorio.
++static Image* ImagenGoty(ResourceManager& theMgr, const char* theId)
++{
++	if (!gDatosOriginales)
++		return theMgr.GetImageThrow(theId);
++	Image* aImagen = theMgr.GetImage(theId);
++	return aImagen != nullptr ? aImagen : (Image*)Sexy::IMAGE_BLANK;
++}
++
++static Image* ImagenBailarin(ResourceManager& theMgr, const char* theId, const char* theIdViejo)
++{
++	if (!gDatosOriginales)
++		return theMgr.GetImageThrow(theId);
++	// nullptr = sin reemplazo: la pista conserva su imagen original
++	return theIdViejo != nullptr ? (Image*)theMgr.GetImage(theIdViejo) : nullptr;
++}
++
++static intptr_t SonidoGoty(ResourceManager& theMgr, const char* theId)
++{
++	if (!gDatosOriginales)
++		return theMgr.GetSoundThrow(theId);
++	return theMgr.GetSound(theId);  // -1 si no está: ReportAchievement no lo toca con estos datos
++}
++
++
+ bool Sexy::ExtractResourcesByName(ResourceManager* theResourceManager, const char* theName)
+ {
+ 	if (!strcmp(theName, "DelayLoad_Almanac")) return ExtractDelayLoad_AlmanacResources(theResourceManager);
+@@ -723,226 +753,226 @@ bool Sexy::ExtractDelayLoad_ZombatarResources(ResourceManager* theManager)
+ 	ResourceManager& aMgr = *theManager;
+ 	try
+ 	{
+-		IMAGE_ZOMBATAR_ACCEPT_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCEPT_BUTTON");
+-		IMAGE_ZOMBATAR_ACCEPT_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCEPT_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_ACCESSORY_1 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_1");
+-		IMAGE_ZOMBATAR_ACCESSORY_10 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_10");
+-		IMAGE_ZOMBATAR_ACCESSORY_11 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_11");
+-		IMAGE_ZOMBATAR_ACCESSORY_12 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_12");
+-		IMAGE_ZOMBATAR_ACCESSORY_13 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_13");
+-		IMAGE_ZOMBATAR_ACCESSORY_14 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_14");
+-		IMAGE_ZOMBATAR_ACCESSORY_15 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_15");
+-		IMAGE_ZOMBATAR_ACCESSORY_16 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_16");
+-		IMAGE_ZOMBATAR_ACCESSORY_2 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_2");
+-		IMAGE_ZOMBATAR_ACCESSORY_3 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_3");
+-		IMAGE_ZOMBATAR_ACCESSORY_4 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_4");
+-		IMAGE_ZOMBATAR_ACCESSORY_5 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_5");
+-		IMAGE_ZOMBATAR_ACCESSORY_6 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_6");
+-		IMAGE_ZOMBATAR_ACCESSORY_7 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_7");
+-		IMAGE_ZOMBATAR_ACCESSORY_8 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_8");
+-		IMAGE_ZOMBATAR_ACCESSORY_9 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_9");
+-		IMAGE_ZOMBATAR_ACCESSORY_BG = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_BG");
+-		IMAGE_ZOMBATAR_ACCESSORY_BG_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_BG_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_ACCESSORY_BG_NONE = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_BG_NONE");
+-		IMAGE_ZOMBATAR_ACCESSORY_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_BUTTON");
+-		IMAGE_ZOMBATAR_ACCESSORY_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_ACCESSORY_BUTTON_OVER = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ACCESSORY_BUTTON_OVER");
+-		IMAGE_ZOMBATAR_BACKDROPS_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BACKDROPS_BUTTON");
+-		IMAGE_ZOMBATAR_BACKDROPS_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BACKDROPS_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_BACKDROPS_BUTTON_OVER = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BACKDROPS_BUTTON_OVER");
+-		IMAGE_ZOMBATAR_BACKGROUND_BLANK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BACKGROUND_BLANK");
+-		IMAGE_ZOMBATAR_BACKGROUND_CRAZYDAVE = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BACKGROUND_CRAZYDAVE");
+-		IMAGE_ZOMBATAR_BACKGROUND_MENU = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BACKGROUND_MENU");
+-		IMAGE_ZOMBATAR_BACKGROUND_MENU_DOS = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BACKGROUND_MENU_DOS");
+-		IMAGE_ZOMBATAR_BACKGROUND_ROOF = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BACKGROUND_ROOF");
+-		IMAGE_ZOMBATAR_BACK_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BACK_BUTTON");
+-		IMAGE_ZOMBATAR_BACK_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BACK_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_BEGIN_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BEGIN_BUTTON");
+-		IMAGE_ZOMBATAR_BEGIN_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_BEGIN_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_CLOTHES_1 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_1");
+-		IMAGE_ZOMBATAR_CLOTHES_10 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_10");
+-		IMAGE_ZOMBATAR_CLOTHES_11 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_11");
+-		IMAGE_ZOMBATAR_CLOTHES_12 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_12");
+-		IMAGE_ZOMBATAR_CLOTHES_2 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_2");
+-		IMAGE_ZOMBATAR_CLOTHES_3 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_3");
+-		IMAGE_ZOMBATAR_CLOTHES_4 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_4");
+-		IMAGE_ZOMBATAR_CLOTHES_5 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_5");
+-		IMAGE_ZOMBATAR_CLOTHES_6 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_6");
+-		IMAGE_ZOMBATAR_CLOTHES_7 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_7");
+-		IMAGE_ZOMBATAR_CLOTHES_8 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_8");
+-		IMAGE_ZOMBATAR_CLOTHES_9 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_9");
+-		IMAGE_ZOMBATAR_CLOTHES_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_BUTTON");
+-		IMAGE_ZOMBATAR_CLOTHES_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_CLOTHES_BUTTON_OVER = aMgr.GetImageThrow("IMAGE_ZOMBATAR_CLOTHES_BUTTON_OVER");
+-		IMAGE_ZOMBATAR_COLORPICKER = aMgr.GetImageThrow("IMAGE_ZOMBATAR_COLORPICKER");
+-		IMAGE_ZOMBATAR_COLORPICKER_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_COLORPICKER_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_COLORPICKER_NONE = aMgr.GetImageThrow("IMAGE_ZOMBATAR_COLORPICKER_NONE");
+-		IMAGE_ZOMBATAR_COLORS_BG = aMgr.GetImageThrow("IMAGE_ZOMBATAR_COLORS_BG");
+-		IMAGE_ZOMBATAR_COLORS_BG_SMALL = aMgr.GetImageThrow("IMAGE_ZOMBATAR_COLORS_BG_SMALL");
+-		IMAGE_ZOMBATAR_DISPLAY_WINDOW = aMgr.GetImageThrow("IMAGE_ZOMBATAR_DISPLAY_WINDOW");
+-		IMAGE_ZOMBATAR_EYEWEAR_1 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_1");
+-		IMAGE_ZOMBATAR_EYEWEAR_10 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_10");
+-		IMAGE_ZOMBATAR_EYEWEAR_10_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_10_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_11 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_11");
+-		IMAGE_ZOMBATAR_EYEWEAR_11_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_11_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_12 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_12");
+-		IMAGE_ZOMBATAR_EYEWEAR_12_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_12_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_13 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_13");
+-		IMAGE_ZOMBATAR_EYEWEAR_14 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_14");
+-		IMAGE_ZOMBATAR_EYEWEAR_15 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_15");
+-		IMAGE_ZOMBATAR_EYEWEAR_16 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_16");
+-		IMAGE_ZOMBATAR_EYEWEAR_1_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_1_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_2 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_2");
+-		IMAGE_ZOMBATAR_EYEWEAR_2_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_2_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_3 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_3");
+-		IMAGE_ZOMBATAR_EYEWEAR_3_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_3_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_4 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_4");
+-		IMAGE_ZOMBATAR_EYEWEAR_4_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_4_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_5 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_5");
+-		IMAGE_ZOMBATAR_EYEWEAR_5_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_5_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_6 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_6");
+-		IMAGE_ZOMBATAR_EYEWEAR_6_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_6_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_7 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_7");
+-		IMAGE_ZOMBATAR_EYEWEAR_7_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_7_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_8 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_8");
+-		IMAGE_ZOMBATAR_EYEWEAR_8_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_8_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_9 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_9");
+-		IMAGE_ZOMBATAR_EYEWEAR_9_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_9_MASK");
+-		IMAGE_ZOMBATAR_EYEWEAR_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_BUTTON");
+-		IMAGE_ZOMBATAR_EYEWEAR_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_EYEWEAR_BUTTON_OVER = aMgr.GetImageThrow("IMAGE_ZOMBATAR_EYEWEAR_BUTTON_OVER");
+-		IMAGE_ZOMBATAR_FACIALHAIR_1 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_1");
+-		IMAGE_ZOMBATAR_FACIALHAIR_10 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_10");
+-		IMAGE_ZOMBATAR_FACIALHAIR_10_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_10_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_11 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_11");
+-		IMAGE_ZOMBATAR_FACIALHAIR_11_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_11_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_12 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_12");
+-		IMAGE_ZOMBATAR_FACIALHAIR_12_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_12_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_13 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_13");
+-		IMAGE_ZOMBATAR_FACIALHAIR_14 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_14");
+-		IMAGE_ZOMBATAR_FACIALHAIR_14_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_14_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_15 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_15");
+-		IMAGE_ZOMBATAR_FACIALHAIR_15_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_15_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_16 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_16");
+-		IMAGE_ZOMBATAR_FACIALHAIR_16_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_16_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_17 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_17");
+-		IMAGE_ZOMBATAR_FACIALHAIR_18 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_18");
+-		IMAGE_ZOMBATAR_FACIALHAIR_18_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_18_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_19 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_19");
+-		IMAGE_ZOMBATAR_FACIALHAIR_1_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_1_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_2 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_2");
+-		IMAGE_ZOMBATAR_FACIALHAIR_20 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_20");
+-		IMAGE_ZOMBATAR_FACIALHAIR_21 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_21");
+-		IMAGE_ZOMBATAR_FACIALHAIR_21_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_21_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_22 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_22");
+-		IMAGE_ZOMBATAR_FACIALHAIR_22_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_22_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_23 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_23");
+-		IMAGE_ZOMBATAR_FACIALHAIR_23_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_23_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_24 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_24");
+-		IMAGE_ZOMBATAR_FACIALHAIR_24_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_24_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_3 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_3");
+-		IMAGE_ZOMBATAR_FACIALHAIR_4 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_4");
+-		IMAGE_ZOMBATAR_FACIALHAIR_4_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_4_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_5 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_5");
+-		IMAGE_ZOMBATAR_FACIALHAIR_6 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_6");
+-		IMAGE_ZOMBATAR_FACIALHAIR_7 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_7");
+-		IMAGE_ZOMBATAR_FACIALHAIR_8 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_8");
+-		IMAGE_ZOMBATAR_FACIALHAIR_8_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_8_MASK");
+-		IMAGE_ZOMBATAR_FACIALHAIR_9 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_9");
+-		IMAGE_ZOMBATAR_FACIALHAIR_9_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIALHAIR_9_MASK");
+-		IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON");
+-		IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON_OVER = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON_OVER");
+-		IMAGE_ZOMBATAR_FINISHED_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FINISHED_BUTTON");
+-		IMAGE_ZOMBATAR_FINISHED_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_FINISHED_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_HAIR_1 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_1");
+-		IMAGE_ZOMBATAR_HAIR_10 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_10");
+-		IMAGE_ZOMBATAR_HAIR_11 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_11");
+-		IMAGE_ZOMBATAR_HAIR_11_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_11_MASK");
+-		IMAGE_ZOMBATAR_HAIR_12 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_12");
+-		IMAGE_ZOMBATAR_HAIR_12_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_12_MASK");
+-		IMAGE_ZOMBATAR_HAIR_13 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_13");
+-		IMAGE_ZOMBATAR_HAIR_13_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_13_MASK");
+-		IMAGE_ZOMBATAR_HAIR_14 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_14");
+-		IMAGE_ZOMBATAR_HAIR_14_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_14_MASK");
+-		IMAGE_ZOMBATAR_HAIR_15 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_15");
+-		IMAGE_ZOMBATAR_HAIR_15_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_15_MASK");
+-		IMAGE_ZOMBATAR_HAIR_16 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_16");
+-		IMAGE_ZOMBATAR_HAIR_1_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_1_MASK");
+-		IMAGE_ZOMBATAR_HAIR_2 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_2");
+-		IMAGE_ZOMBATAR_HAIR_2_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_2_MASK");
+-		IMAGE_ZOMBATAR_HAIR_3 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_3");
+-		IMAGE_ZOMBATAR_HAIR_4 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_4");
+-		IMAGE_ZOMBATAR_HAIR_5 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_5");
+-		IMAGE_ZOMBATAR_HAIR_6 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_6");
+-		IMAGE_ZOMBATAR_HAIR_7 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_7");
+-		IMAGE_ZOMBATAR_HAIR_8 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_8");
+-		IMAGE_ZOMBATAR_HAIR_9 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_9");
+-		IMAGE_ZOMBATAR_HAIR_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_BUTTON");
+-		IMAGE_ZOMBATAR_HAIR_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_HAIR_BUTTON_OVER = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HAIR_BUTTON_OVER");
+-		IMAGE_ZOMBATAR_HATS_1 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_1");
+-		IMAGE_ZOMBATAR_HATS_10 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_10");
+-		IMAGE_ZOMBATAR_HATS_11 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_11");
+-		IMAGE_ZOMBATAR_HATS_11_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_11_MASK");
+-		IMAGE_ZOMBATAR_HATS_12 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_12");
+-		IMAGE_ZOMBATAR_HATS_13 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_13");
+-		IMAGE_ZOMBATAR_HATS_14 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_14");
+-		IMAGE_ZOMBATAR_HATS_1_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_1_MASK");
+-		IMAGE_ZOMBATAR_HATS_2 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_2");
+-		IMAGE_ZOMBATAR_HATS_3 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_3");
+-		IMAGE_ZOMBATAR_HATS_3_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_3_MASK");
+-		IMAGE_ZOMBATAR_HATS_4 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_4");
+-		IMAGE_ZOMBATAR_HATS_5 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_5");
+-		IMAGE_ZOMBATAR_HATS_6 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_6");
+-		IMAGE_ZOMBATAR_HATS_6_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_6_MASK");
+-		IMAGE_ZOMBATAR_HATS_7 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_7");
+-		IMAGE_ZOMBATAR_HATS_7_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_7_MASK");
+-		IMAGE_ZOMBATAR_HATS_8 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_8");
+-		IMAGE_ZOMBATAR_HATS_8_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_8_MASK");
+-		IMAGE_ZOMBATAR_HATS_9 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_9");
+-		IMAGE_ZOMBATAR_HATS_9_MASK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_9_MASK");
+-		IMAGE_ZOMBATAR_HATS_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_BUTTON");
+-		IMAGE_ZOMBATAR_HATS_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_HATS_BUTTON_OVER = aMgr.GetImageThrow("IMAGE_ZOMBATAR_HATS_BUTTON_OVER");
+-		IMAGE_ZOMBATAR_LOGO = aMgr.GetImageThrow("IMAGE_ZOMBATAR_LOGO");
+-		IMAGE_ZOMBATAR_MAINMENUBACK_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_MAINMENUBACK_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_MAIN_BG = aMgr.GetImageThrow("IMAGE_ZOMBATAR_MAIN_BG");
+-		IMAGE_ZOMBATAR_NEWZOMBIE_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_NEWZOMBIE_BUTTON");
+-		IMAGE_ZOMBATAR_NEWZOMBIE_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_NEWZOMBIE_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_NEXT_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_NEXT_BUTTON");
+-		IMAGE_ZOMBATAR_NEXT_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_NEXT_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_PREV_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_PREV_BUTTON");
+-		IMAGE_ZOMBATAR_PREV_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_PREV_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_SKIN_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_SKIN_BUTTON");
+-		IMAGE_ZOMBATAR_SKIN_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_SKIN_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_TIDBITS_1 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_1");
+-		IMAGE_ZOMBATAR_TIDBITS_10 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_10");
+-		IMAGE_ZOMBATAR_TIDBITS_11 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_11");
+-		IMAGE_ZOMBATAR_TIDBITS_12 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_12");
+-		IMAGE_ZOMBATAR_TIDBITS_13 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_13");
+-		IMAGE_ZOMBATAR_TIDBITS_14 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_14");
+-		IMAGE_ZOMBATAR_TIDBITS_2 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_2");
+-		IMAGE_ZOMBATAR_TIDBITS_3 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_3");
+-		IMAGE_ZOMBATAR_TIDBITS_4 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_4");
+-		IMAGE_ZOMBATAR_TIDBITS_5 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_5");
+-		IMAGE_ZOMBATAR_TIDBITS_6 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_6");
+-		IMAGE_ZOMBATAR_TIDBITS_7 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_7");
+-		IMAGE_ZOMBATAR_TIDBITS_8 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_8");
+-		IMAGE_ZOMBATAR_TIDBITS_9 = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_9");
+-		IMAGE_ZOMBATAR_TIDBITS_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_BUTTON");
+-		IMAGE_ZOMBATAR_TIDBITS_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_TIDBITS_BUTTON_OVER = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TIDBITS_BUTTON_OVER");
+-		IMAGE_ZOMBATAR_TOS_ARROW = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TOS_ARROW");
+-		IMAGE_ZOMBATAR_TOS_SLIDER = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TOS_SLIDER");
+-		IMAGE_ZOMBATAR_TOS_SLIDER_THUMB = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TOS_SLIDER_THUMB");
+-		IMAGE_ZOMBATAR_TRIPTYCH = aMgr.GetImageThrow("IMAGE_ZOMBATAR_TRIPTYCH");
+-		IMAGE_ZOMBATAR_VIEW_BUTTON = aMgr.GetImageThrow("IMAGE_ZOMBATAR_VIEW_BUTTON");
+-		IMAGE_ZOMBATAR_VIEW_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ZOMBATAR_VIEW_BUTTON_HIGHLIGHT");
+-		IMAGE_ZOMBATAR_WIDGET_BG = aMgr.GetImageThrow("IMAGE_ZOMBATAR_WIDGET_BG");
+-		IMAGE_ZOMBATAR_WIDGET_INNER_BG = aMgr.GetImageThrow("IMAGE_ZOMBATAR_WIDGET_INNER_BG");
+-		IMAGE_ZOMBATAR_ZOMBIE_BLANK = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ZOMBIE_BLANK");
+-		IMAGE_ZOMBATAR_ZOMBIE_BLANK_SKIN = aMgr.GetImageThrow("IMAGE_ZOMBATAR_ZOMBIE_BLANK_SKIN");
++		IMAGE_ZOMBATAR_ACCEPT_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCEPT_BUTTON");
++		IMAGE_ZOMBATAR_ACCEPT_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCEPT_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_ACCESSORY_1 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_1");
++		IMAGE_ZOMBATAR_ACCESSORY_10 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_10");
++		IMAGE_ZOMBATAR_ACCESSORY_11 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_11");
++		IMAGE_ZOMBATAR_ACCESSORY_12 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_12");
++		IMAGE_ZOMBATAR_ACCESSORY_13 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_13");
++		IMAGE_ZOMBATAR_ACCESSORY_14 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_14");
++		IMAGE_ZOMBATAR_ACCESSORY_15 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_15");
++		IMAGE_ZOMBATAR_ACCESSORY_16 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_16");
++		IMAGE_ZOMBATAR_ACCESSORY_2 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_2");
++		IMAGE_ZOMBATAR_ACCESSORY_3 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_3");
++		IMAGE_ZOMBATAR_ACCESSORY_4 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_4");
++		IMAGE_ZOMBATAR_ACCESSORY_5 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_5");
++		IMAGE_ZOMBATAR_ACCESSORY_6 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_6");
++		IMAGE_ZOMBATAR_ACCESSORY_7 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_7");
++		IMAGE_ZOMBATAR_ACCESSORY_8 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_8");
++		IMAGE_ZOMBATAR_ACCESSORY_9 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_9");
++		IMAGE_ZOMBATAR_ACCESSORY_BG = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_BG");
++		IMAGE_ZOMBATAR_ACCESSORY_BG_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_BG_HIGHLIGHT");
++		IMAGE_ZOMBATAR_ACCESSORY_BG_NONE = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_BG_NONE");
++		IMAGE_ZOMBATAR_ACCESSORY_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_BUTTON");
++		IMAGE_ZOMBATAR_ACCESSORY_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_ACCESSORY_BUTTON_OVER = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ACCESSORY_BUTTON_OVER");
++		IMAGE_ZOMBATAR_BACKDROPS_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BACKDROPS_BUTTON");
++		IMAGE_ZOMBATAR_BACKDROPS_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BACKDROPS_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_BACKDROPS_BUTTON_OVER = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BACKDROPS_BUTTON_OVER");
++		IMAGE_ZOMBATAR_BACKGROUND_BLANK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BACKGROUND_BLANK");
++		IMAGE_ZOMBATAR_BACKGROUND_CRAZYDAVE = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BACKGROUND_CRAZYDAVE");
++		IMAGE_ZOMBATAR_BACKGROUND_MENU = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BACKGROUND_MENU");
++		IMAGE_ZOMBATAR_BACKGROUND_MENU_DOS = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BACKGROUND_MENU_DOS");
++		IMAGE_ZOMBATAR_BACKGROUND_ROOF = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BACKGROUND_ROOF");
++		IMAGE_ZOMBATAR_BACK_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BACK_BUTTON");
++		IMAGE_ZOMBATAR_BACK_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BACK_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_BEGIN_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BEGIN_BUTTON");
++		IMAGE_ZOMBATAR_BEGIN_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_BEGIN_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_CLOTHES_1 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_1");
++		IMAGE_ZOMBATAR_CLOTHES_10 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_10");
++		IMAGE_ZOMBATAR_CLOTHES_11 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_11");
++		IMAGE_ZOMBATAR_CLOTHES_12 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_12");
++		IMAGE_ZOMBATAR_CLOTHES_2 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_2");
++		IMAGE_ZOMBATAR_CLOTHES_3 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_3");
++		IMAGE_ZOMBATAR_CLOTHES_4 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_4");
++		IMAGE_ZOMBATAR_CLOTHES_5 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_5");
++		IMAGE_ZOMBATAR_CLOTHES_6 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_6");
++		IMAGE_ZOMBATAR_CLOTHES_7 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_7");
++		IMAGE_ZOMBATAR_CLOTHES_8 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_8");
++		IMAGE_ZOMBATAR_CLOTHES_9 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_9");
++		IMAGE_ZOMBATAR_CLOTHES_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_BUTTON");
++		IMAGE_ZOMBATAR_CLOTHES_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_CLOTHES_BUTTON_OVER = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_CLOTHES_BUTTON_OVER");
++		IMAGE_ZOMBATAR_COLORPICKER = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_COLORPICKER");
++		IMAGE_ZOMBATAR_COLORPICKER_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_COLORPICKER_HIGHLIGHT");
++		IMAGE_ZOMBATAR_COLORPICKER_NONE = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_COLORPICKER_NONE");
++		IMAGE_ZOMBATAR_COLORS_BG = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_COLORS_BG");
++		IMAGE_ZOMBATAR_COLORS_BG_SMALL = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_COLORS_BG_SMALL");
++		IMAGE_ZOMBATAR_DISPLAY_WINDOW = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_DISPLAY_WINDOW");
++		IMAGE_ZOMBATAR_EYEWEAR_1 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_1");
++		IMAGE_ZOMBATAR_EYEWEAR_10 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_10");
++		IMAGE_ZOMBATAR_EYEWEAR_10_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_10_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_11 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_11");
++		IMAGE_ZOMBATAR_EYEWEAR_11_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_11_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_12 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_12");
++		IMAGE_ZOMBATAR_EYEWEAR_12_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_12_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_13 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_13");
++		IMAGE_ZOMBATAR_EYEWEAR_14 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_14");
++		IMAGE_ZOMBATAR_EYEWEAR_15 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_15");
++		IMAGE_ZOMBATAR_EYEWEAR_16 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_16");
++		IMAGE_ZOMBATAR_EYEWEAR_1_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_1_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_2 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_2");
++		IMAGE_ZOMBATAR_EYEWEAR_2_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_2_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_3 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_3");
++		IMAGE_ZOMBATAR_EYEWEAR_3_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_3_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_4 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_4");
++		IMAGE_ZOMBATAR_EYEWEAR_4_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_4_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_5 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_5");
++		IMAGE_ZOMBATAR_EYEWEAR_5_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_5_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_6 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_6");
++		IMAGE_ZOMBATAR_EYEWEAR_6_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_6_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_7 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_7");
++		IMAGE_ZOMBATAR_EYEWEAR_7_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_7_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_8 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_8");
++		IMAGE_ZOMBATAR_EYEWEAR_8_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_8_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_9 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_9");
++		IMAGE_ZOMBATAR_EYEWEAR_9_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_9_MASK");
++		IMAGE_ZOMBATAR_EYEWEAR_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_BUTTON");
++		IMAGE_ZOMBATAR_EYEWEAR_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_EYEWEAR_BUTTON_OVER = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_EYEWEAR_BUTTON_OVER");
++		IMAGE_ZOMBATAR_FACIALHAIR_1 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_1");
++		IMAGE_ZOMBATAR_FACIALHAIR_10 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_10");
++		IMAGE_ZOMBATAR_FACIALHAIR_10_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_10_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_11 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_11");
++		IMAGE_ZOMBATAR_FACIALHAIR_11_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_11_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_12 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_12");
++		IMAGE_ZOMBATAR_FACIALHAIR_12_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_12_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_13 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_13");
++		IMAGE_ZOMBATAR_FACIALHAIR_14 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_14");
++		IMAGE_ZOMBATAR_FACIALHAIR_14_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_14_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_15 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_15");
++		IMAGE_ZOMBATAR_FACIALHAIR_15_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_15_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_16 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_16");
++		IMAGE_ZOMBATAR_FACIALHAIR_16_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_16_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_17 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_17");
++		IMAGE_ZOMBATAR_FACIALHAIR_18 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_18");
++		IMAGE_ZOMBATAR_FACIALHAIR_18_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_18_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_19 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_19");
++		IMAGE_ZOMBATAR_FACIALHAIR_1_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_1_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_2 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_2");
++		IMAGE_ZOMBATAR_FACIALHAIR_20 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_20");
++		IMAGE_ZOMBATAR_FACIALHAIR_21 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_21");
++		IMAGE_ZOMBATAR_FACIALHAIR_21_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_21_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_22 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_22");
++		IMAGE_ZOMBATAR_FACIALHAIR_22_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_22_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_23 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_23");
++		IMAGE_ZOMBATAR_FACIALHAIR_23_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_23_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_24 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_24");
++		IMAGE_ZOMBATAR_FACIALHAIR_24_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_24_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_3 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_3");
++		IMAGE_ZOMBATAR_FACIALHAIR_4 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_4");
++		IMAGE_ZOMBATAR_FACIALHAIR_4_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_4_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_5 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_5");
++		IMAGE_ZOMBATAR_FACIALHAIR_6 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_6");
++		IMAGE_ZOMBATAR_FACIALHAIR_7 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_7");
++		IMAGE_ZOMBATAR_FACIALHAIR_8 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_8");
++		IMAGE_ZOMBATAR_FACIALHAIR_8_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_8_MASK");
++		IMAGE_ZOMBATAR_FACIALHAIR_9 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_9");
++		IMAGE_ZOMBATAR_FACIALHAIR_9_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIALHAIR_9_MASK");
++		IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON");
++		IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON_OVER = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FACIAL_HAIR_BUTTON_OVER");
++		IMAGE_ZOMBATAR_FINISHED_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FINISHED_BUTTON");
++		IMAGE_ZOMBATAR_FINISHED_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_FINISHED_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_HAIR_1 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_1");
++		IMAGE_ZOMBATAR_HAIR_10 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_10");
++		IMAGE_ZOMBATAR_HAIR_11 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_11");
++		IMAGE_ZOMBATAR_HAIR_11_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_11_MASK");
++		IMAGE_ZOMBATAR_HAIR_12 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_12");
++		IMAGE_ZOMBATAR_HAIR_12_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_12_MASK");
++		IMAGE_ZOMBATAR_HAIR_13 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_13");
++		IMAGE_ZOMBATAR_HAIR_13_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_13_MASK");
++		IMAGE_ZOMBATAR_HAIR_14 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_14");
++		IMAGE_ZOMBATAR_HAIR_14_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_14_MASK");
++		IMAGE_ZOMBATAR_HAIR_15 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_15");
++		IMAGE_ZOMBATAR_HAIR_15_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_15_MASK");
++		IMAGE_ZOMBATAR_HAIR_16 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_16");
++		IMAGE_ZOMBATAR_HAIR_1_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_1_MASK");
++		IMAGE_ZOMBATAR_HAIR_2 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_2");
++		IMAGE_ZOMBATAR_HAIR_2_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_2_MASK");
++		IMAGE_ZOMBATAR_HAIR_3 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_3");
++		IMAGE_ZOMBATAR_HAIR_4 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_4");
++		IMAGE_ZOMBATAR_HAIR_5 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_5");
++		IMAGE_ZOMBATAR_HAIR_6 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_6");
++		IMAGE_ZOMBATAR_HAIR_7 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_7");
++		IMAGE_ZOMBATAR_HAIR_8 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_8");
++		IMAGE_ZOMBATAR_HAIR_9 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_9");
++		IMAGE_ZOMBATAR_HAIR_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_BUTTON");
++		IMAGE_ZOMBATAR_HAIR_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_HAIR_BUTTON_OVER = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HAIR_BUTTON_OVER");
++		IMAGE_ZOMBATAR_HATS_1 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_1");
++		IMAGE_ZOMBATAR_HATS_10 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_10");
++		IMAGE_ZOMBATAR_HATS_11 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_11");
++		IMAGE_ZOMBATAR_HATS_11_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_11_MASK");
++		IMAGE_ZOMBATAR_HATS_12 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_12");
++		IMAGE_ZOMBATAR_HATS_13 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_13");
++		IMAGE_ZOMBATAR_HATS_14 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_14");
++		IMAGE_ZOMBATAR_HATS_1_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_1_MASK");
++		IMAGE_ZOMBATAR_HATS_2 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_2");
++		IMAGE_ZOMBATAR_HATS_3 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_3");
++		IMAGE_ZOMBATAR_HATS_3_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_3_MASK");
++		IMAGE_ZOMBATAR_HATS_4 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_4");
++		IMAGE_ZOMBATAR_HATS_5 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_5");
++		IMAGE_ZOMBATAR_HATS_6 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_6");
++		IMAGE_ZOMBATAR_HATS_6_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_6_MASK");
++		IMAGE_ZOMBATAR_HATS_7 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_7");
++		IMAGE_ZOMBATAR_HATS_7_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_7_MASK");
++		IMAGE_ZOMBATAR_HATS_8 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_8");
++		IMAGE_ZOMBATAR_HATS_8_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_8_MASK");
++		IMAGE_ZOMBATAR_HATS_9 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_9");
++		IMAGE_ZOMBATAR_HATS_9_MASK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_9_MASK");
++		IMAGE_ZOMBATAR_HATS_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_BUTTON");
++		IMAGE_ZOMBATAR_HATS_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_HATS_BUTTON_OVER = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_HATS_BUTTON_OVER");
++		IMAGE_ZOMBATAR_LOGO = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_LOGO");
++		IMAGE_ZOMBATAR_MAINMENUBACK_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_MAINMENUBACK_HIGHLIGHT");
++		IMAGE_ZOMBATAR_MAIN_BG = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_MAIN_BG");
++		IMAGE_ZOMBATAR_NEWZOMBIE_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_NEWZOMBIE_BUTTON");
++		IMAGE_ZOMBATAR_NEWZOMBIE_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_NEWZOMBIE_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_NEXT_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_NEXT_BUTTON");
++		IMAGE_ZOMBATAR_NEXT_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_NEXT_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_PREV_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_PREV_BUTTON");
++		IMAGE_ZOMBATAR_PREV_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_PREV_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_SKIN_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_SKIN_BUTTON");
++		IMAGE_ZOMBATAR_SKIN_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_SKIN_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_TIDBITS_1 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_1");
++		IMAGE_ZOMBATAR_TIDBITS_10 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_10");
++		IMAGE_ZOMBATAR_TIDBITS_11 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_11");
++		IMAGE_ZOMBATAR_TIDBITS_12 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_12");
++		IMAGE_ZOMBATAR_TIDBITS_13 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_13");
++		IMAGE_ZOMBATAR_TIDBITS_14 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_14");
++		IMAGE_ZOMBATAR_TIDBITS_2 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_2");
++		IMAGE_ZOMBATAR_TIDBITS_3 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_3");
++		IMAGE_ZOMBATAR_TIDBITS_4 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_4");
++		IMAGE_ZOMBATAR_TIDBITS_5 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_5");
++		IMAGE_ZOMBATAR_TIDBITS_6 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_6");
++		IMAGE_ZOMBATAR_TIDBITS_7 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_7");
++		IMAGE_ZOMBATAR_TIDBITS_8 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_8");
++		IMAGE_ZOMBATAR_TIDBITS_9 = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_9");
++		IMAGE_ZOMBATAR_TIDBITS_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_BUTTON");
++		IMAGE_ZOMBATAR_TIDBITS_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_TIDBITS_BUTTON_OVER = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TIDBITS_BUTTON_OVER");
++		IMAGE_ZOMBATAR_TOS_ARROW = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TOS_ARROW");
++		IMAGE_ZOMBATAR_TOS_SLIDER = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TOS_SLIDER");
++		IMAGE_ZOMBATAR_TOS_SLIDER_THUMB = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TOS_SLIDER_THUMB");
++		IMAGE_ZOMBATAR_TRIPTYCH = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_TRIPTYCH");
++		IMAGE_ZOMBATAR_VIEW_BUTTON = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_VIEW_BUTTON");
++		IMAGE_ZOMBATAR_VIEW_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_VIEW_BUTTON_HIGHLIGHT");
++		IMAGE_ZOMBATAR_WIDGET_BG = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_WIDGET_BG");
++		IMAGE_ZOMBATAR_WIDGET_INNER_BG = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_WIDGET_INNER_BG");
++		IMAGE_ZOMBATAR_ZOMBIE_BLANK = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ZOMBIE_BLANK");
++		IMAGE_ZOMBATAR_ZOMBIE_BLANK_SKIN = ImagenGoty(aMgr, "IMAGE_ZOMBATAR_ZOMBIE_BLANK_SKIN");
+ 	}
+ 	catch (ResourceManagerException&)
+ 	{
+@@ -1594,21 +1624,21 @@ bool Sexy::ExtractLoadingImagesResources(ResourceManager* theManager)
+ 	ResourceManager& aMgr = *theManager;
+ 	try
+ 	{
+-		IMAGE_ACHEESEMENTS_BACK_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_BACK_HIGHLIGHT");
+-		IMAGE_ACHEESEMENTS_BEJEWELED = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_BEJEWELED");
+-		IMAGE_ACHEESEMENTS_BOOKWORM = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_BOOKWORM");
+-		IMAGE_ACHEESEMENTS_CHINA = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_CHINA");
+-		IMAGE_ACHEESEMENTS_CHUZZLE = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_CHUZZLE");
+-		IMAGE_ACHEESEMENTS_HOLE_TILE = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_HOLE_TILE");
+-		IMAGE_ACHEESEMENTS_ICONS = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_ICONS");
+-		IMAGE_ACHEESEMENTS_MORE_BUTTON = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_MORE_BUTTON");
+-		IMAGE_ACHEESEMENTS_MORE_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_MORE_BUTTON_HIGHLIGHT");
+-		IMAGE_ACHEESEMENTS_MORE_ROCK = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_MORE_ROCK");
+-		IMAGE_ACHEESEMENTS_PEGGLE = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_PEGGLE");
+-		IMAGE_ACHEESEMENTS_PIPE = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_PIPE");
+-		IMAGE_ACHEESEMENTS_TOP_BUTTON = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_TOP_BUTTON");
+-		IMAGE_ACHEESEMENTS_TOP_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_TOP_BUTTON_HIGHLIGHT");
+-		IMAGE_ACHEESEMENTS_ZUMA = aMgr.GetImageThrow("IMAGE_ACHEESEMENTS_ZUMA");
++		IMAGE_ACHEESEMENTS_BACK_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_BACK_HIGHLIGHT");
++		IMAGE_ACHEESEMENTS_BEJEWELED = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_BEJEWELED");
++		IMAGE_ACHEESEMENTS_BOOKWORM = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_BOOKWORM");
++		IMAGE_ACHEESEMENTS_CHINA = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_CHINA");
++		IMAGE_ACHEESEMENTS_CHUZZLE = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_CHUZZLE");
++		IMAGE_ACHEESEMENTS_HOLE_TILE = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_HOLE_TILE");
++		IMAGE_ACHEESEMENTS_ICONS = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_ICONS");
++		IMAGE_ACHEESEMENTS_MORE_BUTTON = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_MORE_BUTTON");
++		IMAGE_ACHEESEMENTS_MORE_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_MORE_BUTTON_HIGHLIGHT");
++		IMAGE_ACHEESEMENTS_MORE_ROCK = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_MORE_ROCK");
++		IMAGE_ACHEESEMENTS_PEGGLE = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_PEGGLE");
++		IMAGE_ACHEESEMENTS_PIPE = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_PIPE");
++		IMAGE_ACHEESEMENTS_TOP_BUTTON = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_TOP_BUTTON");
++		IMAGE_ACHEESEMENTS_TOP_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_TOP_BUTTON_HIGHLIGHT");
++		IMAGE_ACHEESEMENTS_ZUMA = ImagenGoty(aMgr, "IMAGE_ACHEESEMENTS_ZUMA");
+ 		IMAGE_ALMANAC = aMgr.GetImageThrow("IMAGE_ALMANAC");
+ 		IMAGE_ALMANAC_IMITATER = aMgr.GetImageThrow("IMAGE_ALMANAC_IMITATER");
+ 		IMAGE_AWARDPICKUPGLOW = aMgr.GetImageThrow("IMAGE_AWARDPICKUPGLOW");
+@@ -1708,17 +1738,17 @@ bool Sexy::ExtractLoadingImagesResources(ResourceManager* theManager)
+ 		IMAGE_PROJECTILESNOWPEA = aMgr.GetImageThrow("IMAGE_PROJECTILESNOWPEA");
+ 		IMAGE_PROJECTILE_STAR = aMgr.GetImageThrow("IMAGE_PROJECTILE_STAR");
+ 		IMAGE_PUFFSHROOM_PUFF1 = aMgr.GetImageThrow("IMAGE_PUFFSHROOM_PUFF1");
+-		IMAGE_QUICKPLAY_BACK_BUTTON = aMgr.GetImageThrow("IMAGE_QUICKPLAY_BACK_BUTTON");
+-		IMAGE_QUICKPLAY_BACK_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_QUICKPLAY_BACK_BUTTON_HIGHLIGHT");
+-		IMAGE_QUICKPLAY_MINIGAMES_BUTTON = aMgr.GetImageThrow("IMAGE_QUICKPLAY_MINIGAMES_BUTTON");
+-		IMAGE_QUICKPLAY_MINIGAMES_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_QUICKPLAY_MINIGAMES_BUTTON_HIGHLIGHT");
+-		IMAGE_QUICKPLAY_MINIGAMES_CLOUD = aMgr.GetImageThrow("IMAGE_QUICKPLAY_MINIGAMES_CLOUD");
+-		IMAGE_QUICKPLAY_PUZZLES_BUTTON = aMgr.GetImageThrow("IMAGE_QUICKPLAY_PUZZLES_BUTTON");
+-		IMAGE_QUICKPLAY_PUZZLES_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_QUICKPLAY_PUZZLES_BUTTON_HIGHLIGHT");
+-		IMAGE_QUICKPLAY_PUZZLES_CLOUD = aMgr.GetImageThrow("IMAGE_QUICKPLAY_PUZZLES_CLOUD");
+-		IMAGE_QUICKPLAY_SURVIVAL_BUTTON = aMgr.GetImageThrow("IMAGE_QUICKPLAY_SURVIVAL_BUTTON");
+-		IMAGE_QUICKPLAY_SURVIVAL_BUTTON_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_QUICKPLAY_SURVIVAL_BUTTON_HIGHLIGHT");
+-		IMAGE_QUICKPLAY_SURVIVAL_CLOUD = aMgr.GetImageThrow("IMAGE_QUICKPLAY_SURVIVAL_CLOUD");
++		IMAGE_QUICKPLAY_BACK_BUTTON = ImagenGoty(aMgr, "IMAGE_QUICKPLAY_BACK_BUTTON");
++		IMAGE_QUICKPLAY_BACK_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_QUICKPLAY_BACK_BUTTON_HIGHLIGHT");
++		IMAGE_QUICKPLAY_MINIGAMES_BUTTON = ImagenGoty(aMgr, "IMAGE_QUICKPLAY_MINIGAMES_BUTTON");
++		IMAGE_QUICKPLAY_MINIGAMES_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_QUICKPLAY_MINIGAMES_BUTTON_HIGHLIGHT");
++		IMAGE_QUICKPLAY_MINIGAMES_CLOUD = ImagenGoty(aMgr, "IMAGE_QUICKPLAY_MINIGAMES_CLOUD");
++		IMAGE_QUICKPLAY_PUZZLES_BUTTON = ImagenGoty(aMgr, "IMAGE_QUICKPLAY_PUZZLES_BUTTON");
++		IMAGE_QUICKPLAY_PUZZLES_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_QUICKPLAY_PUZZLES_BUTTON_HIGHLIGHT");
++		IMAGE_QUICKPLAY_PUZZLES_CLOUD = ImagenGoty(aMgr, "IMAGE_QUICKPLAY_PUZZLES_CLOUD");
++		IMAGE_QUICKPLAY_SURVIVAL_BUTTON = ImagenGoty(aMgr, "IMAGE_QUICKPLAY_SURVIVAL_BUTTON");
++		IMAGE_QUICKPLAY_SURVIVAL_BUTTON_HIGHLIGHT = ImagenGoty(aMgr, "IMAGE_QUICKPLAY_SURVIVAL_BUTTON_HIGHLIGHT");
++		IMAGE_QUICKPLAY_SURVIVAL_CLOUD = ImagenGoty(aMgr, "IMAGE_QUICKPLAY_SURVIVAL_CLOUD");
+ 		IMAGE_RAIN = aMgr.GetImageThrow("IMAGE_RAIN");
+ 		IMAGE_REANIM_CABBAGEPULT_CABBAGE = aMgr.GetImageThrow("IMAGE_REANIM_CABBAGEPULT_CABBAGE");
+ 		IMAGE_REANIM_COBCANNON_COB = aMgr.GetImageThrow("IMAGE_REANIM_COBCANNON_COB");
+@@ -1753,7 +1783,7 @@ bool Sexy::ExtractLoadingImagesResources(ResourceManager* theManager)
+ 		IMAGE_REANIM_SELECTORSCREEN_VASEBREAKER_BUTTON = aMgr.GetImageThrow("IMAGE_REANIM_SELECTORSCREEN_VASEBREAKER_BUTTON");
+ 		IMAGE_REANIM_SELECTORSCREEN_VASEBREAKER_HIGHLIGHT = aMgr.GetImageThrow("IMAGE_REANIM_SELECTORSCREEN_VASEBREAKER_HIGHLIGHT");
+ 		IMAGE_REANIM_SELECTORSCREEN_WOODSIGN2_PRESS = aMgr.GetImageThrow("IMAGE_REANIM_SELECTORSCREEN_WOODSIGN2_PRESS");
+-		IMAGE_REANIM_SELECTORSCREEN_WOODSIGN3_PRESS = aMgr.GetImageThrow("IMAGE_REANIM_SELECTORSCREEN_WOODSIGN3_PRESS");
++		IMAGE_REANIM_SELECTORSCREEN_WOODSIGN3_PRESS = ImagenGoty(aMgr, "IMAGE_REANIM_SELECTORSCREEN_WOODSIGN3_PRESS");
+ 		IMAGE_REANIM_STINKY_TURN3 = aMgr.GetImageThrow("IMAGE_REANIM_STINKY_TURN3");
+ 		IMAGE_REANIM_TALLNUT_CRACKED1 = aMgr.GetImageThrow("IMAGE_REANIM_TALLNUT_CRACKED1");
+ 		IMAGE_REANIM_TALLNUT_CRACKED2 = aMgr.GetImageThrow("IMAGE_REANIM_TALLNUT_CRACKED2");
+@@ -1763,8 +1793,8 @@ bool Sexy::ExtractLoadingImagesResources(ResourceManager* theManager)
+ 		IMAGE_REANIM_WALLNUT_CRACKED2 = aMgr.GetImageThrow("IMAGE_REANIM_WALLNUT_CRACKED2");
+ 		IMAGE_REANIM_WINTERMELON_PROJECTILE = aMgr.GetImageThrow("IMAGE_REANIM_WINTERMELON_PROJECTILE");
+ 		IMAGE_REANIM_ZENGARDEN_BUGSPRAY_BOTTLE = aMgr.GetImageThrow("IMAGE_REANIM_ZENGARDEN_BUGSPRAY_BOTTLE");
+-		IMAGE_REANIM_ZOMBIE_BACKUP_INNERARM_HAND = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_BACKUP_INNERARM_HAND");
+-		IMAGE_REANIM_ZOMBIE_BACKUP_OUTERARM_UPPER2 = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_BACKUP_OUTERARM_UPPER2");
++		IMAGE_REANIM_ZOMBIE_BACKUP_INNERARM_HAND = ImagenBailarin(aMgr, "IMAGE_REANIM_ZOMBIE_BACKUP_INNERARM_HAND", "IMAGE_REANIM_ZOMBIE_DANCER_INNERARM_HAND");
++		IMAGE_REANIM_ZOMBIE_BACKUP_OUTERARM_UPPER2 = ImagenBailarin(aMgr, "IMAGE_REANIM_ZOMBIE_BACKUP_OUTERARM_UPPER2", nullptr);
+ 		IMAGE_REANIM_ZOMBIE_BALLOON_OUTERARM_UPPER2 = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_BALLOON_OUTERARM_UPPER2");
+ 		IMAGE_REANIM_ZOMBIE_BOBSLED_OUTERARM_HAND = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_BOBSLED_OUTERARM_HAND");
+ 		IMAGE_REANIM_ZOMBIE_BOBSLED_OUTERARM_UPPER2 = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_BOBSLED_OUTERARM_UPPER2");
+@@ -1799,8 +1829,8 @@ bool Sexy::ExtractLoadingImagesResources(ResourceManager* theManager)
+ 		IMAGE_REANIM_ZOMBIE_DIGGER_HARDHAT3 = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_DIGGER_HARDHAT3");
+ 		IMAGE_REANIM_ZOMBIE_DIGGER_OUTERARM_UPPER2 = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_DIGGER_OUTERARM_UPPER2");
+ 		IMAGE_REANIM_ZOMBIE_DIGGER_PICKAXE = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_DIGGER_PICKAXE");
+-		IMAGE_REANIM_ZOMBIE_DISCO_OUTERARM_HAND = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_DISCO_OUTERARM_HAND");
+-		IMAGE_REANIM_ZOMBIE_DISCO_OUTERARM_UPPER2 = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_DISCO_OUTERARM_UPPER2");
++		IMAGE_REANIM_ZOMBIE_DISCO_OUTERARM_HAND = ImagenBailarin(aMgr, "IMAGE_REANIM_ZOMBIE_DISCO_OUTERARM_HAND", "IMAGE_REANIM_ZOMBIE_JACKSON_OUTERARM_HAND");
++		IMAGE_REANIM_ZOMBIE_DISCO_OUTERARM_UPPER2 = ImagenBailarin(aMgr, "IMAGE_REANIM_ZOMBIE_DISCO_OUTERARM_UPPER2", "IMAGE_REANIM_ZOMBIE_JACKSON_OUTERARM_UPPER2");
+ 		IMAGE_REANIM_ZOMBIE_DOLPHINRIDER_OUTERARM_UPPER2 = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_DOLPHINRIDER_OUTERARM_UPPER2");
+ 		IMAGE_REANIM_ZOMBIE_FLAG1 = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_FLAG1");
+ 		IMAGE_REANIM_ZOMBIE_FLAG3 = aMgr.GetImageThrow("IMAGE_REANIM_ZOMBIE_FLAG3");
+@@ -1874,15 +1904,15 @@ bool Sexy::ExtractLoadingImagesResources(ResourceManager* theManager)
+ 		IMAGE_SEEDPACKETSILHOUETTE = aMgr.GetImageThrow("IMAGE_SEEDPACKETSILHOUETTE");
+ 		IMAGE_SEEDPACKET_LARGER = aMgr.GetImageThrow("IMAGE_SEEDPACKET_LARGER");
+ 		IMAGE_SEEDS = aMgr.GetImageThrow("IMAGE_SEEDS");
+-		IMAGE_SELECTORSCREEN_ACHIEVEMENTS_BG = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_ACHIEVEMENTS_BG");
+-		IMAGE_SELECTORSCREEN_ACHIEVEMENTS_PEDESTAL = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_ACHIEVEMENTS_PEDESTAL");
+-		IMAGE_SELECTORSCREEN_ACHIEVEMENTS_PEDESTAL_PRESS = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_ACHIEVEMENTS_PEDESTAL_PRESS");
++		IMAGE_SELECTORSCREEN_ACHIEVEMENTS_BG = ImagenGoty(aMgr, "IMAGE_SELECTORSCREEN_ACHIEVEMENTS_BG");
++		IMAGE_SELECTORSCREEN_ACHIEVEMENTS_PEDESTAL = ImagenGoty(aMgr, "IMAGE_SELECTORSCREEN_ACHIEVEMENTS_PEDESTAL");
++		IMAGE_SELECTORSCREEN_ACHIEVEMENTS_PEDESTAL_PRESS = ImagenGoty(aMgr, "IMAGE_SELECTORSCREEN_ACHIEVEMENTS_PEDESTAL_PRESS");
+ 		IMAGE_SELECTORSCREEN_ALMANAC = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_ALMANAC");
+ 		IMAGE_SELECTORSCREEN_ALMANACHIGHLIGHT = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_ALMANACHIGHLIGHT");
+ 		IMAGE_SELECTORSCREEN_HELP1 = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_HELP1");
+ 		IMAGE_SELECTORSCREEN_HELP2 = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_HELP2");
+ 		IMAGE_SELECTORSCREEN_LEVELNUMBERS = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_LEVELNUMBERS");
+-		IMAGE_SELECTORSCREEN_MOREWAYSTOPLAY_BG = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_MOREWAYSTOPLAY_BG");
++		IMAGE_SELECTORSCREEN_MOREWAYSTOPLAY_BG = ImagenGoty(aMgr, "IMAGE_SELECTORSCREEN_MOREWAYSTOPLAY_BG");
+ 		IMAGE_SELECTORSCREEN_OPTIONS1 = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_OPTIONS1");
+ 		IMAGE_SELECTORSCREEN_OPTIONS2 = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_OPTIONS2");
+ 		IMAGE_SELECTORSCREEN_QUIT1 = aMgr.GetImageThrow("IMAGE_SELECTORSCREEN_QUIT1");
+@@ -2143,7 +2173,7 @@ bool Sexy::ExtractLoadingSoundsResources(ResourceManager* theManager)
+ 	ResourceManager& aMgr = *theManager;
+ 	try
+ 	{
+-		SOUND_ACHIEVEMENT = aMgr.GetSoundThrow("SOUND_ACHIEVEMENT");
++		SOUND_ACHIEVEMENT = SonidoGoty(aMgr, "SOUND_ACHIEVEMENT");
+ 		SOUND_AWOOGA = aMgr.GetSoundThrow("SOUND_AWOOGA");
+ 		SOUND_BALLOONINFLATE = aMgr.GetSoundThrow("SOUND_BALLOONINFLATE");
+ 		SOUND_BALLOON_POP = aMgr.GetSoundThrow("SOUND_BALLOON_POP");
+diff --git a/src/SexyAppFramework/misc/ResourceManager.cpp b/src/SexyAppFramework/misc/ResourceManager.cpp
+index af5f56d..9f1946d 100644
+--- a/src/SexyAppFramework/misc/ResourceManager.cpp
++++ b/src/SexyAppFramework/misc/ResourceManager.cpp
+@@ -83,6 +83,11 @@ bool ResourceManager::IsGroupLoaded(const std::string &theGroup)
+ 	return mLoadedGroups.find(theGroup)!=mLoadedGroups.end();
+ }
+ 
++bool ResourceManager::ExisteGrupo(const std::string &theGroup)
++{
++	return mResGroupMap.find(theGroup)!=mResGroupMap.end();
++}
++
+ void ResourceManager::DeleteMap(ResMap &theMap)
+ {
+ 	for (ResMap::iterator anItr = theMap.begin(); anItr != theMap.end(); ++anItr)
+diff --git a/src/SexyAppFramework/misc/ResourceManager.h b/src/SexyAppFramework/misc/ResourceManager.h
+index 5ecd241..657c9e4 100644
+--- a/src/SexyAppFramework/misc/ResourceManager.h
++++ b/src/SexyAppFramework/misc/ResourceManager.h
+@@ -181,6 +181,8 @@ public:
+ 	std::string				GetErrorText();
+ 	bool					HadError();
+ 	bool					IsGroupLoaded(const std::string &theGroup);
++	// porteo 1051: si el resources.xml declara el grupo (los datos de 2009 no traen los de la GOTY)
++	bool					ExisteGrupo(const std::string &theGroup);
+ 
+ 	int						GetNumImages(const std::string &theGroup);
+ 	int						GetNumSounds(const std::string &theGroup);

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Plantas vs. Zombies</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  /* El id lo usa el juego: su casilla "Pantalla completa" pide fullscreen sobre #canvas-container. */
+  #canvas-container { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #000; }
+  #canvas { display: block; outline: none; touch-action: none; }
+  #carga { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    background: radial-gradient(circle at 50% 40%, #1d3b12, #050a03 70%); color: #e9f7cf; font: 600 16px system-ui, sans-serif; text-align: center; padding: 24px; }
+  #carga b { font-size: 22px; letter-spacing: .02em; color: #b8f070; text-shadow: 0 2px 0 #1a3008; }
+  #barra { width: min(70vw, 420px); height: 14px; border-radius: 8px; background: #16290d; border: 2px solid #5e9a2c; overflow: hidden; }
+  #barra i { display: block; height: 100%; width: 0; background: linear-gradient(#a8ec62, #4fae29); transition: width .15s; }
+  #carga small { opacity: .75; font-weight: 500; }
+  #fin { position: fixed; inset: 0; z-index: 6; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    background: #050a03; color: #e9f7cf; font: 600 17px system-ui, sans-serif; }
+  #fin button { font: 700 17px system-ui, sans-serif; color: #0b1a05; background: #9be15d; border: 0; border-radius: 22px; padding: 12px 26px; }
+  /* El juego abre el teclado del teléfono enfocando este campo (Dialog.cpp / Input.cpp,
+     id fijo). Invisible pero enfocable; 16px para que iOS no haga zoom al enfocarlo. */
+  #pvz-soft-keyboard { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; resize: none; font-size: 16px; }
+</style>
+</head>
+<body>
+<div id="canvas-container"><canvas id="canvas" width="800" height="600" tabindex="0"></canvas></div>
+<div id="carga"><b>Plantas vs. Zombies</b><div id="barra"><i></i></div><small id="estado">Preparando…</small></div>
+<div id="fin"><span>¡Gracias por jugar!</span><button id="otra">Volver a jugar</button></div>
+<textarea id="pvz-soft-keyboard" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done"></textarea>
+
+<script src="porteo-web.js"></script>
+<script>
+'use strict';
+(function () {
+  var lienzo = document.getElementById('canvas');
+  var barra = document.querySelector('#barra i');
+  var estado = document.getElementById('estado');
+  var listo = false;
+
+  function progreso(p, txt) {
+    if (p != null) barra.style.width = Math.round(p * 100) + '%';
+    if (txt) estado.textContent = txt;
+  }
+
+  // ---- el juego dibuja a 800×600: se escala entero, sin deformar, con bandas negras ----
+  // innerWidth/innerHeight los traduce web.js cuando el teléfono está parado y la
+  // página va girada: el lienzo se acomoda al lado "lógico" sin saber del giro.
+  function ajustar() {
+    var e = Math.min(innerWidth / 800, innerHeight / 600);
+    lienzo.style.width = Math.floor(800 * e) + 'px';
+    lienzo.style.height = Math.floor(600 * e) + 'px';
+  }
+  addEventListener('resize', ajustar);
+  ajustar();
+
+  // ---- el motor (Emscripten) ----
+  var Module = window.Module = {
+    canvas: lienzo,
+    noInitialRun: true,
+    print: function (t) { if (window.__pvzLog) window.__pvzLog.push(t); },
+    printErr: function (t) { if (window.__pvzLog) window.__pvzLog.push(t); },
+    setStatus: function () {},
+    onRuntimeInitialized: function () { arrancar().catch(fallo); },
+    onAbort: function (que) { fallo(new Error(String(que))); },
+  };
+  lienzo.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  function fallo(e) {
+    console.error(e);
+    document.getElementById('carga').style.display = 'flex';
+    progreso(null, 'No se pudo arrancar: ' + (e && e.message || e));
+  }
+
+  // main.pak son 25 MB: se baja con progreso para que no parezca colgado.
+  async function bajar(ruta, desde, hasta) {
+    var r = await fetch(ruta);
+    if (!r.ok) throw new Error(ruta + ': ' + r.status);
+    var total = +r.headers.get('content-length') || 0;
+    if (!r.body || !total) return new Uint8Array(await r.arrayBuffer());
+    var lector = r.body.getReader(), partes = [], van = 0;
+    for (;;) {
+      var p = await lector.read();
+      if (p.done) break;
+      partes.push(p.value);
+      van += p.value.length;
+      progreso(desde + (hasta - desde) * van / total, 'Cargando el juego… ' + Math.round(van / 1048576) + ' de ' + Math.round(total / 1048576) + ' MB');
+    }
+    var datos = new Uint8Array(van), o = 0;
+    partes.forEach(function (c) { datos.set(c, o); o += c.length; });
+    return datos;
+  }
+
+  // ---- partidas guardadas: /saves vive en IndexedDB ----
+  // El juego escribe ahí perfiles, progreso y "guardar y salir". Se vuelca al disco
+  // cada 5 s y, sobre todo, al irse de la app: Android puede matarla en segundo plano.
+  var sincronizando = false, otraVez = false;
+  function guardar() {
+    if (!listo) return;
+    if (sincronizando) { otraVez = true; return; }
+    sincronizando = true;
+    Module.FS.syncfs(false, function (err) {
+      if (err) console.warn('guardado', err);
+      sincronizando = false;
+      if (otraVez) { otraVez = false; guardar(); }
+    });
+  }
+
+  async function arrancar() {
+    var FS = Module.FS;
+    progreso(0.02, 'Cargando el juego…');
+    // properties/: lo que el juego original tenía suelto al lado del .exe
+    try { FS.mkdir('/properties'); } catch (_) {}
+    var sueltos = ['partner.xml', 'partner_logo.jpg'];
+    for (var i = 0; i < sueltos.length; i++) {
+      try { FS.writeFile('/properties/' + sueltos[i], await bajar('properties/' + sueltos[i], 0, 0)); } catch (_) {}
+    }
+    FS.writeFile('/main.pak', await bajar('main.pak', 0.03, 0.95));
+    progreso(0.96, 'Recuperando partidas guardadas…');
+    try { FS.mkdir('/saves'); } catch (_) {}
+    FS.mount(FS.filesystems.IDBFS, {}, '/saves');
+    await new Promise(function (ok) { FS.syncfs(true, function (err) { if (err) console.warn(err); ok(); }); });
+    progreso(1, 'Listo');
+    listo = true;
+    setInterval(guardar, 5000);
+    document.getElementById('carga').style.display = 'none';
+    // El motor va compilado en modo de poca memoria (LOW_MEMORY): lee main.pak de acá a
+    // medida que lo necesita, en vez de copiarlo entero adentro. No se borra.
+    Module.callMain([]);
+  }
+
+  // ---- sonido y guardado al ir y volver de segundo plano ----
+  // Sin cuadros (pestaña oculta) el juego se frena, pero el audio de SDL sigue
+  // sonando desde su propio hilo: se suspende a mano.
+  function contexto() { return Module.SDL2 && Module.SDL2.audioContext; }
+  document.addEventListener('visibilitychange', function () {
+    var ctx = contexto();
+    if (document.hidden) { guardar(); if (ctx && ctx.state === 'running') ctx.suspend(); }
+    else if (ctx && ctx.state === 'suspended') ctx.resume();
+  });
+  addEventListener('pagehide', guardar);
+  // El navegador arranca el audio suspendido hasta el primer toque.
+  addEventListener('pointerdown', function () { var ctx = contexto(); if (ctx && ctx.state === 'suspended' && !document.hidden) ctx.resume(); }, true);
+
+  // ---- teclado del teléfono para el nombre del jugador ----
+  // El juego enfoca el campo desde su bucle (Input.cpp), fuera del toque, y Android
+  // e iOS sólo abren el teclado si el foco se pide ADENTRO de un gesto. Mientras el
+  // juego espera texto, cada toque lo vuelve a enfocar dentro del gesto: el primer
+  // toque sobre el cuadro del nombre abre el teclado.
+  var campo = document.getElementById('pvz-soft-keyboard');
+  addEventListener('pointerup', function () {
+    var st = Module.wasmSoftKeyboardState;
+    if (!st || !st.active) return;
+    if (document.activeElement === campo) campo.blur();
+    campo.focus();
+  }, true);
+
+  // "Salir" del menú del juego: en una página no hay ventana que cerrar.
+  window.onGameExit = function () {
+    guardar();
+    document.getElementById('fin').style.display = 'flex';
+  };
+  document.getElementById('otra').addEventListener('click', function () { location.reload(); });
+
+  // ---- lo del teléfono: horizontal, pantalla completa y prendida, atrás ----
+  // Atrás = Escape, que en el juego abre el menú de pausa (o "¿salir?" en el menú
+  // principal). Dos seguidos salen de la app.
+  Porteo.web({ orientacion: 'landscape', textoSalir: 'Atrás otra vez para salir' });
+})();
+</script>
+<script src="pvz-portable.js"></script>
+</body>
+</html>
