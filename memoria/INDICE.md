@@ -43,6 +43,8 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
   **No se portean juegos que hoy se venden**, aunque sean versiones viejas o recortadas (Poppy Playtime y GTA SA Lite,
   07/10), ni los «gratis» con anuncios o compras (Hypper Sandbox de VobbyGames: tiene versión oficial web en
   CrazyGames, solo PC). Sí fangames y freeware. FNaF 2 fue un error (se vende en Steam y celular): no es precedente.
+  **Con cada juego entregado va una portada 9:16** ("siempre dame una portada 9:16", 07/10): arte de Higgsfield
+  (`nano_banana_2`) + título y moneda de JXStudios compuestos aparte ([higgsfield](higgsfield.md) › Portadas).
   Se ofrece un juego propio inspirado. Un pedido sin nombre de juego
   habla del último que se le mandó; si hay duda entre dos, preguntar antes.
 - **Cada juego con estilo propio**: otros botones, otro orden de menú, otras
