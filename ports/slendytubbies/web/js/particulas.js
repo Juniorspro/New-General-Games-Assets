@@ -3,6 +3,7 @@
    frenado, el crecimiento y cinco colores a lo largo de la vida. Se dibujan como puntos con la textura
    del material (sumando luz o mezclando). */
 import * as THREE from 'three';
+import { P } from './pantalla.js';
 
 const MAX = 300;
 export class Particulas {
@@ -37,7 +38,7 @@ export class Particulas {
   liberar() { for (const p of this.sist) { this.escena.remove(p.sis.pts); p.sis.g.dispose(); p.sis.pts.material.dispose(); } this.sist = []; }
   update(dt) {
     const S = this.S, v = new THREE.Vector3(), q = new THREE.Quaternion(), w = new THREE.Vector3();
-    const esc = window.innerHeight * 0.5 / Math.tan(THREE.MathUtils.degToRad(30));
+    const esc = P.H * 0.5 / Math.tan(THREE.MathUtils.degToRad(30));
     for (const p of this.sist) {
       const s = p.sis, e = p.emisor, a = p.anim, vivo = S.activo[p.i] && !S.destruido[p.i];
       s.pts.material.uniforms.escala.value = esc;

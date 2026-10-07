@@ -3,6 +3,7 @@
    se mantiene, E empezar, N la visión del Tinky); se pueden mover, agrandar, hacer más transparentes y espejar
    para zurdos (se guarda). En la compu: WASD, el mouse y esas mismas teclas, como el original. */
 import { D, guardar } from './guardado.js';
+import { P, revisarGiro } from './pantalla.js';
 
 const IDS = ['joy', 'pausa', 'linterna', 'correr', 'agachar', 'saltar', 'mapa', 'usar', 'vision'];
 const TECLA = { linterna: 'KeyF', correr: 'ShiftLeft', agachar: 'KeyC', saltar: 'Space', mapa: 'KeyM', usar: 'KeyE', vision: 'KeyN' };
@@ -42,7 +43,8 @@ export function crearControles(raiz) {
   }
   K.el = el;
   function ubicar() {
-    const W = innerWidth, H = innerHeight, u = Math.min(W, H) / 400;
+    revisarGiro();
+    const W = P.W, H = P.H, u = Math.min(W, H) / 400;
     for (const id of IDS) {
       const c = K.cfg.b[id], d = BASE[id] * c.tam * Math.max(0.75, Math.min(1.35, u));
       const x = (K.cfg.zurdo ? 1 - c.x : c.x) * W, y = c.y * H;
@@ -55,7 +57,7 @@ export function crearControles(raiz) {
   const textos = () => {};
   K.textos = textos;
 
-  const centro = (id) => { const r = el[id].getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: r.width / 2 }; };
+  const centro = (id) => { const r = el[id].getBoundingClientRect(); return { ...P.xy(r.left + r.width / 2, r.top + r.height / 2), r: r.width / 2 }; };
   const tocado = (x, y) => {
     let mejor = null, dm = Infinity;
     for (const id of IDS) {
@@ -67,7 +69,7 @@ export function crearControles(raiz) {
   };
   const joy = (e, f) => {
     const c = centro('joy');
-    let dx = (e.clientX - c.x) / c.r, dy = (e.clientY - c.y) / c.r;
+    const p = P.ev(e); let dx = (p.x - c.x) / c.r, dy = (p.y - c.y) / c.r;
     const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
     K.mover.x = dx; K.mover.y = -dy;
     el.joy.firstChild.style.transform = `translate(${dx * c.r * 0.55}px, ${dy * c.r * 0.55}px)`;
@@ -75,32 +77,33 @@ export function crearControles(raiz) {
   };
   raiz.addEventListener('pointerdown', (e) => {
     K.tactil = K.tactil || e.pointerType === 'touch';
-    const id = tocado(e.clientX, e.clientY);
+    const p = P.ev(e), id = tocado(p.x, p.y);
     if (K.editando) {
-      if (id) { K.sel = id; K.arrastre = { id, x: e.clientX, y: e.clientY, cx: K.cfg.b[id].x, cy: K.cfg.b[id].y }; try { raiz.setPointerCapture(e.pointerId); } catch { /* */ } K.alElegir?.(id); marcar(); }
+      if (id) { K.sel = id; K.arrastre = { id, x: p.x, y: p.y, cx: K.cfg.b[id].x, cy: K.cfg.b[id].y }; try { raiz.setPointerCapture(e.pointerId); } catch { /* */ } K.alElegir?.(id); marcar(); }
       return;
     }
     if (e.pointerType === 'mouse' && !id) { K.alMouse?.(e); return; }
     if (!id) K.alToque?.(e); // (en el menú, un toque es un clic sobre los objetos 3D)
     e.preventDefault();
     try { raiz.setPointerCapture(e.pointerId); } catch { /* */ }
-    const f = { id, x: e.clientX, y: e.clientY };
+    const f = { id, x: p.x, y: p.y };
     K.dedos.set(e.pointerId, f);
     if (id === 'joy') joy(e, f);
     else if (id) apretar(id, true);
   });
   raiz.addEventListener('pointermove', (e) => {
     if (K.editando && K.arrastre) {
-      const a = K.arrastre, c = K.cfg.b[a.id];
-      const dx = (e.clientX - a.x) / innerWidth * (K.cfg.zurdo ? -1 : 1);
-      c.x = Math.min(0.97, Math.max(0.03, a.cx + dx)); c.y = Math.min(0.97, Math.max(0.03, a.cy + (e.clientY - a.y) / innerHeight));
+      const a = K.arrastre, c = K.cfg.b[a.id], p = P.ev(e);
+      const dx = (p.x - a.x) / P.W * (K.cfg.zurdo ? -1 : 1);
+      c.x = Math.min(0.97, Math.max(0.03, a.cx + dx)); c.y = Math.min(0.97, Math.max(0.03, a.cy + (p.y - a.y) / P.H));
       ubicar(); return;
     }
     const f = K.dedos.get(e.pointerId);
     if (!f) return;
+    const p = P.ev(e);
     if (f.id === 'joy') joy(e);
-    else if (!f.id) { K.mirar.x += e.clientX - f.x; K.mirar.y += e.clientY - f.y; }
-    f.x = e.clientX; f.y = e.clientY;
+    else if (!f.id) { K.mirar.x += p.x - f.x; K.mirar.y += p.y - f.y; }
+    f.x = p.x; f.y = p.y;
   });
   const soltar = (e) => {
     if (K.editando) { if (K.arrastre) { K.arrastre = null; guardarCfg(); } return; }

@@ -10,6 +10,7 @@ import { Sonido } from './sonido.js';
 import { D, guardar } from './guardado.js';
 import { prepararEmbebidos, url } from './archivos.js';
 import { crearRed } from './red.js';
+import { P, revisarGiro, completa } from './pantalla.js';
 
 const BASE = window.SLENDY_BASE || '';
 const tactil = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -44,8 +45,9 @@ controles.mostrar(false);
 
 function ajustarTam() {
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, Q().px));
-  renderer.setSize(innerWidth, innerHeight, false);
-  if (J) { J.camara.aspect = innerWidth / innerHeight; J.camara.updateProjectionMatrix(); J.lejos = Q().lejos; J.cfgPasto = Q().pasto; }
+  revisarGiro();
+  renderer.setSize(P.W, P.H, false);
+  if (J) { J.camara.aspect = P.W / P.H; J.camara.updateProjectionMatrix(); J.lejos = Q().lejos; J.cfgPasto = Q().pasto; }
   controles.ubicar();
 }
 addEventListener('resize', ajustarTam);
@@ -72,6 +74,7 @@ async function arrancar() {
 function empezar() { // JUGAR (el toque que habilita el audio) → idioma → menú
   if (!listo) return;
   sonido.iniciar();
+  completa();
   U.mostrar('idioma');
 }
 async function entrar() {
@@ -151,7 +154,7 @@ function tocarMenu(e) {
   sonido.iniciar();
   // los créditos y la ayuda se cierran con Espacio: un toque hace lo mismo
   if (J.conTag('Creditsandhelp').length) { J.teclasExtra = ['Space']; return; }
-  const nx = (e.clientX / innerWidth) * 2 - 1, ny = -(e.clientY / innerHeight) * 2 + 1;
+  const p = P.ev(e), nx = (p.x / P.W) * 2 - 1, ny = -(p.y / P.H) * 2 + 1;
   J.clic(nx, ny);
 }
 controles.alToque = (e) => { if (modo === 'menu' || !J?.jug) tocarMenu(e); };

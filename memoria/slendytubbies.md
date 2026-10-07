@@ -7,6 +7,9 @@ solo el código; la base es el motor de [pizza-delivery](pizza-delivery.md) (que
 
 ## Lo nuevo
 
+- **Girado 90° con el celu parado** (07/10): `pantalla.js` gira `#raiz` por CSS (`body.girado`) y pasa los
+  toques a coordenadas del juego (`P.ev(e)`, `P.W/P.H`); `vw/vh` del CSS van por `--vw/--vh`. Al tocar JUGAR
+  pide pantalla completa apaisada. Prueba: `pruebas/girado.mjs` (toca el botón 3D girado y cambia la cámara).
 - **Arranca directo en JUGAR** (pedido del 07/10, solo este juego): sin pantalla de idioma al abrir; el texto
   sale en el idioma del celu y al tocar JUGAR se elige idioma y entra al menú. Prueba: `pruebas/inicio.mjs`.
 - **MediaFire se baja con curl**: la página trae `href="https://download…"`; ese link anda (subir, no).

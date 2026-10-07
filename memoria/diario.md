@@ -5,6 +5,9 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
 - **07/10/2026 · `claude/fijate-iszyer`:**
+  - Slendytubbies girado 90° con el celu parado (HTML mandado).
+  - FNaF 2 ("by SuperMiGamer003", es el FNaF 2 de Scott con agregados), empezado y frenado por el usuario:
+    Clickteam 2.5 b288 cifrado; `scratchpad/fnaf2/herr/ctf.py` + `cifra.py` ya leen todo (sin commit todavía).
   - Slendytubbies: arranca directo en JUGAR y el idioma se pide al tocarlo (HTML mandado). "El juego"
     sin nombre era el último mandado, no TJOC (lo había hecho en TJOC y se volvió atrás).
   - TJOC **en pausa hasta nuevo aviso** (lo pidió). Capítulo 2 (LivingRoom), a medias: falta `CharacterMovement` en `COMP_DE_ACTOR`, `MovementMode` y

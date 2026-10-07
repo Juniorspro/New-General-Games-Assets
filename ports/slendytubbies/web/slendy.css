@@ -4,7 +4,12 @@
 :root { --fondo: #000; --tinta: #f1f1f1; --tenue: #9b9b9b; --rojo: #d4141c; --unity: rgba(32, 32, 32, .86); --unity-borde: rgba(255, 255, 255, .22); }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--fondo); color: var(--tinta); font-family: 'Mano', 'Comic Sans MS', 'Segoe Print', cursive; user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none; }
-#lienzo { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+#lienzo { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+/* acostado: con el celu parado, todo se gira 90° (ver pantalla.js) */
+:root { --vw: 1vw; --vh: 1vh; }
+#raiz { position: fixed; inset: 0; }
+body.girado { --vw: 1vh; --vh: 1vw; }
+body.girado #raiz { inset: auto; top: 0; left: 0; width: 100vh; height: 100vw; transform-origin: 0 0; transform: translateX(100vw) rotate(90deg); }
 
 /* el OnGUI del original: las imágenes estiradas a toda la pantalla, como GUI.DrawTexture */
 #gui { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
@@ -21,13 +26,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--fondo)
 .unity.calidad .caja-u { width: 200px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .unity.calidad button { width: 110px; }
 .unity.personalizar { position: absolute; left: 10px; bottom: max(10px, env(safe-area-inset-bottom)); display: flex; flex-direction: column-reverse; gap: 8px; align-items: flex-start; }
-.unity.personalizar .ven { display: grid; grid-template-columns: auto auto; gap: 6px 8px; align-items: center; max-width: 94vw; }
+.unity.personalizar .ven { display: grid; grid-template-columns: auto auto; gap: 6px 8px; align-items: center; max-width: calc(94 * var(--vw)); }
 .unity.personalizar .ven p { grid-column: 1 / -1; }
 .unity.personalizar .ven div { display: flex; flex-wrap: wrap; gap: 4px; }
 .unity.personalizar .ven button { border-left: 6px solid var(--c); padding: 3px 7px; }
 .unity.red { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .unity.red input, .unity.chat input { font: inherit; background: #1d1d1d; color: #eee; border: 1px solid #555; border-radius: 3px; padding: 5px 8px; width: 210px; }
-.unity.red .estado { color: #ccc; max-width: 70vw; }
+.unity.red .estado { color: #ccc; max-width: calc(70 * var(--vw)); }
 .unity.botonchat { position: absolute; right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); }
 .unity.chat { position: absolute; left: 50px; top: 50px; width: 220px; height: 300px; display: flex; flex-direction: column; }
 .unity.chat .lineas { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
@@ -35,7 +40,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--fondo)
 .unity.chat .lineas .mio { align-self: flex-start; } .unity.chat .lineas .otro { align-self: flex-end; color: #fbd38b; }
 
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
-#ayuda { position: absolute; left: 50%; top: calc(max(10px, env(safe-area-inset-top)) + 13vh); transform: translateX(-50%); max-width: 80vw; text-align: center; font-size: clamp(13px, 2.3vmin, 18px); color: #ddd; text-shadow: 0 0 6px #000, 0 0 2px #000; opacity: 0; transition: opacity .6s; }
+#ayuda { position: absolute; left: 50%; top: calc(max(10px, env(safe-area-inset-top)) + calc(13 * var(--vh))); transform: translateX(-50%); max-width: calc(80 * var(--vw)); text-align: center; font-size: clamp(13px, 2.3vmin, 18px); color: #ddd; text-shadow: 0 0 6px #000, 0 0 2px #000; opacity: 0; transition: opacity .6s; }
 #ayuda.ve { opacity: 1; }
 body.en-menu #ayuda { display: none; }
 
@@ -72,7 +77,7 @@ body.con-pantalla #engranaje { display: none; }
 h2 { margin: 6px 0 14px; font-weight: normal; font-size: clamp(30px, 6.5vmin, 52px); color: var(--rojo); }
 .botones { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 8px; }
 .botones.fila2 { flex-direction: row; justify-content: center; }
-#pantallas button { font: inherit; font-size: clamp(18px, 3.2vmin, 24px); color: var(--tinta); background: #000; border: 2px solid #fff; border-radius: 2px; padding: 8px 26px; min-width: min(260px, 70vw); cursor: pointer; letter-spacing: .04em; }
+#pantallas button { font: inherit; font-size: clamp(18px, 3.2vmin, 24px); color: var(--tinta); background: #000; border: 2px solid #fff; border-radius: 2px; padding: 8px 26px; min-width: min(260px, calc(70 * var(--vw))); cursor: pointer; letter-spacing: .04em; }
 #pantallas button:active, #pantallas button:hover { background: #1a1a1a; border-color: var(--rojo); color: #fff; }
 .panel { display: flex; flex-direction: column; gap: 8px; text-align: left; margin: 0 auto; max-width: 460px; }
 .fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: clamp(16px, 2.8vmin, 20px); }
@@ -81,6 +86,6 @@ h2 { margin: 6px 0 14px; font-weight: normal; font-size: clamp(30px, 6.5vmin, 52
 #pantallas .sino.si, #pantallas .opc.si { border-color: var(--rojo); color: #fff; background: #2a0507; }
 .grupo { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 .cargando { font-size: clamp(22px, 4.5vmin, 34px); color: #ddd; }
-.barra { display: block; width: min(320px, 70vw); height: 4px; margin: 14px auto 0; background: #222; }
+.barra { display: block; width: min(320px, calc(70 * var(--vw))); height: 4px; margin: 14px auto 0; background: #222; }
 .barra i { display: block; height: 100%; background: var(--rojo); transition: width .2s; }
 .editor p { margin: 4px 0 8px; font-size: 16px; }
