@@ -25,7 +25,7 @@ Port personal de "Geometry Dash: Nexitron" 1.3.4 (fangame gratis de GRIMKITTY, R
 
 ## Un solo HTML de menos de 30 MiB (07/10/2026, en pausa: pidió dejar GD de lado)
 - Meter binarios en "base122" en vez de base64: 7 bits por byte de UTF-8 (+14 %) en vez de 6 (+33 %). Dentro de un `<script>` el HTML solo rompe tres valores: NUL (lo cambia por U+FFFD), CR (lo cambia por LF) y "<" (puede cerrar el bloque). Ese valor de 7 bits va junto con los 7 siguientes en una letra de 2 bytes: U+0100 + (cuál << 7) + siguiente; si es el último, U+0280 + cuál. Ida y vuelta Python → JS: 409 casos sin error; codificar 5 MB tarda 0,8 s en Python.
-- El archivo empieza con la marca BOM de UTF-8: le gana a cualquier otra señal de codificación, hasta al encabezado HTTP. UTF-16 dejaría +3 % pero se rompe si un visor lo lee como texto UTF-8; por eso no.
+- El archivo empieza con la marca BOM de UTF-8: le gana a cualquier otra señal de codificación, hasta al encabezado HTTP. UTF-16 dejaría +3 % pero se rompe si un visor lo lee como texto UTF-8; por eso no. Confirmado el 07/10/2026: Rezona AI muestra un HTML en UTF-16 como texto roto.
 - Código y datos juntos en un gzip que abre `DecompressionStream`: 9,7 MB → 1,2 MB (por archivo suelto, apenas peor).
 - Tilesets de RPG Maker (31, 10,3 MB sin pérdida) → AVIF q55 4:4:4: 2,26 MB, y se ve igual a 3×. El WebP con pérdida promedia el color de a 2×2 y queda peor y más pesado: Outside_B pesa 160 KB a 27,3 dB en WebP q80, contra 102 KB a 33,5 dB en AVIF q55 4:4:4. Pillow 12.3 de acá ya guarda AVIF.
 - Window.png va sin pérdida: `Window_Base.textColor` saca el color del texto de sus píxeles.
