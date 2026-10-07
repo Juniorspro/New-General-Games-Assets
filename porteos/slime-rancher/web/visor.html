@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Slime Rancher: visor</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #info { position: fixed; left: 8px; top: 8px; color: #fff; font: 12px monospace; text-shadow: 0 0 3px #000; white-space: pre; }
+</style>
+</head>
+<body>
+<canvas id="lienzo"></canvas>
+<div id="info">cargando…</div>
+<script src="motor/mate.js"></script>
+<script src="motor/gl.js"></script>
+<script>
+'use strict';
+// porteo: visor de una zona exportada (exportar.py) con los shaders originales. Para probar el
+// renderer: WASD/flechas y arrastrar para mirar; ?zona=rancho
+(async function () {
+  var info = document.getElementById('info');
+  var lienzo = document.getElementById('lienzo');
+  var zona = new URLSearchParams(location.search).get('zona') || 'rancho';
+  var base = 'datos/' + zona + '/';
+  var gl = GL.iniciar(lienzo);
+  var z = await (await fetch(base + 'zona.json')).json();
+  var geo = await (await fetch(base + 'geo.bin')).arrayBuffer();
+
+  info.textContent = 'texturas…';
+  var texturas = await Promise.all(z.texturas.map(async function (t) {
+    var b = await (await fetch(base + 'tex/' + t.archivo)).blob();
+    var img = await createImageBitmap(b, { imageOrientation: 'none', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+    return GL.textura(img, t);
+  }));
+  var materiales = z.materiales.map(function (m) { return GL.material(m, z.shaders[m.shader], texturas); });
+
+  // ── piezas e instancias ──
+  var mallas = z.piezas.map(function (g) {
+    var at = {
+      in_POSITION0: { datos: new Float32Array(geo, g.pos, g.n * 3), comps: 3 },
+      in_NORMAL0: { datos: new Int8Array(geo, g.nrm, g.n * 3), comps: 3, tipo: gl.BYTE, norm: true },
+      in_TEXCOORD0: { datos: new Float32Array(geo, g.uv0, g.n * 2), comps: 2 }
+    };
+    if (g.uv1 !== undefined) at.in_TEXCOORD1 = { datos: new Float32Array(geo, g.uv1, g.n * 2), comps: 2 };
+    if (g.col !== undefined) at.in_COLOR0 = { datos: new Uint8Array(geo, g.col, g.n * 4), comps: 4, tipo: gl.UNSIGNED_BYTE, norm: true };
+    var idx = g.idx32 ? new Uint32Array(geo, g.idx, g.indices) : new Uint16Array(geo, g.idx, g.indices);
+    return GL.malla(at, idx);
+  });
+  var identidad = GL.instancias(Mate.m4());
+  // ?solo=37,52 dibuja sólo esos materiales: para saber qué material es cada cosa en pantalla
+  var solo = (new URLSearchParams(location.search).get('solo') || '').split(',').filter(Boolean).map(Number);
+  var dibujos = z.dibujos.filter(function (d) { return !solo.length || solo.indexOf(d.material) >= 0; }).map(function (d) {
+    return { malla: mallas[d.pieza], material: materiales[d.material], celda: d.celda,
+      instancias: d.inst === null ? identidad : GL.instancias(new Float32Array(geo, d.inst, d.n * 16)),
+      centro: [(d.min[0] + d.max[0]) / 2, (d.min[1] + d.max[1]) / 2, (d.min[2] + d.max[2]) / 2], min: d.min, max: d.max };
+  });
+
+  // ── el cielo: 6 pasadas, una por cara del cubo (como el skybox de 6 caras de Unity) ──
+  var cielo = [];
+  if (z.cielo !== null) {
+    var mc = materiales[z.cielo];
+    var CARAS = [ // frente +Z, atrás -Z, izquierda +X, derecha -X, arriba +Y, abajo -Y
+      [[-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]], [[1, -1, -1], [-1, -1, -1], [-1, 1, -1], [1, 1, -1]],
+      [[1, -1, 1], [1, -1, -1], [1, 1, -1], [1, 1, 1]], [[-1, -1, -1], [-1, -1, 1], [-1, 1, 1], [-1, 1, -1]],
+      [[-1, 1, 1], [1, 1, 1], [1, 1, -1], [-1, 1, -1]], [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1]]];
+    mc.pasadas.forEach(function (pa, i) {
+      var c = CARAS[i], pos = new Float32Array([].concat(c[0], c[1], c[2], c[3]));
+      var uv = new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0]);
+      var m = GL.malla({ in_POSITION0: { datos: pos, comps: 3 }, in_TEXCOORD0: { datos: uv, comps: 3 } }, new Uint16Array([0, 2, 1, 0, 3, 2]));
+      cielo.push({ malla: m, material: { nombre: 'cielo', uniformes: mc.uniformes, cola: 0,
+        pasadas: [{ programa: pa.programa, estado: { zwrite: 0, ztest: 8, cull: 0, blend: [1, 0], offset: [0, 0] } }] }, instancias: null });
+    });
+  }
+
+  // ── el día y la noche: AmbianceDirector.Update, tal cual ──
+  var zonaAmb = z.ambiancia.zonas[0];
+  var mezclar = function (a, b, t) { return a.map(function (v, i) { return v + (b[i] - v) * t; }); };
+  var limitar = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+  function ambiente(frac) {
+    var num = frac - Math.floor(frac);
+    var num2 = limitar((Math.abs(0.5 - num) - 0.15) * 5, 0, 1), num3, num4;
+    if (num < 0.25) { num3 = 0; num4 = limitar((0.25 - num) * 288, 0.01, 1); }
+    else if (num > 0.75) { num3 = 0; num4 = limitar((num - 0.75) * 288, 0.01, 1); }
+    else { num4 = 0; num3 = limitar(Math.min(num - 0.25, 0.75 - num) * 288, 0.01, 1); }
+    var num5 = num2, num6 = 1 - num5, num7 = Math.pow(num5, 6), num8 = 1 - num7;
+    var nieblaColor = mezclar(zonaAmb.dayFogColor, zonaAmb.nightFogColor, num5);
+    var densidad = num8 * zonaAmb.dayFogDensity + num7 * zonaAmb.nightFogDensity;
+    var ambiental = mezclar(zonaAmb.dayAmbientColor, zonaAmb.nightAmbientColor, num5);
+    var x = 360 * (num - 0.5), giro = Mate.euler(x, 0, 0);
+    // la luz principal: la direccional más fuerte (la que Unity usa en ForwardBase)
+    var mejor = null;
+    z.rotadores.forEach(function (r) {
+      var q = qmul(r.rot, giro);
+      r.luces.forEach(function (l) {
+        if (!l.activa || l.tipo !== 1) return;
+        var mod = r.noche ? num4 : num3;
+        var inten = limitar(l.intensidad * mod, mod !== 0 ? 0.001 : 0, 1);
+        if (!mejor || inten > mejor.inten) mejor = { inten: inten, color: l.color, dir: Mate.rotar(qmul(q, l.rot_local), [0, 0, 1]) };
+      });
+    });
+    if (mejor) {
+      GL.global('_WorldSpaceLightPos0', new Float32Array([-mejor.dir[0], -mejor.dir[1], -mejor.dir[2], 0]));
+      GL.global('_LightColor0', new Float32Array([mejor.color[0] * mejor.inten, mejor.color[1] * mejor.inten, mejor.color[2] * mejor.inten, 1]));
+    }
+    // Unity guarda el ambiente a la mitad: UNITY_LIGHTMODEL_AMBIENT = glstate_lightmodel_ambient * 2
+    GL.global('glstate_lightmodel_ambient', new Float32Array(ambiental.map(function (v) { return v * 0.5; })));
+    GL.global('unity_AmbientSky', new Float32Array(ambiental));
+    GL.global('unity_SHAr', new Float32Array([0, 0, 0, ambiental[0]]));
+    GL.global('unity_SHAg', new Float32Array([0, 0, 0, ambiental[1]]));
+    GL.global('unity_SHAb', new Float32Array([0, 0, 0, ambiental[2]]));
+    GL.global('unity_FogColor', new Float32Array(nieblaColor));
+    GL.global('unity_FogParams', new Float32Array([densidad / Math.sqrt(Math.LN2), densidad / Math.LN2, 0, 0]));
+    if (cielo.length) {
+      var u = materiales[z.cielo].uniformes;
+      u._Blend = num2; u._Dayness = num6;
+      u._SkyColor = new Float32Array(zonaAmb.daySkyColor); u._HorizonColor = new Float32Array(zonaAmb.daySkyHorizon);
+      u._SkyColorNight = new Float32Array(zonaAmb.nightSkyColor); u._HorizonNight = new Float32Array(zonaAmb.nightSkyHorizon);
+    }
+    return nieblaColor;
+  }
+  function qmul(a, b) {
+    return [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+      a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3], a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
+  }
+  var horaInicial = +(new URLSearchParams(location.search).get('hora') || 10);
+  var amb = { niebla_color: [0, 0, 0, 1] };
+  GL.global('unity_SHBr', new Float32Array(4)); GL.global('unity_SHBg', new Float32Array(4)); GL.global('unity_SHBb', new Float32Array(4));
+  GL.global('unity_SHC', new Float32Array(4));
+  GL.global('unity_ColorSpaceDouble', new Float32Array([2, 2, 2, 2]));
+  GL.global('unity_WorldTransformParams', new Float32Array([0, 0, 0, 1]));
+  GL.global('unity_LODFade', new Float32Array([1, 1, 1, 1]));
+  GL.global('unity_IndirectSpecColor', new Float32Array([0, 0, 0, 0]));
+
+  // ── cámara: arranca sobre la celda de la casa ──
+  var cam = { pos: [89.3, 16.7, -144.5], yaw: 0, pitch: 5, fov: 60 };
+  var params = new URLSearchParams(location.search);
+  if (params.get('cam')) { var c = params.get('cam').split(',').map(Number); cam.pos = c.slice(0, 3); cam.yaw = c[3] || 0; cam.pitch = c[4] || 0; }
+
+  var teclas = {};
+  addEventListener('keydown', function (e) { teclas[e.code] = true; });
+  addEventListener('keyup', function (e) { teclas[e.code] = false; });
+  var arrastre = null;
+  lienzo.addEventListener('pointerdown', function (e) { arrastre = [e.clientX, e.clientY]; lienzo.setPointerCapture(e.pointerId); });
+  lienzo.addEventListener('pointermove', function (e) {
+    if (!arrastre) return;
+    cam.yaw += (e.clientX - arrastre[0]) * 0.25; cam.pitch += (e.clientY - arrastre[1]) * 0.25;
+    cam.pitch = Math.max(-89, Math.min(89, cam.pitch)); arrastre = [e.clientX, e.clientY];
+  });
+  lienzo.addEventListener('pointerup', function () { arrastre = null; });
+
+  var V = Mate.m4(), P = Mate.m4(), VP = Mate.m4(), t0 = performance.now(), antes = t0, cuadros = 0, fps = 0, tFps = t0;
+  function cuadro(ahora) {
+    var dt = Math.min(0.1, (ahora - antes) / 1000); antes = ahora;
+    var rot = Mate.euler(cam.pitch, cam.yaw, 0);
+    var adelante = Mate.rotar(rot, [0, 0, 1]), derecha = Mate.rotar(rot, [1, 0, 0]);
+    var vel = (teclas.ShiftLeft ? 60 : 15) * dt;
+    var avance = (teclas.KeyW || teclas.ArrowUp ? 1 : 0) - (teclas.KeyS || teclas.ArrowDown ? 1 : 0);
+    var lado = (teclas.KeyD || teclas.ArrowRight ? 1 : 0) - (teclas.KeyA || teclas.ArrowLeft ? 1 : 0);
+    for (var i = 0; i < 3; i++) cam.pos[i] += (adelante[i] * avance + derecha[i] * lado) * vel;
+    if (teclas.KeyE) cam.pos[1] += vel; if (teclas.KeyQ) cam.pos[1] -= vel;
+
+    var dpr = Math.min(devicePixelRatio || 1, 2);
+    var w = Math.floor(lienzo.clientWidth * dpr), h = Math.floor(lienzo.clientHeight * dpr);
+    if (lienzo.width !== w || lienzo.height !== h) { lienzo.width = w; lienzo.height = h; }
+    gl.viewport(0, 0, w, h);
+    var cerca = 0.3, lejos = 1000;
+    Mate.vistaDeUnity(V, cam.pos, rot);
+    Mate.perspectiva(P, cam.fov, w / h, cerca, lejos);
+    Mate.mul(VP, P, V);
+    var t = (ahora - t0) / 1000;
+    GL.global('hlslcc_mtx4x4unity_MatrixVP', VP);
+    GL.global('hlslcc_mtx4x4unity_MatrixV', V);
+    GL.global('hlslcc_mtx4x4glstate_matrix_projection', P);
+    GL.global('_WorldSpaceCameraPos', new Float32Array(cam.pos));
+    GL.global('_Time', new Float32Array([t / 20, t, t * 2, t * 3]));
+    GL.global('_TimeEditor', new Float32Array([t / 20, t, t * 2, t * 3]));
+    GL.global('_SinTime', new Float32Array([Math.sin(t / 8), Math.sin(t / 4), Math.sin(t / 2), Math.sin(t)]));
+    GL.global('_CosTime', new Float32Array([Math.cos(t / 8), Math.cos(t / 4), Math.cos(t / 2), Math.cos(t)]));
+    GL.global('unity_DeltaTime', new Float32Array([dt, 1 / Math.max(dt, 1e-4), dt, 1 / Math.max(dt, 1e-4)]));
+    GL.global('_ProjectionParams', new Float32Array([1, cerca, lejos, 1 / lejos]));
+    GL.global('_ScreenParams', new Float32Array([w, h, 1 + 1 / w, 1 + 1 / h]));
+    GL.global('_ZBufferParams', new Float32Array([1 - lejos / cerca, lejos / cerca, (1 - lejos / cerca) / lejos, (lejos / cerca) / lejos]));
+
+    var hora = horaInicial + t * 24 / z.segundos_por_dia * (+(new URLSearchParams(location.search).get('rapido') || 1));
+    var nc = ambiente(hora / 24);
+    gl.clearColor(nc[0], nc[1], nc[2], 1);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    dibujos.forEach(function (d) {
+      var dx = d.centro[0] - cam.pos[0], dy = d.centro[1] - cam.pos[1], dz = d.centro[2] - cam.pos[2];
+      d.dist = dx * dx + dy * dy + dz * dz;
+    });
+    if (cielo.length) {
+      var k = 400, mc2 = new Float32Array([k, 0, 0, 0, 0, k, 0, 0, 0, 0, k, 0, cam.pos[0], cam.pos[1], cam.pos[2], 1]);
+      if (!cielo.inst) cielo.inst = GL.instancias(mc2); else GL.actualizar(cielo.inst, mc2);
+      cielo.forEach(function (c) { c.instancias = cielo.inst; });
+      GL.dibujar(cielo, cam.pos);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+    }
+    GL.dibujar(dibujos, cam.pos);
+    cuadros++;
+    if (ahora - tFps > 1000) { fps = cuadros * 1000 / (ahora - tFps); cuadros = 0; tFps = ahora; }
+    info.textContent = zona + '  ' + fps.toFixed(0) + ' fps  ' + dibujos.length + ' dibujos  ' + (hora % 24).toFixed(2) + ' h\n' +
+      cam.pos.map(function (v) { return v.toFixed(1); }).join(', ') + '  yaw ' + cam.yaw.toFixed(0) + ' pitch ' + cam.pitch.toFixed(0);
+    requestAnimationFrame(cuadro);
+  }
+  window.__visor = { cam: cam, faltantes: GL.faltantes, listo: true };
+  requestAnimationFrame(cuadro);
+})().catch(function (e) { document.getElementById('info').textContent = 'error: ' + (e && e.stack || e); console.error(e); });
+</script>
+</body>
+</html>
