@@ -136,7 +136,7 @@ anda en cada etapa** en vez de esperar al final.
 |---|---|
 | `assets/index.html` o `assets/www/` dentro de un APK; strings `appassets.androidplatform.net`, `WebViewAssetLoader`, `cordova.js`, `capacitor` | **HTML5 en un WebView** (el caso fácil) |
 | `Build/*.loader.js`, `*.framework.js`, `*.data`, `*.wasm` (también `.gz`/`.br`/`.unityweb`) | **Unity WebGL** |
-| APK con `lib/*/libunity.so`, `libil2cpp.so`, `assets/bin/Data/` | **Unity Android** |
+| APK con `lib/*/libunity.so` y `assets/bin/Data/`: si trae `libil2cpp.so` es IL2CPP; si trae `libmonobdwgc-2.0.so` y `Data/Managed/*.dll`, es Mono | **Unity Android**. `herramientas/unity/analizar-apk.py` dice cuál, la versión, escenas, texturas y audio |
 | `*.pck` + `*.wasm` + `index.js` | **Godot web** |
 | APK con `libgodot_android.so`; `assets/*.pck` | **Godot Android** |
 | proyecto con `project.godot` | proyecto Godot (3 o 4, según `config_version`) |
@@ -172,6 +172,7 @@ anda en cada etapa** en vez de esperar al final.
 | Scratch `.sb3` | **TurboWarp Packager** → HTML | 1:1 |
 | DOS | **js-dos** + `tactil.js` | 1:1 (emulado) |
 | ROM o Java ME del dueño | emulador web (EmulatorJS / freej2me-web) + controles | 1:1 (emulado) |
+| **Unity Android Mono** (el C# viene en `Managed/`) | AssetRipper reconstruye el proyecto con los scripts decompilados y se compila para WebGL con **la misma versión de Unity** (necesita una licencia activada: la del dueño). Antes, medir con `analizar-apk.py`: audio decodificado, tamaño de las escenas y formato de las texturas dicen si entra en una pestaña de teléfono | 1:1 si entra en memoria |
 | **Unity Android sin proyecto** (IL2CPP) | no se puede pasar el binario a web. Se extraen los assets (AssetRipper/AssetStudio: modelos, texturas, audio, escenas) y se **rearma la lógica** en three.js. Si hay un build de PC Mono, las DLL se descompilan con ILSpy y la lógica se traduce leyendo el original | lo más cercano posible |
 | **juego de PC en C++ con una reimplementación abierta** (PvZ → PvZ-Portable, y las hay de muchos clásicos: OpenTTD, devilutionX, OpenRCT2…) | se compila la reimplementación a WebAssembly con Emscripten y corre con los **datos originales del dueño**. Si espera otra versión de los datos, se parchea el motor (no se inventan datos). Receta: `porteos/pvz/` | 1:1 (la lógica es la del juego; los datos, los del dueño) |
 | GameMaker / libGDX / Unreal sin fuente | igual: se extraen los assets y se rehace la lógica en HTML5 | lo más cercano posible |
@@ -678,6 +679,16 @@ Un intérprete de Clickteam en JS que corre los datos originales.
   `porteos/fnaf2/corregir.py` lo arregla; medido después: 1,00×.
 
 Detalle, mediciones y lo que falta en [`porteos/fnaf2/ANALISIS.md`](porteos/fnaf2/ANALISIS.md).
+
+### Slime Rancher (APK no oficial, "v1.2") — analizado
+
+Un port de Android hecho por alguien en 2023: Slime Rancher 1.2.3 de PC recompilado con Unity
+2018.4.36f1 (Mono, sólo 32 bits, controles táctiles agregados). No se encontró nada raro.
+- **A la web, fiel:** recompilarlo para WebGL con la misma versión de Unity, que pide licencia.
+  En PC es viable con trabajo.
+- **En un teléfono, entero, no entra en una pestaña:** el mundo es una escena de 357 mil objetos,
+  la música decodificada son 3,0 GB y las texturas ETC no tienen equivalente en WebGL de Unity 2018.
+- Detalle, números y plan en [`porteos/slime-rancher/ANALISIS.md`](porteos/slime-rancher/ANALISIS.md).
 
 ---
 
