@@ -1,0 +1,20 @@
+<!-- porteo:web — lo que hacía la parte Android de FNaF 4: horizontal, pantalla
+     completa y prendida, y el botón atrás. -->
+<script src="porteo-web.js"></script>
+<script>
+(function () {
+  var ct = function () { return window.__ct; };
+  Porteo.web({
+    orientacion: 'landscape',
+    // En el FNaF 4 de Android, atrás cerraba el juego (Escape = "terminar la
+    // aplicación" en casi todas las pantallas). Acá el primero sólo avisa y el
+    // segundo sale: una noche de 6 minutos no se pierde por rozar el borde.
+    atras: function () {},
+    textoSalir: 'Atrás otra vez para salir',
+    // FNaF 4 no tiene pausa: mientras el teléfono está parado y el cartel tapa
+    // la pantalla, el juego y el sonido se congelan.
+    alGirarMal: function () { if (ct()) { ct().congelar = true; ct().motor.sonido.pausar(true); } },
+    alGirarBien: function () { if (ct()) { ct().congelar = false; ct().motor.sonido.pausar(false); } },
+  });
+})();
+</script>

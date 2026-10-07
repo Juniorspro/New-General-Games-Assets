@@ -158,6 +158,7 @@ anda en cada etapa** en vez de esperar al final.
 | tenemos | estrategia | fidelidad |
 |---|---|---|
 | **HTML5 dentro de un APK** | se extrae `assets/`, se reemplaza lo nativo con `web.js` (§6), se prueba | 1:1 |
+| **Clickteam Fusion en APK** (`res/raw/application.ccn`: FNaF, miles de fan games) | `herramientas/clickteam/`: `ccn.py` saca los datos originales, `cobertura.mjs` dice si el motor cubre todo, `motor.js` corre los eventos originales | 1:1 (la lógica es la del autor) |
 | HTML5 suelto (itch.io, carpeta) | se adapta a móvil con `tactil.js` + `web.js` | 1:1 |
 | RPG Maker MV/MZ | la carpeta `www/` ya es HTML5; se le agregan controles táctiles si faltan | 1:1 |
 | Construct, Cocos Creator web, Phaser, Pixi, three | ídem HTML5 | 1:1 |
@@ -477,6 +478,13 @@ créditos ni se tapa al autor.
 | abrir el `.html` desde el disco | `fetch`/XHR a los archivos de al lado están prohibidos en `file://` y `content://` | `un-archivo.py`: todo adentro y los pedidos interceptados |
 | leer los cuadros por segundo de Clickteam un campo antes | en la cabecera, "cantidad de pantallas" va justo antes de "cuadros por segundo": FNaF 2 (27 pantallas) quedó con fps 27 y todo temporizador 2,2× más rápido | leer `frameRate` en su lugar (`AppHeader` +0x68) y **medir el reloj del juego contra el reloj real** |
 | intérprete con pasos fijos por segundo ≠ fps del juego | si el bucle da 60 pasos y cada paso cuenta 1000/fps ms, el reloj del juego se desfasa | un solo número manda: pasos por segundo = fps del juego |
+| Clickteam de Android: leer las propiedades de objeto con el diseño publicado | el 2.º campo es la extensión y las animaciones van después de los calificadores: leídos al revés, ningún sprite tiene animaciones | `ccn.py` los lee en el orden de Android |
+| multiplicar la transparencia del editor por la de "fijar coeficiente" | el menú de FNaF 4 (125/128 de fábrica) nunca pasaba del 2 % de opacidad | la acción **reemplaza** la del editor |
+| ignorar el NO en condiciones que no son de objeto | "NO mouse apretado" = "mouse apretado": la linterna se apaga mientras se la sostiene | el NO se aplica en todas |
+| ignorar la marca de doble clic | un toque simple te hace correr a la puerta | byte alto del parámetro 32 + detector de doble toque (450 ms, 40 px) |
+| crear el audio recién en el primer toque | lo que el juego pide antes (la música del título) se pierde: título mudo | crear el contexto al cargar, suspendido; arranca con el toque |
+| juego sin pausa + cartel de "girá el teléfono" | en vertical la noche sigue corriendo detrás del cartel y te matan | `alGirarMal`/`alGirarBien` congelan y sueltan el juego |
+| `decode()` de todas las imágenes de una pantalla | 270 MB de píxeles sólo en el nivel de FNaF 4: el teléfono cierra la pestaña | pedir los archivos y dejar que el navegador decodifique al dibujar |
 
 ## 14. Registro de porteos
 
@@ -540,6 +548,51 @@ Pruebas: 41/41 (porteos/bus-stop/prueba.mjs) · no se pudo probar en un teléfon
 - **Rearmarlo:** `porteos/bus-stop/portear.sh RUTA/bus-stop-simulator.apk`.
   **Probarlo:** `node porteos/bus-stop/prueba.mjs http://127.0.0.1:8811/ file:///…/bus-stop-simulator.html`.
 - **No va al repo** (§11): `bus-stop/` y `entrega-*/` están en `.gitignore`.
+
+### FNaF 4 — terminado (falta la prueba en un teléfono de verdad)
+
+```
+Origen: FNaF4 para Android (com.scottgames.fnaf4 1.1, 44,6 MB, sha256 b3104e3a…091e), por link de MediaFire
+Motor: Clickteam Fusion 2.5, runtime de Android (res/raw/application.ccn + 60 WAV)
+Estrategia: extraer los datos originales y correr sus eventos en herramientas/clickteam/motor.js
+Fidelidad: 1:1 — 16 pantallas, 772 grupos de eventos, 228 objetos, 534 imágenes, 60 sonidos; la UI táctil es la de Android
+Tamaños: APK original 44,6 MB → web 7,2 MB · un archivo 9,35 MB · APK nuevo 7,24 MB (−84 %)
+Pruebas: 36/36 (porteos/fnaf4/prueba.mjs) · no se pudo probar en un teléfono real
+```
+
+- **Cobertura:** 1.575 condiciones, 1.508 acciones y 2.331 tokens de expresión:
+  **el 100 %**, medido con `cobertura.mjs` antes de jugar.
+- **Controles:** los de la versión Android, tal cual:
+  - mantener a un costado para mirar;
+  - **doble toque** para correr a una puerta;
+  - mantener LINTERNA y CLOSE DOOR;
+  - tocar abajo para darse vuelta o volver.
+
+  Más el atrás de Android (el primero avisa, el segundo sale) y el teléfono
+  parado, que congela la noche porque el juego no tiene pausa.
+- **Optimización:**
+  - imágenes: 20 MB de píxeles zlib → 5,6 MB en WebP;
+  - sonidos: 24 MB de WAV → 2,9 MB en Opus;
+  - el envoltorio del APK no carga los 3 runtimes nativos de Clickteam
+    (armeabi, v7a y x86);
+  - la lógica tarda 0,44 ms por cuadro;
+  - las imágenes se decodifican al dibujarse: forzar todas serían 365 MB.
+- **Probado:**
+  - advertencia → título (con su música) → New Game → noche 1;
+  - mirar, doble toque, linterna, puerta, volver;
+  - el reloj a 1,00× (hora = 60 s);
+  - perder (game over de 7 s → título) y ganar (6 AM → night win → Plushtrap);
+  - las 16 pantallas sin errores;
+  - cuatro tamaños de pantalla, vertical congela;
+  - sin red, y el archivo único desde el disco.
+- **Problemas conocidos:**
+  - no se probó en un teléfono real;
+  - el APK nuevo es otra app (`ar.juniors.fnaf4`), al lado de la original;
+  - las fuentes de Windows de los textos (Castellar, Book Antiqua) se
+    reemplazan por las más parecidas;
+  - sin probar en Safari.
+- **Rearmarlo:** `porteos/fnaf4/portear.sh RUTA/fnaf4.apk`. **Probarlo:**
+  `node porteos/fnaf4/prueba.mjs http://127.0.0.1:8821/ file:///…/fnaf4.html`.
 
 ### FNaF 2 — port de otra sesión, analizado y corregido
 

@@ -25,6 +25,8 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 | `iblo-eventos/` | material de IBLO: imágenes, publicaciones, investigación | — |
 | `modelos-cdn/` | modelos GLB de IBLO, con el hash en el nombre | — |
 | `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, IBLO | — |
+| `herramientas/porteo/` + `herramientas/clickteam/` | portear juegos a móvil: HTML5 → APK, y juegos de Clickteam (FNaF) con su lógica original | ver `PORTEO.md` |
+| `porteos/` | la receta de cada juego porteado (sin el juego: el repo es público) | — |
 | `Prompts/` | colecciones de prompts (finanzas, diseño web, skills de UI) | — |
 
 ## Desplegar

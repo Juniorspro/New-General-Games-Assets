@@ -134,9 +134,13 @@
       var mq = matchMedia('(orientation:' + contrario + ') and (pointer:coarse)');
       var mal = function () {
         rotulo();
+        // alGirarBien existe para juegos sin pausa propia (FNaF 4): se los
+        // congela mientras el cartel tapa y se los suelta al volver a girar.
         if (mq.matches && cfg.alGirarMal) try { cfg.alGirarMal(); } catch (_) {}
+        if (!mq.matches && cfg.alGirarBien) try { cfg.alGirarBien(); } catch (_) {}
       };
       mq.addEventListener ? mq.addEventListener('change', mal) : mq.addListener(mal);
+      if (mq.matches && cfg.alGirarMal) setTimeout(function () { try { cfg.alGirarMal(); } catch (_) {} }, 0);
     }
 
     // ---- que la pantalla no se apague a mitad de partida ----
