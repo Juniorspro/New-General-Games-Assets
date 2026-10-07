@@ -248,6 +248,10 @@ function iconoPx(nombre, col, S) {
      palabra: { col, borde }, presenta: color, negro: color del fondo
      antes(g, t, I) / despues(g, t, I)        dibujar algo más (I.cx, I.cy, I.ancho, I.yPalabra)
      jingle(ctx, bus, t0, tg, h)              otra música; h = { tono, soplo, f, T }
+   Para juegos que no son de píxeles (lienzo liso, con escala propia):
+     anchoLogo(W, H) → ancho del monograma; logo(g, i) lo dibuja a mano (i = { avance, t, x0, y0, esc,
+     ancho, golpe, TRAZOS, camino2d, largo }); letras(g, parte, I, t, y) y presentaTxt(g, txt, I, t, y)
+     escriben con otra letra; chispa: px de las chispas (por defecto 1)
    ========================================================================== */
 
 const IntroJXS_ = (() => {
@@ -401,7 +405,7 @@ const IntroJXS_ = (() => {
 
   function crear(o) {
     const W = o.W, H = o.H, cx = W >> 1, cy = Math.round(H * 0.42), E = o.estilo || {};
-    const ancho = Math.round(Math.min(W * 0.66, H * 0.9, 120));
+    const ancho = E.anchoLogo ? E.anchoLogo(W, H) : Math.round(Math.min(W * 0.66, H * 0.9, 120));
     const fondo = E.fondo ? E.fondo(W, H, cx, cy) : fondoCarbono(W, H, cx, cy, Math.min(W, H) * 0.44);
     const PUNTAS = E.puntas || ['#ffffff', '#ffd27a'], GOLPE = E.golpe || ['#ffffff', '#ffd27a', '#c9ccd4', '#7ad7ff'];
     let chispas = [], sacudida = 0, golpeado = false, letras = 0, pts = null, cache = { avance: -1, c: null };
@@ -440,10 +444,15 @@ const IntroJXS_ = (() => {
           return;
         }
         const abre = clamp((t - T_CORTE) / (T_ABRE - T_CORTE), 0, 1), alto = Math.round((Math.max(cy, H - cy) + 4) * salidaAtras(abre));
-        g.save(); g.beginPath(); g.rect(0, cy - alto, W, alto * 2); g.clip(); g.drawImage(fondo, sx, sy); if (E.antes) E.antes(g, t, I); g.restore();
+        g.save(); g.beginPath(); g.rect(0, cy - alto, W, alto * 2); g.clip(); g.drawImage(fondo, sx, sy, W, H); if (E.antes) E.antes(g, t, I); g.restore();
         if (abre < 1) { g.fillStyle = '#d9dce3'; g.fillRect(0, cy - alto, W, 1); g.fillRect(0, cy + alto - 1, W, 1); }
         const avance = clamp((t - T_TRAZA0) / (T_TRAZA1 - T_TRAZA0), 0, 1);
-        if (avance > 0) {
+        if (avance > 0 && E.logo) {
+          const esc = ancho / CAJA.w, x0 = cx - ancho / 2 + sx, y0 = cy - CAJA.h * esc / 2 + sy;
+          pts = avance < 1 ? puntas(avance).map(([px, py]) => [x0 + px * esc, y0 + py * esc]) : null;
+          E.logo(g, { avance, t, x0, y0, esc, ancho, golpe: t >= T_GOLPE, TRAZOS, camino2d, largo });
+          if (t >= T_GOLPE && t < T_GOLPE + 0.06) { g.fillStyle = E.destello || 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, W, H); }
+        } else if (avance > 0) {
           const a = Math.round(avance * 40) / 40;
           if (cache.avance !== a) cache = { avance: a, c: monogramaPixel(ancho, a, E) };
           const m = cache.c, x0 = Math.round(cx - m.width / 2) + sx, y0 = Math.round(cy - m.height / 2) + sy;
@@ -464,14 +473,17 @@ const IntroJXS_ = (() => {
           const x = Math.round(cx - an / 2), y = Math.round(cy + ancho * 0.29 + 4);
           const parte = palabra.slice(0, letras);
           if (E.palabraFondo) E.palabraFondo(g, t, I, letras);
+          if (E.letras) { E.letras(g, parte, I, t, y + sy); if (t > T_LETRAS + 0.5 && E.presentaTxt) E.presentaTxt(g, o.presenta || 'PRESENTA', I, t, y + sy); }
+          else {
           textoPx(g, parte, x + sx, y + sy, { col: (E.palabra && E.palabra.col) || '#e4e6ec', borde: (E.palabra && E.palabra.borde) || '#3d4048', escala: esc });
           if (letras < 9 && ((t * 20) | 0) % 2) { g.fillStyle = '#f6f3ff'; g.fillRect(x + anchoTexto(parte) * esc + esc, y, esc, 7 * esc); }
           if (t > T_LETRAS + 0.5) textoPx(g, o.presenta || 'PRESENTA', cx, y + 12 * esc, { alin: 'centro', col: E.presenta || '#8d88ad', borde: 'no' });
+          }
         }
         if (E.despues) E.despues(g, t, I);
         for (const c of chispas) {
           if (c.t > c.vida * 0.7 && ((c.t * 30) | 0) % 2) continue;
-          g.fillStyle = c.col; g.fillRect(Math.round(c.x), Math.round(c.y), 1, 1);
+          g.fillStyle = c.col; g.fillRect(Math.round(c.x), Math.round(c.y), E.chispa || 1, E.chispa || 1);
         }
       },
     };

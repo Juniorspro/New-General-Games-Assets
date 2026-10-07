@@ -87,6 +87,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [justshoot](justshoot.md) | Just Shoot: la demo web (BananaBread/Emscripten) a un solo HTML, texturas DXT, paquetes de Emscripten, controles de dedo |
 | [salamanca](salamanca.md) | SALAMANCA: el roguelite vertical en pixel art (tipo Archero, 182 KB): arte en texto, chacarera sintetizada, el bot de prueba y sus trampas |
 | [filete](filete.md) | FILETE: el rompecabezas de bloques en filete porteño (108 KB), la intro de JXSTUDIOS con estilo propio, la tanda justa de piezas |
+| [nebulosa](nebulosa.md) | NEBULOSA: fusionar cuerpos celestes con física (tipo Suika) en neón, 104 KB; la intro en un lienzo liso (no de píxeles) |
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR y los dúos de los seis de un archivo): tomas con bots, voz, subtítulos, montaje en Remotion, portadas |
 | [barro](barro.md) | BARRO: motocross tipo Mad Skills (de cero): física de la moto, rivales, pistas, la tierra en tiras, el arte de Rezona |
 | [bus-stop](bus-stop.md) | port de un juego de Unity 4.5 ajeno (Bus Stop Simulator) a APK sin el editor: UnityPy, el IL de los scripts, la luz de Unity 4 en three, lo que no entra al repo |
@@ -117,6 +118,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | `barro/` | BARRO: motocross de costado tipo Mad Skills, 20 pistas en 4 sedes, Jam del día, contrarreloj, un archivo | [barro](barro.md) · `barro/README.md` |
 | `salamanca/` | SALAMANCA: roguelite vertical en pixel art tipo Archero, 4 pisos con jefe, cartas, altar, desafío del día, un archivo de 182 KB | [salamanca](salamanca.md) · `salamanca/README.md` |
 | `filete/` | FILETE: rompecabezas de bloques tipo Block Blast en filete porteño, tango sintetizado, 30 niveles por barrios, un archivo de 108 KB | [filete](filete.md) · `filete/README.md` |
+| `nebulosa/` | NEBULOSA: fusionar cuerpos celestes (polvo estelar → agujero negro) con física, neón synthwave, 3 modos, catálogo, un archivo de 104 KB | [nebulosa](nebulosa.md) · `nebulosa/README.md` |
 | `ports/bus-stop/` | port de *Bus Stop Simulator* (Unity 4.5, de otros) a three.js y APK: solo el código y las herramientas; lo del juego sale de su zip | [bus-stop](bus-stop.md) · `ports/bus-stop/README.md` |
 | `ports/slendytubbies/` | port de *Slendytubbies V2 Beta* (Unity 4.0, de otros) a un solo HTML con multijugador: solo el código y las herramientas | [slendytubbies](slendytubbies.md) · `ports/slendytubbies/README.md` |
 | `ports/tjoc-sm/` | port de *The Joy of Creation: Story Mode* (UE 4.16, de otros) a three.js y APK, por capítulos: solo el código y las herramientas | [tjoc](tjoc.md) · `ports/tjoc-sm/README.md` |

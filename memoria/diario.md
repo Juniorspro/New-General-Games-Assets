@@ -5,6 +5,8 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
 - **07/10/2026 · `claude/fijate-iszyer`:**
+  - NEBULOSA ("ahora otro"): fusionar cuerpos celestes tipo Suika en neón synthwave, 104 KB ([nebulosa](nebulosa.md));
+    la intro compartida suma `logo`/`letras` para juegos lisos. Mandado con portada 9:16 (Higgsfield `7deaa0bc…`).
   - FILETE ("otro juego diferente con su intro a su estilo"): rompecabezas tipo Block Blast en filete porteño, 108 KB
     ([filete](filete.md)); la intro compartida ahora acepta `estilo`. Mandado con portada 9:16 (Higgsfield `3825fe2a…`).
   - SALAMANCA, juego propio pedido "pixel art, vertical, liviano, adictivo": roguelite tipo Archero de 182 KB
