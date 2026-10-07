@@ -10,7 +10,8 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
     Falta probar a fondo objetos, la cuerda de Playtime, el final y la escena secreta.
   - Portada 9:16 de Baldi: arte con Higgsfield (`nano_banana_2`, job `2861f1a6…`) + título con Comic Neue (OFL),
     Liberation Serif y la moneda (`scratchpad/portadas/`, fuera del repo). Mandada.
-  - Rechazados (se venden o tienen anuncios): Poppy Playtime, GTA SA Lite, Hypper Sandbox, Geometry Dash 2.2081.
+  - Rechazados (se venden o tienen anuncios): Poppy Playtime, GTA SA Lite, Hypper Sandbox, Geometry Dash 2.2081,
+    Counter-Strike 1.6 (resubido a GameJolt por otro; es de Valve y se vende en Steam).
   - Slendytubbies: intro JXStudios, sin pantalla de carga, idioma sobre el menú difuminado (HTML mandado).
   - Portadas 9:16 de FNaF 2 y Slendytubbies: arte con Higgsfield (`nano_banana_2`, jobs `cf4a8b9f…` y `48f56c26…`)
     + título y moneda compuestos con PIL (`scratchpad/portadas/componer.py`, fuera del repo: es fan art). Mandadas.
