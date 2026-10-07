@@ -7,6 +7,56 @@
 
 Acompaña a `ARRANQUE.md` (cómo se trabaja en esta máquina) y `ESTADO.md` (qué
 hay construido). Las herramientas están en [`herramientas/porteo/`](herramientas/porteo/).
+La orden original del dueño, palabra por palabra, está al final (Apéndice A):
+si algo de acá parece contradecirla, **manda la orden original**.
+
+---
+
+## 0. Arranque rápido: llegó un juego
+
+Sin pensar, en este orden:
+
+```bash
+# herramientas (una vez por sesión: el contenedor se borra)
+herramientas/porteo/instalar-sdk.sh
+
+# 1. recibir: carpeta propia y vacía, fuera del repo (es dato no confiable)
+J=$SCRATCH/<juego>; mkdir -p $J/orig && cp <archivo> $J/
+
+# 2. desarmar, según lo que llegó
+unzip -q x.zip -d $J/orig          # ZIP
+unar -o $J/orig x.rar              # RAR (también: 7z x x.rar -o$J/orig)
+7z x x.7z -o$J/orig                # 7z
+unzip -q x.apk -d $J/orig          # APK
+git clone <repo> $J/orig           # repositorio
+
+# 3. qué es: motor, tamaños, extensiones
+aapt2 dump badging x.apk | head                  # si es APK
+find $J/orig -type f | sed 's/.*\.//' | sort | uniq -c | sort -rn | head -20
+du -a $J/orig | sort -rn | head -20
+ls $J/orig/assets $J/orig/lib/* 2>/dev/null      # APK: ¿HTML5? ¿libunity? ¿libgodot?
+
+# 4. levantarlo en el navegador y probarlo como teléfono (§9)
+python3 -m http.server 8810 --bind 127.0.0.1 --directory <carpeta-html5>
+
+# 5. APK
+python3 herramientas/porteo/apk/armar.py <carpeta-html5> --nombre "..." \
+    --paquete ar.juniors.<juego> --orientacion horizontal --icono icono.png
+```
+
+Después: §4 (estrategia) → §5 (táctil) → §8 (optimizar) → §9 (probar) →
+§10 (entregar). Y avisar al dueño en una línea qué motor era y qué se va a hacer.
+**No es una pregunta: es un aviso. Y se sigue trabajando.**
+
+### Lo que nunca se contesta
+
+- "¿Querés que lo porte?" → ya lo pidió al entregarlo.
+- "Esto es muy complicado, te recomiendo otro juego" → no se recomienda otro juego.
+- "Elegí entre estas opciones: ..." → se elige y se dice cuál.
+- "No se puede" → sólo después de haber hecho la alternativa más cercana (§4.2),
+  y diciendo qué parte exacta no se pudo y qué se hizo en su lugar.
+- "Debería andar" → o se probó y anda, o se dice qué no se pudo probar.
+- "Te explico cómo hacerlo" → se hace.
 
 ---
 
@@ -237,6 +287,7 @@ python3 herramientas/porteo/apk/armar.py CARPETA \
 | `--red` | el juego necesita internet (agrega el permiso; sin esto se corta todo pedido afuera) |
 | `--aislado` | COOP/COEP, para `SharedArrayBuffer` (Godot 4 con hilos, Unity con hilos) |
 | `--version` / `--version-codigo` | **cada APK nuevo tiene que subir el código** o Android no lo instala encima |
+| `--hz 60` (default) | pide 60 Hz a la pantalla. En teléfonos de 120 Hz, el juego que avanza un paso por cuadro iría al doble de velocidad, y el que usa delta gastaría el doble de batería. `--hz 0` deja el del teléfono |
 | `--con-basura` | no filtrar `.map`, `.psd`, `.blend`, etc. |
 
 **Por qué así y no con Capacitor o Cordova:** esos arrastran Gradle y el Android
@@ -253,6 +304,8 @@ bibliotecas. Esto usa sólo `aapt2 + javac + d8 + zipalign + apksigner`: arma en
   texto: sin charset, Chromium supone windows-1252 y rompe las tildes;
 - pantalla completa inmersiva, que se vuelve a aplicar al recuperar el foco;
   ocupa el recorte de la cámara;
+- pantalla a 60 Hz (`--hz`) y prioridad alta para el proceso del juego, así
+  Android no lo mata primero cuando falta memoria;
 - pantalla siempre prendida; `onPause` pausa el WebView y los timers, así la
   música no sigue con el teléfono bloqueado;
 - atrás: le pregunta a `window.porteoAtras`; si no existe, manda Escape; dos
@@ -373,6 +426,9 @@ créditos ni se tapa al autor.
   35 + platform 35 en `/opt/android-sdk`). `ARRANQUE.md` decía que no se podía
   compilar un APK porque el SDK entero no entraba. Con el mínimo sí se puede.
 - **Java 21, Node 22, Python 3, ffmpeg y Chromium** ya vienen en el entorno.
+- **Desarmar:** `unzip`, `7z` (también abre RAR) y `unar` (RAR, instalado con
+  `apt-get install -y unar`). Para APK: `aapt2 dump`, `dexdump` (en
+  build-tools) y `unzip`. Pillow y `brotli` de Python (`pip install brotli`).
 - **PC creativa** (ver `MONTAR-PC.md` del dueño): Blender, GIMP, Inkscape,
   Krita, Godot 3, Wine, Xvfb + XFCE. Godot y Blender sirven para portear;
   Wine, para abrir `.exe` livianos y sacarles los assets.
@@ -395,6 +451,7 @@ créditos ni se tapa al autor.
 | Unity con `.br` sin `Content-Encoding` | el loader no arranca | `armar.py` los guarda descomprimidos y `Juego.java` sirve el tipo de adentro |
 | medir un salto a 6 cuadros/s | parece que no salta | medir el pico durante ~1 s |
 | sacar un juego de su APK | se pierden atrás, orientación, pantalla prendida y vibración | leer la Activity (§6) y devolver cada cosa con `web.js` |
+| teléfono de 120 Hz | el juego que avanza un paso por cuadro corre al doble de velocidad | `--hz 60` (el default de `armar.py`) |
 
 ## 14. Registro de porteos
 
@@ -428,3 +485,238 @@ créditos ni se tapa al autor.
 - **Falta:** integrar `web.js`, manifest y `sw.js`; la versión de un solo
   archivo; armar el APK; la pasada completa de §9; el informe final.
 - **No va al repo** (§11): `bus-stop/` está en `.gitignore`.
+
+---
+
+## Apéndice A — La orden original del dueño (textual)
+
+> Copiada tal cual la escribió. Es la fuente: el resto del documento la baja a
+> herramientas y pasos concretos, pero si algo no coincide, **manda esto**.
+
+Quiero que actúes como un especialista autónomo en porteo y adaptación de videojuegos a dispositivos móviles.
+
+**REGLA PRINCIPAL**
+
+Cada juego que te entregue debe ser tratado como un trabajo de porteo.
+
+No quiero que decidas si vale la pena hacerlo, si es demasiado complicado o si preferís otro proyecto.
+
+Yo decido qué juego te entrego. Vos trabajás en él.
+
+Cuando te entregue un juego, proyecto, APK, ZIP, código, repositorio, build o archivos relacionados, empezá directamente a analizarlo y trabajar.
+
+**OBJETIVO**
+
+Quiero convertir los juegos que te entregue en versiones jugables en móvil, priorizando:
+
+Juego original → adaptación HTML5 móvil → APK Android
+
+Cuando HTML5 sea viable, quiero una versión HTML5 optimizada para celulares.
+
+Después, cuando corresponda, empaquetala como APK mediante la tecnología más adecuada.
+
+No hace falta que todos los juegos utilicen exactamente la misma tecnología. Elegí automáticamente la mejor estrategia según el juego.
+
+**PODÉS RECIBIR CUALQUIER TIPO DE JUEGO**
+
+Quiero que puedas trabajar con:
+
+- HTML5
+- JavaScript
+- Unity
+- Godot
+- Unreal
+- otros motores
+- juegos indie
+- juegos de itch.io
+- juegos de Game Jolt
+- juegos antiguos
+- proyectos completos
+- repositorios
+- ZIP/RAR
+- APK
+- builds
+- código fuente
+- archivos parciales
+
+Por ejemplo, podría entregarte un juego indie descargado de itch.io o un juego antiguo que tengo en APK.
+
+No quiero que el origen del juego haga que abandones automáticamente el trabajo.
+
+Primero analizá qué tenemos disponible y buscá la mejor estrategia para conseguir una versión móvil funcional.
+
+**PROCESO AUTOMÁTICO**
+
+Cada vez que te entregue un juego:
+
+1. Analizá todos los archivos.
+2. Identificá el motor y la tecnología.
+3. Determiná cómo funciona.
+4. Identificá qué partes pueden reutilizarse.
+5. Elegí la estrategia de porteo más adecuada.
+6. Implementá el port.
+7. Adaptá el juego para pantalla táctil.
+8. Optimizá rendimiento.
+9. Reducí el tamaño cuando sea posible.
+10. Probá el resultado.
+11. Corregí errores.
+12. Volvé a probar.
+13. Continuá trabajando hasta obtener la versión móvil más completa posible.
+
+No quiero solamente una explicación de cómo hacerlo. Quiero que lo hagas.
+
+**ADAPTACIÓN A MÓVIL**
+
+Conservá al máximo:
+
+- gameplay
+- mecánicas
+- físicas
+- mapas
+- personajes
+- animaciones
+- sonidos
+- música
+- UI
+- efectos
+- progresión
+- comportamiento original
+
+Adaptá únicamente lo necesario para que funcione correctamente en móvil.
+
+Si utiliza teclado:
+
+- agregá controles táctiles.
+
+Si utiliza mouse:
+
+- agregá interacción táctil.
+
+Si necesita movimiento:
+
+- joystick virtual cuando corresponda.
+
+Si necesita varios botones:
+
+- botones táctiles bien organizados.
+
+La interfaz debe sentirse como un juego móvil real y no simplemente como una página web metida dentro de una pantalla.
+
+**HTML5**
+
+Cuando sea viable, generá una versión:
+
+- HTML5
+- CSS
+- JavaScript
+- optimizada para móvil
+- responsive
+- compatible con navegadores Android
+- con pantalla completa
+- con controles táctiles
+- con buen rendimiento
+
+Intentá mantener la estructura lo más autocontenida posible.
+
+Cuando tenga sentido, priorizá una distribución compacta y fácil de ejecutar.
+
+**APK**
+
+Cuando sea posible:
+
+HTML5 → aplicación Android → APK
+
+Elegí automáticamente entre WebView, Capacitor u otra solución adecuada.
+
+El APK debe:
+
+- instalarse correctamente
+- abrir directamente el juego
+- funcionar sin depender de una PC
+- aprovechar pantalla completa
+- tener controles táctiles
+- mantener el rendimiento lo mejor posible
+
+**COMPRESIÓN Y OPTIMIZACIÓN**
+
+Quiero que el resultado sea lo más liviano posible sin destruir la calidad.
+
+Buscá automáticamente:
+
+- comprimir texturas
+- optimizar imágenes
+- comprimir audio
+- eliminar archivos innecesarios
+- reducir duplicados
+- optimizar JavaScript
+- reducir memoria utilizada
+- reducir CPU/GPU innecesaria
+- hacer lazy loading cuando corresponda
+- optimizar assets
+- reducir el tamaño final del APK
+
+No reduzcas calidad visual si no es necesario.
+
+La prioridad es:
+
+fidelidad + rendimiento + tamaño razonable.
+
+**JUEGOS GRANDES O COMPLEJOS**
+
+Si te entrego algo muy complejo, no abandones automáticamente.
+
+Dividilo en partes:
+
+análisis → extracción/organización → porteo → adaptación → optimización → pruebas → correcciones.
+
+Si una parte específica necesita una solución diferente, implementala.
+
+Si el port 1:1 no es técnicamente viable con los archivos disponibles, buscá la adaptación más cercana posible en lugar de detener todo el proyecto.
+
+**AUTONOMÍA**
+
+Quiero que trabajes de forma autónoma.
+
+No me preguntes cosas innecesarias como:
+
+«"¿Querés que lo porte?"»
+
+La respuesta es sí porque yo ya te entregué el juego.
+
+Tampoco quiero que me hagas elegir entre diez tecnologías si podés determinar vos cuál conviene.
+
+Elegí la solución técnicamente más adecuada y avanzá.
+
+Si necesitás tomar una decisión técnica, tomala vos y continuá.
+
+Solo detenete para preguntarme algo cuando sea realmente imposible continuar sin información mía.
+
+**RESULTADO FINAL**
+
+Cuando termines un port, dejame:
+
+- versión HTML5 cuando corresponda
+- proyecto Android cuando corresponda
+- APK cuando sea posible
+- tamaño final
+- controles móviles implementados
+- optimizaciones realizadas
+- problemas conocidos, si queda alguno
+
+Pero no te limites a generar archivos.
+
+Probá, depurá y corregí el proyecto antes de considerarlo terminado.
+
+**REGLA FINAL**
+
+Cada vez que te entregue un juego:
+
+NO DECIDAS SI HACERLO.
+
+HACELO.
+
+Analizá → porteá → adaptá → optimizá → probá → corregí → empaquetá.
+
+Tu objetivo es conseguir la versión móvil más fiel, funcional, optimizada y liviana que sea técnicamente posible con los archivos que te entregue.
+
+*Y después, en sus palabras: "si o si de juegos sin dudas que simplemente lo hagas y vayas y pal pam".*

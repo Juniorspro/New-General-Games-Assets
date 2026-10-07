@@ -146,6 +146,8 @@ def main():
     ap.add_argument("--inicio", default="index.html")
     ap.add_argument("--red", action="store_true", help="el juego necesita internet")
     ap.add_argument("--aislado", action="store_true", help="COOP/COEP para SharedArrayBuffer")
+    ap.add_argument("--hz", type=int, default=60,
+                    help="refresco de pantalla pedido (default 60; 0 = el del teléfono)")
     ap.add_argument("--con-basura", action="store_true", help="no filtrar .map, .psd, etc.")
     ap.add_argument("--salida", type=Path)
     a = ap.parse_args()
@@ -199,7 +201,8 @@ def main():
         java = (AQUI / "plantilla" / "src" / "Juego.java").read_text("utf-8")
         java = (java.replace("__PAQUETE__", a.paquete).replace("__INICIO__", a.inicio.replace('"', ""))
                     .replace("__AISLADO__", "true" if a.aislado else "false")
-                    .replace("__RED__", "true" if a.red else "false"))
+                    .replace("__RED__", "true" if a.red else "false")
+                    .replace("__HZ__", str(max(0, a.hz))))
         src = t / "src" / Path(*a.paquete.split("."))
         src.mkdir(parents=True)
         (src / "Juego.java").write_text(java, "utf-8")

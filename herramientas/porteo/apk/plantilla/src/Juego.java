@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
@@ -42,6 +43,7 @@ public class Juego extends Activity {
     static final String INICIO = "__INICIO__";
     static final boolean AISLADO = __AISLADO__;
     static final boolean RED = __RED__;
+    static final float HZ = __HZ__f;
 
     WebView web;
     long ultimoAtras = 0;
@@ -58,6 +60,26 @@ public class Juego extends Activity {
             lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
             w.setAttributes(lp);
         }
+        if (HZ > 0) {
+            // En un teléfono de 120 Hz, requestAnimationFrame corre a 120: el
+            // juego que avanza un paso por cuadro va al doble de velocidad, y
+            // el que usa delta gasta el doble de batería y se calienta.
+            WindowManager.LayoutParams lp = w.getAttributes();
+            lp.preferredRefreshRate = HZ;
+            if (Build.VERSION.SDK_INT >= 23) {
+                Display d = getWindowManager().getDefaultDisplay();
+                Display.Mode actual = d.getMode();
+                for (Display.Mode m : d.getSupportedModes()) {
+                    if (m.getPhysicalWidth() == actual.getPhysicalWidth()
+                            && m.getPhysicalHeight() == actual.getPhysicalHeight()
+                            && Math.abs(m.getRefreshRate() - HZ) < 1f) {
+                        lp.preferredDisplayModeId = m.getModeId();
+                        break;
+                    }
+                }
+            }
+            w.setAttributes(lp);
+        }
 
         web = new WebView(this);
         web.setBackgroundColor(Color.BLACK);
@@ -71,6 +93,10 @@ public class Juego extends Activity {
         });
         web.setHapticFeedbackEnabled(false);
         web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        if (Build.VERSION.SDK_INT >= 26) {
+            // Que Android no mate el proceso del juego primero cuando falta memoria.
+            web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true);
+        }
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
