@@ -475,6 +475,8 @@ créditos ni se tapa al autor.
 | botones del juego con `pointer-events: none` (los atiende una capa) | `page.tap()` de Playwright se niega a tocarlos | tocar con CDP en el centro, como un dedo |
 | espiar `fetch` en la versión de un archivo | el archivo sirve los datos sin pasar por el `fetch` de verdad: "0 de 0" | medir lo que el juego decodifica (`decodeAudioData`), no los pedidos |
 | abrir el `.html` desde el disco | `fetch`/XHR a los archivos de al lado están prohibidos en `file://` y `content://` | `un-archivo.py`: todo adentro y los pedidos interceptados |
+| leer los cuadros por segundo de Clickteam un campo antes | en la cabecera, "cantidad de pantallas" va justo antes de "cuadros por segundo": FNaF 2 (27 pantallas) quedó con fps 27 y todo temporizador 2,2× más rápido | leer `frameRate` en su lugar (`AppHeader` +0x68) y **medir el reloj del juego contra el reloj real** |
+| intérprete con pasos fijos por segundo ≠ fps del juego | si el bucle da 60 pasos y cada paso cuenta 1000/fps ms, el reloj del juego se desfasa | un solo número manda: pasos por segundo = fps del juego |
 
 ## 14. Registro de porteos
 
@@ -538,6 +540,17 @@ Pruebas: 41/41 (porteos/bus-stop/prueba.mjs) · no se pudo probar en un teléfon
 - **Rearmarlo:** `porteos/bus-stop/portear.sh RUTA/bus-stop-simulator.apk`.
   **Probarlo:** `node porteos/bus-stop/prueba.mjs http://127.0.0.1:8811/ file:///…/bus-stop-simulator.html`.
 - **No va al repo** (§11): `bus-stop/` y `entrega-*/` están en `.gitignore`.
+
+### FNaF 2 — port de otra sesión, analizado y corregido
+
+Un intérprete de Clickteam en JS que corre los datos originales.
+- **Cobertura:** el 100 % de las condiciones y de las expresiones, y todas
+  las acciones menos una.
+- **Defecto grande:** el reloj iba **2,17× más rápido** (noche de 3,3 min en
+  vez de 7), porque el extractor leyó "27 pantallas" como "27 cps".
+  `porteos/fnaf2/corregir.py` lo arregla; medido después: 1,00×.
+
+Detalle, mediciones y lo que falta en [`porteos/fnaf2/ANALISIS.md`](porteos/fnaf2/ANALISIS.md).
 
 ---
 
