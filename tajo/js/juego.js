@@ -111,9 +111,6 @@ function dibujar(g, dt) {
 }
 
 function dibujarJuego(g) {
-  g.fillStyle = ESTILO_SUMI.negro;
-  g.fillRect(0, 0, W, H);
-
   for (const f of G.frutas) {
     dibujarFruta(g, f.tipo, f.x, f.y, f.ang, f.cortada, 1);
   }
@@ -301,33 +298,28 @@ document.addEventListener('pointerup', () => {
   G.trazando = false;
 });
 
-let frameTime = 0, introsystem = null;
+let frameTime = 0, intro = null, musicaIntro = null;
 function loop(now) {
   const dt = Math.min(0.05, (now - frameTime) / 1000);
   frameTime = now;
 
   if (G.escena === 'intro') {
-    G.introTiempo += dt;
-    if (G.introTiempo > 3.5) { G.escena = 'menu'; Sonido.musica(TEMAS.menu); }
+    if (intro) intro.pasar(dt);
+    if (intro && intro.listo) { G.escena = 'menu'; Sonido.musica(TEMAS.menu); if (musicaIntro) musicaIntro.cortar(); }
   }
 
   actualizar(dt);
 
-  const [c, g] = lienzoHD(W, H);
-
-  if (G.escena === 'intro') {
-    if (!introsystem) {
-      introsystem = introduccion(ESTILO_SUMI, 'TAJO', '', 3.5);
-    }
-    introsystem(g, G.introTiempo);
-  } else {
-    dibujar(g, dt);
-  }
-
   const canvas = document.querySelector('canvas');
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(c, 0, 0);
+  ctx.fillStyle = ESTILO_SUMI.negro;
+  ctx.fillRect(0, 0, W, H);
+
+  if (G.escena === 'intro' && intro) {
+    intro.dibujar(ctx);
+  } else {
+    dibujar(ctx, dt);
+  }
 
   requestAnimationFrame(loop);
 }
@@ -342,5 +334,10 @@ window.addEventListener('load', () => {
   ctx.scale(escala, escala);
 
   Sonido.iniciar();
+  intro = crearIntroJXS({ W, H, presenta: tr('presenta'), vibrar: true, estilo: ESTILO_SUMI });
+  if (Sonido.ctx && Sonido.ctx.state === 'running') musicaIntro = jingleJXS(Sonido.ctx, Sonido.total, ESTILO_SUMI);
+
   requestAnimationFrame(loop);
+
+  document.addEventListener('click', () => { if (intro && !intro.listo) intro.saltar(); });
 });
