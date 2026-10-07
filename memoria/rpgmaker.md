@@ -22,3 +22,15 @@ Port personal de "Geometry Dash: Nexitron" 1.3.4 (fangame gratis de GRIMKITTY, R
 - Pasar todos los base64 a Blob al abrir tardaba 10 s en la compu: mejor pasar cada uno cuando el juego lo pide.
 - Sistema de archivos virtual: se emparchan `XMLHttpRequest.open` y el `src` de `<img>`, `<video>`/`<audio>` y `<source>`. `PluginManager.loadScript` se cambia por un script con `src` blob, pero su propiedad `src` sigue devolviendo la ruta original, porque hay complementos que usan `document.currentScript.src`. Las rutas no distinguen mayúsculas (en Windows no las distinguen).
 - Medido en Chromium: elige los archivos y llega al título en ~28 s (el aviso y los logos del juego duran ~27 s). Probado como compu y como Android: título, partida nueva, video de la intro y primer mapa, sin archivos faltantes ni errores.
+
+## Un solo HTML de menos de 30 MiB (07/10/2026, en pausa: pidió dejar GD de lado)
+- Meter binarios en "base122" en vez de base64: 7 bits por byte de UTF-8 (+14 %) en vez de 6 (+33 %). Dentro de un `<script>` el HTML solo rompe tres valores: NUL (lo cambia por U+FFFD), CR (lo cambia por LF) y "<" (puede cerrar el bloque). Ese valor de 7 bits va junto con los 7 siguientes en una letra de 2 bytes: U+0100 + (cuál << 7) + siguiente; si es el último, U+0280 + cuál. Ida y vuelta Python → JS: 409 casos sin error; codificar 5 MB tarda 0,8 s en Python.
+- El archivo empieza con la marca BOM de UTF-8: le gana a cualquier otra señal de codificación, hasta al encabezado HTTP. UTF-16 dejaría +3 % pero se rompe si un visor lo lee como texto UTF-8; por eso no.
+- Código y datos juntos en un gzip que abre `DecompressionStream`: 9,7 MB → 1,2 MB (por archivo suelto, apenas peor).
+- Tilesets de RPG Maker (31, 10,3 MB sin pérdida) → AVIF q55 4:4:4: 2,26 MB, y se ve igual a 3×. El WebP con pérdida promedia el color de a 2×2 y queda peor y más pesado: Outside_B pesa 160 KB a 27,3 dB en WebP q80, contra 102 KB a 33,5 dB en AVIF q55 4:4:4. Pillow 12.3 de acá ya guarda AVIF.
+- Window.png va sin pérdida: `Window_Base.textColor` saca el color del texto de sus píxeles.
+- Uso fino de las animaciones: de 127 hojas, solo 27 las usa alguna habilidad, objeto, arma, evento (212/337) o complemento. Las otras viajan igual, en AVIF q10, porque si falta una imagen MV corta con "Failed to load". Animaciones usadas: 2,88 MB en WebP q85 → 0,92 MB en AVIF q50.
+- Videos VHS: VP9 con CRF 50 a 640 px dio 1,54 MB por 12 s, por el ruido. Con tope de 160 kbps (`-crf 50 -b:v 160k`) quedó en 383 KB y se ve parecido.
+- Opus para música a 16, 20 y 24 kbps: el espectro llega a ~20 kHz en los tres (CELT rellena lo agudo). 2 min pesan 221, 272 y 355 KB.
+- Ambientes (bgs) a Opus: MV lee LOOPSTART/LOOPLENGTH solo de las cabeceras de Vorbis. Se pasan los valores a muestras de 48 kHz (`-metadata:s:a:0`) y un parche de `WebAudio._readOgg` los lee del OpusTags (sin comprobar en el navegador).
+- Presupuesto: todo menos la música quedó en ~18 MB, y a los 68,6 min de música le quedaban ~18 kbps para no pasar 31 MB.

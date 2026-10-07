@@ -5,6 +5,8 @@ Fuente: `guias/GUIA_JUEGOS_2D_PIXEL.md § 12`, `guias/GUIA-JUEGOS.md § 9`, y lo
 - Node 22 con `playwright` 1.56.1 global: `require('/opt/node22/lib/node_modules/playwright')`; Chromium 1194 en `/opt/pw-browsers`. Nunca `npx playwright install`.
 - También global: `prettier`, `eslint`, `http-server`, `serve`. NO hay Pillow ni esbuild.
 - npm y pip llegan a la red: `npm install esbuild` y `pip install --target <scratchpad>/py pillow` (después `PYTHONPATH=<scratchpad>/py`).
+- 07/10/2026: `python3` ya trae Pillow 12.3, con WebP y AVIF; no hay numpy. Con `python3 -I` no se lee `PYTHONPATH`: el script agrega la carpeta a `sys.path`.
+- 07/10/2026: el Chromium de Playwright no confía en el certificado del proxy para salir a la red (ERR_CERT_AUTHORITY_INVALID en mediafire.com, aunque existe `~/.pki/nssdb`). Para bajar cosas, curl. Si una página arma el enlace con JavaScript, como MediaFire, curl no lo ve.
 
 ## Chromium sin placa de video
 - Flags: `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist`.
