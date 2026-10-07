@@ -1,0 +1,310 @@
+[
+ {
+  "clave": "img-cabana_ruina",
+  "type": "image",
+  "output_path": "assets/img-cabana_ruina.png",
+  "params": {
+   "prompt": "The same kind of old mountain log cabin but abandoned and half collapsed: dark weathered logs, the shingle roof sagging and partly caved in on one side, broken windows with no glass, missing planks, moss and dead vines, the front door hanging from one hinge, a rough stone chimney cracked. Rectangular footprint, front door on the long side. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+   ]
+  }
+ },
+ {
+  "clave": "img-pino1",
+  "type": "image",
+  "output_path": "assets/img-pino1.png",
+  "params": {
+   "prompt": "A single tall dark mountain fir tree as a 3D game asset: conical silhouette made of five or six large chunky faceted clusters of dark blue-green needles, straight dark brown trunk visible at the bottom, a little snow dust on the upper branches. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+   ]
+  }
+ },
+ {
+  "clave": "img-pino2",
+  "type": "image",
+  "output_path": "assets/img-pino2.png",
+  "params": {
+   "prompt": "A single tall old pine tree, taller than wide, slightly asymmetric with a few dead bare branches low on the trunk, dark green chunky faceted foliage clusters, rough dark bark. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+   ]
+  }
+ },
+ {
+  "clave": "img-roca1",
+  "type": "image",
+  "output_path": "assets/img-roca1.png",
+  "params": {
+   "prompt": "A single large granite boulder, rounded and cracked, dark grey with patches of green moss and pale lichen. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-roca2",
+  "type": "image",
+  "output_path": "assets/img-roca2.png",
+  "params": {
+   "prompt": "A single flat broken slab of dark mountain rock, angular with sharp edges, moss in the cracks. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-mina_entrada",
+  "type": "image",
+  "output_path": "assets/img-mina_entrada.png",
+  "params": {
+   "prompt": "The entrance of an old abandoned mine dug into a rock face: a heavy rough timber frame with two thick posts and a lintel beam, extra diagonal braces, a few broken planks nailed across the upper part, a pitch-black opening, two rusty rails coming out of the dark, a rusty lantern hanging on a nail. Around the frame, a thick irregular slab of dark rock that shows it is carved into a mountain. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+   ]
+  }
+ },
+ {
+  "clave": "img-jaula",
+  "type": "image",
+  "output_path": "assets/img-jaula.png",
+  "params": {
+   "prompt": "A crude cage for holding a person, about two meters tall and square, made of thick rough wooden poles lashed with rope and rusty barbed wire, a small barred door with a heavy rusty padlock and chain, dirty straw on the floor, empty. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-tronco",
+  "type": "image",
+  "output_path": "assets/img-tronco.png",
+  "params": {
+   "prompt": "A big fallen tree trunk log lying horizontally, about seven meters long, rough dark bark, broken branch stubs, moss, one end splintered and torn from the stump. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-aserradero",
+  "type": "image",
+  "output_path": "assets/img-aserradero.png",
+  "params": {
+   "prompt": "An old abandoned industrial sawmill building in the mountains: a long shed of rusted corrugated iron and weathered wooden planks, a big sliding door half open, a short brick smokestack, broken windows, a wooden log ramp on one side, piles of old logs. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+   ]
+  }
+ },
+ {
+  "clave": "img-tienda",
+  "type": "image",
+  "output_path": "assets/img-tienda.png",
+  "params": {
+   "prompt": "A crude dirty canvas tent from a primitive camp in the woods, patched with animal hides and rags, held up by rough wooden poles and ropes, a dark opening, bones and antlers hanging at the entrance. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+   ]
+  }
+ },
+ {
+  "clave": "img-cruces",
+  "type": "image",
+  "output_path": "assets/img-cruces.png",
+  "params": {
+   "prompt": "A small group of five crude wooden grave crosses of different heights made of branches tied with rope, some leaning, on small mounds of dark earth, a couple of rusty tin plates nailed to them with no writing. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+   ]
+  }
+ },
+ {
+  "clave": "img-farol",
+  "type": "image",
+  "output_path": "assets/img-farol.png",
+  "params": {
+   "prompt": "An old rusty kerosene hurricane lantern with a glass chimney and a wire handle, the flame glowing faintly orange. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-trampa_oso",
+  "type": "image",
+  "output_path": "assets/img-trampa_oso.png",
+  "params": {
+   "prompt": "An open rusty steel bear trap with jagged teeth and a short heavy chain with a stake. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-vagoneta",
+  "type": "image",
+  "output_path": "assets/img-vagoneta.png",
+  "params": {
+   "prompt": "A rusty old mine cart on four small iron wheels, riveted metal box with dents and dried mud. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-pistola",
+  "type": "image",
+  "output_path": "assets/img-pistola.png",
+  "params": {
+   "prompt": "An old worn semi-automatic pistol, dark steel with scratches and worn edges, seen from the side. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-escopeta",
+  "type": "image",
+  "output_path": "assets/img-escopeta.png",
+  "params": {
+   "prompt": "An old pump-action shotgun with a scratched wooden stock and worn blued steel, seen from the side. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-rifle",
+  "type": "image",
+  "output_path": "assets/img-rifle.png",
+  "params": {
+   "prompt": "An old bolt-action hunting rifle with a small scope and a worn wooden stock, seen from the side. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-hacha",
+  "type": "image",
+  "output_path": "assets/img-hacha.png",
+  "params": {
+   "prompt": "A woodsman's felling axe with a long worn wooden handle and a rusty chipped steel head. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-linterna",
+  "type": "image",
+  "output_path": "assets/img-linterna.png",
+  "params": {
+   "prompt": "A sturdy black tactical flashlight, scratched metal body, the lens glowing slightly. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-botiquin",
+  "type": "image",
+  "output_path": "assets/img-botiquin.png",
+  "params": {
+   "prompt": "A battered red first aid kit case with a white cross, scratched and dirty plastic, with a handle. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-bateria",
+  "type": "image",
+  "output_path": "assets/img-bateria.png",
+  "params": {
+   "prompt": "Two worn D-size flashlight batteries lying side by side, plain dull labels with no text. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-bidon",
+  "type": "image",
+  "output_path": "assets/img-bidon.png",
+  "params": {
+   "prompt": "A dented red metal jerry can fuel container with chipped paint and a spout cap. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-municion",
+  "type": "image",
+  "output_path": "assets/img-municion.png",
+  "params": {
+   "prompt": "A small open worn cardboard box of ammunition with brass cartridges inside, no printed text. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-lata",
+  "type": "image",
+  "output_path": "assets/img-lata.png",
+  "params": {
+   "prompt": "A single dented tin can of food with no label, rusty rim, sealed. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-herramientas",
+  "type": "image",
+  "output_path": "assets/img-herramientas.png",
+  "params": {
+   "prompt": "A battered red metal toolbox with a handle, the lid slightly open showing wrenches, pliers and a hammer. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-repuesto",
+  "type": "image",
+  "output_path": "assets/img-repuesto.png",
+  "params": {
+   "prompt": "An old car battery, dirty black plastic case with two lead terminals and a handle strap, no text. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-torre_agua",
+  "type": "image",
+  "output_path": "assets/img-torre_agua.png",
+  "params": {
+   "prompt": "An old wooden water tower on four tall wooden legs with cross braces, a round wooden tank with iron bands, a ladder, weathered and mossy. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+   ]
+  }
+ },
+ {
+  "clave": "img-portada",
+  "type": "image",
+  "output_path": "assets/img-portada.png",
+  "params": {
+   "prompt": "Cinematic night key art for a survival horror video game, no text: a remote mountain valley with huge jagged snowy peaks under a full moon and heavy clouds, dark dense pine forest, tall waterfalls, thick mist on a river, two isolated log cabins with warm orange light in the windows, a wooden bridge, an abandoned rusty old pickup truck with a hydraulic crane, and in the foreground a lone mountain rescuer in a worn olive jacket with a flashlight seen from behind. Between the dark pines, several pale deformed figures stand still, watching. Cold blue moonlight, volumetric fog, ominous atmosphere, realistic, highly detailed.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg",
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/protagonista.jpg"
+   ]
+  }
+ }
+]
