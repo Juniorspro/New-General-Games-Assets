@@ -7,6 +7,8 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 - **07/10/2026 · `claude/fijate-iszyer`:**
   - SALAMANCA, juego propio pedido "pixel art, vertical, liviano, adictivo": roguelite tipo Archero de 182 KB
     ([salamanca](salamanca.md)). Mandado con su portada 9:16 (Higgsfield `0c5a020f…`). Falta probarlo en un celu.
+  - "Así las quiero a las intro" (link de Rezona a La Cripta): la intro de `cripta/` pasó a `motor2d/intro-jxs.js` y
+    la usa SALAMANCA (regla en INDICE). Los demás juegos siguen con la suya: cambiarlos si lo pide.
   - Baldi's Basics Classic 1.4.3 (Unity 2018, gratis) portado a un solo HTML de 13,5 MB y mandado ([baldi](baldi.md)):
     un Unity chiquito en JS con los guiones del juego pasados de C#; intro JXStudios, idioma, controles de celu.
     Falta probar a fondo objetos, la cuerda de Playtime, el final y la escena secreta.

@@ -16,6 +16,9 @@ qué archivo tiene qué: `salamanca/README.md`.
 - Probar: `node salamanca/pruebas/recorrido.mjs /ruta/afuera/` (bot inmortal, ~70 s llega a 1-6). Para un
   jefe: `__salamanca.J.piso = n; J.sala = 7; __salamanca.siguienteSala()`.
 
+- La intro es la compartida `motor2d/intro-jxs.js` (la de La Cripta): `crearIntroJXS({W,H,presenta,vibrar})`,
+  `pasar/dibujar` por cuadro, `jingleJXS(ctx, destino)` si el audio ya anda, `irisJXS` para el corte.
+
 ## Trampas que costaron
 
 - **Capturas de Playwright con ruta relativa caen en la raíz del repo** (el cwd): usar rutas absolutas afuera.

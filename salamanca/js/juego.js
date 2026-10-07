@@ -27,9 +27,9 @@ function ajustar() {
 }
 addEventListener('resize', ajustar);
 
-function irA(nueva, alMedio) {
+function irA(nueva, alMedio, iris) {
   if (transicion) return;
-  transicion = { t: 0, dur: 0.32, alMedio: () => { if (alMedio) alMedio(); if (nueva) { escena = nueva; tEsc = 0; } }, hecho: false };
+  transicion = { t: 0, dur: iris ? 0.3 : 0.32, iris, alMedio: () => { if (alMedio) alMedio(); if (nueva) { escena = nueva; tEsc = 0; } }, hecho: false };
 }
 /* el telón de rombos */
 function dibujarTelon(g, p) {
@@ -226,10 +226,11 @@ function escenaIdioma(t) {
   dibujarFondoMenu(g, t, false);
   titulo(g, 34, t);
   const nombres = { es: 'ESPAÑOL', en: 'ENGLISH', pt: 'PORTUGUÊS' };
-  placa(g, 20, H * 0.36, W - 40, 118);
-  textoPx(g, TXT[IDIOMA].idioma, W / 2, H * 0.36 + 8, { alin: 'centro', grad: GRAD.ocre });
+  const y0 = Math.round(H * 0.33);
+  placa(g, 16, y0, W - 32, 138);
+  ['es', 'en', 'pt'].forEach((l, i) => textoPx(g, TXT[l].idioma, W / 2, y0 + 7 + i * 10, { alin: 'centro', grad: [GRAD.oro, GRAD.ocre, GRAD.ambar][i] }));
   ['es', 'en', 'pt'].forEach((l, i) => {
-    if (boton(34, H * 0.36 + 24 + i * 30, W - 68, 22, nombres[l], { borde: l === IDIOMA ? '#ffe080' : null })) {
+    if (boton(30, y0 + 42 + i * 30, W - 60, 22, nombres[l], { borde: ['#ffcf4a', '#ff7a5a', '#7ad860'][i] })) {
       IDIOMA = l; Guardado.escribir('idioma', l); cacheCarta.clear();
       irA('menu');
     }
@@ -525,7 +526,7 @@ function cuadroPrincipal(ts) {
   Entrada.modoJuego = escena === 'juego' && !transicion;
   try {
     switch (escena) {
-      case 'intro': g.fillStyle = '#07040a'; g.fillRect(0, 0, W, H); break;
+      case 'intro': escenaIntro(dt); break;
       case 'idioma': escenaIdioma(t); break;
       case 'menu': escenaMenu(t); break;
       case 'altar': escenaAltar(t); break;
@@ -540,8 +541,21 @@ function cuadroPrincipal(ts) {
       case 'victoria': escenaFin(t, true); break;
     }
   } catch (e) { console.error(e); }
-  if (transicion) dibujarTelon(g, transicion.t < transicion.dur ? transicion.t / transicion.dur : 2 - transicion.t / transicion.dur);
+  if (transicion && transicion.iris) {
+    // el iris de la intro de JXSTUDIOS: se cierra y se abre con rebote
+    const R = Math.hypot(W, H), p = transicion.t / transicion.dur;
+    irisJXS(g, W, H, W / 2, H / 2, p < 1 ? (1 - IntroJXS_.salida(clamp(p, 0, 1))) * R : IntroJXS_.salidaAtras(clamp(p - 1, 0, 1)) * R);
+  } else if (transicion) dibujarTelon(g, transicion.t < transicion.dur ? transicion.t / transicion.dur : 2 - transicion.t / transicion.dur);
   Entrada.finCuadro();
+}
+
+/* ------------------------------------------------- la intro de JXSTUDIOS */
+let intro = null, musicaIntro = null;
+function escenaIntro(dt) {
+  if (Entrada.toque || Entrada.apretada('Enter', 'Space', 'Escape')) { intro.saltar(); if (intro.listo && musicaIntro) musicaIntro.cortar(); }
+  intro.pasar(dt);
+  intro.dibujar(g);
+  if (intro.listo && !transicion) irA('idioma', null, true);
 }
 
 /* ----------------------------------------------------------------- arranque */
@@ -550,13 +564,10 @@ function arrancar() {
   Entrada.iniciar(lienzo);
   Entrada.alTocarJuego = tocarJuego;
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (escena === 'juego') pausar(); Sonido.pausar(true); } else Sonido.pausar(false); });
-  const intro = document.getElementById('intro');
-  document.getElementById('moneda').src = MONEDA;
-  intro.querySelector('.presenta').textContent = TXT[IDIOMA].presenta;
-  let fuera = false;
-  const salir = () => { if (fuera) return; fuera = true; intro.classList.add('fuera'); setTimeout(() => { intro.remove(); }, 600); escena = 'idioma'; tEsc = 0; };
-  setTimeout(salir, 2600);
-  intro.addEventListener('pointerdown', () => { Sonido.iniciar(); salir(); });
+  // la intro arranca sola; si el navegador deja sonar sin un toque, con su música
+  intro = crearIntroJXS({ W, H, presenta: TXT[IDIOMA].presenta, vibrar });
+  Sonido.iniciar();
+  if (Sonido.ctx && Sonido.ctx.state === 'running') musicaIntro = jingleJXS(Sonido.ctx, Sonido.total);
   requestAnimationFrame(cuadroPrincipal);
   window.__salamanca = { get J() { return J; }, get escena() { return escena; }, DATOS, CTRL, empezarPartida, tomarCarta, siguienteSala };
 }

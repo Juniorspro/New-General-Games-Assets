@@ -38,7 +38,9 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 - **En todo juego, antes del menú, se elige idioma: español, inglés o
   portugués**, siempre, y con todo traducido (menús, historia, diálogos).
   (Excepciones: Slendytubbies pide el idioma sobre el menú difuminado, después de la intro; FNaF 2 queda en inglés.)
-  **Ports: arrancan directo como el original, con una intro de JXStudios (la moneda de `jxstudios/img/`) y los
+  **La intro de JXStudios es siempre la de La Cripta** ("así las quiero a las intro", 07/10): monograma JXS de metal
+  en píxeles sobre fibra de carbono, JXSTUDIOS tipeado, música y el iris; lista para usar en `motor2d/intro-jxs.js`.
+  **Ports: arrancan directo como el original, con esa intro y los
   créditos; los controles de celu, como la versión de celular del juego si existe** (07/10).
   **No se portean juegos que hoy se venden**, aunque sean versiones viejas o recortadas (Poppy Playtime y GTA SA Lite,
   07/10), ni los «gratis» con anuncios o compras (Hypper Sandbox de VobbyGames: tiene versión oficial web en
