@@ -37,7 +37,9 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 - Quiere calidad visual alta ("goty", "AAA"), con números detrás.
 - **En todo juego, antes del menú, se elige idioma: español, inglés o
   portugués**, siempre, y con todo traducido (menús, historia, diálogos).
-  (Slendytubbies es la excepción: el idioma se pide al tocar JUGAR.) Un pedido sin nombre de juego
+  (Excepciones: Slendytubbies pide el idioma al tocar JUGAR; FNaF 2 queda en inglés, sin traducir.)
+  **Ports: arrancan directo como el original, con una intro de JXStudios (la moneda de `jxstudios/img/`) y los
+  créditos; los controles de celu, como la versión de celular del juego si existe** (07/10). Un pedido sin nombre de juego
   habla del último que se le mandó; si hay duda entre dos, preguntar antes.
 - **Cada juego con estilo propio**: otros botones, otro orden de menú, otras
   transiciones y otros efectos. No reusar el diseño del juego anterior.
@@ -78,6 +80,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [slendytubbies](slendytubbies.md) | port de Unity 4.0 a un solo HTML (Slendytubbies V2): ilspycmd, Unity 4 con UnityPy, scripts por clase, niebla que recorta, multijugador por código de sala, carteles traducidos |
 | [tjoc](tjoc.md) | port de Unreal 4.16 (TJOC: Story Mode) por capítulos: CUE4Parse, el Blueprint corriendo en una VM de Kismet, colisión por tipo, exposición de 4.16, imágenes con texto traducidas |
 | [pizza-delivery](pizza-delivery.md) | segundo port (Unity 3.5, 6 escenas, UnityScript): campos de scripts desde las DLL, static batching, objetos que se prenden solos, personajes con huesos, corrutinas, pruebas con await |
+| [fnaf2](fnaf2.md) | port de Clickteam Fusion 2.5 a un solo HTML (FNaF 2): lector y descifrado propios del .exe, motor de eventos en JS, controles como el de celular, intro JXStudios |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el celular parado (vertical), el arte de Rezona y sus trampas |
 | [aeroplaza](aeroplaza.md) | AEROPLAZA, lo general: el 3D social Frutiger Aero (multijugador MQTT, la isla y los reinos, parkour, interiores), cómo se arma y se prueba, las trampas de three |
 | [aeroplaza-vueltas](aeroplaza-vueltas.md) | AEROPLAZA vuelta por vuelta (de la 8.ª a la 48.ª: VR, manos, APK, ARCore, tu espacio, el mando VR Box, las actualizaciones, el celu con amigos, construir la casa como en Sims Mobile): qué nota abrir para cada cosa |
@@ -103,6 +106,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | `ports/slendytubbies/` | port de *Slendytubbies V2 Beta* (Unity 4.0, de otros) a un solo HTML con multijugador: solo el código y las herramientas | [slendytubbies](slendytubbies.md) · `ports/slendytubbies/README.md` |
 | `ports/tjoc-sm/` | port de *The Joy of Creation: Story Mode* (UE 4.16, de otros) a three.js y APK, por capítulos: solo el código y las herramientas | [tjoc](tjoc.md) · `ports/tjoc-sm/README.md` |
 | `ports/pizza-delivery/` | port de *Pizza Delivery v0.2* (Unity 3.5, de otros) a three.js y APK: solo el código y las herramientas; lo del juego sale de su archivo | [pizza-delivery](pizza-delivery.md) · `ports/pizza-delivery/README.md` |
+| `ports/fnaf2/` | port de *Five Nights at Freddy's 2* (Clickteam 2.5, de Scott Cawthon) a un solo HTML: solo el código y las herramientas | [fnaf2](fnaf2.md) · `ports/fnaf2/README.md` |
 | `ruta40/` | RUTA 40: autos tipo Hill Climb por la Ruta 40, arte pintado de Rezona, 7 tramos, 5 vehículos, picadas | [ruta40](ruta40.md) · `ruta40/README.md` |
 | `aeroplaza/` | AEROPLAZA: 3D social Frutiger Aero, multijugador por MQTT sin servidor, 5 reinos, muñecos de gelatina, 3 idiomas | [aeroplaza](aeroplaza.md) · `aeroplaza/README.md` |
 | `videos/` | videos de TikTok relatados: grabadores de tomas, voz, stickers, memes y el montaje en Remotion | [videos](videos.md) |

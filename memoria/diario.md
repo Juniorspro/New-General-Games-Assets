@@ -5,6 +5,8 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
 - **07/10/2026 · `claude/fijate-iszyer`:**
+  - FNaF 2 (Clickteam 2.5) portado a un solo HTML de 19,8 MB y mandado ([fnaf2](fnaf2.md)): intro JXStudios,
+    arranca directo, en inglés, controles como el de celular. Falta: subtítulos de las llamadas (no los pidió).
   - Slendytubbies girado 90° con el celu parado (HTML mandado).
   - FNaF 2 ("by SuperMiGamer003", es el FNaF 2 de Scott con agregados), empezado y frenado por el usuario:
     Clickteam 2.5 b288 cifrado; `scratchpad/fnaf2/herr/ctf.py` + `cifra.py` ya leen todo (sin commit todavía).

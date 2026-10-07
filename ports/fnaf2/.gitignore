@@ -1,0 +1,10 @@
+# Lo del juego (de Scott Cawthon) no va al repo: el .exe, lo exportado y lo armado.
+descarga/
+web/datos/
+dist/
+salida/
+pruebas/salida/
+ref/
+*.log
+eventos.txt
+noche.txt
