@@ -2,8 +2,9 @@
 
 Pidió portear "FiveNightsatFreddys2bySuperMiGamer003.exe" (MediaFire) "como siempre dando créditos", **en HTML**,
 **igual al de celular** (no botones inventados), **sin traducir** (queda en inglés) y que **arranque directo como el
-original, con una intro de JXStudios**. Es el FNaF 2 v1.033 de Scott Cawthon (demo extendida), Clickteam Fusion 2.5
-build 288. Salió `salida/fnaf2.html` de 19,8 MB. Código en `ports/fnaf2/` (sin nada del juego).
+original, con una intro de JXStudios**. Es el FNaF 2 v1.033 **completo** de Scott Cawthon
+(trae pantallas de demo que no se activan: `DEMO?` queda en 0; «Continue» con `level` 5 entra a la noche 5), Clickteam
+Fusion 2.5 build 288. Salió `salida/fnaf2.html` de 19,8 MB. Código en `ports/fnaf2/` (sin nada del juego).
 
 ## Lo que hay que saber
 

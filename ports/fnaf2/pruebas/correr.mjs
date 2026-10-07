@@ -16,6 +16,7 @@ p.on('pageerror', (e) => err.push('PAGEERROR ' + (e.stack || e.message).slice(0,
 p.on('response', (r) => { if (r.status() >= 400) err.push('falta ' + r.url().split('/').slice(-2).join('/')); });
 p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) err.push(m.text().slice(0, 300)); });
 await p.addInitScript((i) => localStorage.setItem('fnaf2.v1', JSON.stringify({ idioma: i })), process.env.IDIOMA || 'es');
+if (process.env.INI) await p.addInitScript((x) => localStorage.setItem('fnaf2.ini', x), process.env.INI);
 await p.goto(process.env.ARCHIVO ? 'file://' + path.join(AQUI, 'salida/fnaf2.html') : `http://127.0.0.1:${PUERTO}/index.html`);
 await p.waitForSelector('#intro:not([hidden])', { timeout: 120000 }); await p.waitForTimeout(500);
 await p.click('#intro').catch(() => {});

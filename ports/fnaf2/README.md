@@ -1,7 +1,8 @@
 # Five Nights at Freddy's 2 → un solo HTML (port no oficial)
 
 Port para uso personal de **Five Nights at Freddy's 2** (Scott Cawthon, 2014), versión subida por
-**SuperMiGamer003** (es el FNaF 2 v1.033 con su demo extendida). El juego, sus personajes, imágenes y sonidos son
+**SuperMiGamer003** (es el FNaF 2 v1.033 completo; trae las pantallas de la demo, pero no se activan: el contador
+`DEMO?` queda en 0). El juego, sus personajes, imágenes y sonidos son
 de su autor: **nada de eso está en este repo**; sale del `.exe` original con las herramientas de acá.
 
 - **`herr/`** (Python, propio): lee el `.exe` de Clickteam Fusion 2.5 (build 288): `ctf.py` (trozos, objetos, eventos,
