@@ -322,6 +322,11 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
   (se sacaron); estratos con `sin(y)` → pana a rayas (amplitud chica y por manchas).
 - Límite de 45° para trepar (juego.js): las montañas cierran el valle; se comprobó por
   BFS en una grilla de 4 m que todos los lugares siguen alcanzables.
+- Artifact de Los Montes: JewVYcbsLHJhbg98tcwqrf (7/10, v1), con `room` y los tópicos
+  herir/tomar/liberar/disparo/zona abiertos a `interact` (si no, solo los Editores emiten).
+- En prueba headless, cerrar un panel pide el puntero, falla y el juego se **pausa solo**:
+  la prueba pone `est.pausado = false` antes de cada paso. Y `simular(seg, paso, false)`
+  para no dibujar en cada paso (sin eso, 10 min por la mitad de la partida).
 - `prueba-completa.mjs` juega todo por la API (`__p.ir/usar/probarLados`) en ~10 min
   de SwiftShader: correrlo en segundo plano.
 
