@@ -8,6 +8,8 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
   - TAJO: la primera entrega estaba incompleta y se quejó ("ni te hiciste el juego"). Rehecho entero ([tajo](tajo.md)):
     127 KB, 4 modos, combos, bombas, poderes, dojo, controles, intro a pincel. Mandados el HTML y una portada nueva
     (Higgsfield `4e52f759…`). Falta probarlo en el celu.
+  - "Hacé el último juego": DORADO, pinball vertical Art Déco ([dorado](dorado.md)), 158 KB, con portada
+    (Higgsfield `95a6115b…`). Falta probarlo en el celu.
 
 - **07/10/2026 · `claude/fijate-iszyer`:**
   - Portada 9:16 de Plants vs. Zombies (fan art, pidió "real": render realista): Higgsfield `d8a0ec9e…` + título Bebas

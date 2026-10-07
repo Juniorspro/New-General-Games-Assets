@@ -89,6 +89,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [justshoot](justshoot.md) | Just Shoot: la demo web (BananaBread/Emscripten) a un solo HTML, texturas DXT, paquetes de Emscripten, controles de dedo |
 | [salamanca](salamanca.md) | SALAMANCA: el roguelite vertical en pixel art (tipo Archero, 182 KB): arte en texto, chacarera sintetizada, el bot de prueba y sus trampas |
 | [filete](filete.md) | FILETE: el rompecabezas de bloques en filete porteño (108 KB), la intro de JXSTUDIOS con estilo propio, la tanda justa de piezas |
+| [dorado](dorado.md) | DORADO: pinball vertical Art Déco (158 KB): física de flippers, la letra de un TTF en trazos (28 KB), medir dónde cae la bola, el bot acelerado |
 | [tajo](tajo.md) | TAJO: cortar fruta con el dedo en tinta sumi-e (127 KB): mitades con la pulpa, el filo por velocidad, el bot de prueba; la primera entrega salió incompleta |
 | [nebulosa](nebulosa.md) | NEBULOSA: fusionar cuerpos celestes con física (tipo Suika) en neón, 104 KB; la intro en un lienzo liso (no de píxeles) |
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR y los dúos de los seis de un archivo): tomas con bots, voz, subtítulos, montaje en Remotion, portadas |
@@ -121,6 +122,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | `barro/` | BARRO: motocross de costado tipo Mad Skills, 20 pistas en 4 sedes, Jam del día, contrarreloj, un archivo | [barro](barro.md) · `barro/README.md` |
 | `salamanca/` | SALAMANCA: roguelite vertical en pixel art tipo Archero, 4 pisos con jefe, cartas, altar, desafío del día, un archivo de 182 KB | [salamanca](salamanca.md) · `salamanca/README.md` |
 | `filete/` | FILETE: rompecabezas de bloques tipo Block Blast en filete porteño, tango sintetizado, 30 niveles por barrios, un archivo de 108 KB | [filete](filete.md) · `filete/README.md` |
+| `dorado/` | DORADO: pinball vertical en Art Déco, misiones de hotel, multibola, jazz sintetizado, un archivo de 158 KB | [dorado](dorado.md) · `dorado/README.md` |
 | `tajo/` | TAJO: cortar fruta tipo Fruit Ninja en tinta sumi-e, 4 modos, dojo de filos, koto sintetizado, un archivo de 127 KB | [tajo](tajo.md) · `tajo/README.md` |
 | `nebulosa/` | NEBULOSA: fusionar cuerpos celestes (polvo estelar → agujero negro) con física, neón synthwave, 3 modos, catálogo, un archivo de 104 KB | [nebulosa](nebulosa.md) · `nebulosa/README.md` |
 | `ports/bus-stop/` | port de *Bus Stop Simulator* (Unity 4.5, de otros) a three.js y APK: solo el código y las herramientas; lo del juego sale de su zip | [bus-stop](bus-stop.md) · `ports/bus-stop/README.md` |

@@ -1,0 +1,5 @@
+{
+  "salida": "dorado.html",
+  "css": ["dorado/dorado.css"],
+  "js": ["motor2d/fuente.js", "motor2d/intro-jxs.js", "dorado/js/letra.js", "dorado/js/base.js", "dorado/js/fisica.js", "dorado/js/mesa.js", "dorado/js/sonido.js", "dorado/js/intro.js", "dorado/js/juego.js"]
+}
