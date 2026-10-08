@@ -7,6 +7,7 @@ const { dotnet } = await import(modulo('_framework/dotnet.js'));
 const { crearAudio } = await import(modulo('audio.js'));
 const { crearFuentes } = await import(modulo('fuentes.js'));
 const { crearControles } = await import(modulo('controles.js'));
+const { crearVideos } = await import(modulo('video.js'));
 const { crearFuenteRed } = await import(modulo('datos.js'));
 
 const estado = document.getElementById('estado');
@@ -77,8 +78,11 @@ if (U) arranque = arranque.withResourceLoader(U.cargadorDotnet);
 const { setModuleImports, getAssemblyExports, getConfig, runMain } = await arranque.create();
 const TIPOS = ['error', 'assert', 'warn', 'log', 'exception'];
 const audio = crearAudio(datos);
+const videos = crearVideos(datos);
+globalThis.porteoVideos = videos;   // porteo_video_subir (porteo.c) toma de acá el <video>
 setModuleImports('porteo', {
   ...audio,
+  ...videos,
   ...crearFuentes(),
   tamanoPaquete: (n) => { const p = datos.paquete(n); return p ? p.length : -1; },
   hayPaquete: (n) => (datos.hayPaquete ? datos.hayPaquete(n) : true),
@@ -278,7 +282,14 @@ addEventListener('blur', () => {
   abajo.clear();
 });
 
-const controles = crearControles(exp, lienzo);
+// los controles: los de Android con TouchControlsKit (Slime Rancher), o los de un juego de PC en
+// primera persona (joystick y mirar arrastrando, ver controles-pc.js). indice.json puede elegir
+const tipoControles = indice.controles || (indice.convencion === 'd3d11' ? 'pc' : 'tck');
+let controles = { cuadro() {} };
+if (tipoControles === 'pc') {
+  const { crearControlesPC } = await import(modulo('controles-pc.js'));
+  crearControlesPC(exp, lienzo, indice.controlesPC || {});
+} else controles = crearControles(exp, lienzo);
 
 // ── el sistema de velocidad ──
 // Si el teléfono no da abasto (menos de 24 cuadros por segundo durante 3 segundos), se dibuja a

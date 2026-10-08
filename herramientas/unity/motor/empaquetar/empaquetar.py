@@ -7,7 +7,10 @@
 WEB es la publicación de Web/ (la carpeta wwwroot, con _framework), DATOS la salida de exportar.py
 (indice.json, paquetes/, recursos/). --orden es la lista de recursos en el orden en que el motor
 los usó (globalThis.porteoOrden en una partida por la red): lo primero que se usa va primero en el
-archivo, así el juego arranca mientras el resto se sigue leyendo.
+archivo, así el juego arranca mientras el resto se sigue leyendo. Un "|" en la lista corta ahí los
+bloques: lo de antes (lo que usa el menú, por ejemplo) queda en bloques propios y el menú no espera
+bloques de 8 MB que traen también la primera escena. Con un corte, la pantalla de carga sabe cuánto
+hay que bajar para el menú (mbMenu: lo de antes del primer corte).
 
 Cómo achica sin perder:
   - LZMA (el de xz, preset 9e) en bloques de --bloque MB, cada bloque de una sola clase de datos y
@@ -294,6 +297,8 @@ def pantalla_de_carga(a):
         config["fondo"] = "data:image/webp;base64," + base64.b64encode(fondo_difuminado(a.fondo_carga)).decode()
     if a.registro:
         config["registro"] = a.registro
+    if getattr(a, "mb_menu", None):   # medido con el corte de --orden: mejor que el de carga.json
+        config["mbMenu"] = a.mb_menu
     pegamento = (AQUI / "pantalla.js").read_text(encoding="utf-8").replace("/*CONFIG*/null", json.dumps(config, ensure_ascii=False))
     # el registro y el escenario primero: los errores de lo que sigue y la pantalla ya horizontal
     partes = [porteo / "registro.js", porteo / "escenario.js", porteo / "intro.js", porteo / "carga.js"]
@@ -403,6 +408,8 @@ def main():
     web, datos = Path(a.web), Path(a.datos)
     BLOQUE = int(a.bloque * 1048576)
     t0 = time.time()
+    if a.cache:   # antes del audio, que también guarda ahí lo que ya optimizó
+        Path(a.cache).mkdir(parents=True, exist_ok=True)
 
     # 1. las entradas: (clave, bytes, clase, trans)
     log("analizando los paquetes…")
@@ -422,11 +429,23 @@ def main():
     codigo.append(("findice.json", (datos / "indice.json").read_bytes(), "codigo", None))
     paquetes = [("p" + f.stem, f.read_bytes(), "paquetes", None) for f in sorted((datos / "paquetes").glob("*.paq"))]
 
-    orden = []
+    orden, cortes = [], []
     if a.orden:
-        orden = [int(x) for x in json.loads(Path(a.orden).read_text())]
+        for x in json.loads(Path(a.orden).read_text()):
+            if x == "|":
+                cortes.append(len(orden))
+            else:
+                orden.append(int(x))
     posicion = {rid: k for k, rid in enumerate(orden)}
     ids = sorted((int(f.stem) for f in (datos / "recursos").glob("*.bin")), key=lambda r: (posicion.get(r, len(orden)), r))
+    # el primer recurso de cada tramo (después de cada "|"): ahí se cierran los bloques abiertos
+    cortar, k = set(), 0
+    for rid in ids:
+        p = posicion.get(rid, len(orden))
+        if k < len(cortes) and p >= cortes[k]:
+            cortar.add("r%d" % rid)
+            while k < len(cortes) and p >= cortes[k]:
+                k += 1
     log(f"{len(codigo)} archivos de código, {len(paquetes)} paquetes, {len(ids)} recursos ({len(orden)} con orden de uso)")
     # las mallas proxy, como diferencia con lo que se predice desde otras mallas (proxies.py)
     descs, fuente = {}, None
@@ -466,10 +485,16 @@ def main():
     # 2. los bloques: el código primero (para arrancar ya), los paquetes, y los recursos en orden de
     # uso, cada clase en sus bloques (se abre uno nuevo al llenarse)
     bloques = []    # [clase, [entradas], tamaño]
+    antes_del_corte = None   # cuántos bloques hay antes del primer corte (lo del menú)
 
     def agrupar(lista, tope=BLOQUE):
+        nonlocal antes_del_corte
         abiertos = {}
         for e in lista:
+            if e[0] in cortar:
+                abiertos = {}
+                if antes_del_corte is None:
+                    antes_del_corte = len(bloques)
             clase = e[2]
             b = abiertos.get(clase)
             if b is None or b[2] + len(e[1]) > tope and b[1]:
@@ -494,8 +519,6 @@ def main():
         for e, desde in es:
             buf[desde:desde + len(e[1])] = e[1]
         trabajos.append((i, bytes(buf), PARAMETROS[clase], a.cache))
-    if a.cache:
-        Path(a.cache).mkdir(parents=True, exist_ok=True)
     comprimidos = [None] * len(bloques)
     hechos = 0
     with ProcessPoolExecutor(a.procesos) as ex:
@@ -504,6 +527,10 @@ def main():
             hechos += len(trabajos[i][1])
             log(f"   bloque {i} ({bloques[i][0]}): {len(trabajos[i][1]) / 1e6:.1f} → {len(c) / 1e6:.2f} MB en {dt:.0f} s ({hechos * 100 // total}%)")
     del trabajos
+    a.mb_menu = None
+    if antes_del_corte is not None:
+        a.mb_menu = round(sum(len(c) for c in comprimidos[:antes_del_corte]) / 1048576, 1)
+        log(f"antes del primer corte (lo del menú): {antes_del_corte} bloques, {a.mb_menu} MB")
 
     # 4. el HTML
     tabla = {"wasm": base64.b64encode((AQUI / "lzma.wasm").read_bytes()).decode(),

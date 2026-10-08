@@ -470,7 +470,12 @@
   for (let i = 0; i < nB; i++) if (deEscena(T.bloques[i])) fondo.push(i);
   for (let i = 0; i < nB; i++) if (T.bloques[i].k === 'audio') fondo.push(i);
 
+  // en el APK (herramientas/porteo/apk: la página sale de los assets) los bloques ya están en el
+  // teléfono: guardarlos otra vez en Cache Storage los duplicaba, y el service worker no tiene red
+  const enApk = location.hostname === 'appassets.androidplatform.net';
+
   async function abrirCache() {
+    if (enApk) return;
     try { if (self.caches && isSecureContext) cacheBloques = await caches.open('porteo-bloques'); } catch (e) { cacheBloques = null; }
     if (!cacheBloques) return;
     // los de versiones anteriores (que ya no están en la tabla) se borran
@@ -491,9 +496,12 @@
       let i = -1;
       while (urgentes.length && i < 0) { const u = urgentes.shift(); if (!comp[u] && !bajando.has(u)) i = u; }
       // lo que nadie pidió todavía, de a pocos y sólo cuando no se está bajando nada que el motor
-      // espera: con una conexión lenta, todo el ancho es para eso
+      // espera: con una conexión lenta, todo el ancho es para eso. Mientras la pantalla de carga
+      // tapa el juego, de a uno: lo que sigue en el archivo es lo que el arranque va a pedir enseguida
+      // (los paquetes después del código) y no tiene que repartir la conexión con otros dos
       if (i < 0) {
-        if (bajando.size >= 3) return;
+        const tope = globalThis.porteoCarga && porteoCarga.tapado() ? 1 : 3;
+        if (bajando.size >= tope) return;
         for (const j of bajando) if (urgente[j]) return;
         while (siguiente < fondo.length && (comp[fondo[siguiente]] || bajando.has(fondo[siguiente]))) siguiente++;
         if (siguiente >= fondo.length) return;
@@ -519,6 +527,10 @@
     for (const [i, t] of pedidoListo) if (!desc[i] && ahora - t < 2000) f += T.bloques[i].c;
     return f;
   };
+
+  // para mirar desde afuera (pruebas, la consola): por bloque, si lo pidió el motor (u), si llegó
+  // (c) o se está bajando (b), su clase y su tamaño en KB
+  P.verBloques = () => T.bloques.map((b, i) => `${i}:${urgente[i] ? 'u' : ''}${comp[i] ? 'c' : bajando.has(i) ? 'b' : ''}:${b.k}:${Math.round(b.c / 1024)}`).join(' ');
 
   // de lo que pidió el motor, qué parte ya llegó (para la barra de la pantalla de carga)
   function fraccionUrgente() {
@@ -677,7 +689,7 @@
 
   if (T.web) {
     // la página guardada para arrancar sin red, y que el navegador no borre lo bajado si le falta lugar
-    if ('serviceWorker' in navigator && isSecureContext) navigator.serviceWorker.register('sw.js').catch((e) => console.warn('porteo: sin service worker', e));
+    if ('serviceWorker' in navigator && isSecureContext && !enApk) navigator.serviceWorker.register('sw.js').catch((e) => console.warn('porteo: sin service worker', e));
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     abrirCache().then(() => {
       // lo primero y solo, con todo el ancho: el código (con él arranca .NET mientras baja lo

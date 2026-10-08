@@ -1,0 +1,66 @@
+# Bad Parenting 1: Mr. Red Face → navegador
+
+El juego de 2OO2 (gratis en itch.io, Unity 2022.2 para Windows) corriendo en el navegador del
+teléfono: su IL original sobre nuestro UnityEngine en C# ([`herramientas/unity/motor`](../../herramientas/unity/motor)),
+en .NET 10 para WebAssembly (AOT), con WebGL 2 y PhysX. Es el primer juego de PC del motor: los
+shaders vienen compilados para Direct3D 11 y pasan a GLSL ES con HLSLcc (ver "Juegos de PC" en el
+LEEME del motor).
+
+**Estado:** el logo de 2OO2 (video), el menú, las opciones (idioma, brillo, filtro), la casa, los
+diálogos, caminar, correr, mirar y usar las cosas andan; las 13 escenas cargan y corren en la
+prueba de consola sin miembros faltantes. El filtro VHS y el verde de las habitaciones salen
+como en el original (comparado con las capturas de itch.io).
+
+## Controles
+
+En el teléfono (siempre horizontal y 16:9; en vertical gira 90°):
+
+| qué | cómo |
+|---|---|
+| caminar | joystick a la izquierda (aparece donde se apoya el dedo) |
+| mirar | arrastrar en la mitad derecha |
+| usar lo que se mira / pasar el diálogo | tocar la pantalla |
+| correr | mantener **Correr** |
+| usar | **Usar** (la E) |
+| pausa (idioma, brillo, filtro) | **❚❚** |
+
+Los controles aparecen sólo mientras se juega (el juego traba el puntero); en los menús los toques
+van a los botones del juego. En la computadora: clic en el juego para trabar el puntero, WASD y el
+mouse, Shift para correr, E o clic para usar, Esc para la pausa.
+
+## Armarlo
+
+```bash
+porteos/bad-parenting/portear.sh "Bad Parenting 1.zip" entrega-bp1
+```
+
+Deja en `entrega-bp1/`: `sitio/` (la versión para subir: baja lo que hace falta, queda en caché y
+se instala como app) y `bad-parenting-1.html` (el HTML único, se abre como archivo). El APK sale
+del sitio con `herramientas/porteo/apk/armar.py ... --orientacion horizontal`, y la subida privada
+con `herramientas/porteo/cloudflare/subir.py` (una puerta con clave delante de todo).
+
+| archivo | qué es |
+|---|---|
+| `portear.sh` | del zip al sitio y al HTML único (HLSLcc, exportar, reparar, la web con AOT, empaquetar) |
+| `carga.json` | el título, el aviso de la intro, los consejos de la pantalla de carga y la escena del menú (`Main`) |
+| `carga.py` | la portada del menú (el sprite de `Cover`) → imagen de la pantalla de carga, fondo e ícono |
+| `orden.json` | los recursos en el orden en que se usan; el `"|"` separa lo del menú (bloques propios) |
+
+## La carga
+
+Con 5 Mbps: el código (.NET compilado, 5,5 MB con LZMA) llega primero, el motor arranca mientras
+llegan los paquetes, y el menú espera sólo lo suyo. Lo que lo hizo más chico:
+
+- el corte de `orden.json`: lo del menú en bloques propios (de 13 MB a 7);
+- los videos no se esperan (`VideoClip` es diferible: el `<video>` busca sus bytes al crearse);
+  el del bosque (casi 1 MB) se esperaba desde el arranque;
+- Steamworks.NET recortado (`perfiles/bad-parenting/juego.props`): Steam no está y entero eran
+  3,4 MB de código compilado;
+- mientras la pantalla de carga tapa el juego, lo de fondo baja de a un bloque: lo que el arranque
+  pide enseguida no reparte la conexión.
+
+El logo de 2OO2 (la primera escena) corre sin dibujar, un segundo de juego por cuadro, mientras la
+pantalla de carga lo tapa, como el de Monomi Park en Slime Rancher.
+
+El juego, sus personajes, imágenes y sonidos son de 2OO2: nada de eso entra al repo (sólo las
+recetas, el motor y las herramientas).

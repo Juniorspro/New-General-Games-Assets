@@ -10,7 +10,8 @@
 (function () {
   'use strict';
   const CONFIG = /*CONFIG*/null;
-  const MENU = 'MainMenu';
+  // la escena del menú (carga.json, "menu"): cuando termina de cargar, la pantalla se va
+  const MENU = CONFIG.menu || 'MainMenu';
   const ESPERA_MAXIMA = 25000;   // ms después del menú: con una conexión muy lenta, que se vea igual
   let pantalla = null, terminado = false, tapa = true, menuListo = false;
   let datos = 0, motor = false, escenas = 0;
@@ -33,7 +34,10 @@
   }
   function actualizar(texto) {
     if (!pantalla) return;
-    const mb = megas(), meta = CONFIG.mbMenu || 0;
+    // por MB sólo en la versión para un sitio: en el HTML único los bloques llegan con la página y
+    // no se cuentan (la barra se quedaba en 0 hasta el final)
+    const U = globalThis.porteoUnArchivo;
+    const mb = megas(), meta = (U && U.web && CONFIG.mbMenu) || 0;
     const f = meta ? 0.95 * Math.min(1, mb / meta) + (escenas >= 2 ? 0.02 : 0)
                    : 0.5 * datos + (motor ? 0.2 : 0) + Math.min(escenas, 2) * 0.12;
     const coma = (x) => x.toFixed(1).replace('.', idioma === 'en' ? '.' : ',');

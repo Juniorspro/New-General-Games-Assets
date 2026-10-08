@@ -303,11 +303,14 @@ namespace Porteo.Datos
         // Lo que una escena puede usar después de armada, si el anfitrión lo permite: el sonido
         // (AudioClip) y las texturas (Texture2D, Cubemap, Texture3D, Texture2DArray). En el menú
         // de Slime Rancher son 9 de cada 10 bytes de lo que alcanza (el director de objetos del
-        // juego apunta a todos los prefabs) y casi nada de eso se ve o se oye ahí.
+        // juego apunta a todos los prefabs) y casi nada de eso se ve o se oye ahí. Los videos
+        // (VideoClip) como el sonido: los bytes los busca la página recién al crear el <video>
+        // (VideoPlayer.Prepare), y en Bad Parenting el del bosque (casi 1 MB) alcanzaba desde el
+        // arranque y se esperaba antes del menú.
         static bool Diferible(int clase) => clase switch
         {
             28 or 89 or 117 or 187 => Anfitrion.DiferirTexturas,
-            83 => Anfitrion.DiferirAudio,
+            83 or 329 => Anfitrion.DiferirAudio,
             _ => false,
         };
 

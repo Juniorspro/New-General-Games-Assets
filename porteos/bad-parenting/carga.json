@@ -1,0 +1,32 @@
+{
+  "titulo": "Bad Parenting 1: Mr. Red Face",
+  "aviso": {
+    "es": "Port no oficial, para uso personal, de «Bad Parenting 1: Mr. Red Face» de 2OO2. El juego, sus personajes, imágenes y sonidos son de sus autores.",
+    "en": "Unofficial personal-use port of \"Bad Parenting 1: Mr. Red Face\" by 2OO2. The game, its characters, images and sounds belong to their authors.",
+    "pt": "Port não oficial, para uso pessoal, de \"Bad Parenting 1: Mr. Red Face\" da 2OO2. O jogo, seus personagens, imagens e sons pertencem aos seus autores."
+  },
+  "consejos": {
+    "es": [
+      "Joystick a la izquierda para caminar; arrastrá a la derecha para mirar.",
+      "Tocá la pantalla para usar lo que mirás y para pasar los diálogos.",
+      "El botón Correr se mantiene apretado mientras corrés.",
+      "Con ❚❚ pausás y cambiás el idioma, el brillo y el filtro.",
+      "Mejor con auriculares y la luz apagada."
+    ],
+    "en": [
+      "Left joystick to walk; drag on the right to look around.",
+      "Tap the screen to use what you look at and to advance dialogue.",
+      "Hold the Run button while you run.",
+      "Use ❚❚ to pause and change language, brightness and filter.",
+      "Best with headphones and the lights off."
+    ],
+    "pt": [
+      "Joystick à esquerda para andar; arraste à direita para olhar.",
+      "Toque na tela para usar o que você olha e passar os diálogos.",
+      "Segure o botão Correr enquanto corre.",
+      "Com ❚❚ você pausa e muda idioma, brilho e filtro.",
+      "Melhor com fones de ouvido e a luz apagada."
+    ]
+  },
+  "menu": "Main"
+}

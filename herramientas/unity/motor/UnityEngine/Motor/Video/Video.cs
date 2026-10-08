@@ -348,7 +348,8 @@ namespace UnityEngine.Video
                 case VideoRenderMode.MaterialOverride:
                 {
                     if (rendererDestino == null) return;
-                    texMaterial ??= new Texture2D(2, 2) { name = "porteo_video" };
+                    // sin mips: el video sube sólo el nivel 0
+                    texMaterial ??= new Texture2D(2, 2, TextureFormat.RGBA32, false) { name = "porteo_video" };
                     tex = texMaterial.IdGl();
                     var bloque = new MaterialPropertyBlock();
                     rendererDestino.GetPropertyBlock(bloque);

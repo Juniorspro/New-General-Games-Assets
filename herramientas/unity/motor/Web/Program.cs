@@ -31,6 +31,14 @@ public static partial class Programa
     [JSImport("fuenteRegistrar", "porteo")] internal static partial void FuenteRegistrar(int fuente, [JSMarshalAs<JSType.MemoryView>] Span<byte> ttf);
     [JSImport("discoGuardar", "porteo")] internal static partial void DiscoGuardar(string ruta, [JSMarshalAs<JSType.MemoryView>] Span<byte> datos);
     [JSImport("discoBorrar", "porteo")] internal static partial void DiscoBorrar(string ruta);
+    [JSImport("videoCrear", "porteo")] internal static partial void VideoCrear(int id, int recurso);
+    [JSImport("videoReproducir", "porteo")] internal static partial void VideoReproducir(int id, bool si);
+    [JSImport("videoBuscar", "porteo")] internal static partial void VideoBuscar(int id, double segundos);
+    [JSImport("videoAjustar", "porteo")] internal static partial void VideoAjustar(int id, bool bucle, double velocidad, double volumen);
+    [JSImport("videoTiempo", "porteo")] internal static partial double VideoTiempo(int id);
+    [JSImport("videoEstado", "porteo")] internal static partial int VideoEstado(int id);
+    [JSImport("videoSoltar", "porteo")] internal static partial void VideoSoltar(int id);
+    [System.Runtime.InteropServices.DllImport("porteo")] static extern int porteo_video_subir(int id, uint textura);
     [JSImport("fuenteRasterizar", "porteo")] internal static partial bool FuenteRasterizar(int fuente, int codigo, int tamPx, int estilo, int ox, int oy, int w, int h, [JSMarshalAs<JSType.MemoryView>] Span<byte> salida);
 
     // los glifos de UI.Text, dibujados con el canvas 2D del navegador (fuentes.js)
@@ -39,6 +47,19 @@ public static partial class Programa
         public void Registrar(int fuente, byte[] ttf) => FuenteRegistrar(fuente, ttf);
         public bool Rasterizar(int fuente, int codigo, int tamPx, int estilo, int ox, int oy, int w, int h, Span<byte> salida) =>
             FuenteRasterizar(fuente, codigo, tamPx, estilo, ox, oy, w, h, salida);
+    }
+
+    // los videos (VideoPlayer) con un <video> del navegador (video.js)
+    sealed class VideoWeb : Porteo.Video.IVideo
+    {
+        public void Crear(int id, int recurso) => VideoCrear(id, recurso);
+        public void Reproducir(int id, bool si) => VideoReproducir(id, si);
+        public void Buscar(int id, double segundos) => VideoBuscar(id, segundos);
+        public void Ajustar(int id, bool bucle, double velocidad, double volumen) => VideoAjustar(id, bucle, velocidad, volumen);
+        public double Tiempo(int id) => VideoTiempo(id);
+        public int Estado(int id) => VideoEstado(id);
+        public bool Subir(int id, uint textura) => porteo_video_subir(id, textura) != 0;
+        public void Soltar(int id) => VideoSoltar(id);
     }
 
     // el sonido del motor, con Web Audio (audio.js)
@@ -100,6 +121,7 @@ public static partial class Programa
         Anfitrion.Consola = (t, tipo) => Consola(t, (int)tipo);
         Porteo.Audio.Sonido.Salida = new AudioWeb();
         Porteo.UI.Fuentes.Anfitrion = new FuentesWeb();
+        Porteo.Video.Videos.Salida = new VideoWeb();
         Pantalla.Dpi = (float)dpi;
         Plataforma.Movil = movil;
         if (Porteo.Render.Gpu.Iniciar("#lienzo", false)) Porteo.Render.Dibujo.Iniciar();
@@ -467,6 +489,9 @@ public static partial class Programa
     [JSExport] public static void BotonRaton(int boton, bool baja) => Entrada.BotonRaton(boton, baja);
     [JSExport] public static void Raton(double x, double y) => Entrada.Raton((float)x, (float)y);
     [JSExport] public static void Rueda(double dx, double dy) => Entrada.Rueda((float)dx, (float)dy);
+    [JSExport] public static void Mirar(double dx, double dy) => Entrada.Mirar((float)dx, (float)dy);
+    // el juego trabó el puntero (Cursor.lockState): se está jugando, no en un menú
+    [JSExport] public static bool CursorTrabado() => Cursor.lockState == CursorLockMode.Locked && Time.timeScale > 0;
     [JSExport] public static void Texto(string s) => Entrada.Texto(s);
     [JSExport] public static void Toque(int dedo, int fase, double x, double y) => Entrada.Toque(dedo, fase, (float)x, (float)y);
 }

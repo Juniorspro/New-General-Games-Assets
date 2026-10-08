@@ -2,6 +2,7 @@
 // (DllImport "porteo" con los nombres de GLES3: los resuelve la biblioteca GL de emscripten);
 // acá sólo está lo que no es una llamada de GL: crear el contexto y habilitar extensiones.
 #include <emscripten/html5.h>
+#include <emscripten.h>
 
 static EMSCRIPTEN_WEBGL_CONTEXT_HANDLE contexto;
 
@@ -35,3 +36,17 @@ void porteo_tamano(int* ancho, int* alto)
 {
     emscripten_webgl_get_drawing_buffer_size(contexto, ancho, alto);
 }
+
+// el cuadro actual de un video (video.js) a una textura de GL, con la fila 0 abajo como las
+// texturas de Unity; 0 si todavía no hay imagen. Va en JS porque la imagen es un <video>
+EM_JS(int, porteo_video_subir, (int id, unsigned int tex), {
+    var vs = globalThis.porteoVideos;
+    var el = vs && vs.elemento(id);
+    var t = GL.textures[tex];
+    if (!el || !t) return 0;
+    GLctx.bindTexture(GLctx.TEXTURE_2D, t);
+    GLctx.pixelStorei(0x9240, true);   // UNPACK_FLIP_Y_WEBGL
+    GLctx.texImage2D(GLctx.TEXTURE_2D, 0, GLctx.RGBA, GLctx.RGBA, GLctx.UNSIGNED_BYTE, el);
+    GLctx.pixelStorei(0x9240, false);
+    return 1;
+});

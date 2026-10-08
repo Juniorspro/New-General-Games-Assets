@@ -13,6 +13,10 @@
     <Reference Include="Unity.Timeline"><HintPath>$(JUEGO)/Unity.Timeline.dll</HintPath></Reference>
     <Reference Include="Unity.Postprocessing.Runtime"><HintPath>$(JUEGO)/Unity.Postprocessing.Runtime.dll</HintPath></Reference>
     <Reference Include="com.rlabrecque.steamworks.net"><HintPath>$(JUEGO)/com.rlabrecque.steamworks.net.dll</HintPath></Reference>
-    <TrimmerRootAssembly Include="Assembly-CSharp;UnityEngine.UI;Unity.TextMeshPro;RTLTMPro;Unity.Timeline;Unity.Postprocessing.Runtime;com.rlabrecque.steamworks.net;UnityEngine.CoreModule" />
+    <TrimmerRootAssembly Include="Assembly-CSharp;UnityEngine.UI;Unity.TextMeshPro;RTLTMPro;Unity.Timeline;Unity.Postprocessing.Runtime;UnityEngine.CoreModule" />
+    <!-- Steamworks.NET sí se recorta: Steam no está (reparar deja SteamAPI.Init en false), nadie
+         lo crea por reflexión y entero eran 3,4 MB de código compilado (con AOT, ~10% del .wasm
+         que se baja antes del menú) para las pocas llamadas del juego -->
+    <TrimmableAssembly Include="com.rlabrecque.steamworks.net" />
   </ItemGroup>
 </Project>

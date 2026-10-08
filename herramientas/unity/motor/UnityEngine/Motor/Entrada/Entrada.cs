@@ -11,7 +11,7 @@ namespace Porteo
     // valen durante el cuadro siguiente al evento, y cada toque tiene una sola fase por cuadro.
     public static class Entrada
     {
-        enum TipoEvento : byte { Tecla, Boton, Raton, Toque, Rueda, Texto }
+        enum TipoEvento : byte { Tecla, Boton, Raton, Toque, Rueda, Texto, Mirar }
 
         struct Evento
         {
@@ -25,6 +25,7 @@ namespace Porteo
         internal static readonly HashSet<KeyCode> abajo = new HashSet<KeyCode>(), bajaron = new HashSet<KeyCode>(), subieron = new HashSet<KeyCode>();
         internal static Vector3 raton, ratonAntes;
         internal static Vector2 rueda;
+        internal static Vector2 mirar;   // movimiento relativo del cuadro (arrastrar para mirar en el teléfono)
         internal static string texto = "";
         internal static readonly List<Touch> toques = new List<Touch>();
         static readonly Dictionary<int, (Vector2 pos, Vector2 antes, int toques, float inicio)> dedos = new Dictionary<int, (Vector2, Vector2, int, float)>();
@@ -36,6 +37,9 @@ namespace Porteo
         public static void Raton(float x, float y) => cola.Add(new Evento { Tipo = TipoEvento.Raton, X = x, Y = y });
         public static void Rueda(float dx, float dy) => cola.Add(new Evento { Tipo = TipoEvento.Rueda, X = dx, Y = dy });
         public static void Texto(string s) => cola.Add(new Evento { Tipo = TipoEvento.Texto, Texto = s });
+        // un movimiento del mouse sin mover el puntero (como con el puntero trabado): llega a los ejes
+        // "Mouse X/Y" y no a Input.mousePosition. Así se mira arrastrando el dedo en el teléfono
+        public static void Mirar(float dx, float dy) => cola.Add(new Evento { Tipo = TipoEvento.Mirar, X = dx, Y = dy });
         // fase: 0 empieza, 1 se mueve, 3 termina, 4 se cancela. Los dedos de Unity en Android son
         // números chicos que se reusan (el más bajo libre) y TouchControlsKit lo supone: arrastra el
         // joystick o el touchpad sólo si Input.touchCount >= fingerId. El anfitrión manda sus ids (los
@@ -69,6 +73,7 @@ namespace Porteo
             bajaron.Clear(); subieron.Clear();
             ratonAntes = raton;
             rueda = Vector2.zero;
+            mirar = Vector2.zero;
             texto = "";
             nuevos.Clear(); conFase.Clear();
             // los dedos que terminaron el cuadro anterior ya no están
@@ -97,6 +102,7 @@ namespace Porteo
                     }
                     case TipoEvento.Raton: raton = new Vector3(e.X, e.Y, 0); hayRaton = true; break;
                     case TipoEvento.Rueda: rueda += new Vector2(e.X, e.Y); break;
+                    case TipoEvento.Mirar: mirar += new Vector2(e.X, e.Y); break;
                     case TipoEvento.Texto:
                         texto += e.Texto;
                         // los caracteres de control ("\b" al borrar) ya van como su tecla
@@ -288,7 +294,7 @@ namespace Porteo
                     }
                     case 1:
                     {
-                        var d = Entrada.raton - Entrada.ratonAntes;
+                        var d = (Vector2)(Entrada.raton - Entrada.ratonAntes) + Entrada.mirar;
                         float v = e.Numero == 0 ? d.x : e.Numero == 1 ? d.y : Entrada.rueda.y;
                         v *= e.Sensibilidad * (e.Numero == 2 ? 1 : 0.1f);
                         if (e.Invertir) v = -v;

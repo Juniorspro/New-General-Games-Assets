@@ -48,9 +48,10 @@ python3 -I empaquetar/empaquetar.py ... CARPETA --sitio --bloque 8 [--icono icon
 - `--carga`: al abrir, la intro de la marca (`herramientas/porteo/intro.js`) y después la pantalla
   de carga (`herramientas/porteo/carga.js`: el personaje girando, la barra, consejos y "Saltar" para
   empezar ya con lo que haya). El JSON tiene el título, el aviso de la intro, los consejos por
-  idioma y `mbMenu` (lo que hay que bajar hasta el menú, medido: la barra sigue a los MB y abajo se
-  ve cuánto va y a qué velocidad; ver `porteos/slime-rancher/carga.json`); `pantalla.js` la une al
-  motor. `--fondo-carga captura.png`: la portada, difuminada, de fondo detrás del personaje.
+  idioma, `menu` (la escena del menú: cuando termina de cargar y llegó lo que muestra, la pantalla
+  se va; si no está, `MainMenu`) y `mbMenu` (lo que hay que bajar hasta el menú: la barra sigue a
+  los MB y abajo se ve cuánto va y a qué velocidad; con un corte en `--orden` lo calcula
+  `empaquetar.py`; ver `porteos/slime-rancher/carga.json`); `pantalla.js` la une al motor. `--fondo-carga captura.png`: la portada, difuminada, de fondo detrás del personaje.
   Siempre horizontal y en 16:9 (`herramientas/porteo/escenario.js`): con el teléfono en vertical,
   todo gira 90°; en Android el primer toque pide pantalla completa y traba la orientación.
   `--registro __registro`: la página cuenta lo que pasa y los errores (`herramientas/porteo/registro.js`;
@@ -86,7 +87,36 @@ Medido con 20 Mbps y 60 ms (Chromium sin GPU): el menú pasó de 73 s a 31 s; si
 El orden (`--orden`) es la lista de recursos en el orden en que el motor los usó la primera vez:
 `globalThis.porteoOrden` en la consola del navegador, después de jugar un rato con la versión que
 lee de `datos/`. Con él, lo primero que se usa va primero en el archivo y el juego arranca
-mientras el navegador sigue leyendo el resto.
+mientras el navegador sigue leyendo el resto. Un `"|"` en la lista corta los bloques ahí: lo de
+antes (lo que el menú usa y lo que el arranque espera) queda en bloques propios, y el menú no
+espera bloques de 8 MB que también traen la primera escena. En Bad Parenting 1 eso bajó lo
+necesario para el menú de 13 MB a 7. Para ver qué pidió el motor y qué bloque espera:
+`porteoUnArchivo.verBloques()` en la consola (u: lo pidió el motor, c: llegó, b: bajando).
+
+## Juegos de PC (Direct3D 11) y Unity 2022
+
+Un juego de Windows trae sus shaders compilados para Direct3D 11 (DXBC). `exportar.py
+--dxbc-glsl` los pasa a GLSL ES 3.00 con HLSLcc, el traductor de Unity (`exportar/dxbc/`:
+`compilar.sh` lo baja y lo compila; el código de HLSLcc no entra al repo). El GLSL que sale sigue
+las convenciones de Direct3D (la fila 0 de la imagen arriba, la profundidad de 0 a 1 e invertida,
+los triángulos en el otro sentido), así que el motor las imita en vez de tocar cada shader
+(`Motor/Render/Convencion.cs`): la proyección como la arma Unity para D3D, la comparación de
+profundidad y el borrado al revés, el viewport dado vuelta en la pantalla y el lienzo espejado
+con CSS (`main.js`). `indice.json` dice `"convencion": "d3d11"` y el resto se acomoda solo.
+
+Lo demás que necesitó Unity 2022 (Bad Parenting 1): el perfil `perfiles/bad-parenting` (el
+esqueleto de la API que usa ese juego, con `-p:PERFIL=bad-parenting`), TextCore y el
+FontEngine de TextMeshPro (los glifos se dibujan de los contornos del TTF, con la misma distancia
+con signo que Unity), los CommandBuffer en los eventos de la cámara (los usa Post Processing v2),
+PlayerPrefs en un archivo, el VideoPlayer (un `<video>` escondido que se sube a la textura cada
+cuadro; los videos pasan a WebM porque Chromium no trae H.264) y `reparar` deja a Steam sin
+código nativo (SteamAPI.Init da falso y el juego sigue sin Steam).
+
+Los controles: si el juego es de PC en primera persona (`indice.json`: `convencion d3d11`, o
+`"controles": "pc"`), `controles-pc.js` pone, mientras el juego traba el puntero, un joystick a la
+izquierda (W/A/S/D), arrastrar a la derecha para mirar (como mover el mouse), tocar para hacer
+clic y botones para correr, usar y pausar. En los menús se esconde y los toques van a la UI. En
+la computadora, clic para trabar el puntero y mirar con el mouse.
 
 ## El HTML único
 

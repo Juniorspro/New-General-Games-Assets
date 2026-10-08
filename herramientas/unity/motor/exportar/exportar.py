@@ -27,6 +27,10 @@ motor ve lo mismo que Unity al cargar. Lo que cambia:
 Lo bajado es de terceros: los datos se leen, no se ejecuta nada de ellos. Correr con python -I.
 """
 import argparse
+import os
+import shutil
+import subprocess
+import tempfile
 import hashlib
 import json
 import struct
@@ -104,6 +108,31 @@ class Recursos:
             (self.carpeta / f"{i}.bin").write_bytes(datos)
             self.tabla.append({"bytes": len(datos)})
         return i
+
+
+def a_webm(datos, nombre):
+    """Un video a WebM (VP9 + Opus) con ffmpeg: lo abre cualquier navegador (los Chromium sin
+    códecs propietarios no tienen H.264, y Chrome no abre el audio PCM de los .mov). Más de 1280
+    de lado no hace falta en un teléfono. Sin ffmpeg (o si falla) queda como estaba."""
+    ff = shutil.which("ffmpeg")
+    if not ff:
+        print(f"  {nombre}: sin ffmpeg, el video queda como está (puede no abrir en el navegador)")
+        return datos
+    with tempfile.TemporaryDirectory() as d:
+        ent, sal = os.path.join(d, "e.bin"), os.path.join(d, "s.webm")
+        with open(ent, "wb") as f:
+            f.write(datos)
+        r = subprocess.run([ff, "-v", "error", "-y", "-i", ent, "-map", "0:v:0", "-map", "0:a?",
+                            "-vf", "scale='min(1280,iw)':'min(1280,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",
+                            "-c:v", "libvpx-vp9", "-crf", "36", "-b:v", "1M", "-row-mt", "1", "-deadline", "good", "-cpu-used", "2",
+                            "-c:a", "libopus", "-b:a", "96k", sal], capture_output=True)
+        if r.returncode != 0 or not os.path.exists(sal):
+            print(f"  {nombre}: ffmpeg no pudo ({r.stderr.decode(errors='replace')[:200]}); queda como estaba")
+            return datos
+        with open(sal, "rb") as f:
+            nuevo = f.read()
+    print(f"  {nombre}: video a WebM VP9 ({len(datos) / 1e6:.1f} MB a {len(nuevo) / 1e6:.1f} MB)")
+    return nuevo
 
 
 class Exportador:
@@ -247,10 +276,12 @@ class Exportador:
         return a
 
     def video(self, o, a):
-        """El archivo del video tal cual (el navegador lo reproduce: H.264 o VP8)."""
+        """El archivo del video, pasado a WebM (ver a_webm): el navegador lo pasa a la textura."""
         r = a.get("m_ExternalResources")
         if r and r.get("m_Size"):
-            a["_datos"] = {"_recurso": self.recursos(self.leer_stream(o.assets_file, r["m_Source"], r["m_Offset"], r["m_Size"]))}
+            datos = self.leer_stream(o.assets_file, r["m_Source"], r["m_Offset"], r["m_Size"])
+            datos = a_webm(datos, a.get("m_Name") or "video")
+            a["_datos"] = {"_recurso": self.recursos(datos)}
         return a
 
     def audio(self, o, a):
