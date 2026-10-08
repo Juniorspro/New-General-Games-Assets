@@ -54,6 +54,12 @@ namespace UnityEngine
             sucio = true;
         }
 
+        // cambió el padre: un RectTransform se vuelve a ubicar respecto del rect nuevo
+        internal virtual void PadreNuevo() { }
+
+        // la posición local cambió desde afuera (RectTransform recalcula su anchoredPosition)
+        internal virtual void PosLocalCambiada() { }
+
         internal virtual void AlCambiar()
         {
             var cs = go?.componentes;
@@ -87,6 +93,7 @@ namespace UnityEngine
             set
             {
                 posLocal = padre != null ? padre.InverseTransformPoint(value) : value;
+                PosLocalCambiada();
                 Ensuciar();
             }
         }
@@ -94,7 +101,7 @@ namespace UnityEngine
         public Vector3 localPosition
         {
             get => posLocal;
-            set { posLocal = value; Ensuciar(); }
+            set { posLocal = value; PosLocalCambiada(); Ensuciar(); }
         }
 
         public Quaternion rotation
@@ -157,6 +164,7 @@ namespace UnityEngine
                 rotLocal = Quaternion.Normalize(Quaternion.Inverse(padre.rotation) * rotation);
             }
             else { posLocal = position; rotLocal = Quaternion.Normalize(rotation); }
+            PosLocalCambiada();
             Ensuciar();
         }
 
@@ -207,7 +215,9 @@ namespace UnityEngine
                     escLocal = new Vector3(pe.x != 0 ? esc.x / pe.x : 0, pe.y != 0 ? esc.y / pe.y : 0, pe.z != 0 ? esc.z / pe.z : 0);
                 }
                 else { posLocal = pos; rotLocal = rot; escLocal = esc; }
+                PosLocalCambiada();   // quedó en el mismo lugar: el RectTransform recalcula sus anclas
             }
+            else PadreNuevo();        // conserva lo local: el RectTransform se ubica en el rect nuevo
             // la escena es la del padre nuevo
             if (parent != null && go != null && parent.go != null && parent.go.escena != go.escena) Escenas.Mover(go, parent.go.escena);
             Ensuciar();

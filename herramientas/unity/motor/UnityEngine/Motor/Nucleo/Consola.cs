@@ -112,7 +112,7 @@ namespace UnityEngine
 namespace Porteo
 {
     // Lo que depende de dónde corre el juego: lo completa el anfitrión.
-    public static class Plataforma
+    public static partial class Plataforma
     {
         public static bool Movil;
         public static bool Enfocada = true;

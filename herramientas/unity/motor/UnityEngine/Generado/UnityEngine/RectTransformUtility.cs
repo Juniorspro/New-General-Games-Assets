@@ -4,13 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class RectTransformUtility
     {
-        public static bool RectangleContainsScreenPoint(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam) { global::Porteo.Falta.Llamada("UnityEngine.RectTransformUtility::RectangleContainsScreenPoint"); return default; }
-        public static bool ScreenPointToLocalPointInRectangle(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam, out global::UnityEngine.Vector2 localPoint) { localPoint = default;  global::Porteo.Falta.Llamada("UnityEngine.RectTransformUtility::ScreenPointToLocalPointInRectangle"); return default;  }
-        public static global::UnityEngine.Ray ScreenPointToRay(global::UnityEngine.Camera cam, global::UnityEngine.Vector2 screenPos) { global::Porteo.Falta.Llamada("UnityEngine.RectTransformUtility::ScreenPointToRay"); return default; }
-        public static global::UnityEngine.Vector2 WorldToScreenPoint(global::UnityEngine.Camera cam, global::UnityEngine.Vector3 worldPoint) { global::Porteo.Falta.Llamada("UnityEngine.RectTransformUtility::WorldToScreenPoint"); return default; }
-        public static void FlipLayoutOnAxis(global::UnityEngine.RectTransform rect, int axis, bool keepPositioning, bool recursive) { global::Porteo.Falta.Llamada("UnityEngine.RectTransformUtility::FlipLayoutOnAxis"); }
-        public static void FlipLayoutAxes(global::UnityEngine.RectTransform rect, bool keepPositioning, bool recursive) { global::Porteo.Falta.Llamada("UnityEngine.RectTransformUtility::FlipLayoutAxes"); }
-        public static global::UnityEngine.Vector2 PixelAdjustPoint(global::UnityEngine.Vector2 point, global::UnityEngine.Transform elementTransform, global::UnityEngine.Canvas canvas) { global::Porteo.Falta.Llamada("UnityEngine.RectTransformUtility::PixelAdjustPoint"); return default; }
-        public static global::UnityEngine.Rect PixelAdjustRect(global::UnityEngine.RectTransform rectTransform, global::UnityEngine.Canvas canvas) { global::Porteo.Falta.Llamada("UnityEngine.RectTransformUtility::PixelAdjustRect"); return default; }
     }
 }

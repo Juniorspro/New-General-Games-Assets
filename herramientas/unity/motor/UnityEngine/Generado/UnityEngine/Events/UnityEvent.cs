@@ -2,12 +2,7 @@
 #pragma warning disable
 namespace UnityEngine.Events
 {
-    public partial class UnityEvent : global::UnityEngine.Events.UnityEventBase
+    public partial class UnityEvent
     {
-        public UnityEvent() { global::Porteo.Falta.Llamada("UnityEngine.Events.UnityEvent::.ctor"); }
-        public void AddListener(global::UnityEngine.Events.UnityAction call) { global::Porteo.Falta.Llamada("UnityEngine.Events.UnityEvent::AddListener"); }
-        protected override global::System.Reflection.MethodInfo FindMethod_Impl(string name, object targetObj) { global::Porteo.Falta.Llamada("UnityEngine.Events.UnityEvent::FindMethod_Impl"); return default; }
-        public override global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Porteo.Falta.Llamada("UnityEngine.Events.UnityEvent::GetDelegate"); return default; }
-        public void Invoke() { global::Porteo.Falta.Llamada("UnityEngine.Events.UnityEvent::Invoke"); }
     }
 }

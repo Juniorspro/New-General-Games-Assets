@@ -2,7 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class Animator : global::UnityEngine.Behaviour
+    public partial class Animator
     {
         public bool isInitialized { get { global::Porteo.Falta.Llamada("UnityEngine.Animator::isInitialized"); return default; } }
         public int layerCount { get { global::Porteo.Falta.Llamada("UnityEngine.Animator::layerCount"); return default; } }
@@ -22,7 +22,6 @@ namespace UnityEngine
         public void ResetTrigger(string name) { global::Porteo.Falta.Llamada("UnityEngine.Animator::ResetTrigger"); }
         public global::UnityEngine.AnimatorStateInfo GetCurrentAnimatorStateInfo(int layerIndex) { global::Porteo.Falta.Llamada("UnityEngine.Animator::GetCurrentAnimatorStateInfo"); return default; }
         public void Play(int stateNameHash, int layer, float normalizedTime) { global::Porteo.Falta.Llamada("UnityEngine.Animator::Play"); }
-        public static int StringToHash(string name) { global::Porteo.Falta.Llamada("UnityEngine.Animator::StringToHash"); return default; }
         public void Rebind() { global::Porteo.Falta.Llamada("UnityEngine.Animator::Rebind"); }
     }
 }

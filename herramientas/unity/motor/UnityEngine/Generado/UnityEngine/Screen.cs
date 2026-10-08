@@ -4,13 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class Screen
     {
-        public static int width { get { global::Porteo.Falta.Llamada("UnityEngine.Screen::width"); return default; } }
-        public static int height { get { global::Porteo.Falta.Llamada("UnityEngine.Screen::height"); return default; } }
-        public static float dpi { get { global::Porteo.Falta.Llamada("UnityEngine.Screen::dpi"); return default; } }
-        public static global::UnityEngine.Resolution currentResolution { get { global::Porteo.Falta.Llamada("UnityEngine.Screen::currentResolution"); return default; } }
-        public static bool fullScreen { get { global::Porteo.Falta.Llamada("UnityEngine.Screen::fullScreen"); return default; } }
-        public static global::UnityEngine.FullScreenMode fullScreenMode { get { global::Porteo.Falta.Llamada("UnityEngine.Screen::fullScreenMode"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Screen::fullScreenMode="); } }
-        public static global::UnityEngine.Resolution[] resolutions { get { global::Porteo.Falta.Llamada("UnityEngine.Screen::resolutions"); return default; } }
-        public static void SetResolution(int width, int height, bool fullscreen, int preferredRefreshRate) { global::Porteo.Falta.Llamada("UnityEngine.Screen::SetResolution"); }
     }
 }

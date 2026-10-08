@@ -4,14 +4,5 @@ namespace UnityEngine
 {
     public partial struct UIVertex
     {
-        public global::UnityEngine.Vector3 position;
-        public global::UnityEngine.Vector3 normal;
-        public global::UnityEngine.Vector4 tangent;
-        public global::UnityEngine.Color32 color;
-        public global::UnityEngine.Vector2 uv0;
-        public global::UnityEngine.Vector2 uv1;
-        public global::UnityEngine.Vector2 uv2;
-        public global::UnityEngine.Vector2 uv3;
-        public static global::UnityEngine.UIVertex simpleVert;
     }
 }

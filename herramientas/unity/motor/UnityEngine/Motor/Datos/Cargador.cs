@@ -11,8 +11,20 @@ namespace Porteo
     public static class Anfitrion
     {
         public static Func<string, byte[]> LeerPaquete;   // "level0" → el .paq
-        public static Func<int, byte[]> LeerRecurso;      // id → recursos/ID.bin
+        public static Func<int, byte[]> LeerRecurso;      // id → recursos/ID.bin (null si todavía no llegó)
+        public static Action<int> PedirRecurso;           // que lo traiga (sin esperar)
+        public static Func<int, bool> HayRecurso;         // si ya llegó (sin copiarlo)
         public static Action<string, LogType> Consola;
+
+        // un recurso si ya está; si no, se pide para más adelante
+        public static byte[] Recurso(int id, bool pedir)
+        {
+            var b = LeerRecurso?.Invoke(id);
+            if (b == null && pedir) PedirRecurso?.Invoke(id);
+            return b;
+        }
+
+        public static bool Hay(int id) => HayRecurso == null || HayRecurso(id);
     }
 }
 
@@ -34,7 +46,7 @@ namespace Porteo.Datos
             externos = new Archivo[paq.Externos.Length];
         }
 
-        Archivo Externo(int i)
+        internal Archivo Externo(int i)
         {
             if (i < 0 || i >= externos.Length) return null;
             return externos[i] ??= Cargador.Archivo(Paq.Externos[i]);
@@ -252,5 +264,73 @@ namespace Porteo.Datos
             a();
             Anfitrion.Consola?.Invoke($"porteo: {que} en {s.ElapsedMilliseconds} ms ({Registro.Cantidad} objetos vivos)", LogType.Log);
         }
+    }
+
+    // Lo que hay que traer antes de cargar algo: los recursos de todo lo que alcanzan sus objetos
+    // siguiendo los punteros. Unity, al cargar una escena, carga todo lo que la escena referencia
+    // (los prefabs que tienen los scripts, sus mallas, texturas y sonidos); acá esos datos llegan
+    // de a poco desde el anfitrión, así que se piden todos antes y la escena se arma cuando están.
+    public static class Alcance
+    {
+        public static HashSet<int> Recursos(IEnumerable<(Archivo a, long pid)> raices)
+        {
+            var vistos = new Dictionary<Archivo, HashSet<long>>();
+            var pendientes = new Stack<(Archivo, long)>();
+            var ps = new List<PPtr>();
+            var rs = new List<int>();
+            var res = new HashSet<int>();
+            foreach (var r in raices) if (r.a != null) pendientes.Push(r);
+            while (pendientes.Count > 0)
+            {
+                var (a, pid) = pendientes.Pop();
+                if (!vistos.TryGetValue(a, out var v)) vistos[a] = v = new HashSet<long>();
+                if (!v.Add(pid)) continue;
+                // lo que ya está cargado trajo lo suyo cuando se cargó (y lo que alcanza también)
+                if (a.objetos.ContainsKey(pid)) continue;
+                ps.Clear(); rs.Clear();
+                a.Paq.Escanear(pid, ps, rs);
+                foreach (var id in rs) res.Add(id);
+                foreach (var p in ps)
+                {
+                    var b = p.Archivo == 0 ? a : a.Externo(p.Archivo - 1);
+                    if (b != null && b.Paq.Tiene(p.PathID)) pendientes.Push((b, p.PathID));
+                }
+            }
+            return res;
+        }
+
+        public static HashSet<int> DeArchivo(Archivo a)
+        {
+            if (a == null) return new HashSet<int>();
+            var l = new List<(Archivo, long)>(a.Paq.Orden.Length);
+            foreach (var pid in a.Paq.Orden) l.Add((a, pid));
+            return Recursos(l);
+        }
+    }
+
+    // Un pedido de recursos: se piden todos de una y se cuenta cuántos faltan.
+    public sealed class Espera
+    {
+        readonly List<int> faltan;
+        public readonly int Total;
+
+        public Espera(IEnumerable<int> ids)
+        {
+            faltan = new List<int>();
+            foreach (var id in ids) if (!Anfitrion.Hay(id)) faltan.Add(id);
+            Total = faltan.Count;
+            foreach (var id in faltan) Anfitrion.PedirRecurso?.Invoke(id);
+        }
+
+        public bool Lista
+        {
+            get
+            {
+                if (faltan.Count > 0) faltan.RemoveAll(Anfitrion.Hay);
+                return faltan.Count == 0;
+            }
+        }
+
+        public float Avance => Total == 0 ? 1f : (Total - faltan.Count) / (float)Total;
     }
 }

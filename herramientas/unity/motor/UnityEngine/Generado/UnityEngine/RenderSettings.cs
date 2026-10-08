@@ -2,14 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class RenderSettings : global::UnityEngine.Object
+    public sealed partial class RenderSettings
     {
-        public static float fogStartDistance { get { global::Porteo.Falta.Llamada("UnityEngine.RenderSettings::fogStartDistance"); return default; } }
-        public static float fogEndDistance { get { global::Porteo.Falta.Llamada("UnityEngine.RenderSettings::fogEndDistance"); return default; } }
-        public static global::UnityEngine.FogMode fogMode { get { global::Porteo.Falta.Llamada("UnityEngine.RenderSettings::fogMode"); return default; } }
-        public static global::UnityEngine.Color fogColor { get { global::Porteo.Falta.Llamada("UnityEngine.RenderSettings::fogColor"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.RenderSettings::fogColor="); } }
-        public static float fogDensity { get { global::Porteo.Falta.Llamada("UnityEngine.RenderSettings::fogDensity"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.RenderSettings::fogDensity="); } }
-        public static global::UnityEngine.Color ambientLight { set { global::Porteo.Falta.Llamada("UnityEngine.RenderSettings::ambientLight="); } }
-        public static global::UnityEngine.Material skybox { get { global::Porteo.Falta.Llamada("UnityEngine.RenderSettings::skybox"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.RenderSettings::skybox="); } }
     }
 }

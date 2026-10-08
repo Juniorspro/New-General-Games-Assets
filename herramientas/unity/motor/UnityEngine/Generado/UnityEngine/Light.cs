@@ -2,15 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class Light : global::UnityEngine.Behaviour
+    public sealed partial class Light
     {
-        public global::UnityEngine.LightType type { get { global::Porteo.Falta.Llamada("UnityEngine.Light::type"); return default; } }
-        public float spotAngle { get { global::Porteo.Falta.Llamada("UnityEngine.Light::spotAngle"); return default; } }
-        public global::UnityEngine.Color color { get { global::Porteo.Falta.Llamada("UnityEngine.Light::color"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Light::color="); } }
-        public float intensity { get { global::Porteo.Falta.Llamada("UnityEngine.Light::intensity"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Light::intensity="); } }
-        public float range { get { global::Porteo.Falta.Llamada("UnityEngine.Light::range"); return default; } }
-        public global::UnityEngine.LightBakingOutput bakingOutput { get { global::Porteo.Falta.Llamada("UnityEngine.Light::bakingOutput"); return default; } }
-        public int cullingMask { get { global::Porteo.Falta.Llamada("UnityEngine.Light::cullingMask"); return default; } }
-        public global::UnityEngine.LightShadows shadows { get { global::Porteo.Falta.Llamada("UnityEngine.Light::shadows"); return default; } }
     }
 }

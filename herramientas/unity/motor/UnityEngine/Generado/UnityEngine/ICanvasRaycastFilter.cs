@@ -4,6 +4,5 @@ namespace UnityEngine
 {
     public partial interface ICanvasRaycastFilter
     {
-        bool IsRaycastLocationValid(global::UnityEngine.Vector2 sp, global::UnityEngine.Camera eventCamera);
     }
 }

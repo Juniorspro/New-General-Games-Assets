@@ -2,7 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class MeshRenderer : global::UnityEngine.Renderer
+    public partial class MeshRenderer
     {
     }
 }

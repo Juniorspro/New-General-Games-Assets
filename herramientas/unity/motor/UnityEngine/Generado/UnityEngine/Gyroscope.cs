@@ -4,6 +4,5 @@ namespace UnityEngine
 {
     public partial class Gyroscope
     {
-        public global::UnityEngine.Quaternion attitude { get { global::Porteo.Falta.Llamada("UnityEngine.Gyroscope::attitude"); return default; } }
     }
 }

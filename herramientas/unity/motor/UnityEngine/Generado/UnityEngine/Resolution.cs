@@ -7,8 +7,5 @@ namespace UnityEngine
         public int m_Width;
         public int m_Height;
         public int m_RefreshRate;
-        public int width { get { global::Porteo.Falta.Llamada("UnityEngine.Resolution::width"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Resolution::width="); } }
-        public int height { get { global::Porteo.Falta.Llamada("UnityEngine.Resolution::height"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Resolution::height="); } }
-        public int refreshRate { get { global::Porteo.Falta.Llamada("UnityEngine.Resolution::refreshRate"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Resolution::refreshRate="); } }
     }
 }

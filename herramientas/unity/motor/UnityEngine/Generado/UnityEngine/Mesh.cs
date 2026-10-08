@@ -4,30 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class Mesh
     {
-        public int vertexCount { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::vertexCount"); return default; } }
-        public global::UnityEngine.Bounds bounds { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::bounds"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Mesh::bounds="); } }
-        public global::UnityEngine.Vector3[] vertices { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::vertices"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Mesh::vertices="); } }
-        public global::UnityEngine.Vector3[] normals { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::normals"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Mesh::normals="); } }
-        public global::UnityEngine.Vector4[] tangents { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::tangents"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Mesh::tangents="); } }
-        public global::UnityEngine.Vector2[] uv { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::uv"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Mesh::uv="); } }
-        public global::UnityEngine.Vector2[] uv2 { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::uv2"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Mesh::uv2="); } }
-        public global::UnityEngine.Vector2[] uv3 { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::uv3"); return default; } }
-        public global::UnityEngine.Vector2[] uv4 { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::uv4"); return default; } }
-        public global::UnityEngine.Color[] colors { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::colors"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Mesh::colors="); } }
-        public global::UnityEngine.Color32[] colors32 { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::colors32"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Mesh::colors32="); } }
-        public int[] triangles { get { global::Porteo.Falta.Llamada("UnityEngine.Mesh::triangles"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Mesh::triangles="); } }
-        public Mesh() { global::Porteo.Falta.Llamada("UnityEngine.Mesh::.ctor"); }
-        public void SetVertices(global::System.Collections.Generic.List<global::UnityEngine.Vector3> inVertices) { global::Porteo.Falta.Llamada("UnityEngine.Mesh::SetVertices"); }
-        public void SetNormals(global::System.Collections.Generic.List<global::UnityEngine.Vector3> inNormals) { global::Porteo.Falta.Llamada("UnityEngine.Mesh::SetNormals"); }
-        public void SetTangents(global::System.Collections.Generic.List<global::UnityEngine.Vector4> inTangents) { global::Porteo.Falta.Llamada("UnityEngine.Mesh::SetTangents"); }
-        public void SetColors(global::System.Collections.Generic.List<global::UnityEngine.Color32> inColors) { global::Porteo.Falta.Llamada("UnityEngine.Mesh::SetColors"); }
-        public void SetUVs(int channel, global::System.Collections.Generic.List<global::UnityEngine.Vector2> uvs) { global::Porteo.Falta.Llamada("UnityEngine.Mesh::SetUVs"); }
-        public int[] GetIndices(int submesh) { global::Porteo.Falta.Llamada("UnityEngine.Mesh::GetIndices"); return default; }
-        public void SetTriangles(global::System.Collections.Generic.List<int> triangles, int submesh) { global::Porteo.Falta.Llamada("UnityEngine.Mesh::SetTriangles"); }
-        public void Clear() { global::Porteo.Falta.Llamada("UnityEngine.Mesh::Clear"); }
-        public void RecalculateBounds() { global::Porteo.Falta.Llamada("UnityEngine.Mesh::RecalculateBounds"); }
-        public void RecalculateNormals() { global::Porteo.Falta.Llamada("UnityEngine.Mesh::RecalculateNormals"); }
-        public void MarkDynamic() { global::Porteo.Falta.Llamada("UnityEngine.Mesh::MarkDynamic"); }
-        public void CombineMeshes(global::UnityEngine.CombineInstance[] combine) { global::Porteo.Falta.Llamada("UnityEngine.Mesh::CombineMeshes"); }
     }
 }

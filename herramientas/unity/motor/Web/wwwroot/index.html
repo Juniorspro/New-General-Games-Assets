@@ -1,3 +1,18 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><title>porteo</title></head>
-<body><script type="module" src="main.js"></script></body></html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Slime Rancher</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none; }
+  #lienzo { display: block; width: 100vw; height: 100vh; }
+  #estado { position: fixed; left: 12px; bottom: 10px; color: #ccc; font: 14px system-ui, sans-serif; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="lienzo"></canvas>
+<div id="estado">cargando…</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>

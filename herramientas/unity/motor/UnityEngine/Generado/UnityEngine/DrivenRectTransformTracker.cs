@@ -4,8 +4,5 @@ namespace UnityEngine
 {
     public partial struct DrivenRectTransformTracker
     {
-        public global::System.Collections.Generic.List<global::UnityEngine.RectTransform> m_Tracked;
-        public void Add(global::UnityEngine.Object driver, global::UnityEngine.RectTransform rectTransform, global::UnityEngine.DrivenTransformProperties drivenProperties) { global::Porteo.Falta.Llamada("UnityEngine.DrivenRectTransformTracker::Add"); }
-        public void Clear() { global::Porteo.Falta.Llamada("UnityEngine.DrivenRectTransformTracker::Clear"); }
     }
 }

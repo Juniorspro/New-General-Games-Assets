@@ -4,14 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class SystemInfo
     {
-        public static string operatingSystem { get { global::Porteo.Falta.Llamada("UnityEngine.SystemInfo::operatingSystem"); return default; } }
-        public static global::UnityEngine.OperatingSystemFamily operatingSystemFamily { get { global::Porteo.Falta.Llamada("UnityEngine.SystemInfo::operatingSystemFamily"); return default; } }
-        public static int processorCount { get { global::Porteo.Falta.Llamada("UnityEngine.SystemInfo::processorCount"); return default; } }
-        public static int graphicsShaderLevel { get { global::Porteo.Falta.Llamada("UnityEngine.SystemInfo::graphicsShaderLevel"); return default; } }
-        public static bool supportsRenderTextures { get { global::Porteo.Falta.Llamada("UnityEngine.SystemInfo::supportsRenderTextures"); return default; } }
-        public static bool supportsImageEffects { get { global::Porteo.Falta.Llamada("UnityEngine.SystemInfo::supportsImageEffects"); return default; } }
-        public static bool supports3DTextures { get { global::Porteo.Falta.Llamada("UnityEngine.SystemInfo::supports3DTextures"); return default; } }
-        public static bool supportsComputeShaders { get { global::Porteo.Falta.Llamada("UnityEngine.SystemInfo::supportsComputeShaders"); return default; } }
-        public static bool SupportsRenderTextureFormat(global::UnityEngine.RenderTextureFormat format) { global::Porteo.Falta.Llamada("UnityEngine.SystemInfo::SupportsRenderTextureFormat"); return default; }
     }
 }

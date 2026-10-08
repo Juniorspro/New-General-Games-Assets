@@ -4,14 +4,5 @@ namespace UnityEngine
 {
     public partial class Graphics
     {
-        public static void ClearRandomWriteTargets() { global::Porteo.Falta.Llamada("UnityEngine.Graphics::ClearRandomWriteTargets"); }
-        public static void DrawMeshNow(global::UnityEngine.Mesh mesh, global::UnityEngine.Matrix4x4 matrix) { global::Porteo.Falta.Llamada("UnityEngine.Graphics::DrawMeshNow"); }
-        public static void DrawProceduralIndirect(global::UnityEngine.MeshTopology topology, global::UnityEngine.ComputeBuffer bufferWithArgs, int argsOffset) { global::Porteo.Falta.Llamada("UnityEngine.Graphics::DrawProceduralIndirect"); }
-        public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest) { global::Porteo.Falta.Llamada("UnityEngine.Graphics::Blit"); }
-        public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest, global::UnityEngine.Material mat, int pass) { global::Porteo.Falta.Llamada("UnityEngine.Graphics::Blit"); }
-        public static void Blit(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest, global::UnityEngine.Material mat) { global::Porteo.Falta.Llamada("UnityEngine.Graphics::Blit"); }
-        public static void BlitMultiTap(global::UnityEngine.Texture source, global::UnityEngine.RenderTexture dest, global::UnityEngine.Material mat, params global::UnityEngine.Vector2[] offsets) { global::Porteo.Falta.Llamada("UnityEngine.Graphics::BlitMultiTap"); }
-        public static void SetRenderTarget(global::UnityEngine.RenderTexture rt) { global::Porteo.Falta.Llamada("UnityEngine.Graphics::SetRenderTarget"); }
-        public static void SetRandomWriteTarget(int index, global::UnityEngine.ComputeBuffer uav) { global::Porteo.Falta.Llamada("UnityEngine.Graphics::SetRandomWriteTarget"); }
     }
 }

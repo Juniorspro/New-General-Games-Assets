@@ -2,7 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class SkinnedMeshRenderer : global::UnityEngine.Renderer
+    public partial class SkinnedMeshRenderer
     {
     }
 }

@@ -4,9 +4,6 @@ namespace UnityEngine
 {
     public static partial class UISystemProfilerApi
     {
-        public static void BeginSample(global::UnityEngine.UISystemProfilerApi.SampleType type) { global::Porteo.Falta.Llamada("UnityEngine.UISystemProfilerApi::BeginSample"); }
-        public static void EndSample(global::UnityEngine.UISystemProfilerApi.SampleType type) { global::Porteo.Falta.Llamada("UnityEngine.UISystemProfilerApi::EndSample"); }
-        public static void AddMarker(string name, global::UnityEngine.Object obj) { global::Porteo.Falta.Llamada("UnityEngine.UISystemProfilerApi::AddMarker"); }
         public enum SampleType : int
         {
             Layout = 0,

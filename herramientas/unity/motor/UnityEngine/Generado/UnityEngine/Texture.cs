@@ -2,13 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class Texture : global::UnityEngine.Object
+    public partial class Texture
     {
-        public virtual int width { get { global::Porteo.Falta.Llamada("UnityEngine.Texture::width"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Texture::width="); } }
-        public virtual int height { get { global::Porteo.Falta.Llamada("UnityEngine.Texture::height"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Texture::height="); } }
-        public global::UnityEngine.TextureWrapMode wrapMode { get { global::Porteo.Falta.Llamada("UnityEngine.Texture::wrapMode"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Texture::wrapMode="); } }
-        public global::UnityEngine.FilterMode filterMode { set { global::Porteo.Falta.Llamada("UnityEngine.Texture::filterMode="); } }
-        public int anisoLevel { set { global::Porteo.Falta.Llamada("UnityEngine.Texture::anisoLevel="); } }
-        public global::UnityEngine.Vector2 texelSize { get { global::Porteo.Falta.Llamada("UnityEngine.Texture::texelSize"); return default; } }
     }
 }

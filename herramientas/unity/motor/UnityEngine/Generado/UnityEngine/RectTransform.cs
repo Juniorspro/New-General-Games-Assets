@@ -2,31 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class RectTransform : global::UnityEngine.Transform
+    public sealed partial class RectTransform
     {
-        public global::UnityEngine.Rect rect { get { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::rect"); return default; } }
-        public global::UnityEngine.Vector2 anchorMin { get { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::anchorMin"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::anchorMin="); } }
-        public global::UnityEngine.Vector2 anchorMax { get { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::anchorMax"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::anchorMax="); } }
-        public global::UnityEngine.Vector2 anchoredPosition { get { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::anchoredPosition"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::anchoredPosition="); } }
-        public global::UnityEngine.Vector2 sizeDelta { get { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::sizeDelta"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::sizeDelta="); } }
-        public global::UnityEngine.Vector2 pivot { get { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::pivot"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::pivot="); } }
-        public static event global::UnityEngine.RectTransform.ReapplyDrivenProperties reapplyDrivenProperties { add { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::reapplyDrivenProperties+"); } remove { } }
-        public void GetLocalCorners(global::UnityEngine.Vector3[] fourCornersArray) { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::GetLocalCorners"); }
-        public void GetWorldCorners(global::UnityEngine.Vector3[] fourCornersArray) { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::GetWorldCorners"); }
-        public void SetInsetAndSizeFromParentEdge(global::UnityEngine.RectTransform.Edge edge, float inset, float size) { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::SetInsetAndSizeFromParentEdge"); }
-        public void SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis axis, float size) { global::Porteo.Falta.Llamada("UnityEngine.RectTransform::SetSizeWithCurrentAnchors"); }
-        public enum Axis : int
-        {
-            Horizontal = 0,
-            Vertical = 1,
-        }
-        public enum Edge : int
-        {
-            Left = 0,
-            Right = 1,
-            Top = 2,
-            Bottom = 3,
-        }
-        public delegate void ReapplyDrivenProperties(global::UnityEngine.RectTransform driven);
     }
 }

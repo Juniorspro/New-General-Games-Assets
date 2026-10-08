@@ -4,7 +4,5 @@ namespace UnityEngine
 {
     public partial class Cursor
     {
-        public static bool visible { get { global::Porteo.Falta.Llamada("UnityEngine.Cursor::visible"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Cursor::visible="); } }
-        public static global::UnityEngine.CursorLockMode lockState { get { global::Porteo.Falta.Llamada("UnityEngine.Cursor::lockState"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Cursor::lockState="); } }
     }
 }

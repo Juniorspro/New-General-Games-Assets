@@ -9,7 +9,5 @@ namespace UnityEngine
         public global::UnityEngine.Matrix4x4 m_Transform;
         public global::UnityEngine.Vector4 m_LightmapScaleOffset;
         public global::UnityEngine.Vector4 m_RealtimeLightmapScaleOffset;
-        public global::UnityEngine.Mesh mesh { set { global::Porteo.Falta.Llamada("UnityEngine.CombineInstance::mesh="); } }
-        public global::UnityEngine.Matrix4x4 transform { set { global::Porteo.Falta.Llamada("UnityEngine.CombineInstance::transform="); } }
     }
 }

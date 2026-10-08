@@ -4,15 +4,5 @@ namespace UnityEngine
 {
     public partial class RenderTexture
     {
-        public global::UnityEngine.RenderTextureFormat format { get { global::Porteo.Falta.Llamada("UnityEngine.RenderTexture::format"); return default; } }
-        public static global::UnityEngine.RenderTexture active { set { global::Porteo.Falta.Llamada("UnityEngine.RenderTexture::active="); } }
-        public RenderTexture(int width, int height, int depth, global::UnityEngine.RenderTextureFormat format) { global::Porteo.Falta.Llamada("UnityEngine.RenderTexture::.ctor"); }
-        public RenderTexture(int width, int height, int depth) { global::Porteo.Falta.Llamada("UnityEngine.RenderTexture::.ctor"); }
-        public void MarkRestoreExpected() { global::Porteo.Falta.Llamada("UnityEngine.RenderTexture::MarkRestoreExpected"); }
-        public void DiscardContents() { global::Porteo.Falta.Llamada("UnityEngine.RenderTexture::DiscardContents"); }
-        public static void ReleaseTemporary(global::UnityEngine.RenderTexture temp) { global::Porteo.Falta.Llamada("UnityEngine.RenderTexture::ReleaseTemporary"); }
-        public static global::UnityEngine.RenderTexture GetTemporary(int width, int height, int depthBuffer, global::UnityEngine.RenderTextureFormat format) { global::Porteo.Falta.Llamada("UnityEngine.RenderTexture::GetTemporary"); return default; }
-        public static global::UnityEngine.RenderTexture GetTemporary(int width, int height, int depthBuffer) { global::Porteo.Falta.Llamada("UnityEngine.RenderTexture::GetTemporary"); return default; }
-        public static global::UnityEngine.RenderTexture GetTemporary(int width, int height) { global::Porteo.Falta.Llamada("UnityEngine.RenderTexture::GetTemporary"); return default; }
     }
 }

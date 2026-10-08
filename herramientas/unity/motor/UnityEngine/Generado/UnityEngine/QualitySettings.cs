@@ -2,25 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class QualitySettings : global::UnityEngine.Object
+    public sealed partial class QualitySettings
     {
-        public static int pixelLightCount { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::pixelLightCount="); } }
-        public static global::UnityEngine.ShadowProjection shadowProjection { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::shadowProjection="); } }
-        public static int shadowCascades { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::shadowCascades="); } }
-        public static float shadowDistance { get { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::shadowDistance"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::shadowDistance="); } }
-        public static float shadowNearPlaneOffset { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::shadowNearPlaneOffset="); } }
-        public static float shadowCascade2Split { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::shadowCascade2Split="); } }
-        public static global::UnityEngine.Vector3 shadowCascade4Split { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::shadowCascade4Split="); } }
-        public static float lodBias { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::lodBias="); } }
-        public static global::UnityEngine.AnisotropicFiltering anisotropicFiltering { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::anisotropicFiltering="); } }
-        public static int masterTextureLimit { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::masterTextureLimit="); } }
-        public static int maximumLODLevel { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::maximumLODLevel="); } }
-        public static int particleRaycastBudget { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::particleRaycastBudget="); } }
-        public static int vSyncCount { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::vSyncCount="); } }
-        public static int antiAliasing { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::antiAliasing="); } }
-        public static global::UnityEngine.BlendWeights blendWeights { set { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::blendWeights="); } }
-        public static string[] names { get { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::names"); return default; } }
-        public static global::UnityEngine.ColorSpace activeColorSpace { get { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::activeColorSpace"); return default; } }
-        public static void SetQualityLevel(int index, bool applyExpensiveChanges) { global::Porteo.Falta.Llamada("UnityEngine.QualitySettings::SetQualityLevel"); }
     }
 }

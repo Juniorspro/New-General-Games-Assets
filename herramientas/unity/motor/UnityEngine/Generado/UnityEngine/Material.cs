@@ -4,37 +4,5 @@ namespace UnityEngine
 {
     public partial class Material
     {
-        public global::UnityEngine.Shader shader { get { global::Porteo.Falta.Llamada("UnityEngine.Material::shader"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Material::shader="); } }
-        public global::UnityEngine.Color color { get { global::Porteo.Falta.Llamada("UnityEngine.Material::color"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Material::color="); } }
-        public global::UnityEngine.Texture mainTexture { get { global::Porteo.Falta.Llamada("UnityEngine.Material::mainTexture"); return default; } }
-        public int renderQueue { set { global::Porteo.Falta.Llamada("UnityEngine.Material::renderQueue="); } }
-        public int passCount { get { global::Porteo.Falta.Llamada("UnityEngine.Material::passCount"); return default; } }
-        public string[] shaderKeywords { get { global::Porteo.Falta.Llamada("UnityEngine.Material::shaderKeywords"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Material::shaderKeywords="); } }
-        public Material(global::UnityEngine.Shader shader) { global::Porteo.Falta.Llamada("UnityEngine.Material::.ctor"); }
-        public Material(global::UnityEngine.Material source) { global::Porteo.Falta.Llamada("UnityEngine.Material::.ctor"); }
-        public bool HasProperty(int nameID) { global::Porteo.Falta.Llamada("UnityEngine.Material::HasProperty"); return default; }
-        public bool HasProperty(string name) { global::Porteo.Falta.Llamada("UnityEngine.Material::HasProperty"); return default; }
-        public void EnableKeyword(string keyword) { global::Porteo.Falta.Llamada("UnityEngine.Material::EnableKeyword"); }
-        public void DisableKeyword(string keyword) { global::Porteo.Falta.Llamada("UnityEngine.Material::DisableKeyword"); }
-        public bool SetPass(int pass) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetPass"); return default; }
-        public void CopyPropertiesFromMaterial(global::UnityEngine.Material mat) { global::Porteo.Falta.Llamada("UnityEngine.Material::CopyPropertiesFromMaterial"); }
-        public void SetFloat(string name, float value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetFloat"); }
-        public void SetFloat(int nameID, float value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetFloat"); }
-        public void SetInt(string name, int value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetInt"); }
-        public void SetColor(string name, global::UnityEngine.Color value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetColor"); }
-        public void SetColor(int nameID, global::UnityEngine.Color value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetColor"); }
-        public void SetVector(string name, global::UnityEngine.Vector4 value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetVector"); }
-        public void SetVector(int nameID, global::UnityEngine.Vector4 value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetVector"); }
-        public void SetMatrix(string name, global::UnityEngine.Matrix4x4 value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetMatrix"); }
-        public void SetMatrix(int nameID, global::UnityEngine.Matrix4x4 value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetMatrix"); }
-        public void SetTexture(string name, global::UnityEngine.Texture value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetTexture"); }
-        public void SetTexture(int nameID, global::UnityEngine.Texture value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetTexture"); }
-        public void SetBuffer(string name, global::UnityEngine.ComputeBuffer value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetBuffer"); }
-        public float GetFloat(string name) { global::Porteo.Falta.Llamada("UnityEngine.Material::GetFloat"); return default; }
-        public float GetFloat(int nameID) { global::Porteo.Falta.Llamada("UnityEngine.Material::GetFloat"); return default; }
-        public global::UnityEngine.Color GetColor(string name) { global::Porteo.Falta.Llamada("UnityEngine.Material::GetColor"); return default; }
-        public global::UnityEngine.Color GetColor(int nameID) { global::Porteo.Falta.Llamada("UnityEngine.Material::GetColor"); return default; }
-        public global::UnityEngine.Vector4 GetVector(int nameID) { global::Porteo.Falta.Llamada("UnityEngine.Material::GetVector"); return default; }
-        public global::UnityEngine.Texture GetTexture(int nameID) { global::Porteo.Falta.Llamada("UnityEngine.Material::GetTexture"); return default; }
     }
 }

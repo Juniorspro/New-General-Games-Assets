@@ -139,6 +139,34 @@ namespace Porteo.Datos
             return Valor(ref p);
         }
 
+        // Los punteros y los recursos de un objeto, recorriendo los bytes sin armar el árbol: para
+        // saber qué hay que traer antes de cargar una escena.
+        public void Escanear(long pathID, List<PPtr> punteros, List<int> recursos)
+        {
+            if (!Objetos.TryGetValue(pathID, out var e)) return;
+            int p = baseDatos + e.Desde;
+            Saltar(ref p, punteros, recursos);
+        }
+
+        void Saltar(ref int p, List<PPtr> ps, List<int> rs)
+        {
+            byte t = datos[p++];
+            switch (t)
+            {
+                case 0: case 1: case 2: return;
+                case 3: Varint(ref p); return;
+                case 4: p += 4; return;
+                case 5: p += 8; return;
+                case 6: case 9: { int n = (int)Varint(ref p); p += n; return; }
+                case 7: { int n = (int)Varint(ref p); for (int i = 0; i < n; i++) Saltar(ref p, ps, rs); return; }
+                case 8: { int n = (int)Varint(ref p); for (int i = 0; i < n; i++) { Varint(ref p); Saltar(ref p, ps, rs); } return; }
+                case 10: { int a = (int)Varint(ref p); long id = Zigzag(ref p); if (id != 0) ps.Add(new PPtr(a, id)); return; }
+                case 11: { byte tipo = datos[p++]; int n = (int)Varint(ref p); p += n * TamanoElemento(tipo); return; }
+                case 12: rs.Add((int)Varint(ref p)); return;
+                default: throw new FormatException($"{Nombre}: etiqueta {t} en {p - 1}");
+            }
+        }
+
         // ── lectura ──
         int U32(ref int p) { int v = BitConverter.ToInt32(datos, p); p += 4; return v; }
 

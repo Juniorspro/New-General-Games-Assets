@@ -620,7 +620,7 @@ namespace Porteo
             {
                 // implementación explícita de interfaz
                 var ov = m.Overrides.FirstOrDefault();
-                if (ov == null || t.IsInterface) continue;
+                if (ov == null || t.IsInterface || hechos.Contains(ClaveMetodo(m))) continue;
                 var retE = m.ReturnType.FullName == "System.Void" ? "" : " return default;";
                 sb.AppendLine($"{s}{NombreRef(m.ReturnType)} {NombreRef(ov.DeclaringType)}.{Id(ov.Name)}({Parametros(m)}) {AsignarOut(m, $"{{ global::Porteo.Falta.Llamada(\"{Q(ov.Name)}\");{retE} }}")}");
                 continue;
@@ -674,6 +674,10 @@ namespace Porteo
     public static string ClaveMetodo(MethodDefinition m)
     {
         var n = m.IsConstructor ? ".ctor" : m.Name;
+        // las implementaciones explícitas de interfaz ("UnityEngine.ISerializationCallbackReceiver.OnBeforeSerialize")
+        // se escriben a mano con el nombre corto
+        int punto = n.LastIndexOf('.');
+        if (!m.IsConstructor && punto > 0) n = n.Substring(punto + 1);
         return "M:" + n + "`" + m.GenericParameters.Count + "(" + string.Join(",", m.Parameters.Select(p => Sintaxis.Simple(NombreSimple(p.ParameterType)))) + ")";
     }
 

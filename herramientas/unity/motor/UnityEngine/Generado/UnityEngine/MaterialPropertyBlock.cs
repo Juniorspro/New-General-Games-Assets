@@ -4,7 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class MaterialPropertyBlock
     {
-        public MaterialPropertyBlock() { global::Porteo.Falta.Llamada("UnityEngine.MaterialPropertyBlock::.ctor"); }
-        public void SetColor(int nameID, global::UnityEngine.Color value) { global::Porteo.Falta.Llamada("UnityEngine.MaterialPropertyBlock::SetColor"); }
     }
 }

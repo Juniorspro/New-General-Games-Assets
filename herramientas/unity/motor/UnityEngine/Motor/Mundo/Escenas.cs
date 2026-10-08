@@ -39,6 +39,8 @@ namespace Porteo
             public int Indice;
             public LoadSceneMode Modo;
             public AsyncOperation Op;
+            public bool Asincronica;
+            public Espera Datos;   // los recursos que alcanza la escena (se piden antes de armarla)
         }
         static readonly List<Pedido> pedidos = new List<Pedido>();
 
@@ -173,8 +175,29 @@ namespace Porteo
                 return null;
             }
             var op = new AsyncOperation();
-            pedidos.Add(new Pedido { Indice = indice, Modo = modo, Op = op });
+            pedidos.Add(new Pedido { Indice = indice, Modo = modo, Op = op, Asincronica = asincronica });
             return asincronica ? op : null;
+        }
+
+        // Una carga sincrónica (LoadScene) en Unity bloquea el cuadro siguiente hasta terminar:
+        // mientras sus datos no llegaron, el cuadro no corre (ver Mundo.Cuadro).
+        internal static bool Esperando
+        {
+            get
+            {
+                if (pedidos.Count == 0) return false;
+                var p = pedidos[0];
+                return !p.Asincronica && !Preparado(p);
+            }
+        }
+
+        static bool Preparado(Pedido p)
+        {
+            p.Datos ??= new Espera(Alcance.DeArchivo(Cargador.Archivo("level" + p.Indice)));
+            bool listo = p.Datos.Lista;
+            // como en Unity: hasta 0.9 cargando; el resto es activar la escena
+            p.Op.avance = 0.9f * p.Datos.Avance;
+            return listo;
         }
 
         // al principio del cuadro (donde Unity integra las cargas pendientes)
@@ -183,6 +206,7 @@ namespace Porteo
             while (pedidos.Count > 0)
             {
                 var p = pedidos[0];
+                if (!Preparado(p)) return;
                 // una carga asincrónica con allowSceneActivation = false queda en 0.9 hasta que la dejen
                 if (!p.Op.permitirActivacion) { p.Op.avance = 0.9f; return; }
                 pedidos.RemoveAt(0);

@@ -4,6 +4,5 @@ namespace UnityEngine.U2D
 {
     public partial class SpriteAtlasManager
     {
-        public static event global::System.Action<global::UnityEngine.U2D.SpriteAtlas> atlasRegistered { add { global::Porteo.Falta.Llamada("UnityEngine.U2D.SpriteAtlasManager::atlasRegistered+"); } remove { } }
     }
 }

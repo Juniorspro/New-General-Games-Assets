@@ -5,6 +5,5 @@ namespace UnityEngine
     public partial struct SortingLayer
     {
         public int m_Id;
-        public static int GetLayerValueFromID(int id) { global::Porteo.Falta.Llamada("UnityEngine.SortingLayer::GetLayerValueFromID"); return default; }
     }
 }

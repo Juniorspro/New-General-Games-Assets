@@ -2,9 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class MeshFilter : global::UnityEngine.Component
+    public sealed partial class MeshFilter
     {
-        public global::UnityEngine.Mesh sharedMesh { get { global::Porteo.Falta.Llamada("UnityEngine.MeshFilter::sharedMesh"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.MeshFilter::sharedMesh="); } }
-        public global::UnityEngine.Mesh mesh { get { global::Porteo.Falta.Llamada("UnityEngine.MeshFilter::mesh"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.MeshFilter::mesh="); } }
     }
 }

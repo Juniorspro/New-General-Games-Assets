@@ -2,11 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class CanvasGroup : global::UnityEngine.Behaviour, global::UnityEngine.ICanvasRaycastFilter
+    public sealed partial class CanvasGroup
     {
-        public float alpha { get { global::Porteo.Falta.Llamada("UnityEngine.CanvasGroup::alpha"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.CanvasGroup::alpha="); } }
-        public bool interactable { get { global::Porteo.Falta.Llamada("UnityEngine.CanvasGroup::interactable"); return default; } }
-        public bool ignoreParentGroups { get { global::Porteo.Falta.Llamada("UnityEngine.CanvasGroup::ignoreParentGroups"); return default; } }
-        public bool IsRaycastLocationValid(global::UnityEngine.Vector2 sp, global::UnityEngine.Camera eventCamera) { global::Porteo.Falta.Llamada("UnityEngine.CanvasGroup::IsRaycastLocationValid"); return default; }
     }
 }

@@ -4,6 +4,5 @@ namespace UnityEngine
 {
     public partial class TextAsset
     {
-        public string text { get { global::Porteo.Falta.Llamada("UnityEngine.TextAsset::text"); return default; } }
     }
 }

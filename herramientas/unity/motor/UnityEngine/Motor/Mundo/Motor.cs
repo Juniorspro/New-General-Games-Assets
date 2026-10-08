@@ -10,7 +10,17 @@ namespace Porteo
         {
             Escenas.Iniciar(escenasBuild);
             Datos.Ajustes.Cargar();
-            Escenas.CargarAhora(primera, LoadSceneMode.Single);
+            // los RenderSettings de cada escena (niebla, ambiente, cielo): los usan los scripts aunque no se dibuje
+            Datos.Ajustes.alCargarAjusteDeEscena += o =>
+            {
+                if (o is Datos.AjusteEscena a && a.Clase == 104 && a.crudo != null && a.archivo != null) UnityEngine.RenderSettings.Leer(a.crudo, a.archivo);
+            };
+            Entrada.Iniciar();
+            UI.Lienzos.Iniciar();
+            // lo que se puede pedir en cualquier momento (Resources.Load, Shader.Find) se trae antes
+            // de empezar; la primera escena se arma en el primer cuadro, cuando están sus datos
+            Mundo.Arranque = new Datos.Espera(Datos.Alcance.Recursos(Datos.Ajustes.Siempre()));
+            Escenas.Pedir(primera, LoadSceneMode.Single, false);
         }
     }
 }

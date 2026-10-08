@@ -36,6 +36,7 @@ namespace Porteo.Datos
                     case 30: Graficos = m; break;
                     case 11: Audio = m; break;
                     case 147: LeerRecursos(m); break;
+                    case 94: mapaShaders = m; break;
                 }
             }
             // el orden de ejecución de los scripts está en sus MonoScript
@@ -79,6 +80,42 @@ namespace Porteo.Datos
                 ps.Add(p);
             }
         }
+
+        // ScriptMapper: el nombre de cada shader que el proyecto incluye (para Shader.Find)
+        static Mapa mapaShaders;
+        static Dictionary<string, PPtr> shaders;
+
+        public static Shader ShaderPorNombre(string nombre)
+        {
+            if (shaders == null)
+            {
+                shaders = new Dictionary<string, PPtr>();
+                var l = mapaShaders?.M("m_Shaders")?.L("m_ObjectToName");
+                if (l != null)
+                    foreach (var x in l)
+                        if (x is List<object> par && par.Count == 2 && par[0] is PPtr p && par[1] is string n && !p.Nulo) shaders[n] = p;
+            }
+            return gestores != null && shaders.TryGetValue(nombre, out var q) ? gestores.Resolver(q) as Shader : null;
+        }
+
+        // Lo que el juego puede pedir en cualquier momento sin cargar una escena: lo de Resources,
+        // los shaders que se buscan por nombre y los que el proyecto incluye siempre.
+        public static IEnumerable<(Archivo a, long pid)> Siempre()
+        {
+            if (gestores == null) yield break;
+            foreach (var ps in recursos.Values)
+                foreach (var p in ps) if (!p.Nulo) yield return Ubicar(p);
+            var l = mapaShaders?.M("m_Shaders")?.L("m_ObjectToName");
+            if (l != null)
+                foreach (var x in l)
+                    if (x is List<object> par && par.Count == 2 && par[0] is PPtr p && !p.Nulo) yield return Ubicar(p);
+            var inc = Graficos?.L("m_AlwaysIncludedShaders");
+            if (inc != null)
+                foreach (var x in inc)
+                    if (x is PPtr p && !p.Nulo) yield return Ubicar(p);
+        }
+
+        static (Archivo, long) Ubicar(PPtr p) => (p.Archivo == 0 ? gestores : gestores.Externo(p.Archivo - 1), p.PathID);
 
         public static string Etiqueta(int id)
         {

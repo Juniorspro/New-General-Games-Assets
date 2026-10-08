@@ -145,6 +145,9 @@ class Exportador:
                     self.avisos.add(f"MonoBehaviour {sc}: {e}")
             return cab, sc
         arbol = o.read_typetree(check_read=False)
+        if tipo == "TextAsset" and isinstance(arbol.get("m_Script"), str):
+            # el contenido tal cual: puede ser binario (UnityPy lo deja en un str con surrogateescape)
+            arbol["m_Script"] = arbol["m_Script"].encode("utf-8", "surrogateescape")
         if tipo == "Shader":
             arbol = self.shader(o, arbol)
         elif tipo == "AudioClip":

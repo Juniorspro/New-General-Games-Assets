@@ -4,13 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class Random
     {
-        public static float value { get { global::Porteo.Falta.Llamada("UnityEngine.Random::value"); return default; } }
-        public static global::UnityEngine.Vector3 insideUnitSphere { get { global::Porteo.Falta.Llamada("UnityEngine.Random::insideUnitSphere"); return default; } }
-        public static global::UnityEngine.Vector2 insideUnitCircle { get { global::Porteo.Falta.Llamada("UnityEngine.Random::insideUnitCircle"); return default; } }
-        public static global::UnityEngine.Vector3 onUnitSphere { get { global::Porteo.Falta.Llamada("UnityEngine.Random::onUnitSphere"); return default; } }
-        public static global::UnityEngine.Quaternion rotation { get { global::Porteo.Falta.Llamada("UnityEngine.Random::rotation"); return default; } }
-        public static void InitState(int seed) { global::Porteo.Falta.Llamada("UnityEngine.Random::InitState"); }
-        public static float Range(float min, float max) { global::Porteo.Falta.Llamada("UnityEngine.Random::Range"); return default; }
-        public static int Range(int min, int max) { global::Porteo.Falta.Llamada("UnityEngine.Random::Range"); return default; }
     }
 }

@@ -4,18 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class Sprite
     {
-        public global::UnityEngine.Bounds bounds { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::bounds"); return default; } }
-        public global::UnityEngine.Rect rect { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::rect"); return default; } }
-        public global::UnityEngine.Vector4 border { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::border"); return default; } }
-        public global::UnityEngine.Texture2D texture { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::texture"); return default; } }
-        public float pixelsPerUnit { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::pixelsPerUnit"); return default; } }
-        public global::UnityEngine.Texture2D associatedAlphaSplitTexture { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::associatedAlphaSplitTexture"); return default; } }
-        public global::UnityEngine.Vector2 pivot { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::pivot"); return default; } }
-        public bool packed { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::packed"); return default; } }
-        public global::UnityEngine.Rect textureRect { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::textureRect"); return default; } }
-        public global::UnityEngine.Vector2[] vertices { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::vertices"); return default; } }
-        public ushort[] triangles { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::triangles"); return default; } }
-        public global::UnityEngine.Vector2[] uv { get { global::Porteo.Falta.Llamada("UnityEngine.Sprite::uv"); return default; } }
-        public static global::UnityEngine.Sprite Create(global::UnityEngine.Texture2D texture, global::UnityEngine.Rect rect, global::UnityEngine.Vector2 pivot) { global::Porteo.Falta.Llamada("UnityEngine.Sprite::Create"); return default; }
     }
 }

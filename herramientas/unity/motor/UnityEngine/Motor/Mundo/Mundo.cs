@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Porteo.Datos;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -28,8 +29,15 @@ namespace Porteo
 
         static bool primerCuadro = true;
 
+        // los datos que hacen falta antes de empezar (Resources, shaders siempre incluidos)
+        internal static Espera Arranque;
+
         public static void Cuadro(double dtReal)
         {
+            // mientras llegan los datos de una carga que en Unity bloquearía, no corre nada
+            if (Arranque != null) { if (!Arranque.Lista) return; Arranque = null; }
+            if (Escenas.Esperando) return;
+
             // ── tiempo ──
             if (dtReal < 0) dtReal = 0;
             float real = (float)dtReal;
@@ -42,12 +50,14 @@ namespace Porteo
             Time.dtSuave = Time.cuadros == 0 ? dt : Time.dtSuave + (dt - Time.dtSuave) * 0.2f;
             Time.cuadros++;
 
+            long t0 = Medidor.Ahora();
             // ── EarlyUpdate ──
             Llamar(AlEmpezarCuadro);
             Escenas.ProcesarPedidos();
             Activacion.ArrancarPendientes();
             Invocaciones.Procesar();
 
+            long t1 = Medidor.Ahora();
             // ── FixedUpdate ──
             if (Time.dtFijo > 0)
             {
@@ -70,6 +80,7 @@ namespace Porteo
                 if (Time.tFijo + Time.dtFijo <= Time.t) Time.tFijo = Time.t;
             }
 
+            long t2 = Medidor.Ahora();
             // ── PreUpdate / Update ──
             Llamar(PreUpdate);
             Ciclo.Update.Correr();
@@ -78,17 +89,22 @@ namespace Porteo
             Activacion.ArrancarPendientes();
             ProcesarDestrucciones();
 
+            long t3 = Medidor.Ahora();
             // ── LateUpdate ──
             Llamar(AntesDeLateUpdate);
             Ciclo.LateUpdate.Correr();
             ProcesarDestrucciones();
 
             // ── PostLateUpdate ──
+            long t4 = Medidor.Ahora();
             Llamar(AntesDeDibujar);
+            long t5 = Medidor.Ahora();
             Llamar(Dibujar);
+            long t6 = Medidor.Ahora();
             Corrutinas.FinDeCuadro();
             ProcesarDestrucciones();
             Llamar(AlTerminarCuadro);
+            Medidor.Cuadro(t0, t1, t2, t3, t4, t5, t6, Medidor.Ahora());
         }
 
         static void Llamar(Action a)
@@ -219,3 +235,37 @@ namespace Porteo
         }
     }
 }
+
+namespace Porteo
+{
+    // Cuánto tarda cada parte del cuadro (para saber qué optimizar): cada tantos segundos se
+    // informa el promedio por cuadro de cada fase.
+    public static class Medidor
+    {
+        public static bool Activo = true;
+        public static float Cada = 5f;
+        static readonly double[] suma = new double[7];
+        static int cuadros;
+        static long desde;
+        public static int Dibujos, Triangulos;   // los suma Dibujo
+
+        public static long Ahora() => System.Diagnostics.Stopwatch.GetTimestamp();
+
+        internal static void Cuadro(long t0, long t1, long t2, long t3, long t4, long t5, long t6, long t7)
+        {
+            if (!Activo) return;
+            double f = 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+            suma[0] += (t1 - t0) * f; suma[1] += (t2 - t1) * f; suma[2] += (t3 - t2) * f; suma[3] += (t4 - t3) * f;
+            suma[4] += (t5 - t4) * f; suma[5] += (t6 - t5) * f; suma[6] += (t7 - t0) * f;
+            cuadros++;
+            if (desde == 0) desde = t0;
+            if ((t7 - desde) * f < Cada * 1000) return;
+            double n = cuadros, seg = (t7 - desde) * f / 1000;
+            Anfitrion.Consola?.Invoke($"porteo: {n / seg:F1} cuadros/s | por cuadro (ms): inicio {suma[0] / n:F1}, fijo {suma[1] / n:F1}, update {suma[2] / n:F1}, late {suma[3] / n:F1}, canvas {suma[4] / n:F1}, dibujo {suma[5] / n:F1}, total {suma[6] / n:F1} | {Dibujos / n:F0} dibujos, {Triangulos / n / 1000:F0}k triángulos", UnityEngine.LogType.Log);
+            Array.Clear(suma, 0, suma.Length);
+            cuadros = 0; Dibujos = 0; Triangulos = 0;
+            desde = t7;
+        }
+    }
+}
+

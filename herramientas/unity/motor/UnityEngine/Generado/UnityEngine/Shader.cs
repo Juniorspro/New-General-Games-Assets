@@ -2,16 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class Shader : global::UnityEngine.Object
+    public sealed partial class Shader
     {
-        public static int globalMaximumLOD { set { global::Porteo.Falta.Llamada("UnityEngine.Shader::globalMaximumLOD="); } }
-        public bool isSupported { get { global::Porteo.Falta.Llamada("UnityEngine.Shader::isSupported"); return default; } }
-        public static global::UnityEngine.Shader Find(string name) { global::Porteo.Falta.Llamada("UnityEngine.Shader::Find"); return default; }
-        public static void EnableKeyword(string keyword) { global::Porteo.Falta.Llamada("UnityEngine.Shader::EnableKeyword"); }
-        public static void DisableKeyword(string keyword) { global::Porteo.Falta.Llamada("UnityEngine.Shader::DisableKeyword"); }
-        public static int PropertyToID(string name) { global::Porteo.Falta.Llamada("UnityEngine.Shader::PropertyToID"); return default; }
-        public static void SetGlobalFloat(string name, float value) { global::Porteo.Falta.Llamada("UnityEngine.Shader::SetGlobalFloat"); }
-        public static void SetGlobalVector(string name, global::UnityEngine.Vector4 value) { global::Porteo.Falta.Llamada("UnityEngine.Shader::SetGlobalVector"); }
-        public static void SetGlobalTexture(string name, global::UnityEngine.Texture value) { global::Porteo.Falta.Llamada("UnityEngine.Shader::SetGlobalTexture"); }
     }
 }

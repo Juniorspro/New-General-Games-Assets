@@ -10,8 +10,17 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- el juego arma las rutas de sus textos con CultureInfo.Name y TwoLetterISOLanguageName
+         (I18n/es/...) y tiene 10 idiomas, de alfabetos latinos, cirílico y CJK: hace falta ICU completo -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <WasmIncludeFullIcuData>true</WasmIncludeFullIcuData>
+    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
     <WasmEnableSIMD>true</WasmEnableSIMD>
+    <!-- el motor llama a WebGL 2 directo (DllImport "porteo"): hace falta enlazar lo nativo -->
+    <WasmBuildNative>true</WasmBuildNative>
+    <EmccExtraLDFlags>-lGL -sMAX_WEBGL_VERSION=2 -sMIN_WEBGL_VERSION=2</EmccExtraLDFlags>
+    <EmccInitialHeapSize>268435456</EmccInitialHeapSize>
+    <EmccMaximumHeapSize>4294901760</EmccMaximumHeapSize>
     <!-- se recorta sólo la biblioteca de .NET: el juego y el motor quedan como están (Unity llama
          por reflexión a Awake, Update... y la propagación de constantes del recortador se rompe
          con el IL de UnityEngine.UI) -->
@@ -19,6 +28,9 @@
     <_ExtraTrimmerArgs>$(_ExtraTrimmerArgs) --disable-opt ipconstprop --disable-opt unreachablebodies</_ExtraTrimmerArgs>
     <NoWarn>$(NoWarn);MSB3277;CS1701;CS1702;IL2026;IL2075;IL2072;IL2070;IL2067;IL2057</NoWarn>
   </PropertyGroup>
+  <ItemGroup>
+    <NativeFileReference Include="nativo/porteo.c" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../UnityEngine/UnityEngine.CoreModule.csproj" />
     <ProjectReference Include="../Fachadas/*/*.csproj" />

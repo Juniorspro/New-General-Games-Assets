@@ -130,6 +130,7 @@ namespace Porteo
 
         public static void Accion(Action a, UnityEngine.Object contexto)
         {
+            if (a == null) return;
             try { a(); }
             catch (Exception e) { Debug.LogException(e, contexto); }
         }
