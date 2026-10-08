@@ -57,10 +57,17 @@ que salen de `exportar/`. Medido sobre Slime Rancher (913 MB exportados):
 |---|---|---|---|
 | texturas ETC2 (bloques de 16 bytes) | 340 MB | ~11% | lp=pb=4 |
 | texturas ETC1 (bloques de 8 bytes) | 117 MB | ~21% | lp=pb=3 |
-| vértices | 178 MB | ~30% | por canal: todas las posiciones, todas las normales... |
+| vértices | 178 MB | ~25% | por canal (todas las posiciones, todas las normales...); los proxies de región, como diferencia con su predicción (abajo) |
 | índices | 18 MB | ~2% | cada uno como diferencia con el anterior |
 | audio Ogg | 68 MB | ~97% | ya viene comprimido |
 | paquetes y shaders | 136 MB | ~10% | |
+
+Los proxies de región (lo que se ve de una zona lejana: 150 de los 178 MB de vértices) son las
+mallas de la raíz de cada región, transformadas y juntadas por material. `proxies.py` encuentra de
+qué malla y con qué matriz sale cada tramo (el 46% de los vértices; el resto sale de mallas que
+Unity comprimió, que ya no son las originales) y guarda la diferencia con la predicción, casi
+siempre 0 o ±1 en los bits de cada float. `arranque.js` la deshace con las mismas cuentas en el
+mismo orden: sale igual bit a bit (probado con los 111 proxies). Ahorra 9 MB.
 
 Comparado con gzip, zstd -22 --long y brotli 11, LZMA gana en todas las clases. Los bloques son
 de 32 MB: más grandes comprimen un poco más (64 MB: −2,6%) pero cada uno se descomprime entero

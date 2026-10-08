@@ -38,6 +38,7 @@ from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parent / "exportar"))
+sys.path.insert(0, str(AQUI))   # con python -I la carpeta del script no está (proxies.py)
 from leer import Paquete  # noqa: E402
 
 # lc/lp/pb de LZMA por clase de datos (medido: ver arriba)
@@ -233,6 +234,7 @@ def main():
     ap.add_argument("--procesos", type=int, default=os.cpu_count() or 2)
     ap.add_argument("--titulo", default="Slime Rancher")
     ap.add_argument("--cache", help="carpeta donde guardar los bloques comprimidos (rearmar es mucho más rápido)")
+    ap.add_argument("--sin-proxies", action="store_true", help="no predecir las mallas proxy (proxies.py, necesita numpy)")
     a = ap.parse_args()
     web, datos = Path(a.web), Path(a.datos)
     BLOQUE = int(a.bloque * 1048576)
@@ -262,16 +264,35 @@ def main():
     posicion = {rid: k for k, rid in enumerate(orden)}
     ids = sorted((int(f.stem) for f in (datos / "recursos").glob("*.bin")), key=lambda r: (posicion.get(r, len(orden)), r))
     log(f"{len(codigo)} archivos de código, {len(paquetes)} paquetes, {len(ids)} recursos ({len(orden)} con orden de uso)")
+    # las mallas proxy, como diferencia con lo que se predice desde otras mallas (proxies.py)
+    descs, fuente = {}, None
+    if not a.sin_proxies:
+        import proxies
+
+        def abrir(n):
+            f = datos / "paquetes" / (n + ".paq")
+            return Paquete(f.read_bytes()) if f.exists() else None
+        log("buscando de qué está hecho cada proxy…")
+        descs, fuente = proxies.buscar(abrir, [f.stem for f in (datos / "paquetes").glob("*.paq")],
+                                       lambda rid: (datos / "recursos" / f"{rid}.bin").read_bytes(), log)
+        if descs:
+            cub = sum(sg[1] for d in descs.values() for sg in d["segmentos"])
+            log(f"   {len(descs)} proxies: {cub} de {sum(d['n'] for d in descs.values())} vértices se predicen")
     sin_trans = 0
     for rid in ids:
         b = (datos / "recursos" / f"{rid}.bin").read_bytes()
         clase, trans = info.get(rid, ("otros", None))
+        if rid in descs:
+            b = proxies.restar(b, descs[rid], fuente)
         b2, trans2 = transformar(b, trans)
         if trans is not None and trans2 is None:
             sin_trans += 1
+        if rid in descs:
+            trans2 = ["P", str(rid), trans2]
         entradas.append(("r%d" % rid, b2, clase, trans2))
     if sin_trans:
         log(f"   {sin_trans} recursos sin transformar (canales raros)")
+    del fuente
 
     # 2. los bloques: el código primero (para arrancar ya), los paquetes, y los recursos en orden de
     # uso, cada clase en sus bloques (se abre uno nuevo al llenarse)
@@ -291,6 +312,8 @@ def main():
             b[2] += len(e[1])
     agrupar(codigo, tope=1 << 40)   # el código en un solo bloque: se necesita entero para arrancar
     agrupar(paquetes)
+    if descs:   # las recetas de los proxies, en su bloque chico (se leen al armar el primero)
+        agrupar([("dproxies", json.dumps({str(k): v for k, v in descs.items()}, separators=(",", ":")).encode(), "codigo", None)])
     agrupar(entradas)
     total = sum(b[2] for b in bloques)
     log(f"{len(bloques)} bloques, {total / 1e6:.1f} MB sin comprimir")

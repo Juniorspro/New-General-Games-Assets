@@ -68,7 +68,8 @@
   // lo que empaquetar.py transformó para que comprima mejor, de vuelta como era
   function deshacer(d, entradas) {
     for (const e of entradas) {
-      const t = e[3];
+      let t = e[3];
+      if (t && t[0] === 'P') t = t[2];   // proxy: acá sólo su transformación de vértices (ver obtener)
       if (!t) continue;
       const desde = e[1], largo = e[2];
       if (t[0] === 'd') {
@@ -89,6 +90,78 @@
         for (let o = 0; o < largo; o++) if (!usado[o]) dst[o] = src[p++];
       }
     }
+  }
+
+  // ── proxies (empaquetar/proxies.py): el proxy viene como diferencia con lo que se predice desde
+  // otras mallas (con su matriz); acá se vuelve a armar, con las mismas cuentas en el mismo orden
+  // (doble precisión y Math.fround al final, como numpy .astype(float32)): sale igual bit a bit ──
+  const TAM_FMT = [4, 2, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4];
+  function mitad(h) {   // float16 → número, exacto
+    const s = h & 0x8000 ? -1 : 1, e = (h >> 10) & 31, f = h & 1023;
+    if (e === 0) return s * f * Math.pow(2, -24);
+    if (e === 31) return f ? NaN : s * Infinity;
+    return s * (1 + f / 1024) * Math.pow(2, e - 15);
+  }
+  function predecirProxy(desc, fuente) {
+    const n = desc.n, canales = desc.canales;
+    let largo = 0;
+    for (const c in canales) { const [ini, paso, fmt, dim] = canales[c]; largo = Math.max(largo, ini + (n - 1) * paso + dim * TAM_FMT[fmt]); }
+    const pred = new Uint8Array(largo), dv = new DataView(pred.buffer);
+    for (const [i, vc, clave, fv, M, N] of desc.segmentos) {
+      const [nf, cf] = desc.fuentes[clave];
+      const fb = fuente(clave);
+      const fdv = new DataView(fb.buffer, fb.byteOffset, fb.byteLength);
+      for (const cs in canales) {
+        const c = +cs, [ini, paso, fmt, dim] = canales[cs];
+        const src = cf[cs];
+        if (!src) {
+          if (c === 3 && fmt === 2) for (let k = 0; k < vc; k++) pred.fill(255, ini + (i + k) * paso, ini + (i + k) * paso + dim);
+          continue;
+        }
+        const [fIni, fPaso, fFmt, fDim] = src;
+        if (fmt === 2 && fFmt === 2 && c === 3) {
+          for (let k = 0; k < vc; k++) for (let b = 0; b < dim; b++) pred[ini + (i + k) * paso + b] = fb[fIni + (fv + k) * fPaso + b];
+          continue;
+        }
+        if (fmt !== 0 || (fFmt !== 0 && fFmt !== 1) || fDim < Math.min(dim, c <= 2 ? 3 : dim)) continue;
+        const leer = (k, j) => { const o = fIni + (fv + k) * fPaso; return fFmt === 0 ? fdv.getFloat32(o + j * 4, true) : mitad(fdv.getUint16(o + j * 2, true)); };
+        const out = new Array(4);
+        for (let k = 0; k < vc; k++) {
+          if (c === 0) {
+            const x = leer(k, 0), y = leer(k, 1), z = leer(k, 2);
+            for (let f = 0; f < 3; f++) out[f] = Math.fround(((x * M[f * 4] + y * M[f * 4 + 1]) + z * M[f * 4 + 2]) + M[f * 4 + 3]);
+          } else if (c === 1 || c === 2) {
+            const x = leer(k, 0), y = leer(k, 1), z = leer(k, 2);
+            const T = c === 1 ? N : [M[0], M[1], M[2], M[4], M[5], M[6], M[8], M[9], M[10]];
+            const a = (x * T[0] + y * T[1]) + z * T[2], b = (x * T[3] + y * T[4]) + z * T[5], cc = (x * T[6] + y * T[7]) + z * T[8];
+            let l = Math.sqrt((a * a + b * b) + cc * cc);
+            if (l === 0) l = 1;
+            out[0] = Math.fround(a / l); out[1] = Math.fround(b / l); out[2] = Math.fround(cc / l);
+            if (c === 2) out[3] = Math.fround(fDim > 3 ? leer(k, 3) : 1);
+          } else {
+            for (let j = 0; j < fDim && j < 4; j++) out[j] = Math.fround(leer(k, j));
+          }
+          const o = ini + (i + k) * paso;
+          for (let j = 0; j < dim; j++) dv.setFloat32(o + j * 4, Number.isFinite(out[j]) ? out[j] : 0, true);
+        }
+      }
+    }
+    return pred;
+  }
+  function reconstruirProxy(residuo, desc, fuente) {
+    const pred = predecirProxy(desc, fuente);
+    const out = residuo.slice(), n = desc.n;
+    const dvO = new DataView(out.buffer), dvP = new DataView(pred.buffer);
+    for (const cs in desc.canales) {
+      const [ini, paso, fmt, dim] = desc.canales[cs];
+      const tam = TAM_FMT[fmt];
+      for (let i = 0; i < n; i++) {
+        const o = ini + i * paso;
+        if (fmt === 0) for (let j = 0; j < dim; j++) dvO.setUint32(o + j * 4, (dvO.getUint32(o + j * 4, true) + dvP.getUint32(o + j * 4, true)) >>> 0, true);
+        else for (let b = 0; b < dim * tam; b++) out[o + b] = (out[o + b] + pred[o + b]) & 0xFF;
+      }
+    }
+    return out;
   }
 
   function trabajador() {
@@ -254,12 +327,63 @@
     return d;
   }
 
+  // los proxies ya armados (pocos: el motor los copia apenas los pide)
+  const armados = new Map();
+  let descProxies = null;
+  // las fuentes de todos los proxies (3,5 MB en Slime Rancher), copiadas una sola vez: casi todas
+  // son mallas chicas dentro de los .paq, y leerlas de a una descomprimía y soltaba una y otra vez
+  // los bloques de 32 MB donde están
+  let fuentesProxy = null;
+  function copiarFuentes() {
+    fuentesProxy = new Map();
+    const porBloque = new Map();
+    for (const id in descProxies) {
+      for (const clave in descProxies[id].fuentes) {
+        if (fuentesProxy.has(clave)) continue;
+        fuentesProxy.set(clave, null);
+        const k = clave[0] === 'r' ? clave : 'p' + /^p(.*)@\d+@\d+$/.exec(clave)[1];
+        const ij = donde.get(k);
+        if (!ij) continue;
+        if (!porBloque.has(ij[0])) porBloque.set(ij[0], []);
+        porBloque.get(ij[0]).push(clave);
+      }
+    }
+    // bloque por bloque: cada uno se descomprime (si hace falta) una vez
+    for (const lista of porBloque.values()) {
+      for (const clave of lista) {
+        let d;
+        if (clave[0] === 'r') d = obtener(clave);
+        else {
+          const [, paq, desde, largo] = /^p(.*)@(\d+)@(\d+)$/.exec(clave);
+          const b = obtener('p' + paq);
+          d = b && b.subarray(+desde, +desde + +largo);
+        }
+        fuentesProxy.set(clave, d ? d.slice() : null);
+      }
+    }
+  }
+  function fuenteProxy(clave) {
+    if (!fuentesProxy) copiarFuentes();
+    return fuentesProxy.get(clave);
+  }
+
   function obtener(clave) {
     const ij = donde.get(clave);
     if (!ij) return null;
+    const e = T.bloques[ij[0]].e[ij[1]];
+    if (e[3] && e[3][0] === 'P') {
+      let a = armados.get(clave);
+      if (a) return a;
+      const d = bloqueYa(ij[0]);
+      if (!d) return null;
+      if (!descProxies) descProxies = JSON.parse(new TextDecoder().decode(obtener('dproxies')));
+      a = reconstruirProxy(d.subarray(e[1], e[1] + e[2]), descProxies[e[3][1]], fuenteProxy);
+      if (armados.size >= 4) armados.delete(armados.keys().next().value);
+      armados.set(clave, a);
+      return a;
+    }
     const d = bloqueYa(ij[0]);
     if (!d) return null;
-    const e = T.bloques[ij[0]].e[ij[1]];
     return d.subarray(e[1], e[1] + e[2]);
   }
 

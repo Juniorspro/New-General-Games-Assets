@@ -352,6 +352,8 @@ def prediccion_completa(desc, fuente_bytes):
             out = predecir(c, v, M, N)[:, :dim]
             if out.shape[1] < dim:
                 continue
+            # lo no finito va como 0 (arranque.js hace lo mismo): los bits de un NaN no son seguros
+            out = np.where(np.isfinite(out), out, np.float32(0))
             dst = np.lib.stride_tricks.as_strided(pred[ini + i * paso:], (vc, dim * 4), (paso, 1))
             dst[:, :] = np.ascontiguousarray(out.astype("<f4")).view(np.uint8).reshape(vc, dim * 4)
     return pred, canales
