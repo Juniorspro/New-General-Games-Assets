@@ -24,6 +24,11 @@
   #cs-error { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 6vw;
     background: #000; color: #fff; font: 600 20px system-ui, sans-serif; text-align: center; white-space: pre-wrap; }
   #cs-error.si { display: flex; }
+  /* si el teléfono todavía no dejó sonar al juego: un botón para destrabar el sonido con un toque */
+  #cs-sonido { position: fixed; left: calc(10px + env(safe-area-inset-left)); top: calc(10px + env(safe-area-inset-top)); z-index: 45;
+    display: none; padding: 9px 14px; border-radius: 99px; border: 1px solid rgba(255, 200, 100, .7); background: rgba(0, 0, 0, .72);
+    color: #ffc864; font: 600 15px system-ui, sans-serif; min-height: 44px; }
+  #cs-sonido.si { display: block; }
   /* el teclado del teléfono: un campo de verdad, invisible (16px: si no, iOS hace zoom al enfocarlo) */
   #cs-teclado { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0;
     font-size: 16px; pointer-events: none; -webkit-user-select: text; user-select: text; }
@@ -34,6 +39,7 @@
 <div id="cs-carga"><div id="cs-carga-texto">Cargando…</div><div class="barra"><div id="cs-carga-barra"></div></div><small id="cs-carga-detalle"></small></div>
 <div id="cs-fondo"></div>
 <div id="cs-error"></div>
+<button id="cs-sonido" type="button">🔇 Tocá para activar el sonido</button>
 <input id="cs-teclado" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-hidden="true" tabindex="-1">
 <script src="porteo-web.js"></script>
 <script src="porteo-intro.js"></script>
@@ -239,7 +245,17 @@
   // El audio de SDL arranca suspendido: se despierta con el primer toque o tecla, y se calla
   // con la página oculta.
   const audio = () => M && M.SDL2 && M.SDL2.audioContext;
-  ['pointerdown', 'keydown', 'touchend'].forEach((ev) => addEventListener(ev, () => { const a = audio(); if (a && a.state !== 'running') a.resume().catch(() => {}); }, true));
+  // (con el dedo, Chrome da permiso de sonar recién en pointerup/touchend/click, no en pointerdown)
+  const despertar = () => { const a = audio(); if (a && a.state !== 'running' && !document.hidden) a.resume().catch(() => {}); };
+  ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'].forEach((ev) => addEventListener(ev, despertar, true));
+  // Si igual sigue callado (el teléfono no lo dejó), un botón a la vista: un toque directo sobre él
+  // siempre cuenta como permiso.
+  const botonSonido = $('cs-sonido');
+  botonSonido.addEventListener('click', (e) => { e.stopPropagation(); despertar(); });
+  setInterval(() => {
+    const a = audio();
+    botonSonido.className = a && a.state !== 'running' && !document.hidden && estado.fase === 'jugando' && !$('porteo-intro') ? 'si' : '';
+  }, 1000);
   document.addEventListener('visibilitychange', () => {
     const a = audio();
     if (a) { if (document.hidden) a.suspend().catch(() => {}); else a.resume().catch(() => {}); }
@@ -264,6 +280,9 @@
     const hechoInicio = () => hechoDe(inicio) + [...deWads.values()].reduce((a, b) => a + b, 0);
     const wadsBajados = wads.map((w) => traerGz('datos/' + w.archivo, w.gz, (b) => deWads.set(w.ruta, b)));
     inicio.forEach(bajar);
+    // lo común a las partidas se empieza a bajar apenas termina el menú, mientras el motor compila y
+    // arranca (antes esperaba al motor: en un teléfono, varios segundos de red sin usar)
+    Promise.all(inicio.map(bajar)).then(() => indice.partida.forEach(bajar)).catch(() => {});
     const motorListo = XashMotor({
       canvas: $('canvas'),
       locateFile: (p) => 'motor/' + p,

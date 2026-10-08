@@ -32,6 +32,7 @@ async function abrir(url, { w = 844, h = 390 } = {}) {
   const errores = [], afuera = [];
   const origen = new URL(url).origin;
   pg.on('pageerror', (e) => errores.push(e.message));
+  pg.on('dialog', async (d) => { errores.push('cartel: ' + d.message().replace(/\s+/g, ' ')); await d.dismiss().catch(() => {}); });
   pg.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) errores.push(m.text().slice(0, 160)); });
   pg.on('response', (r) => { if (r.status() >= 400 && !/favicon/.test(r.url())) errores.push(`${r.status()} ${r.url()}`); });
   pg.on('request', (r) => { const u = r.url(); if (!u.startsWith(origen) && !/^(data|blob):/.test(u)) afuera.push(u); });
@@ -429,6 +430,51 @@ console.log('\nC. Pantalla chica (640×360): nada cortado ni inalcanzable');
   ch('C: ningún botón tapa a otro', pisan.length === 0, pisan.join(', '));
   ch('C: sin errores en la consola', t.errores.length === 0, t.errores.slice(0, 3).join(' | '));
   await t.c.close();
+}
+
+console.log('\nG. Como en un teléfono: 4G, sin permiso de sonar hasta tocar, y la pantalla cambia de tamaño mientras baja');
+{
+  // otro navegador, sin el permiso de reproducir solo que tienen las demás secciones
+  const nav2 = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const c = await nav2.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, serviceWorkers: 'block' });
+  const pg = await c.newPage();
+  const errores = [];
+  pg.on('pageerror', (e) => errores.push(e.message));
+  pg.on('dialog', async (d) => { errores.push('cartel: ' + d.message().replace(/\s+/g, ' ')); await d.dismiss().catch(() => {}); });
+  const cdp = await c.newCDPSession(pg);
+  await cdp.send('Network.enable');
+  await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 60, downloadThroughput: 10e6 / 8, uploadThroughput: 2e6 / 8 });
+  const t = { c, pg, cdp, errores, t0: Date.now() };
+  await pg.goto(WEB);
+  await pg.waitForTimeout(1200);
+  await tocar(t, 420, 200);                                  // saltea la intro (y pide pantalla completa)
+  await pg.setViewportSize({ width: 800, height: 360 });     // la pantalla completa cambia el tamaño
+  const listo = await hastaElMenu(t);
+  await pg.setViewportSize({ width: 844, height: 390 });
+  await pg.waitForTimeout(1500);
+  ch('G: cambiar el tamaño mientras se baja lo de las partidas no rompe nada', errores.length === 0, errores.slice(0, 2).join(' | '));
+  ch('G: en 4G, el menú se puede tocar enseguida', listo < 30, `motor andando a los ${r1(listo)} s`);
+  // el sonido: el medidor envuelve el procesador de audio de SDL y anota el pico
+  await pg.evaluate(() => {
+    const a = window.M && M.SDL2 && M.SDL2.audio;
+    if (!a || !a.scriptProcessorNode) return;
+    window.__pico = 0;
+    const orig = a.scriptProcessorNode.onaudioprocess;
+    a.scriptProcessorNode.onaudioprocess = function (e) {
+      orig.call(this, e);
+      const d = e.outputBuffer.getChannelData(0);
+      for (let i = 0; i < d.length; i += 4) { const v = Math.abs(d[i]); if (v > window.__pico) window.__pico = v; }
+    };
+  });
+  await tocar(t, 600, 100);
+  await pg.waitForTimeout(3000);
+  const sonido = await pg.evaluate(() => ({ estado: window.M && M.SDL2 && M.SDL2.audioContext && M.SDL2.audioContext.state, pico: window.__pico || 0 }));
+  ch('G: con un toque, el sonido suena (se mide lo que sale, no sólo el estado)', sonido.estado === 'running' && sonido.pico > 0.01, `${sonido.estado}, pico ${r1(sonido.pico * 100) / 100}`);
+  const t1 = Date.now();
+  const { enMapa } = await aJugar(t, 'g');
+  ch('G: en 4G, de entrar a la página a jugar de_dust2 (lo común y el mapa se bajan)', !!enMapa, `${r1((Date.now() - t.t0) / 1000)} s (desde Nueva Partida: ${r1((Date.now() - t1) / 1000)} s)`);
+  ch('G: sin errores ni carteles', errores.length === 0, errores.slice(0, 2).join(' | '));
+  await nav2.close();
 }
 
 const conSW = await fetch(new URL('sw.js', WEB)).then((r) => r.ok).catch(() => false);

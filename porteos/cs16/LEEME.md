@@ -21,7 +21,7 @@ El juego no está en el repo (es público): `portear.sh` lo arma desde el `.rar`
 | `index.html` | la carcasa web: intro de la marca, descarga con progreso, mapas al elegirlos, guardado, teclado del teléfono |
 | `controles.js` | los controles táctiles, al estilo de Standoff 2 / Blood Strike |
 | `mainui_castellano.txt` | las frases del menú de esta versión que el castellano del juego no trae (lo nuestro) |
-| `prueba.mjs` | la lista de PORTEO.md §9 con dedos de verdad (CDP), midiendo el estado del juego (60 puntos) |
+| `prueba.mjs` | la lista de PORTEO.md §9 con dedos de verdad (CDP), midiendo el estado del juego (65 puntos; la sección G, como en un teléfono: 4G, sin permiso de sonar y la pantalla cambiando de tamaño) |
 
 ```bash
 porteos/cs16/portear.sh "CS 1.6 dani vizcarra LOQUENDO.rar" entrega-cs16
@@ -65,7 +65,16 @@ motor monta solo) que viajan con gzip y el navegador abre con `DecompressionStre
   sangre, sprays). Adentro de un `.pk3` no las encontraba.
 - Lo que el motor abre al arrancar (según `relevamiento.json`) va con el menú aunque "sea de
   las partidas": `sound/sentences.txt` se lee una sola vez, y sin él la radio y los bots
-  quedaban mudos.
+  quedaban mudos. Lo mismo con lo que abre **cuando cambia el tamaño de la pantalla** (fase
+  "pantalla" del relevamiento: el HUD del cliente, `sprites/hud.txt` y sus sprites, 1,7 MB): en
+  el teléfono pasa al entrar en pantalla completa o al girarlo, y si todavía se estaba bajando,
+  "Host Error: Failed to get number_0 sprite index".
+- Lo común a las partidas se empieza a bajar apenas termina el menú, mientras el motor compila.
+  Medido con la red de un 4G (10 Mbps): el menú a los ~9 s y jugando de_dust2 al minuto, la
+  primera vez; después queda guardado. El APK no baja nada.
+- El sonido: el teléfono deja sonar recién con un toque (`pointerup`, `touchend` o `click`); si
+  igual sigue callado, aparece un botón "Tocá para activar el sonido". `snd_mute_losefocus 0`:
+  el motor no se calla si cree que perdió el foco (al ir a segundo plano lo calla la página).
 - **Mapas al elegirlos:** antes de cargar un mapa el motor le pregunta a la página si
   están sus datos (`Porteo_MapaListo`, en `map` y en `changelevel`). Si no, la página los
   baja con una barra, hace `fs_rescan` y repite el comando. La lista de Crear partida

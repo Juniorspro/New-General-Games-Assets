@@ -118,9 +118,10 @@ BOTS_SCR = """
 
 # Lo que se aplica cada vez que arranca (index.html: +exec porteo.cfg): cambiar de arma al tocar
 # el número (sin confirmar con el disparo), menús VGUI que se tocan con el dedo, sin micrófono,
-# sin los controles táctiles propios del motor (la página tiene los suyos) y sin el mensaje del día:
-# el del juego es HTML, que cs16-client no dibuja (lo mostraba como código encima del menú de
-# equipos).
+# sin los controles táctiles propios del motor (la página tiene los suyos), sin el mensaje del día
+# (el del juego es HTML, que cs16-client no dibuja: lo mostraba como código encima del menú de
+# equipos) y sin callar el sonido cuando el motor cree que perdió el foco (en el teléfono eso pasa
+# sin que se salga del juego; al ir de verdad a segundo plano lo calla la página).
 PORTEO_CFG = """// porteo web
 hud_fastswitch "1"
 _vgui_menus "1"
@@ -130,6 +131,7 @@ gl_vsync "0"
 fps_max "100"
 cl_showfps "0"
 cl_hide_motd "1"
+snd_mute_losefocus "0"
 """
 
 
@@ -309,9 +311,13 @@ def main():
             if rr in usable and not rr.lower().endswith('.wad'):   # los wad se montan todos al arrancar
                 fases[rr] = set(fs)
     # lo que el motor abre al arrancar tiene que estar en el menú aunque sea "de las partidas"
-    # (sound/sentences.txt: las frases de la radio se leen una sola vez, al iniciar el sonido)
+    # (sound/sentences.txt: las frases de la radio se leen una sola vez, al iniciar el sonido), y
+    # también lo que abre cuando cambia el tamaño de la pantalla ("pantalla": rearma el HUD del
+    # cliente, que pide sprites/hud.txt; sin él, "Host Error: Failed to get number_0 sprite index".
+    # En el teléfono pasa al entrar en pantalla completa o al girarlo, antes de bajar las partidas)
+    al_abrir = lambda fs: 'arranque' in fs or 'pantalla' in fs
     for r, fs in fases.items():
-        if 'arranque' in fs and r in base:
+        if al_abrir(fs) and r in base:
             base.discard(r)
             menu.add(r)
     # la lista de precache de CS (reslists): todo lo que una partida de CS puede pedir
@@ -413,7 +419,7 @@ def main():
         if r in menu or r in base or any(r in del_mapa[m] for m in mapas):
             continue
         solos = fs & set(mapas)
-        if 'arranque' in fs:
+        if al_abrir(fs):
             menu.add(r)
         elif 'partida' in fs or len(solos) >= 2:
             base.add(r)

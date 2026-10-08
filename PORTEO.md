@@ -546,6 +546,9 @@ créditos ni se tapa al autor.
 | Cloudflare Pages con un archivo de más de 25 MiB | no lo sube | partir los paquetes (`armar-datos.py`: partes de hasta 20 MiB) |
 | módulos `.so` de Emscripten en Cloudflare | se sirven como `application/octet-stream`, sin comprimir: 2 MB de más al abrir | publicarlos como `.wasm` (brotli: 3,0 → 1,0 MB) |
 | mandar por el chat un archivo de más de 30 MiB | no llega (límite de los adjuntos) | 7z en partes de 25 MB (`7z a -v25m -mx0`), que ZArchiver (Android) o 7-Zip juntan solos; la web, publicada en Pages |
+| probar con la pantalla quieta | en el teléfono la pantalla cambia de tamaño al entrar en pantalla completa o al girarlo; Xash3D rearma el HUD (`SCR_VidInit`) y pide `sprites/hud.txt`, que todavía se estaba bajando: "Host Error: Failed to get number_0 sprite index" (lo vio el dueño, no las pruebas) | relevar también qué abre el motor al cambiar el tamaño, mandarlo con el menú, y probar cambiando el tamaño con la red de un 4G (`porteos/cs16/prueba.mjs`, sección G) |
+| Playwright con un `alert()` del juego | lo cierra solo y no avisa: un Host Error pasaba la prueba | escuchar `page.on('dialog')` y contarlo como error |
+| "el sonido anda" porque el `AudioContext` está en `running` | no dice que salga algo | medir el pico de lo que escribe el procesador de audio (envolver su `onaudioprocess`), con Chromium **sin** permiso de reproducir solo |
 
 ## 14. Registro de porteos
 
@@ -750,7 +753,8 @@ Tamaños: instalado 503 MB → web 181 MB (al abrir se bajan ~8 MB por la red: e
 Publicado: https://porteo-cs16.pages.dev (Cloudflare Pages, proyecto porteo-cs16)
 Carga (servidor local, CPU sin limitar): el motor anda a los 1,4 s; de_dust2 se baja y carga en 6,5 s;
          el archivo único, 4,2 s
-Pruebas: 60/60 (porteos/cs16/prueba.mjs) · no se pudo probar en un teléfono real
+Pruebas: 65/65 (porteos/cs16/prueba.mjs, contra el sitio publicado) · el dueño lo probó en su teléfono:
+         un Host Error al entrar en pantalla completa antes de bajar las partidas (arreglado, ver §13)
 ```
 
 - **Qué hizo falta** (detalle en [`porteos/cs16/LEEME.md`](porteos/cs16/LEEME.md)):
