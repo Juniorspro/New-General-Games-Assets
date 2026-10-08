@@ -2,9 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class SphereCollider : global::UnityEngine.Collider
+    public partial class SphereCollider
     {
-        public global::UnityEngine.Vector3 center { get { global::Porteo.Falta.Llamada("UnityEngine.SphereCollider::center"); return default; } }
-        public float radius { get { global::Porteo.Falta.Llamada("UnityEngine.SphereCollider::radius"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.SphereCollider::radius="); } }
     }
 }

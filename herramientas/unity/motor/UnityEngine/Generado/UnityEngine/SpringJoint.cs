@@ -2,11 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class SpringJoint : global::UnityEngine.Joint
+    public partial class SpringJoint
     {
-        public float spring { set { global::Porteo.Falta.Llamada("UnityEngine.SpringJoint::spring="); } }
-        public float damper { set { global::Porteo.Falta.Llamada("UnityEngine.SpringJoint::damper="); } }
-        public float minDistance { set { global::Porteo.Falta.Llamada("UnityEngine.SpringJoint::minDistance="); } }
-        public float maxDistance { get { global::Porteo.Falta.Llamada("UnityEngine.SpringJoint::maxDistance"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.SpringJoint::maxDistance="); } }
     }
 }

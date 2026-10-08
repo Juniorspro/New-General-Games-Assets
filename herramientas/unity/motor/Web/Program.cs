@@ -60,7 +60,11 @@ public static partial class Programa
     // la entrada: main.js ya traduce las teclas a KeyCode y las coordenadas a píxeles del lienzo
     // con el origen abajo a la izquierda (como Input.mousePosition)
     [JSExport] public static void PerfilGpu(bool si) => Porteo.Render.Dibujo.PerfilGpu = si;
-    [JSExport] public static void Apagar(string que) => Porteo.Render.Dibujo.Apagado.Add(que);
+    [JSExport] public static void Apagar(string que)
+    {
+        if (que == "aniso") Porteo.Render.Gpu.SinAnisotropia = true;
+        else Porteo.Render.Dibujo.Apagado.Add(que);
+    }
     [JSExport] public static void Tecla(int codigo, bool baja) => Entrada.Tecla(codigo, baja);
     [JSExport] public static void BotonRaton(int boton, bool baja) => Entrada.BotonRaton(boton, baja);
     [JSExport] public static void Raton(double x, double y) => Entrada.Raton((float)x, (float)y);

@@ -30,7 +30,7 @@ namespace Porteo.Render
             ID_LIGHTSHADOW = Ids.De("_LightShadowData"), ID_COLORSPACEDOUBLE = Ids.De("unity_ColorSpaceDouble"), ID_COLORSPACEGREY = Ids.De("unity_ColorSpaceGrey"),
             ID_LMST = Ids.De("unity_LightmapST"), ID_SPECCUBE1 = Ids.De("unity_SpecCube1"), ID_SHADOWFADE = Ids.De("unity_ShadowFadeCenterAndType"),
             ID_COLORSPACEDIEL = Ids.De("unity_ColorSpaceDielectricSpec"), ID_COLORSPACELUM = Ids.De("unity_ColorSpaceLuminance"),
-            ID_GRAB = Ids.De("_GrabTexture");
+            ID_GRAB = Ids.De("_GrabTexture"), ID_PROY = Ids.De("hlslcc_mtx4x4unity_Projector"), ID_PROYCLIP = Ids.De("hlslcc_mtx4x4unity_ProjectorClip");
 
         static bool iniciado;
         static int versionAmbiente = -1;
@@ -193,6 +193,7 @@ namespace Porteo.Render
             int i = 0;
             while (i < nItems && items[i].Cola <= 2500) i = Apagado.Contains("sinopacos") ? i + 1 : DibujarDesde(i, 2500);
             if (cam.borrar == CameraClearFlags.Skybox && !Apagado.Contains("sincielo")) Cielo.Dibujar(cam);
+            if (Proyectores.activos.Count > 0 && !Apagado.Contains("sinproyectores")) DibujarProyectores(i);
             while (i < nItems) i = Apagado.Contains("sintransparentes") ? i + 1 : DibujarDesde(i, int.MaxValue);
             Mensajes.Accion(() => EnCamara?.Invoke(cam), null);
 
@@ -289,7 +290,9 @@ namespace Porteo.Render
         static float Determinante3(in Matrix4x4 m) =>
             m.m00 * (m.m11 * m.m22 - m.m12 * m.m21) - m.m01 * (m.m10 * m.m22 - m.m12 * m.m20) + m.m02 * (m.m10 * m.m21 - m.m11 * m.m20);
 
-        static void Planos(in Matrix4x4 m)
+        static void Planos(in Matrix4x4 m) => PlanosDe(m, planos);
+
+        static void PlanosDe(in Matrix4x4 m, Plane[] planos)
         {
             // Gribb-Hartmann: izquierda, derecha, abajo, arriba, cerca, lejos
             planos[0] = Plano(m.m30 + m.m00, m.m31 + m.m01, m.m32 + m.m02, m.m33 + m.m03);
@@ -307,7 +310,9 @@ namespace Porteo.Render
             return new Plane { normal = new Vector3(a / l, b / l, c / l), distance = d / l };
         }
 
-        static bool Visible(in Bounds b)
+        static bool Visible(in Bounds b) => VisibleEn(planos, b);
+
+        static bool VisibleEn(Plane[] planos, in Bounds b)
         {
             var c = b.center; var e = b.extents;
             for (int i = 0; i < 6; i++)
@@ -406,6 +411,44 @@ namespace Porteo.Render
             }
         }
 
+        // ── proyectores ──
+        // Cada proyector dibuja su material sobre los objetos opacos visibles que entran en su
+        // volumen (salvo las capas que ignora), de a uno: cada objeto lleva sus propias matrices
+        // unity_Projector y unity_ProjectorClip (las del proyector por la del objeto).
+        static readonly Plane[] planosProyector = new Plane[6];
+        static readonly HashSet<(Renderer, int)> proyectados = new HashSet<(Renderer, int)>();
+        static bool proyectando;
+        static Matrix4x4 proyTextura, proyRecorte;
+
+        static void DibujarProyectores(int opacos)
+        {
+            int n = nItems;
+            if (items.Length <= n) Array.Resize(ref items, items.Length * 2);
+            foreach (var pr in Proyectores.activos.ToArray())
+            {
+                var mat = pr.mat;
+                if ((object)mat == null || mat.destruido || (object)mat.sh == null || pr.go == null || (camara.mascara & (1 << pr.go.capa)) == 0) continue;
+                pr.Matrices(out var volumen, out proyTextura, out proyRecorte);
+                PlanosDe(volumen, planosProyector);
+                proyectados.Clear();
+                for (int k = 0; k < opacos; k++)
+                {
+                    var it = items[k];
+                    var go = it.R.go;
+                    if (go == null || (pr.ignorar & (1 << go.capa)) != 0) continue;
+                    if (!proyectados.Add((it.R, it.Sub))) continue;
+                    if (!VisibleEn(planosProyector, it.R.bounds)) continue;
+                    it.Mat = mat;
+                    it.Cola = mat.Cola;
+                    items[n] = it;
+                    proyectando = true;
+                    try { DibujarGrupo(n, n + 1); }
+                    finally { proyectando = false; }
+                }
+            }
+            nItems = n;
+        }
+
         static int Niebla()
         {
             if (!RenderSettings.niebla) return 0;
@@ -436,7 +479,13 @@ namespace Porteo.Render
                 objeto.Poner(ID_LPOS, Valor.Vec(new Vector4(0, 0, 1, 0)));
                 objeto.Poner(ID_LCOLOR0, Valor.Vec(Vector4.zero));
             }
-            Subir(p, mat, a.R.bloque?.t);
+            if (proyectando)
+            {
+                objeto.Poner(ID_PROY, Valor.Matriz(proyTextura * a.O2W));
+                objeto.Poner(ID_PROYCLIP, Valor.Matriz(proyRecorte * a.O2W));
+            }
+            // el MaterialPropertyBlock del objeto no es del material del proyector
+            Subir(p, mat, proyectando ? null : a.R.bloque?.t);
             uint vao = a.M.Vao(p, a.Piel);
             Gpu.UsarVao(vao);
             var sm = a.M.submallas[a.Sub];

@@ -2,14 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class Collider : global::UnityEngine.Component
+    public partial class Collider
     {
-        public bool enabled { get { global::Porteo.Falta.Llamada("UnityEngine.Collider::enabled"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Collider::enabled="); } }
-        public global::UnityEngine.Rigidbody attachedRigidbody { get { global::Porteo.Falta.Llamada("UnityEngine.Collider::attachedRigidbody"); return default; } }
-        public bool isTrigger { get { global::Porteo.Falta.Llamada("UnityEngine.Collider::isTrigger"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Collider::isTrigger="); } }
-        public global::UnityEngine.Bounds bounds { get { global::Porteo.Falta.Llamada("UnityEngine.Collider::bounds"); return default; } }
-        public global::UnityEngine.PhysicMaterial sharedMaterial { get { global::Porteo.Falta.Llamada("UnityEngine.Collider::sharedMaterial"); return default; } }
-        public bool Raycast(global::UnityEngine.Ray ray, out global::UnityEngine.RaycastHit hitInfo, float maxDistance) { hitInfo = default;  global::Porteo.Falta.Llamada("UnityEngine.Collider::Raycast"); return default;  }
-        public global::UnityEngine.Vector3 ClosestPointOnBounds(global::UnityEngine.Vector3 position) { global::Porteo.Falta.Llamada("UnityEngine.Collider::ClosestPointOnBounds"); return default; }
     }
 }

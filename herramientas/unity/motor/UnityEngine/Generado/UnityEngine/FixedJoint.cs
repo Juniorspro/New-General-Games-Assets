@@ -2,7 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class FixedJoint : global::UnityEngine.Joint
+    public partial class FixedJoint
     {
     }
 }

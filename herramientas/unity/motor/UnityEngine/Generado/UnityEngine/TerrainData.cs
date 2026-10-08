@@ -4,15 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class TerrainData
     {
-        public int heightmapWidth { get { global::Porteo.Falta.Llamada("UnityEngine.TerrainData::heightmapWidth"); return default; } }
-        public int heightmapHeight { get { global::Porteo.Falta.Llamada("UnityEngine.TerrainData::heightmapHeight"); return default; } }
-        public int heightmapResolution { get { global::Porteo.Falta.Llamada("UnityEngine.TerrainData::heightmapResolution"); return default; } }
-        public global::UnityEngine.Vector3 size { get { global::Porteo.Falta.Llamada("UnityEngine.TerrainData::size"); return default; } }
-        public int alphamapWidth { get { global::Porteo.Falta.Llamada("UnityEngine.TerrainData::alphamapWidth"); return default; } }
-        public int alphamapHeight { get { global::Porteo.Falta.Llamada("UnityEngine.TerrainData::alphamapHeight"); return default; } }
-        public global::UnityEngine.SplatPrototype[] splatPrototypes { get { global::Porteo.Falta.Llamada("UnityEngine.TerrainData::splatPrototypes"); return default; } }
-        public float[,] GetHeights(int xBase, int yBase, int width, int height) { global::Porteo.Falta.Llamada("UnityEngine.TerrainData::GetHeights"); return default; }
-        public void SetHeights(int xBase, int yBase, float[,] heights) { global::Porteo.Falta.Llamada("UnityEngine.TerrainData::SetHeights"); }
-        public float[,,] GetAlphamaps(int x, int y, int width, int height) { global::Porteo.Falta.Llamada("UnityEngine.TerrainData::GetAlphamaps"); return default; }
     }
 }

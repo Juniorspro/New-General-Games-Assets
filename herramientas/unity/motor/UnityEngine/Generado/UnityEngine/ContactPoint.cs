@@ -4,12 +4,5 @@ namespace UnityEngine
 {
     public partial struct ContactPoint
     {
-        public global::UnityEngine.Vector3 m_Point;
-        public global::UnityEngine.Vector3 m_Normal;
-        public int m_ThisColliderInstanceID;
-        public int m_OtherColliderInstanceID;
-        public float m_Separation;
-        public global::UnityEngine.Vector3 point { get { global::Porteo.Falta.Llamada("UnityEngine.ContactPoint::point"); return default; } }
-        public global::UnityEngine.Vector3 normal { get { global::Porteo.Falta.Llamada("UnityEngine.ContactPoint::normal"); return default; } }
     }
 }

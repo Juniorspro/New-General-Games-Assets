@@ -30,6 +30,9 @@
   </PropertyGroup>
   <ItemGroup>
     <NativeFileReference Include="nativo/porteo.c" />
+    <!-- PhysX y su capa en C (fisica/compilar-physx.py arma libporteo_fisica.a): sin ella, el
+         juego corre sin física (Simulacion avisa y sigue) -->
+    <NativeFileReference Include="$(FISICA)" Condition="'$(FISICA)' != ''" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../UnityEngine/UnityEngine.CoreModule.csproj" />

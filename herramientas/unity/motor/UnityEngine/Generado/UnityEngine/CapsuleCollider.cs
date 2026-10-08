@@ -2,11 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class CapsuleCollider : global::UnityEngine.Collider
+    public partial class CapsuleCollider
     {
-        public global::UnityEngine.Vector3 center { set { global::Porteo.Falta.Llamada("UnityEngine.CapsuleCollider::center="); } }
-        public float radius { get { global::Porteo.Falta.Llamada("UnityEngine.CapsuleCollider::radius"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.CapsuleCollider::radius="); } }
-        public float height { get { global::Porteo.Falta.Llamada("UnityEngine.CapsuleCollider::height"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.CapsuleCollider::height="); } }
-        public int direction { get { global::Porteo.Falta.Llamada("UnityEngine.CapsuleCollider::direction"); return default; } }
     }
 }

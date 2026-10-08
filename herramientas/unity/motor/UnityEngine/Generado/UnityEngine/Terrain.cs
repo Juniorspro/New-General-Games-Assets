@@ -2,11 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class Terrain : global::UnityEngine.Behaviour
+    public sealed partial class Terrain
     {
-        public global::UnityEngine.TerrainData terrainData { get { global::Porteo.Falta.Llamada("UnityEngine.Terrain::terrainData"); return default; } }
-        public int lightmapIndex { get { global::Porteo.Falta.Llamada("UnityEngine.Terrain::lightmapIndex"); return default; } }
-        public bool castShadows { get { global::Porteo.Falta.Llamada("UnityEngine.Terrain::castShadows"); return default; } }
-        public void SetNeighbors(global::UnityEngine.Terrain left, global::UnityEngine.Terrain top, global::UnityEngine.Terrain right, global::UnityEngine.Terrain bottom) { global::Porteo.Falta.Llamada("UnityEngine.Terrain::SetNeighbors"); }
     }
 }

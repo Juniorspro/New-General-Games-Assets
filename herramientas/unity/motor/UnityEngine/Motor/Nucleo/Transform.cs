@@ -222,6 +222,8 @@ namespace UnityEngine
             if (parent != null && go != null && parent.go != null && parent.go.escena != go.escena) Escenas.Mover(go, parent.go.escena);
             Ensuciar();
             Activacion.Recalcular(go);
+            // sus colisionadores pueden pasar a otro Rigidbody
+            Porteo.Fisica.Simulacion.Reubicar(this);
             Jerarquia.PadreCambiado(this, viejo);
         }
 

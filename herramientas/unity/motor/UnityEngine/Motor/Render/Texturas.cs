@@ -64,7 +64,7 @@ namespace UnityEngine
             Porteo.Render.Gl.TexParameteri(o, Porteo.Render.Gl.TEXTURE_WRAP_S, Envolver(envolverU));
             Porteo.Render.Gl.TexParameteri(o, Porteo.Render.Gl.TEXTURE_WRAP_T, Envolver(envolverV));
             if (o != Porteo.Render.Gl.TEXTURE_2D) Porteo.Render.Gl.TexParameteri(o, Porteo.Render.Gl.TEXTURE_WRAP_R, Envolver(envolverW));
-            if (Gpu.Aniso && mips > 1)
+            if (Gpu.Aniso && mips > 1 && !Gpu.SinAnisotropia)
                 Porteo.Render.Gl.TexParameterf(o, Porteo.Render.Gl.TEXTURE_MAX_ANISOTROPY, Math.Clamp(QualitySettings.Anisotropico(aniso), 1, 16));
         }
 

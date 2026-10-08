@@ -15,6 +15,7 @@ namespace Porteo
             {
                 if (o is Datos.AjusteEscena a && a.Clase == 104 && a.crudo != null && a.archivo != null) UnityEngine.RenderSettings.Leer(a.crudo, a.archivo);
             };
+            Fisica.Simulacion.Iniciar();
             Entrada.Iniciar();
             UI.Lienzos.Iniciar();
             // lo que se puede pedir en cualquier momento (Resources.Load, Shader.Find) se trae antes

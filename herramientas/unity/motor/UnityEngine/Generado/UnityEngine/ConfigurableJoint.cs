@@ -2,16 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class ConfigurableJoint : global::UnityEngine.Joint
+    public partial class ConfigurableJoint
     {
-        public global::UnityEngine.ConfigurableJointMotion xMotion { set { global::Porteo.Falta.Llamada("UnityEngine.ConfigurableJoint::xMotion="); } }
-        public global::UnityEngine.ConfigurableJointMotion yMotion { set { global::Porteo.Falta.Llamada("UnityEngine.ConfigurableJoint::yMotion="); } }
-        public global::UnityEngine.ConfigurableJointMotion zMotion { set { global::Porteo.Falta.Llamada("UnityEngine.ConfigurableJoint::zMotion="); } }
-        public global::UnityEngine.ConfigurableJointMotion angularXMotion { set { global::Porteo.Falta.Llamada("UnityEngine.ConfigurableJoint::angularXMotion="); } }
-        public global::UnityEngine.ConfigurableJointMotion angularYMotion { set { global::Porteo.Falta.Llamada("UnityEngine.ConfigurableJoint::angularYMotion="); } }
-        public global::UnityEngine.ConfigurableJointMotion angularZMotion { set { global::Porteo.Falta.Llamada("UnityEngine.ConfigurableJoint::angularZMotion="); } }
-        public global::UnityEngine.SoftJointLimitSpring linearLimitSpring { set { global::Porteo.Falta.Llamada("UnityEngine.ConfigurableJoint::linearLimitSpring="); } }
-        public global::UnityEngine.SoftJointLimitSpring angularXLimitSpring { set { global::Porteo.Falta.Llamada("UnityEngine.ConfigurableJoint::angularXLimitSpring="); } }
-        public global::UnityEngine.SoftJointLimitSpring angularYZLimitSpring { set { global::Porteo.Falta.Llamada("UnityEngine.ConfigurableJoint::angularYZLimitSpring="); } }
     }
 }

@@ -4,9 +4,5 @@ namespace UnityEngine
 {
     public partial class ControllerColliderHit
     {
-        public global::UnityEngine.Collider collider { get { global::Porteo.Falta.Llamada("UnityEngine.ControllerColliderHit::collider"); return default; } }
-        public global::UnityEngine.GameObject gameObject { get { global::Porteo.Falta.Llamada("UnityEngine.ControllerColliderHit::gameObject"); return default; } }
-        public global::UnityEngine.Vector3 point { get { global::Porteo.Falta.Llamada("UnityEngine.ControllerColliderHit::point"); return default; } }
-        public global::UnityEngine.Vector3 moveDirection { get { global::Porteo.Falta.Llamada("UnityEngine.ControllerColliderHit::moveDirection"); return default; } }
     }
 }

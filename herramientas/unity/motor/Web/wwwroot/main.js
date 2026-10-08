@@ -5,9 +5,11 @@ const estado = document.getElementById('estado');
 const lienzo = document.getElementById('lienzo');
 const BASE = new URLSearchParams(location.search).get('datos') || 'datos/';
 
-// el lienzo en píxeles del dispositivo (con tope: en teléfonos de mucha densidad no hace falta todo)
+// el lienzo en píxeles del dispositivo (con tope: en teléfonos de mucha densidad no hace falta
+// todo); ?escala=0.5 dibuja a menos resolución
+const ESCALA = Math.min(Math.max(parseFloat(new URLSearchParams(location.search).get('escala')) || 1, 0.1), 1);
 function ajustar() {
-  const r = Math.min(window.devicePixelRatio || 1, 2);
+  const r = Math.min(window.devicePixelRatio || 1, 2) * ESCALA;
   lienzo.width = Math.max(1, Math.round(lienzo.clientWidth * r));
   lienzo.height = Math.max(1, Math.round(lienzo.clientHeight * r));
 }

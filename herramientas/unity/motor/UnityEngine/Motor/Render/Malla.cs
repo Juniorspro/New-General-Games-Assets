@@ -156,7 +156,7 @@ namespace UnityEngine
             switch (vd?["m_DataSize"])
             {
                 case byte[] b: crudo2 = b; break;
-                case Recurso rec: recursoVertices = rec.Id; break;
+                case Recurso rec: recursoVertices = recursoOrigen = rec.Id; break;
             }
             CalcularStreams();
             indices32 = m.I32("m_IndexFormat") == 1;
@@ -233,6 +233,64 @@ namespace UnityEngine
                 if (crudo2 != null) recursoVertices = -1;
             }
             return crudo2;
+        }
+
+        // ── para la física ──
+        // el recurso de donde salieron los vértices: si ya se soltaron (malla no legible que está
+        // en la GPU), el cooking de un MeshCollider puede volver a pedirlos
+        int recursoOrigen = -1;
+
+        // las posiciones como floats (x, y, z): sólo el canal de posición, sin armar los arreglos
+        // de todos los canales (son 17 mil MeshCollider)
+        internal float[] PosicionesFisica()
+        {
+            if (hayArreglos)
+            {
+                if (pos == null) return null;
+                var r = new float[pos.Length * 3];
+                for (int i = 0; i < pos.Length; i++) { r[i * 3] = pos[i].x; r[i * 3 + 1] = pos[i].y; r[i * 3 + 2] = pos[i].z; }
+                return r;
+            }
+            var b = Crudo() ?? (recursoOrigen >= 0 ? Anfitrion.Recurso(recursoOrigen, true) : null);
+            var c = canales[Canales.POSICION];
+            if (b == null || c.Dim == 0 || nVertices == 0) return null;
+            var res = new float[nVertices * 3];
+            int paso = pasoStream[c.Stream], tam = CanalMalla.Tam(c.Formato);
+            for (int i = 0; i < nVertices; i++)
+            {
+                int p = inicioStream[c.Stream] + i * paso + c.Offset;
+                for (int k = 0; k < 3 && k < c.Dim; k++) res[i * 3 + k] = Componente(b, p + k * tam, c.Formato);
+            }
+            return res;
+        }
+
+        // los triángulos de todas las submallas con su vértice base (Unity arma así el
+        // MeshCollider); los que apuntan fuera de los vértices se saltean
+        internal uint[] TriangulosFisica(int nv)
+        {
+            var ind = indices;
+            if (ind == null) return null;
+            int total = 0;
+            foreach (var s in submallas) if (s.Topologia == 0) total += s.Cantidad - s.Cantidad % 3;
+            var r = new uint[total];
+            int k = 0, tamI = indices32 ? 4 : 2;
+            foreach (var s in submallas)
+            {
+                if (s.Topologia != 0) continue;
+                int n = s.Cantidad - s.Cantidad % 3;
+                for (int i = 0; i < n; i += 3)
+                {
+                    int j = s.Primero + i;
+                    if ((j + 3) * tamI > ind.Length) break;
+                    long a = (indices32 ? BitConverter.ToUInt32(ind, j * 4) : BitConverter.ToUInt16(ind, j * 2)) + (long)s.BaseVertice;
+                    long b = (indices32 ? BitConverter.ToUInt32(ind, j * 4 + 4) : BitConverter.ToUInt16(ind, j * 2 + 2)) + (long)s.BaseVertice;
+                    long c = (indices32 ? BitConverter.ToUInt32(ind, j * 4 + 8) : BitConverter.ToUInt16(ind, j * 2 + 4)) + (long)s.BaseVertice;
+                    if (a < 0 || b < 0 || c < 0 || a >= nv || b >= nv || c >= nv) continue;
+                    r[k++] = (uint)a; r[k++] = (uint)b; r[k++] = (uint)c;
+                }
+            }
+            if (k < r.Length) Array.Resize(ref r, k);
+            return r;
         }
 
         // ── malla comprimida (PackedBitVector) a canales sin comprimir ──
@@ -718,8 +776,9 @@ namespace UnityEngine
             fixed (byte* p = indices) ibo = Gpu.Buffer(Gl.ELEMENT_ARRAY_BUFFER, p, indices.Length, Gl.STATIC_DRAW);
             versionGpu = version;
             firmaGpu = firma;
-            // si nadie lee los vértices, no hace falta guardarlos también en la CPU
-            if (!legible && !hayArreglos) crudo2 = null;
+            // si nadie lee los vértices, no hace falta guardarlos también en la CPU (salvo los que
+            // no se pueden volver a pedir: un MeshCollider puede necesitarlos después)
+            if (!legible && !hayArreglos && recursoOrigen >= 0) crudo2 = null;
             return true;
         }
 

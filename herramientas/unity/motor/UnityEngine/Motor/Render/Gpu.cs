@@ -15,6 +15,8 @@ namespace Porteo.Render
         public static bool Etc, S3tc, Astc, Aniso, ColorFloat, FloatLineal;
         public static int MaxTextura = 4096, MaxUnidades = 16, MaxMuestras;
         public static int Ancho = 1, Alto = 1;   // el lienzo, en píxeles
+        // para probar con una GPU por software (SwiftShader), donde el anisotrópico cuesta muchísimo
+        public static bool SinAnisotropia;
 
         public static uint TexBlanca, TexNegra, TexGris, TexBump, TexRoja, TexGrisLineal, CuboNegro, CuboGris, Tex3DBlanca;
 

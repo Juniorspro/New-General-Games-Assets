@@ -17,6 +17,10 @@
     <ProjectReference Include="../UnityEngine/UnityEngine.CoreModule.csproj" />
     <ProjectReference Include="../Fachadas/*/*.csproj" />
   </ItemGroup>
+  <!-- la física: libporteo.so (la arma fisica/compilar-physx.py con la opción nativo) va junto al ejecutable -->
+  <ItemGroup Condition="'$(FISICA)' != ''">
+    <None Include="$(FISICA)" Link="libporteo.so" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
   <ItemGroup Condition="'$(JUEGO)' != ''">
     <Reference Include="Assembly-CSharp"><HintPath>$(JUEGO)/Assembly-CSharp.dll</HintPath></Reference>
     <Reference Include="Assembly-UnityScript"><HintPath>$(JUEGO)/Assembly-UnityScript.dll</HintPath></Reference>

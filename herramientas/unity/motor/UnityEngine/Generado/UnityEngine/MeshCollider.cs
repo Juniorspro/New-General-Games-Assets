@@ -2,8 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class MeshCollider : global::UnityEngine.Collider
+    public partial class MeshCollider
     {
-        public bool convex { get { global::Porteo.Falta.Llamada("UnityEngine.MeshCollider::convex"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.MeshCollider::convex="); } }
     }
 }

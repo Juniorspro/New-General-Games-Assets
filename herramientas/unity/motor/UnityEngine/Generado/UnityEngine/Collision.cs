@@ -4,11 +4,5 @@ namespace UnityEngine
 {
     public partial class Collision
     {
-        public global::UnityEngine.Vector3 relativeVelocity { get { global::Porteo.Falta.Llamada("UnityEngine.Collision::relativeVelocity"); return default; } }
-        public global::UnityEngine.Rigidbody rigidbody { get { global::Porteo.Falta.Llamada("UnityEngine.Collision::rigidbody"); return default; } }
-        public global::UnityEngine.Collider collider { get { global::Porteo.Falta.Llamada("UnityEngine.Collision::collider"); return default; } }
-        public global::UnityEngine.GameObject gameObject { get { global::Porteo.Falta.Llamada("UnityEngine.Collision::gameObject"); return default; } }
-        public global::UnityEngine.ContactPoint[] contacts { get { global::Porteo.Falta.Llamada("UnityEngine.Collision::contacts"); return default; } }
-        public global::UnityEngine.Vector3 impulse { get { global::Porteo.Falta.Llamada("UnityEngine.Collision::impulse"); return default; } }
     }
 }

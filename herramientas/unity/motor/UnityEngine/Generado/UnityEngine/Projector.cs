@@ -2,9 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class Projector : global::UnityEngine.Behaviour
+    public sealed partial class Projector
     {
-        public float orthographicSize { set { global::Porteo.Falta.Llamada("UnityEngine.Projector::orthographicSize="); } }
-        public global::UnityEngine.Material material { get { global::Porteo.Falta.Llamada("UnityEngine.Projector::material"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Projector::material="); } }
     }
 }

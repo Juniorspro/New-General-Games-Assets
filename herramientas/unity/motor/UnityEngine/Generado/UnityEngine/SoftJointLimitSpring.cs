@@ -6,7 +6,5 @@ namespace UnityEngine
     {
         public float m_Spring;
         public float m_Damper;
-        public float spring { set { global::Porteo.Falta.Llamada("UnityEngine.SoftJointLimitSpring::spring="); } }
-        public float damper { set { global::Porteo.Falta.Llamada("UnityEngine.SoftJointLimitSpring::damper="); } }
     }
 }

@@ -2,13 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class Joint : global::UnityEngine.Component
+    public partial class Joint
     {
-        public global::UnityEngine.Rigidbody connectedBody { get { global::Porteo.Falta.Llamada("UnityEngine.Joint::connectedBody"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Joint::connectedBody="); } }
-        public global::UnityEngine.Vector3 anchor { get { global::Porteo.Falta.Llamada("UnityEngine.Joint::anchor"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Joint::anchor="); } }
-        public global::UnityEngine.Vector3 connectedAnchor { get { global::Porteo.Falta.Llamada("UnityEngine.Joint::connectedAnchor"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Joint::connectedAnchor="); } }
-        public bool autoConfigureConnectedAnchor { set { global::Porteo.Falta.Llamada("UnityEngine.Joint::autoConfigureConnectedAnchor="); } }
-        public float breakForce { set { global::Porteo.Falta.Llamada("UnityEngine.Joint::breakForce="); } }
-        public float breakTorque { set { global::Porteo.Falta.Llamada("UnityEngine.Joint::breakTorque="); } }
     }
 }

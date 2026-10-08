@@ -2,9 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class BoxCollider : global::UnityEngine.Collider
+    public partial class BoxCollider
     {
-        public global::UnityEngine.Vector3 center { get { global::Porteo.Falta.Llamada("UnityEngine.BoxCollider::center"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.BoxCollider::center="); } }
-        public global::UnityEngine.Vector3 size { get { global::Porteo.Falta.Llamada("UnityEngine.BoxCollider::size"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.BoxCollider::size="); } }
     }
 }

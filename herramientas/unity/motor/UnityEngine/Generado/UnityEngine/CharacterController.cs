@@ -2,15 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class CharacterController : global::UnityEngine.Collider
+    public partial class CharacterController
     {
-        public global::UnityEngine.Vector3 velocity { get { global::Porteo.Falta.Llamada("UnityEngine.CharacterController::velocity"); return default; } }
-        public bool isGrounded { get { global::Porteo.Falta.Llamada("UnityEngine.CharacterController::isGrounded"); return default; } }
-        public float radius { get { global::Porteo.Falta.Llamada("UnityEngine.CharacterController::radius"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.CharacterController::radius="); } }
-        public float height { get { global::Porteo.Falta.Llamada("UnityEngine.CharacterController::height"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.CharacterController::height="); } }
-        public global::UnityEngine.Vector3 center { get { global::Porteo.Falta.Llamada("UnityEngine.CharacterController::center"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.CharacterController::center="); } }
-        public float slopeLimit { get { global::Porteo.Falta.Llamada("UnityEngine.CharacterController::slopeLimit"); return default; } }
-        public float stepOffset { get { global::Porteo.Falta.Llamada("UnityEngine.CharacterController::stepOffset"); return default; } }
-        public global::UnityEngine.CollisionFlags Move(global::UnityEngine.Vector3 motion) { global::Porteo.Falta.Llamada("UnityEngine.CharacterController::Move"); return default; }
     }
 }
