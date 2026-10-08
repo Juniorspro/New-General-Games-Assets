@@ -86,14 +86,18 @@ GD.App = class {
     return fetch(ruta).then((r) => { if (!r.ok) throw new Error(`No se pudo leer ${ruta} (${r.status})`); return r; });
   }
 
+  // Decodificada fuera del hilo principal y ya premultiplicada (createImageBitmap); con <img>
+  // si el navegador no lo tiene.
   imagen(ruta) {
     if (!this.imagenes.has(ruta)) {
-      this.imagenes.set(ruta, new Promise((ok, mal) => {
-        const i = new Image();
-        i.onload = () => ok(i);
-        i.onerror = () => mal(new Error(`No se pudo leer ${ruta}`));
-        i.src = ruta;
-      }));
+      this.imagenes.set(ruta, window.createImageBitmap
+        ? this.traer(ruta).then((r) => r.blob()).then((b) => createImageBitmap(b, { premultiplyAlpha: 'premultiply', colorSpaceConversion: 'none' }))
+        : new Promise((ok, mal) => {
+          const i = new Image();
+          i.onload = () => ok(i);
+          i.onerror = () => mal(new Error(`No se pudo leer ${ruta}`));
+          i.src = ruta;
+        }));
     }
     return this.imagenes.get(ruta);
   }

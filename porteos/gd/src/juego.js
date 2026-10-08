@@ -75,14 +75,17 @@ GD.Juego = class {
     if (j.pidioArana) { j.pidioArana = false; this.saltoArana(); }
     // la rampa en la que venía: el salto desde ella y la salida por arriba usan su velocidad
     const rampa = j.enRampa;
+    j.rampaPrev = rampa;
     j.rampaAntes = rampa && rampa.pend * j.signo() > 0 ? rampa : null;
     j.enRampa = null;
+    j.toco = false;
     j.paso(dt);
     this.colisiones();
     if (this.muerto) return;
     // Salir por arriba de una rampa que subía lanza al jugador con la velocidad vertical que
-    // traía (m_slopeVelocity de la 2.2): así la bola cruza los huecos de Hexagon Force.
-    if (j.rampaAntes && !j.enRampa && !j.enSuelo) {
+    // traía (m_slopeVelocity de la 2.2): así la bola cruza los huecos de Hexagon Force. Si en
+    // este mismo paso se apoyó en otra cosa, no.
+    if (j.rampaAntes && !j.enRampa && !j.toco) {
       const v = GD.velocidadRampa(j.rampaAntes, j);
       if (j.vy * j.signo() < v) j.vy = v * j.signo();
     }
@@ -135,11 +138,17 @@ GD.Juego = class {
       if (t === 'peligro') { peligros.push([o, f]); continue; }
       if (GD.toca(f, c)) this.tocar(o, f);
     }
-    // los sólidos, del más cercano al más lejano en la dirección de la gravedad
+    // Los sólidos, del más cercano al más lejano en la dirección de la gravedad, con las rampas
+    // primero: mientras va por una rampa, los bloques que la tocan no lo frenan (GD los ignora,
+    // boolE/boolG en collidedWithObjectInternal). Así el borde al final de una rampa no corta
+    // el lanzamiento.
     if (solidos.length) {
-      solidos.sort((a, b) => (j.invertido ? a[1].y0 - b[1].y0 : b[1].y1 - a[1].y1));
+      const esRampa = (o) => (o.tipo === 'rampa' ? 0 : 1);
+      solidos.sort((a, b) => esRampa(a[0]) - esRampa(b[0]) || (j.invertido ? a[1].y0 - b[1].y0 : b[1].y1 - a[1].y1));
       for (const [o, f] of solidos) {
         if (this.muerto) return;
+        const r = o.tipo === 'rampa' ? null : j.enRampa || j.rampaPrev;
+        if (r && GD.cruzaRampa(f, r)) continue;
         if (GD.toca(f, j.caja())) this.resolverSolido(j, o, f);
       }
     }
@@ -442,6 +451,13 @@ GD.formaDe = function (o, hb) {
   const pts = [[-w, -h], [w, -h], [w, h], [-w, h]].map(([x, y]) => [cx + x * cos - y * sin, cy + x * sin + y * cos]);
   const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
   return { tipo: 'girada', pts, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+};
+
+// ¿Un bloque toca la rampa (su rectángulo agrandado ×1,2 de ancho y ×1,1 de alto, como
+// getObjectRect(1.2, 1.1))?
+GD.cruzaRampa = function (f, r) {
+  const cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2, w = (r.x1 - r.x0) * 0.6, h = (r.y1 - r.y0) * 0.55;
+  return f.x1 > cx - w && f.x0 < cx + w && f.y1 > cy - h && f.y0 < cy + h;
 };
 
 // ¿La forma toca la caja del jugador? (exacto: con giro, círculo y triángulo)

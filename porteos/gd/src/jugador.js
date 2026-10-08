@@ -42,6 +42,7 @@ GD.Jugador = class {
     this.dash = null;
     this.enRampa = null;
     this.rampaAntes = null;
+    this.rampaPrev = null;
   }
 
   ponerVelocidad(v) {
@@ -93,7 +94,8 @@ GD.Jugador = class {
 
   saltar(dt) {
     const f = this.signo();
-    const tam = this.mini ? 0.8 : 1;                   // v16
+    // v16: 0,8 en mini, salvo los que vuelan, que usan 0,85 (updateJump de la 2.2)
+    const tam = this.mini ? (this.volador ? 0.85 : 0.8) : 1;
     const gUsada = (this.modo === 'bola' || this.volador || this.modo === 'arana') ? 0.9582 : this.gravedad;
     let g = gUsada;
 
@@ -233,6 +235,7 @@ GD.Jugador = class {
   // Al tocar suelo o techo (hitGround).
   tocarSuelo() {
     this.enSuelo = true;
+    this.toco = true;              // se apoyó en este paso (la salida de una rampa lo mira)
     this.impulsado = false;
     this.acelerando = false;
     this.tocoPad = false;

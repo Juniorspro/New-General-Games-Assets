@@ -240,6 +240,7 @@ console.log('\nC. Pantalla chica (640×360)');
 {
   const t = await abrir(URL_WEB, { w: 640, h: 360 });
   const menu = await saltearIntro(t);
+  await t.pg.waitForFunction(() => window.__gd.menu.botones.vivos.size >= 3, null, { timeout: 5000 }).catch(() => {});
   const r = await t.pg.evaluate(() => {
     const a = window.__gd, R = a.render;
     const dentro = (b) => { const [w, h] = R.tamCuadro(b.cuadro); return b.x - w * b.escala / 2 >= 0 && b.x + w * b.escala / 2 <= R.VW && b.y - h * b.escala / 2 >= 0 && b.y + h * b.escala / 2 <= R.VH; };

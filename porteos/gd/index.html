@@ -45,6 +45,7 @@
   var estado = document.getElementById('estado');
   var barra = document.querySelector('#barra i');
   var app = null, listo = false, fallado = false;
+  var marcas = window.__gdTiempos = { script: performance.now() };   // etapas de la carga (pruebas)
 
   function fallo(e) {
     if (fallado) return;
@@ -69,7 +70,17 @@
   } });
   intro.then(function () { if (!listo) carga.classList.add('visible'); });
 
+  // Las hojas se decodifican fuera del hilo principal (createImageBitmap, ya premultiplicadas): con
+  // <img>, la decodificación de cada WebP de 2048×2048 caía en texImage2D y trababa la carga.
   function imagen(ruta) {
+    if (window.createImageBitmap) {
+      return fetch(ruta).then(function (r) {
+        if (!r.ok) throw new Error('No se pudo leer ' + ruta + ' (' + r.status + ')');
+        return r.blob();
+      }).then(function (b) {
+        return createImageBitmap(b, { premultiplyAlpha: 'premultiply', colorSpaceConversion: 'none' });
+      });
+    }
     return new Promise(function (ok, mal) {
       var i = new Image();
       i.onload = function () { ok(i); };
@@ -84,6 +95,7 @@
       var r = await fetch('datos/datos.json');
       if (!r.ok) throw new Error('No se pudo leer datos/datos.json (' + r.status + ')');
       var datos = await r.json();
+      marcas.datos = performance.now();
       var hechas = 0;
       var hojas = await Promise.all(datos.hojas.map(function (h) {
         return imagen('datos/hojas/' + h + '.webp').then(function (i) {
@@ -92,11 +104,14 @@
           return i;
         });
       }));
+      marcas.hojas = performance.now();
       app = new GD.App(lienzo, datos, hojas);
+      marcas.texturas = performance.now();
       app.alFallar = fallo;
       await app.preparar();
       barra.style.width = '100%';
       listo = true;
+      window.__gdCargado = performance.now();     // para medir la carga sin la intro
       await intro;
       carga.classList.remove('visible');
       app.arrancar();
