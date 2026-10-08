@@ -13,7 +13,7 @@ escenas cargan y corren en la prueba de consola sin miembros faltantes. El filtr
 las habitaciones salen como en el original (comparado con las capturas de itch.io). Falta jugarlo
 entero en un teléfono de verdad (rendimiento, el resto de las escenas).
 
-Lo que pidió arreglar en el motor: las señales de Timeline (la del final no se disparaba porque la
+Lo que hubo que arreglar en el motor: las señales de Timeline (la del final no se disparaba porque la
 raíz del grafo no tenía el modo del director, y Resume rearrancaba un director parado: el
 jugador quedaba sin control o la escena volvía a empezar) y el ratón con el puntero trabado (un
 toque giraba la cámara).
