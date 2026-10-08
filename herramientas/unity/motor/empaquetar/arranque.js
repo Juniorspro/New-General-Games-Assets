@@ -16,6 +16,8 @@
   //   trans: null, ["d", bits] (índices en diferencias) o ["v", n, [[inicio, paso, offset, tam], ...]]
   //   (vértices por canal: ver empaquetar.py)
   const P = (globalThis.porteoUnArchivo = {});
+  // la base de las URLs del runtime de .NET (ver empaquetar.py: import.meta.url sería un blob:)
+  globalThis.porteoBaseDotnet = new URL('_framework/dotnet.js', location.href).href;
   const estado = () => document.getElementById('estado');
   const nB = T.bloques.length;
   const comp = new Array(nB).fill(null);   // el bloque comprimido, cuando llegó

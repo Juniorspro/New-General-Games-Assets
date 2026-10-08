@@ -656,7 +656,12 @@ EXPORTAR int fx_malla(const float* v, int nv, const uint32_t* tris, int ntris, i
     d.triangles.count = (PxU32)ntris;
     d.triangles.stride = sizeof(uint32_t) * 3;
     d.triangles.data = tris;
-    d.flags = PxMeshFlag::eFLIPNORMALS;
+    // sin eFLIPNORMALS: lo que Unity dibuja de frente (horario visto de frente, en su sistema de
+    // mano izquierda) tiene como normal (v1-v0)x(v2-v0) la que apunta afuera, que es lo que PhysX
+    // toma como frente. Dadas vuelta, los rayos (de una cara, como queriesHitBackfaces = false en
+    // Unity) no veían el suelo desde arriba, y lo que se apoyaba se hundía: frutas y cajas caían
+    // al mar. Los objetos espejados (escala negativa) los resuelve PxMeshScale.
+    d.flags = PxMeshFlags();
     PxTriangleMesh* m = cocina->createTriangleMesh(d, fisica->getPhysicsInsertionCallback());
     return m ? mallas.Alta(m) : -1;
 }

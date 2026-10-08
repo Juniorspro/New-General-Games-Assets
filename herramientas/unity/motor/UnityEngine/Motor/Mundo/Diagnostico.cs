@@ -24,6 +24,8 @@ namespace Porteo
                     case "zonas": return Zonas();
                     case "objetos": return Objetos(arg);
                     case "punto": return Punto(arg);
+                    case "rayo": return Rayo(arg);
+                    case "rayomalla": return RayoMalla(arg);
                     case "tiempo": return $"tiempo: t={Time.time:F2} escala={Time.timeScale} cuadro={Time.frameCount} real={Time.realtimeSinceStartup:F1} cultura={System.Globalization.CultureInfo.CurrentCulture.Name}";
                     default: return "diagnóstico: no sé " + partes[0];
                 }
@@ -125,7 +127,7 @@ namespace Porteo
                 var b = r.bounds;
                 if (x < b.min.x || x > b.max.x || z < b.min.z || z > b.max.z || b.size.x > 2000) continue;
                 if (++n > 30) { sb.Append("\n   ..."); break; }
-                var cols = string.Join(",", r.GetComponents<Collider>().Select(c => $"{c.GetType().Name}({(c.enabled ? "sí" : "no")})"));
+                var cols = string.Join(",", r.GetComponents<Collider>().Select(Colisionador));
                 sb.Append($"\n   {Ruta(r.transform)} activo={r.gameObject.activeInHierarchy} y={b.min.y:F1}..{b.max.y:F1} [{cols}]");
             }
             foreach (var c in Resources.FindObjectsOfTypeAll<Collider>())
@@ -139,6 +141,65 @@ namespace Porteo
             foreach (var t in Resources.FindObjectsOfTypeAll<Terrain>())
                 if (t.gameObject.scene.IsValid())
                     sb.Append($"\n   terreno {Ruta(t.transform)} activo={t.gameObject.activeInHierarchy} en {t.transform.position} tamaño={t.terrainData?.size}");
+            return sb.ToString();
+        }
+
+        // el estado de un colisionador por dentro: si está en PhysX y con qué
+        static string Colisionador(Collider c)
+        {
+            var mc = c as MeshCollider;
+            var malla = mc?.malla;
+            return $"{c.GetType().Name}({(c.enabled ? "sí" : "no")} montado={c.montado} forma={c.forma}" +
+                (mc != null ? $" malla={malla?.name} v={malla?.vertexCount} convexo={mc.convexo}" : "") + ")";
+        }
+
+        // rayo:x,y,z: todo lo que toca un rayo hacia abajo desde ahí (activos, triggers incluidos)
+        public static string Rayo(string arg)
+        {
+            var v = arg.Split(',').Select(x => float.Parse(x, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+            var desde = new Vector3(v[0], v[1], v[2]);
+            var golpes = Physics.RaycastAll(desde, Vector3.down, 200, Physics.AllLayers, QueryTriggerInteraction.Collide);
+            System.Array.Sort(golpes, (a, b) => a.distance.CompareTo(b.distance));
+            var sb = new StringBuilder($"rayo desde {desde}: {golpes.Length} golpes");
+            foreach (var g in golpes) sb.Append($"\n   {g.distance:F2} m: {Ruta(g.collider.transform)} [{Colisionador(g.collider)}]");
+            return sb.ToString();
+        }
+
+        // rayomalla:x,y,z: el rayo hacia abajo contra los triángulos de colisión tal como los tiene el
+        // motor (sin PhysX): si acá pega y en rayo: no, el problema está al armar la forma en PhysX
+        public static string RayoMalla(string arg)
+        {
+            var v = arg.Split(',').Select(x => float.Parse(x, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+            var o = new Vector3(v[0], v[1], v[2]);
+            var sb = new StringBuilder($"rayomalla desde {o}:");
+            foreach (var c in UnityEngine.Object.FindObjectsOfType<MeshCollider>())
+            {
+                var b = c.bounds;
+                if (o.x < b.min.x || o.x > b.max.x || o.z < b.min.z || o.z > b.max.z || c.malla == null) continue;
+                var pos = c.malla.PosicionesFisica();
+                var tri = pos == null ? null : c.malla.TriangulosFisica(pos.Length / 3);
+                if (tri == null) { sb.Append($"\n   {Ruta(c.transform)}: sin datos"); continue; }
+                var M = c.transform.localToWorldMatrix;
+                float mejor = float.PositiveInfinity; int caras = 0;
+                Vector3 P(uint i) => M.MultiplyPoint3x4(new Vector3(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]));
+                for (int t = 0; t + 2 < tri.Length; t += 3)
+                {
+                    Vector3 a = P(tri[t]), bb = P(tri[t + 1]), cc = P(tri[t + 2]);
+                    // Möller–Trumbore con la dirección (0,-1,0), las dos caras
+                    var e1 = bb - a; var e2 = cc - a; var d = Vector3.down;
+                    var h = Vector3.Cross(d, e2); float det = Vector3.Dot(e1, h);
+                    if (Mathf.Abs(det) < 1e-9f) continue;
+                    float f = 1 / det; var s0 = o - a; float u = f * Vector3.Dot(s0, h);
+                    if (u < 0 || u > 1) continue;
+                    var q = Vector3.Cross(s0, e1); float w = f * Vector3.Dot(d, q);
+                    if (w < 0 || u + w > 1) continue;
+                    float dist = f * Vector3.Dot(e2, q);
+                    if (dist < 0) continue;
+                    caras++;
+                    if (dist < mejor) mejor = dist;
+                }
+                sb.Append($"\n   {Ruta(c.transform)} ({c.malla.name}, {pos.Length / 3} v, {tri.Length / 3} tri): {caras} cruces, el primero a {mejor:F2} m");
+            }
             return sb.ToString();
         }
 

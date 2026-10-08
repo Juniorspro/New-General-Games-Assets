@@ -25,6 +25,7 @@ no se ejecutan: se leen y se copian. Correr con python -I.
 """
 import argparse
 import base64
+import hashlib
 import json
 import lzma
 import os
@@ -182,13 +183,20 @@ def transformar(datos, trans):
 # ── bloques ─────────────────────────────────────────────────────────────────
 
 def comprimir(args):
-    i, datos, params = args
+    i, datos, params, cache = args
     lc, lp, pb = params
+    if cache:
+        clave = hashlib.sha256(datos + bytes(params)).hexdigest()
+        f = Path(cache) / clave
+        if f.exists():
+            return i, f.read_bytes(), 0.0
     dic = 1 << max(16, (len(datos) - 1).bit_length())
     t = time.time()
     c = lzma.compress(datos, format=lzma.FORMAT_RAW, filters=[{
         "id": lzma.FILTER_LZMA1, "preset": 9 | lzma.PRESET_EXTREME, "lc": lc, "lp": lp, "pb": pb,
         "dict_size": min(dic, 1 << 30)}])
+    if cache:
+        (Path(cache) / clave).write_bytes(c)
     return i, c, time.time() - t
 
 
@@ -224,6 +232,7 @@ def main():
     ap.add_argument("--bloque", type=float, default=32, help="MB por bloque (más grande comprime más)")
     ap.add_argument("--procesos", type=int, default=os.cpu_count() or 2)
     ap.add_argument("--titulo", default="Slime Rancher")
+    ap.add_argument("--cache", help="carpeta donde guardar los bloques comprimidos (rearmar es mucho más rápido)")
     a = ap.parse_args()
     web, datos = Path(a.web), Path(a.datos)
     BLOQUE = int(a.bloque * 1048576)
@@ -236,9 +245,14 @@ def main():
     codigo = []
     for f in sorted(web.rglob("*")):
         rel = f.relative_to(web).as_posix()
-        if f.is_dir() or rel.startswith("datos") or rel in OMITIR_WEB or f.suffix in (".br", ".gz"):
+        if f.is_dir() or rel == "datos" or rel.startswith("datos/") or rel in OMITIR_WEB or f.suffix in (".br", ".gz"):
             continue
-        codigo.append(("f" + rel, f.read_bytes(), "codigo", None))
+        b = f.read_bytes()
+        if rel.startswith("_framework/") and f.suffix == ".js":
+            # el runtime arma sus URLs relativas a import.meta.url, que acá es un blob: (no sirve
+            # de base): se le da la carpeta de la página (los pedidos igual los contesta el arranque)
+            b = b.replace(b"import.meta.url", b"(globalThis.porteoBaseDotnet||import.meta.url)")
+        codigo.append(("f" + rel, b, "codigo", None))
     codigo.append(("findice.json", (datos / "indice.json").read_bytes(), "codigo", None))
     paquetes = [("p" + f.stem, f.read_bytes(), "paquetes", None) for f in sorted((datos / "paquetes").glob("*.paq"))]
 
@@ -287,7 +301,9 @@ def main():
         buf = bytearray(tam)
         for e, desde in es:
             buf[desde:desde + len(e[1])] = e[1]
-        trabajos.append((i, bytes(buf), PARAMETROS[clase]))
+        trabajos.append((i, bytes(buf), PARAMETROS[clase], a.cache))
+    if a.cache:
+        Path(a.cache).mkdir(parents=True, exist_ok=True)
     comprimidos = [None] * len(bloques)
     hechos = 0
     with ProcessPoolExecutor(a.procesos) as ex:
