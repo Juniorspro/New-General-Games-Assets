@@ -173,6 +173,23 @@ def settings_con_bots(texto):
     return texto[:fin] + BOTS_SCR.replace('\n', nl) + texto[fin:]
 
 
+# Cloudflare Pages (y otros hostings gratis) no sirven archivos de más de 25 MiB: los paquetes van
+# en partes de hasta 20 MiB (sumando los archivos sin comprimir: el .pk3.gz siempre pesa menos)
+MAX_PARTE = 20 << 20
+
+
+def en_partes(archivos, tam):
+    """Los archivos en grupos de hasta MAX_PARTE, en orden de ruta."""
+    grupos, actual, suma = [], [], 0
+    for r in sorted(archivos):
+        if actual and suma + tam[r] > MAX_PARTE:
+            grupos.append(actual)
+            actual, suma = [], 0
+        actual.append(r)
+        suma += tam[r]
+    return grupos + [actual] if actual else grupos or [[]]
+
+
 def rel_real(raiz, rel):
     """El camino de rel con las mayúsculas reales de lo instalado (Windows no las distingue)."""
     cur = raiz
@@ -468,18 +485,22 @@ def main():
                 sueltos['settings.scr'] = settings_con_bots(scr).encode('utf-8')
                 pdir[d].discard('cstrike/settings.scr')
             if pdir[d] or sueltos:
-                indice['paquetes'][f'{nombre}-{d}'] = pk3(f'{nombre}-{d}', pdir[d], d, sueltos)
+                for i, parte in enumerate(en_partes(pdir[d], todos)):
+                    clave = f'{nombre}-{d}' + (f'-{i + 1}' if i else '')
+                    indice['paquetes'][clave] = pk3(clave, parte, d, sueltos if i == 0 else None)
     for m in mapas:
         pdir = por_dir(del_mapa[m])
         paqs = []
-        clave = f'mapas/{m}'
-        indice['paquetes'][clave] = pk3(clave, pdir['cstrike'], 'cstrike',
-                                        {f'porteo_{m}.wad': wads_nuevos[m], f'maps/{m}.ent': ents_nuevas[m]})
-        paqs.append(clave)
-        if pdir['valve']:
-            clave = f'mapas/{m}-valve'
-            indice['paquetes'][clave] = pk3(clave, pdir['valve'], 'valve')
+        for i, parte in enumerate(en_partes(pdir['cstrike'], todos)):
+            clave = f'mapas/{m}' + (f'-{i + 1}' if i else '')
+            indice['paquetes'][clave] = pk3(clave, parte, 'cstrike',
+                                            {f'porteo_{m}.wad': wads_nuevos[m], f'maps/{m}.ent': ents_nuevas[m]} if i == 0 else None)
             paqs.append(clave)
+        if pdir['valve']:
+            for i, parte in enumerate(en_partes(pdir['valve'], todos)):
+                clave = f'mapas/{m}-valve' + (f'-{i + 1}' if i else '')
+                indice['paquetes'][clave] = pk3(clave, parte, 'valve')
+                paqs.append(clave)
         indice['mapas'][m] = {'titulo': titulos[m], 'paquetes': paqs}
     radio = textos_radio(J / 'cstrike' / 'resource' / 'cstrike_english.txt')
     if radio:

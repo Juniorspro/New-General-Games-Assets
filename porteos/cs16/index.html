@@ -273,7 +273,8 @@
       preRun: [(m) => { m.ENV.XASH3D_BASEDIR = '/rwdir'; m.ENV.XASH3D_RODIR = '/rodir'; }],
     });
     // mientras compila el motor ya se bajan el menú y los módulos
-    const modulos = ['filesystem_stdio.so', 'libref_gles3compat.so', 'client.so', 'menu.so', 'server.so', 'extras.pk3']
+    // (los módulos viajan como .wasm, que el hosting comprime; adentro del motor son los .so de siempre)
+    const modulos = ['filesystem_stdio.wasm', 'libref_gles3compat.wasm', 'client.wasm', 'menu.wasm', 'server.wasm', 'extras.pk3']
       .map((n) => fetch('motor/' + n).then((r) => { if (!r.ok) throw new Error(`No se pudo bajar motor/${n}`); return r.arrayBuffer(); }));
     M = await motorListo;
     window.M = M;

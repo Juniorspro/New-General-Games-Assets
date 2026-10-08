@@ -161,14 +161,17 @@ cp "$H/porteo/intro.js" "$W/porteo-intro.js"
 B="$X/build"; BC="$C/build-web"
 cp "$B/engine/xash" "$W/motor/xash.js"
 cp "$B/engine/xash.wasm" "$W/motor/"
-cp "$B/filesystem/filesystem_stdio.so" "$B/ref/gl/libref_gles3compat.so" "$W/motor/"
+# los módulos (.so de Emscripten: WebAssembly) van como .wasm: así el hosting los manda comprimidos
+# (Cloudflare no comprime application/octet-stream): 3,0 → 1,0 MB por la red
+cp "$B/filesystem/filesystem_stdio.so" "$W/motor/filesystem_stdio.wasm"
+cp "$B/ref/gl/libref_gles3compat.so" "$W/motor/libref_gles3compat.wasm"
 cp "$B/3rdparty/extras/extras.pk3" "$W/motor/extras.pk3"
 # los botones y encabezados del menú vienen dibujados con texto en inglés: sin ellos, el menú
 # escribe los textos del castellano del juego (y de mainui_castellano.txt)
 zip -qd "$W/motor/extras.pk3" 'gfx/shell/btns_main.bmp' 'gfx/shell/head_*' >/dev/null
-cp "$BC/cl_dll/client_emscripten_wasm32.so" "$W/motor/client.so"
-cp "$BC/3rdparty/mainui_cpp/menu_emscripten_wasm32.so" "$W/motor/menu.so"
-cp "$BC/3rdparty/ReGameDLL_CS/regamedll/cs_emscripten_wasm32.so" "$W/motor/server.so"
+cp "$BC/cl_dll/client_emscripten_wasm32.so" "$W/motor/client.wasm"
+cp "$BC/3rdparty/mainui_cpp/menu_emscripten_wasm32.so" "$W/motor/menu.wasm"
+cp "$BC/3rdparty/ReGameDLL_CS/regamedll/cs_emscripten_wasm32.so" "$W/motor/server.wasm"
 python3 -I "$AQUI/armar-datos.py" "$J" "$W/datos" --extras-cs "$BC/extras.pk3" --relevamiento "$AQUI/relevamiento.json"
 rm -f "$W/datos/fuera.txt"
 # el ícono: el de Counter-Strike del juego (cstrike.ico)

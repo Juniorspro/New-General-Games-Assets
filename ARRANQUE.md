@@ -77,6 +77,7 @@ Dos sitios que andan, publicados en Cloudflare Pages:
 |---|---|---|
 | **Frutiger Aero** | `frutiger-aero/` | frutiger-aero-86q.pages.dev |
 | **IBLO Eventos** | `docs/paginas/` | iblo-eventos.pages.dev |
+| **Counter-Strike 1.6** (porteo; el juego no está en el repo) | receta en `porteos/cs16/` | porteo-cs16.pages.dev |
 
 El resto de la raíz son assets (modelos 3D, texturas, audio). No hace falta
 tocarlos.
@@ -219,6 +220,7 @@ Viven fuera del repo, con permisos 600:
 | archivo | qué es |
 |---|---|
 | `/root/.cloudflare-iblo` | token de Cloudflare (despliegues y D1) |
+| `/root/.cloudflare-claude` + `/root/.cloudflare-cuenta` | token "Claude" de la cuenta de Cloudflare (Pages y Workers; R2 no está habilitado) y el id de la cuenta. Lo pasó el dueño por el chat |
 | `/root/.paypal-frutiger-id` / `-secret` | PayPal **en vivo** |
 | `/root/.discord-frutiger-id` / `-secret` | Discord OAuth |
 | `~/.rezona/credentials.json` | Rezona Lab |

@@ -27,7 +27,16 @@ El juego no está en el repo (es público): `portear.sh` lo arma desde el `.rar`
 porteos/cs16/portear.sh "CS 1.6 dani vizcarra LOQUENDO.rar" entrega-cs16
 python3 -m http.server 8851 --bind 127.0.0.1 --directory entrega-cs16 &
 node porteos/cs16/prueba.mjs http://127.0.0.1:8851/cs16/ entrega-cs16/cs16.apk file://$PWD/entrega-cs16/cs16.html
+
+# publicarlo (Cloudflare Pages, proyecto porteo-cs16 → https://porteo-cs16.pages.dev)
+export CLOUDFLARE_API_TOKEN=$(cat /root/.cloudflare-claude) CLOUDFLARE_ACCOUNT_ID=$(cat /root/.cloudflare-cuenta)
+npx wrangler@4 pages deploy entrega-cs16/cs16 --project-name porteo-cs16 --branch main
+node porteos/cs16/prueba.mjs https://porteo-cs16.pages.dev/
 ```
+
+Pages no sube archivos de más de 25 MiB: por eso los paquetes van en partes de hasta 20 MiB
+(lo común a las partidas son 5). Y no comprime `application/octet-stream`: los módulos del
+motor (`.so` de Emscripten, que son WebAssembly) van como `.wasm`, y viajan con brotli.
 
 La primera vez baja Emscripten (~1 GB) y los fuentes en los commits fijados, y compila;
 queda en `~/.porteo/cs16` (o `$CS16_TRABAJO`). Con Emscripten ya instalado, todo (clonar,
@@ -44,9 +53,9 @@ motor monta solo) que viajan con gzip y el navegador abre con `DecompressionStre
 
 | paquete | cuándo se baja | tamaño |
 |---|---|---|
-| motor (`motor/`) | con la intro | 9,6 MB |
+| motor (`motor/`) | con la intro | 9,6 MB (3,9 por la red, con brotli) |
 | menú (`menu-*.pk3.gz`) y los `.wad` del sistema (`wads/`) | con la intro, mientras compila el motor | 4,1 MB |
-| lo común a las partidas (`base-*`): sonidos, modelos, sprites | mientras se mira el menú | 53 MB |
+| lo común a las partidas (`base-*`, en 6 partes): sonidos, modelos, sprites | mientras se mira el menú | 53 MB |
 | cada mapa (`mapas/*`) | al elegirlo (y el siguiente de la rotación, mientras se juega) | 0,4 a 9,6 MB |
 
 - El motor anda a los ~1,5 s (en la máquina de pruebas, con el servidor local); el menú

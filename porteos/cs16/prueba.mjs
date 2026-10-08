@@ -498,7 +498,7 @@ if (APK) {
   ch('E: orientación acostada', /screenOrientation.*=6\b|sensorLandscape/.test(manifiesto) || /screenOrientation\(0x0101001e\)=6/.test(manifiesto));
   const lista = execFileSync('unzip', ['-Z1', APK]).toString().split('\n');
   const indice = await fetch(new URL('datos/indice.json', WEB)).then((r) => r.json());
-  const esperados = ['index.html', 'motor/xash.wasm', 'motor/xash.js', 'motor/client.so', 'motor/menu.so', 'motor/server.so',
+  const esperados = ['index.html', 'motor/xash.wasm', 'motor/xash.js', 'motor/client.wasm', 'motor/menu.wasm', 'motor/server.wasm',
     'datos/indice.json', ...Object.values(indice.paquetes).map((p) => 'datos/' + p.archivo), ...(indice.wads || []).map((w) => 'datos/' + w.archivo)]
     .map((f) => 'assets/juego/' + f);       // armar.py pone el juego en assets/juego/
   const faltan = esperados.filter((f) => !lista.includes(f));

@@ -542,6 +542,10 @@ créditos ni se tapa al autor.
 | `radio1` + `menuselect 1` seguidos (CS) | el menú del servidor llega después de elegir y queda abierto: el próximo número elige una orden en vez de un arma | los comandos directos (`coverme`, `go`, `roger`…) |
 | medidas en `vh`/`vw` en estilos agregados después de `Porteo.web()` | con el teléfono parado `web.js` ya reescribió las reglas que había: las nuevas miden el lado equivocado y los botones salen 2,2× más grandes | `calc(n * var(--pvh, 1vh))` (`porteos/cs16/controles.js`) |
 | una prueba que juega contra bots | a veces un bot te mata en medio de la prueba y todo lo que sigue "falla" | medir con los bots quietos (`bot_zombie 1`) después de ver que entran |
+| un salto medido desde afuera de la página | dura medio segundo: con la máquina cargada, la primera muestra caía ya en el piso ("+0") | medir el pico cuadro a cuadro adentro de la página (`requestAnimationFrame`), empezando antes del toque |
+| Cloudflare Pages con un archivo de más de 25 MiB | no lo sube | partir los paquetes (`armar-datos.py`: partes de hasta 20 MiB) |
+| módulos `.so` de Emscripten en Cloudflare | se sirven como `application/octet-stream`, sin comprimir: 2 MB de más al abrir | publicarlos como `.wasm` (brotli: 3,0 → 1,0 MB) |
+| mandar por el chat un archivo de más de 30 MiB | no llega (límite de los adjuntos) | 7z en partes de 25 MB (`7z a -v25m -mx0`), que ZArchiver (Android) o 7-Zip juntan solos; la web, publicada en Pages |
 
 ## 14. Registro de porteos
 
@@ -740,9 +744,10 @@ Estrategia: Xash3D FWGS (reimplementación GPL de GoldSrc) + cs16-client + ReGam
 Fidelidad: casi 1:1 — la lógica de CS, los 31 mapas, modelos, sonidos y el castellano de la copia (con
            sus voces); el menú es el de cs16-client, armado como el GameMenu.res de la copia sin lo que
            en un navegador no anda; sin juego en red (no hay UDP): se juega contra bots
-Tamaños: instalado 503 MB → web 181 MB (al abrir se bajan 14: motor 9,6 + menú 4,1; 53 de las partidas
-         mientras se mira el menú; cada mapa, de 0,4 a 9,6, al elegirlo) · zip 176 MB · APK 177 MB
-         · un archivo 80 MB (con 4 mapas: el juego entero son 171 MB)
+Tamaños: instalado 503 MB → web 181 MB (al abrir se bajan ~8 MB por la red: el motor con brotli y el
+         menú; 53 de las partidas mientras se mira el menú; cada mapa, de 0,4 a 9,6, al elegirlo)
+         · zip 176 MB · APK 177 MB · un archivo 80 MB (con 4 mapas: el juego entero son 171 MB)
+Publicado: https://porteo-cs16.pages.dev (Cloudflare Pages, proyecto porteo-cs16)
 Carga (servidor local, CPU sin limitar): el motor anda a los 1,4 s; de_dust2 se baja y carga en 6,5 s;
          el archivo único, 4,2 s
 Pruebas: 60/60 (porteos/cs16/prueba.mjs) · no se pudo probar en un teléfono real
@@ -799,7 +804,9 @@ Pruebas: 60/60 (porteos/cs16/prueba.mjs) · no se pudo probar en un teléfono re
     falta guardar la clave (§7).
 - **Rearmarlo:** `porteos/cs16/portear.sh "RUTA/CS 1.6 dani vizcarra LOQUENDO.rar" [SALIDA]` (6 min
   con Emscripten ya instalado). **Probarlo:** `node porteos/cs16/prueba.mjs http://127.0.0.1:8851/cs16/
-  entrega-cs16/cs16.apk file:///…/cs16.html`.
+  entrega-cs16/cs16.apk file:///…/cs16.html`. **Publicarlo:** ver `porteos/cs16/LEEME.md`.
+- **Entregado:** el APK y el `.html` único por el chat, en partes de 7z de 25 MB (el chat no
+  acepta más de 30 MiB por archivo); la web, publicada en Pages.
 - **No va al repo** (§11): ni el juego ni el motor compilado; `entrega-*/` está en `.gitignore`.
 
 ### FNaF 2 — port de otra sesión, analizado y corregido
