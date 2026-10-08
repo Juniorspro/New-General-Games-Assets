@@ -586,6 +586,8 @@ créditos ni se tapa al autor.
 | guardar `index.html` en Cloudflare Pages | Pages redirige `/index.html` a `/` (308): lo guardado era una redirección, que no sirve para abrir una página (el ícono instalado abre `./index.html`) | `pwa.py` lo guarda como `./` y sirve eso para las dos direcciones |
 | `alert()` del motor (SDL lo usa para los mensajes de Xash3D: Host Error, Sys_Error) | en el teléfono es un cartel del navegador ("…pages.dev dice") que frena todo y se ve feo | `window.alert` → un aviso propio que no frena el juego, con `console.error` para que las pruebas lo cuenten (`porteos/cs16/index.html`) |
 | `page.waitForFunction` de Playwright con una función que devuelve una promesa | la promesa cuenta como "verdadero": no espera nada | sondear con `page.evaluate` en un bucle |
+| un juego adentro de un cuadro con `sandbox` sin `allow-same-origin` (algunas plataformas) | con sólo leer `navigator.serviceWorker` tira error, y la página del juego no arrancaba | `web.js` lo lee adentro de un `try`; el juego anda sin guardar nada (IndexedDB y el service worker no existen ahí) |
+| un `.html` que abre un sitio con `location.replace` adentro del cuadro de una plataforma | si la plataforma no deja abrir otros sitios en sus cuadros (CSP `frame-src`), Chrome pone su página de error en lugar del `.html`, y no queda nada para tocar | adentro de un cuadro, el sitio va en un cuadro propio; si se bloquea (`securitypolicyviolation`), un botón que lo abre arriba de todo o aparte (`porteos/cs16/counter-strike-1.6.html`) |
 | pedirle a la versión nueva que pase (`skipWaiting`) apenas abre la página | Chrome la activa recién cuando el service worker viejo se duerme; lo que el navegador pide al terminar de cargar (el ícono, el manifiesto) lo despierta, y dormido otra vez tarda hasta 30 s (con DevTools enganchado, como en Playwright, 5 min). Si la página se cansa de esperar y arranca la vieja, la nueva pasa a mitad de partida | `web.js`: el paso se pide con la página ya cargada, y una vez pedido no se juega la vieja (si tarda, se recarga). Se vio en `prueba-pwa.mjs`: fallaba 1 de cada 2 |
 | probar actualizaciones con `python3 -m http.server` | compara fechas al segundo: dos versiones armadas en el mismo segundo le dan 304 al `sw.js` nuevo y la actualización "no anda" | servir con ETag por contenido, como Cloudflare (`prueba-pwa.mjs`) |
 | armar dos veces el mismo juego da bytes distintos | la fecha de cada archivo dentro de los zip (`.pk3`), y `__FILE__`/`__DATE__`/`__TIME__` en lo compilado: cada publicación les hace bajar todo de nuevo a los jugadores aunque no haya cambiado nada (CS: 170 MB) | zip con fecha fija (`ZipInfo` de 2000-01-01), gzip con `mtime=0`, `SOURCE_DATE_EPOCH` (la fecha del commit fijado), `-ffile-prefix-map`, y un `date` que da esa fecha para los scripts que la anotan solos (`appversion.sh` de ReGameDLL) (`porteos/cs16/portear.sh` y `armar-datos.py`); comprobarlo armando dos veces y comparando |
@@ -856,7 +858,9 @@ Pruebas: 65/65 (porteos/cs16/prueba.mjs, contra el sitio publicado) y 16/16 de l
   con Emscripten ya instalado). **Probarlo:** `node porteos/cs16/prueba.mjs http://127.0.0.1:8851/cs16/
   entrega-cs16/cs16.apk file:///…/cs16.html`. **Publicarlo:** ver `porteos/cs16/LEEME.md`.
 - **Entregado:** el APK y el `.html` único por el chat, en partes de 7z de 25 MB (el chat no
-  acepta más de 30 MiB por archivo); la web, publicada en Pages.
+  acepta más de 30 MiB por archivo); la web, publicada en Pages; y `counter-strike-1.6.html`
+  (3 KB, en el repo), que abre lo publicado: directo, o adentro de una plataforma que muestre
+  el archivo en un cuadro (`blob:`, `srcdoc`, sandbox estricto), con "Jugar" si la bloquea.
 - **No va al repo** (§11): ni el juego ni el motor compilado; `entrega-*/` está en `.gitignore`.
 
 ### FNaF 2 — port de otra sesión, analizado y corregido

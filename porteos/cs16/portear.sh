@@ -14,6 +14,8 @@
 #   cs16.apk       APK nuevo (ar.juniors.cs16), con todo adentro: anda sin internet
 #   cs16.html      un solo archivo que se abre con doble clic, con 4 mapas ($UN_ARCHIVO_MAPAS):
 #                  el juego entero son 171 MB
+#   counter-strike-1.6.html  un .html de 3 KB que abre el juego publicado (porteo-cs16.pages.dev):
+#                  directo, o adentro de una plataforma que muestre el archivo en un cuadro
 #
 # Ni el juego ni el motor están en el repo (el repo es público):
 #   - los datos son de Valve: salen del juego del dueño;
@@ -227,6 +229,7 @@ python3 "$H/porteo/pwa.py" "$W" --nombre "Counter-Strike 1.6" --corto "CS 1.6" \
     --orientacion landscape --icono "$ICONO" --color "#000000" \
     --perezosos 'datos/base-*' --perezosos 'datos/mapas/*' --espera
 (cd "$SALIDA" && rm -f cs16-web.zip && zip -qr cs16-web.zip cs16)
+cp "$AQUI/counter-strike-1.6.html" "$SALIDA/"
 if [[ $SIN_APK == 0 ]]; then
   python3 "$H/porteo/apk/armar.py" "$W" --nombre "Counter-Strike 1.6" --paquete ar.juniors.cs16 \
       --orientacion horizontal --icono "$ICONO" --version 1.6.0 --salida "$SALIDA/cs16.apk"

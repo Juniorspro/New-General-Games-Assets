@@ -45,7 +45,11 @@ parchear, compilar, armar los datos, el `.html` único, la PWA, el zip y el APK)
 
 Entrega: `cs16/` (la web instalable), `cs16-web.zip`, `cs16.apk` y `cs16.html` (un solo
 archivo con 4 mapas: de_dust2, cs_assault, fy_iceworld y awp_map; el juego entero son 171 MB.
-Otros mapas: `UN_ARCHIVO_MAPAS=de_dust2,de_inferno portear.sh …`).
+Otros mapas: `UN_ARCHIVO_MAPAS=de_dust2,de_inferno portear.sh …`). Y `counter-strike-1.6.html`,
+3 KB que abren el juego publicado: abierto directo va al link (con lo que ya quedó guardado);
+si una plataforma lo muestra adentro de un cuadro, el juego va en un cuadro propio que ocupa
+todo; si la plataforma no deja abrir otros sitios ahí, aparece "Jugar" (lo abre arriba de todo
+o en otra pestaña). Sin JavaScript, redirige igual.
 
 ## Cómo carga (171 MB en vez de 503)
 

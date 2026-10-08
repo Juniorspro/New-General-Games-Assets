@@ -298,9 +298,13 @@
     document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
 
     // ---- funciona sin internet una vez abierto (si hay sw.js al lado) ----
-    if (cfg.offline !== false && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !enApk) {
-      navigator.serviceWorker.register(cfg.offline || 'sw.js').catch(function () {});
-    }
+    // (en un cuadro con sandbox sin allow-same-origin, con sólo leer navigator.serviceWorker
+    // tira error: sin el try, la página del juego no arrancaba)
+    try {
+      if (cfg.offline !== false && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !enApk) {
+        navigator.serviceWorker.register(cfg.offline || 'sw.js').catch(function () {});
+      }
+    } catch (_) {}
   };
 
   // ───────────────── antes de arrancar: ¿se publicó una versión nueva? ─────────────────
@@ -314,7 +318,8 @@
   //   Porteo.actualizar({ alAvanzar: function (hecho, total) { … } }).then(function (recargar) { … });
   P.actualizar = function (op) {
     op = op || {};
-    var sw = navigator.serviceWorker;
+    var sw = null;
+    try { sw = navigator.serviceWorker; } catch (_) {}   // (en un cuadro con sandbox tira error)
     if (!sw || !sw.controller || !/^https?:$/.test(location.protocol)) return Promise.resolve(false);
     return new Promise(function (ok) {
       var listo = false, quieto = null, t = null, pedido = null;
