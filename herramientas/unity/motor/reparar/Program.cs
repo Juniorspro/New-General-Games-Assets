@@ -15,6 +15,11 @@
 //    cambian por pop y los demás cuerpos que lo usan devuelven el valor por defecto. Así el
 //    esqueleto del motor (generar) ni lo ve. Los ensamblados que no se reparan se copian igual,
 //    para que generar resuelva todo desde la misma carpeta.
+// 3) Lo nativo de PC (Steam, Windows): en el navegador no hay esas bibliotecas. Cada DllImport
+//    del juego pasa a devolver el valor por defecto (sin DllNotFoundException, que SteamManager
+//    contesta con Application.Quit) y SteamAPI dice que no arrancó. Las [MonoPInvokeCallback]
+//    se sacan: nadie las llama desde lo nativo y el armado de WebAssembly rechaza las que tienen
+//    parámetros no blittables (StringBuilder).
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -48,6 +53,7 @@ foreach (var n in nombres)
     var mod = asm.MainModule;
     int antes = agregados;
     SinEspacios(mod, QUITAR, n);
+    SinNativos(mod, n);
     foreach (var t in mod.GetTypes().ToList())
     {
         if (t.IsInterface) continue;
@@ -193,6 +199,54 @@ static void SinEspacios(ModuleDefinition mod, string[] espacios, string nombre)
         Console.WriteLine($"{nombre}: sin {string.Join(", ", espacios)}: {tipos} tipos y {metodos} métodos fuera, {cuerpos} cuerpos por defecto, {llamadas} llamadas sacadas");
 }
 
+// ── 3) sin bibliotecas nativas de PC ──
+static void SinNativos(ModuleDefinition mod, string nombre)
+{
+    int nativos = 0, devoluciones = 0;
+    foreach (var t in mod.GetTypes())
+        foreach (var m in t.Methods)
+        {
+            for (int i = m.CustomAttributes.Count - 1; i >= 0; i--)
+                if (m.CustomAttributes[i].AttributeType.Name == "MonoPInvokeCallbackAttribute") { m.CustomAttributes.RemoveAt(i); devoluciones++; }
+            if (!m.IsPInvokeImpl) continue;
+            m.IsPInvokeImpl = false;
+            m.PInvokeInfo = null;
+            m.IsPreserveSig = false;
+            m.IsInternalCall = false;
+            m.ImplAttributes = MethodImplAttributes.IL | MethodImplAttributes.Managed;
+            m.Body = new MethodBody(m);
+            PorDefecto(m);
+            nativos++;
+        }
+    // Steam no arrancó (InitEx devuelve un resultado: 0 sería "OK")
+    var api = mod.GetType("Steamworks.SteamAPI");
+    if (api != null)
+        foreach (var m in api.Methods)
+        {
+            if (!m.HasBody) continue;
+            if (m.Name == "Init" || m.Name == "RestartAppIfNecessary" || m.Name == "IsSteamRunning") PorDefecto(m);
+            else if (m.Name == "InitEx" && m.ReturnType.Resolve()?.IsEnum == true)
+            {
+                // las salidas en blanco y 1 (k_ESteamAPIInitResult_FailedGeneric)
+                m.Body.Instructions.Clear();
+                m.Body.ExceptionHandlers.Clear();
+                m.Body.Variables.Clear();
+                var il = m.Body.GetILProcessor();
+                foreach (var p in m.Parameters)
+                    if (p.IsOut && p.ParameterType is ByReferenceType br)
+                    {
+                        il.Emit(OpCodes.Ldarg, p);
+                        if (br.ElementType.IsValueType) il.Emit(OpCodes.Initobj, br.ElementType);
+                        else { il.Emit(OpCodes.Ldnull); il.Emit(OpCodes.Stind_Ref); }
+                    }
+                il.Emit(OpCodes.Ldc_I4_1);
+                il.Emit(OpCodes.Ret);
+            }
+        }
+    if (nativos + devoluciones > 0)
+        Console.WriteLine($"{nombre}: {nativos} llamadas nativas por defecto, {devoluciones} devoluciones nativas fuera");
+}
+
 // el cuerpo de un método reemplazado por "devolver el valor por defecto"
 static void PorDefecto(MethodDefinition m)
 {
@@ -201,12 +255,12 @@ static void PorDefecto(MethodDefinition m)
     cuerpo.ExceptionHandlers.Clear();
     cuerpo.Variables.Clear();
     var il = cuerpo.GetILProcessor();
+    // las salidas por referencia en blanco ([Out] de un arreglo no es por referencia: queda igual)
     foreach (var p in m.Parameters)
-        if (p.IsOut || (p.ParameterType is ByReferenceType && p.IsOut))
+        if (p.IsOut && p.ParameterType is ByReferenceType br)
         {
-            var elem = ((ByReferenceType)p.ParameterType).ElementType;
             il.Emit(OpCodes.Ldarg, p);
-            il.Emit(OpCodes.Initobj, elem);
+            il.Emit(OpCodes.Initobj, br.ElementType);
         }
     var r = m.ReturnType;
     if (r.FullName != "System.Void")

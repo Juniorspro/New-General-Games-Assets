@@ -89,6 +89,10 @@ namespace Porteo.Render
             g.Poner(ID_LMST, Valor.Vec(new Vector4(1, 1, 0, 0)));
             g.Poner(ID_SPECHDR, Valor.Vec(new Vector4(1, 1, 0, 0)));
             g.Poner(ID_SHADOWFADE, Valor.Vec(new Vector4(0, 0, 0, 0)));
+            // qué canal de la máscara de sombras horneadas usa la luz: sin máscara (luces en tiempo
+            // real) Unity pone el primero, y el Standard de 2018+ multiplica la luz por ese canal
+            g.Poner(Ids.De("unity_OcclusionMaskSelector"), Valor.Vec(new Vector4(1, 0, 0, 0)));
+            g.Poner(Ids.De("unity_ProbesOcclusion"), Valor.Vec(new Vector4(1, 1, 1, 1)));
         }
 
         // ── el cuadro ──
@@ -169,14 +173,18 @@ namespace Porteo.Render
             if (Apagado.Contains("sin3d")) { Camaras.actual = null; camara = null; return; }
             var efectos = Apagado.Contains("sinefectos") ? new List<(MonoBehaviour, System.Reflection.MethodInfo)>() : Efectos(cam);
             RenderTexture destino = cam.destino, intermedia = null;
+            var r = cam.pixelRect;
+            int vx = (int)r.x, vy = (int)r.y, vw = Math.Max(1, (int)r.width), vh = Math.Max(1, (int)r.height);
             if (efectos.Count > 0)
             {
                 intermedia = RenderTexture.GetTemporary(cam.AnchoDestino, cam.AltoDestino, 24, RenderTextureFormat.ARGB32);
+                // si la cámara no borra el color, dibuja encima de lo que ya había (las otras
+                // cámaras): los efectos lo procesan todo junto, como en Unity
+                if (cam.borrar == CameraClearFlags.Depth || cam.borrar == CameraClearFlags.Nothing)
+                    Profundidad.CopiarColor(destino, intermedia, vx, vy, vw, vh);
                 Destinos.Atar(intermedia);
             }
             else Destinos.Atar(destino);
-            var r = cam.pixelRect;
-            int vx = (int)r.x, vy = (int)r.y, vw = Math.Max(1, (int)r.width), vh = Math.Max(1, (int)r.height);
             Convencion.Viewport(vx, vy, vw, vh);
             Borrar(cam, vx, vy, vw, vh);
 

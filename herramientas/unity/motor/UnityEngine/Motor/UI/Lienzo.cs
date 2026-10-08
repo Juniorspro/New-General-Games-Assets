@@ -568,6 +568,12 @@ namespace Porteo.UI
             if (c.destruido || !(c.transform is RectTransform rt) || !c.isRootCanvas) return;
             float w = Screen.width, h = Screen.height, s = c.escala;
             if (c.modo == RenderMode.WorldSpace) return;
+            // el rect del canvas raíz lo maneja Unity: pivote al centro y anclas en cero. Las
+            // escenas nuevas (2019+) lo guardan todo en cero, y con el pivote abajo a la izquierda
+            // el contenido quedaría corrido medio canvas
+            var centro = new Vector2(0.5f, 0.5f);
+            if (rt.pivote != centro) rt.pivot = centro;
+            if (rt.anchorMin != Vector2.zero || rt.anchorMax != Vector2.zero) { rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.zero; }
             var tam = new Vector2(w / s, h / s);
             if (c.modo == RenderMode.ScreenSpaceCamera && c.camara != null && !c.camara.destruido)
             {

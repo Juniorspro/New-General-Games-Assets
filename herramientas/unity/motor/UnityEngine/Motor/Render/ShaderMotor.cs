@@ -351,7 +351,9 @@ namespace UnityEngine
                 // ?verfs=Shader|expresión: la salida del fragment reemplazada por una expresión (depurar)
                 if (DepurarShader != null && dueno.m_Name == DepurarShader)
                 {
+                    // antes del último return (GLES3 de Unity) o del cierre de main (HLSLcc desde DXBC)
                     int fin = frag.LastIndexOf("return;", StringComparison.Ordinal);
+                    if (fin < 0) fin = frag.LastIndexOf('}');
                     if (fin > 0) frag = frag.Substring(0, fin) + "SV_Target0 = vec4(" + DepurarExpresion + ", 1.0);\n    " + frag.Substring(fin);
                     Debug.Log($"porteo: depurando {dueno.m_Name}/{pa.Nombre} ({clave}): {(fin > 0 ? "reemplazado" : "sin return")}");
                 }

@@ -405,6 +405,7 @@ namespace Porteo.Render
         internal static void Evento(Camera cam, CameraEvent ev, RenderTexture objetivo)
         {
             if (cam.comandos == null || !cam.comandos.TryGetValue(ev, out var l) || l.Count == 0) return;
+            if (Dibujo.Apagado.Contains("sincomandos")) return;   // para aislar problemas (?apagar=sincomandos)
             var antes = objetivoCamara;
             objetivoCamara = objetivo;
             foreach (var cb in l.ToArray()) Ejecutar(cb);

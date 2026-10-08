@@ -20,6 +20,7 @@ namespace Porteo
                     case "jerarquia": return Jerarquia(arg);
                     case "cerca": return Cerca(float.TryParse(arg, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var r) ? r : 6);
                     case "camaras": return Camaras();
+                    case "escena": return Escena();
                     case "disco": return Disco(arg.Length > 0 ? arg : Plataforma.RutaPersistente);
                     case "zonas": return Zonas();
                     case "objetos": return Objetos(arg);
@@ -439,6 +440,35 @@ namespace Porteo
                 if (d > radio) continue;
                 var mats = string.Join(", ", r.sharedMaterials.Select(m => m == null ? "null" : $"{m.name} [{m.shader?.name}] cola={m.renderQueue}"));
                 sb.Append($"\n   {r.GetType().Name} {Ruta(r.transform)} d={d:F1} límites={r.bounds.size} capa={r.gameObject.layer} :: {mats}");
+            }
+            return sb.ToString();
+        }
+
+        // la escena activa por arriba: raíces, canvases (modo, cámara, orden) y lo que muestran las
+        // RawImage y las cámaras que dibujan en texturas
+        public static string Escena()
+        {
+            var sb = new StringBuilder("escena " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name + ":");
+            foreach (var go in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
+                sb.Append($"\n   raíz {go.name} activo={go.activeInHierarchy} [{string.Join(",", go.GetComponents<Component>().Select(c => c.GetType().Name).Where(n => n != "Transform"))}]");
+            foreach (var c in Resources.FindObjectsOfTypeAll<Canvas>())
+            {
+                if (!c.gameObject.scene.IsValid()) continue;
+                var rt = c.transform as RectTransform;
+                sb.Append($"\n   canvas {Ruta(c.transform)} activo={c.isActiveAndEnabled} raíz={c.isRootCanvas} modo={c.renderMode} cámara={c.worldCamera?.name} orden={c.sortingOrder} plano={c.planeDistance} tam={rt?.rect.size} escala={c.transform.lossyScale}");
+            }
+            foreach (var mb in Resources.FindObjectsOfTypeAll<MonoBehaviour>())
+            {
+                if (!mb.gameObject.scene.IsValid() || mb.GetType().Name != "RawImage") continue;
+                var tex = mb.GetType().GetProperty("texture")?.GetValue(mb) as Texture;
+                var rt = mb.transform as RectTransform;
+                sb.Append($"\n   rawimage {Ruta(mb.transform)} activo={mb.isActiveAndEnabled} textura={tex?.name} {tex?.width}x{tex?.height} rect={rt?.rect}");
+            }
+            foreach (var c in Resources.FindObjectsOfTypeAll<Camera>())
+            {
+                if (!c.gameObject.scene.IsValid()) continue;
+                var efectos = string.Join(",", c.GetComponents<MonoBehaviour>().Select(m => m.GetType().Name));
+                sb.Append($"\n   cámara {Ruta(c.transform)} activa={c.isActiveAndEnabled} prof={c.depth} máscara={c.cullingMask:X8} borrar={c.clearFlags} fondo={c.backgroundColor} orto={c.orthographic} destino={c.targetTexture?.name} {c.targetTexture?.width}x{c.targetTexture?.height} rect={c.rect} [{efectos}]");
             }
             return sb.ToString();
         }
