@@ -36,18 +36,21 @@
   <p id="cambiar" hidden><a href="#cambiar">Cambiar la dirección</a></p>
 </main>
 <script>
-  // si la dirección se pone acá, abre directo en cualquier navegador
+  // si la dirección se pone acá, abre directo en cualquier navegador (para el dueño, con la clave:
+  // "https://…pages.dev/#clave=…"; ese archivo no va al repo)
   const FIJA = '';
   const CLAVE = 'porteo-lanzador-' + document.title;
   const guardada = () => { try { return localStorage.getItem(CLAVE) || ''; } catch (e) { return ''; } };
   const form = document.getElementById('form');
   const campo = document.getElementById('dir');
   function abrir(dir) {
-    // con o sin la barra del final, y sin el index.html (el service worker guarda la carpeta)
-    let u = dir.trim().replace(/index\.html?$/i, '');
+    // con o sin la barra del final, y sin el index.html (el service worker guarda la carpeta). Lo de
+    // después del # se respeta: con la puerta de Cloudflare, "#clave=…" entra solo (no viaja al servidor)
+    const [base, ...resto] = dir.trim().split('#');
+    let u = base.replace(/index\.html?$/i, '');
     if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
     if (!u.endsWith('/')) u += '/';
-    location.replace(u);
+    location.replace(u + (resto.length ? '#' + resto.join('#') : ''));
   }
   function pedir() {
     document.getElementById('abriendo').hidden = true;
