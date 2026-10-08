@@ -150,8 +150,9 @@ export function crearControlesPC(exp, lienzo, cfg = {}) {
     };
   }
   const ubicar = [];
-  // a media altura y no abajo: abajo al centro van los diálogos, y los botones tapaban el final
-  botones.forEach((b, i) => ubicar.push(boton(b, (t) => [ancho() - t * (0.8 + i * 1.15) - 10, alto() * 0.6])));
+  // arriba de la mitad y no abajo: el cuadro de los diálogos ocupa el último 30% de la pantalla y
+  // los botones tapaban el final del texto (a 0,6 todavía le pisaban el borde)
+  botones.forEach((b, i) => ubicar.push(boton(b, (t) => [ancho() - t * (0.8 + i * 1.15) - 10, alto() * 0.45])));
   ubicar.push(boton({ texto: '❚❚', tecla: pausa }, (t) => [ancho() - t * 0.6 - 8, t * 0.6 + 8]));
 
   // ── volver de la pausa ──

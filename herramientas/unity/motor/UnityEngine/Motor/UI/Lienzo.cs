@@ -31,6 +31,26 @@ namespace UnityEngine
         internal Vector3 posAntes, escalaAntes;
         internal Quaternion rotAntes;
 
+        // el CanvasScaler de UGUI del mismo objeto (por reflexión: es código del juego) y su modo:
+        // 0 ConstantPixelSize, 1 ScaleWithScreenSize, 2 ConstantPhysicalSize; -1 si no tiene
+        Component escalador;
+        bool escaladorBuscado;
+        static System.Reflection.FieldInfo campoModoEscalador;
+
+        internal int ModoEscalador()
+        {
+            if (!escaladorBuscado)
+            {
+                escaladorBuscado = true;
+                if (go != null)
+                    foreach (var c in go.componentes)
+                        if (c is MonoBehaviour && c.GetType().Name == "CanvasScaler") { escalador = c; break; }
+            }
+            if (escalador == null || escalador.destruido) return -1;
+            campoModoEscalador ??= escalador.GetType().GetField("m_UiScaleMode", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+            return campoModoEscalador?.GetValue(escalador) is object v ? Convert.ToInt32(v) : -1;
+        }
+
         public delegate void WillRenderCanvases();
         static event WillRenderCanvases antesDeDibujar;
         public static event WillRenderCanvases willRenderCanvases { add => antesDeDibujar += value; remove => antesDeDibujar -= value; }
@@ -568,6 +588,10 @@ namespace Porteo.UI
         // está dentro de otro recupera su rect (ver Canvas.conducido). Sólo en el mismo cuadro: uno
         // que fue raíz un rato y después se mueve se queda como estaba, como en Unity
         static readonly HashSet<Canvas> conducidos = new HashSet<Canvas>();
+        // la altura de pantalla con la que se arman los lienzos de píxeles constantes: menos que
+        // un monitor de 1080 para que en un teléfono los textos se lean (los diálogos de Bad
+        // Parenting, letra 38, quedan en un 5% de la altura, como en una ventana de 800)
+        const float ALTO_UI = 800f;
         static readonly List<Canvas> soltar = new List<Canvas>();
 
         internal static void PadreCambiado(Transform t)
@@ -597,6 +621,11 @@ namespace Porteo.UI
             if (c.destruido || !(c.transform is RectTransform rt) || !c.isRootCanvas) return;
             float w = Screen.width, h = Screen.height, s = c.escala;
             if (c.modo == RenderMode.WorldSpace) return;
+            // UI en píxeles constantes (pensada para el monitor de una PC): en el teléfono la medida
+            // de la pantalla depende de la densidad y del sistema de velocidad, que baja la
+            // resolución cuando va lento; a mitad de resolución los diálogos de Bad Parenting
+            // ocupaban media pantalla. Se arma siempre como en una pantalla de ALTO_UI de alto
+            if (c.ModoEscalador() == 0) s *= Math.Max(1f, Math.Min(w, h)) / ALTO_UI;
             if (!c.conducido)
             {
                 c.conducido = true;

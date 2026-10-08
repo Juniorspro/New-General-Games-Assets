@@ -42,6 +42,7 @@ namespace Porteo
                     case "luces": return Luces(arg);
                     case "campos": return Campos(arg);
                     case "pieles": return Pieles(arg);
+                    case "rects": return Rects(arg);
                     default: return "diagnóstico: no sé " + partes[0];
                 }
             }
@@ -503,6 +504,27 @@ namespace Porteo
                 sb.Append($"\n   {ruta} caja={b.center}±{b.extents} principal={c.Principal?.name}");
                 for (int i = 0; i < c.NPixel; i++) sb.Append($"\n      píxel {c.Pixel[i].name} {c.Pixel[i].transform.position}");
                 for (int i = 0; i < c.NVertice; i++) sb.Append($"\n      vértice {c.Vertice[i].name} {c.Vertice[i].transform.position}");
+            }
+            return sb.ToString();
+        }
+
+        // los RectTransform cuya ruta contiene el texto: anclas, tamaño, rect y escala; y de sus textos
+        // TMP el tamaño de letra y el preferido (lo que usa un ContentSizeFitter)
+        public static string Rects(string arg)
+        {
+            var sb = new StringBuilder($"rects (pantalla {Screen.width}x{Screen.height}):");
+            const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public;
+            foreach (var rt in UnityEngine.Object.FindObjectsOfType<RectTransform>())
+            {
+                var ruta = Ruta(rt);
+                if (!ruta.Contains(arg)) continue;
+                sb.Append($"\n   {ruta}: anclas {rt.anchorMin}-{rt.anchorMax} pivote {rt.pivot} tamaño {rt.sizeDelta} pos {rt.anchoredPosition} rect {rt.rect.size} escala {rt.lossyScale}");
+                foreach (var c in rt.GetComponents<Component>())
+                {
+                    var t = c.GetType();
+                    if (t.GetProperty("fontSize", F) is var fs && fs != null && t.GetProperty("preferredHeight", F) is var ph && ph != null)
+                        sb.Append($"\n      {t.Name}: letra {fs.GetValue(c)} auto {t.GetProperty("enableAutoSizing", F)?.GetValue(c)} preferido {t.GetProperty("preferredWidth", F)?.GetValue(c)}x{ph.GetValue(c)}");
+                }
             }
             return sb.ToString();
         }
