@@ -30,6 +30,8 @@ import lz4.block
 import UnityPy
 from UnityPy.export.ShaderConverter import ShaderProgram
 from UnityPy.helpers.TypeTreeGenerator import TypeTreeGenerator
+from UnityPy.helpers.TypeTreeHelper import FUNCTION_READ_MAP
+from UnityPy.helpers.TypeTreeNode import TypeTreeNode
 from UnityPy.streams import EndianBinaryReader
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -48,6 +50,27 @@ def log(*a):
 def nombre_archivo(ruta):
     """Como se nombran los archivos entre sí (externos): sin carpetas, en minúsculas."""
     return ruta.replace("\\", "/").split("/")[-1].lower()
+
+
+def arreglar_arreglos(raiz):
+    """Los arreglos de primitivos y de strings (string[], int[], List<float>...) los genera con el
+    tipo del elemento ("string args" con un Array adentro) y UnityPy, que mira primero el tipo, los
+    lee como un valor suelto: todo lo que sigue sale corrido (XlateText.args). En Unity esos nodos
+    son "vector"; un string de verdad es el único con un Array de char adentro. El árbol se arma de
+    nuevo: el lector en C de UnityPy fija el tipo de cada nodo al crearlo y no ve un m_Type cambiado."""
+    def es_vector(n):
+        hijos = n.m_Children
+        if not (hijos and hijos[0].m_Type == "Array" and n.m_Type in FUNCTION_READ_MAP):
+            return False
+        datos = hijos[0].m_Children[1] if len(hijos[0].m_Children) > 1 else None
+        return not (n.m_Type == "string" and datos is not None and datos.m_Type == "char")
+    nodos = list(raiz.traverse())
+    if not any(es_vector(n) for n in nodos):
+        return raiz
+    return TypeTreeNode.from_list([
+        TypeTreeNode(n.m_Level, "vector" if es_vector(n) else n.m_Type, n.m_Name, n.m_ByteSize, n.m_Version,
+                     m_MetaFlag=n.m_MetaFlag)
+        for n in nodos])
 
 
 class Recursos:
@@ -120,7 +143,7 @@ class Exportador:
         if k not in self.nodos:
             nombre = f"{ns}.{clase}" if ns else clase
             try:
-                self.nodos[k] = self.gen.get_nodes_up(ens, nombre)
+                self.nodos[k] = arreglar_arreglos(self.gen.get_nodes_up(ens, nombre))
             except Exception as e:
                 self.avisos.add(f"sin typetree para {ens}:{nombre}: {e}")
                 self.nodos[k] = None
