@@ -46,15 +46,17 @@
     if (!U || !U.faltaUrgente) { setTimeout(listo, 700); return; }
     const hasta = performance.now() + ESPERA_MAXIMA;
     const desde = globalThis.porteoCuadros || 0;
-    let enCero = 0;
+    let enCero = 0, cuadroCero = -1;
     (function mirar() {
       const falta = U.faltaUrgente();
       if (falta > 0) actualizar(T[3] + ' ' + (falta / 1048576).toFixed(1) + ' MB');
       // dos veces seguidas en cero y después de unos cuadros dibujados: lo que se ve se pide recién
-      // al dibujarlo, y el primer cuadro del menú puede tardar (compila sus shaders)
-      const dibujados = (globalThis.porteoCuadros || 0) - desde;
-      enCero = falta > 0 || dibujados < 5 ? 0 : enCero + 1;
-      if (enCero >= 2 || performance.now() > hasta) { listo(); return; }
+      // al dibujarlo, y el primer cuadro del menú puede tardar (compila sus shaders). Y con todo
+      // ya acá, dos cuadros más: lo que llegó se sube y se dibuja en el siguiente
+      const cuadros = globalThis.porteoCuadros || 0;
+      if (falta > 0 || cuadros - desde < 5) { enCero = 0; cuadroCero = -1; }
+      else { enCero++; if (cuadroCero < 0) cuadroCero = cuadros; }
+      if ((enCero >= 2 && cuadros - cuadroCero >= 2) || performance.now() > hasta) { listo(); return; }
       setTimeout(mirar, 300);
     })();
   }
