@@ -1,0 +1,34 @@
+{
+ "titulo": "Slime Rancher",
+ "aviso": {
+  "es": "Port no oficial, para uso personal, de «Slime Rancher» de Monomi Park. El juego, sus personajes, imágenes y sonidos son de sus autores.",
+  "en": "Unofficial personal-use port of \"Slime Rancher\" by Monomi Park. The game, its characters, images and sounds belong to their authors.",
+  "pt": "Port não oficial, para uso pessoal, de \"Slime Rancher\" da Monomi Park. O jogo, seus personagens, imagens e sons pertencem aos seus autores."
+ },
+ "consejos": {
+  "es": [
+   "Los slimes rosas comen de todo: frutas, verduras y carne.",
+   "Alimentá a un slime y te va a dar plorts para vender en el mercado.",
+   "Si un slime se come el plort de otro tipo, se convierte en un largo.",
+   "Cuidado: si un largo se come un plort de un tercer tipo, aparece un tarr.",
+   "Los precios del mercado cambian cada día: vendé cuando suben.",
+   "Los slimes rad te hacen daño si te acercás demasiado."
+  ],
+  "en": [
+   "Pink slimes eat anything: fruit, veggies and meat.",
+   "Feed a slime and it will give you plorts to sell at the market.",
+   "If a slime eats a plort of another kind, it becomes a largo.",
+   "Careful: if a largo eats a plort of a third kind, a tarr appears.",
+   "Market prices change every day: sell when they go up.",
+   "Rad slimes hurt you if you get too close."
+  ],
+  "pt": [
+   "Os slimes rosas comem de tudo: frutas, legumes e carne.",
+   "Alimente um slime e ele vai te dar plorts para vender no mercado.",
+   "Se um slime come o plort de outro tipo, ele vira um largo.",
+   "Cuidado: se um largo come um plort de um terceiro tipo, aparece um tarr.",
+   "Os preços do mercado mudam todo dia: venda quando subirem.",
+   "Os slimes rad machucam se você chegar perto demais."
+  ]
+ }
+}

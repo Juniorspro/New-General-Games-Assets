@@ -79,6 +79,8 @@ setModuleImports('porteo', {
   discoGuardar: (ruta, vista) => { const b = vista.slice(); vista.dispose(); discoEscribir((s) => s.put(b, ruta)); },
   discoBorrar: (ruta) => discoEscribir((s) => s.delete(ruta)),
   consola: (t, tipo) => {
+    // a la pantalla de carga del HTML (pantalla.js): cada escena que termina de cargar
+    if (globalThis.porteoCarga && t.startsWith('porteo: escena ')) porteoCarga.escena(t.slice(15, t.indexOf(' en ')));
     const k = TIPOS[tipo] || 'log';
     if (k === 'error' || k === 'exception' || k === 'assert') console.error(t);
     else if (k === 'warn') console.warn(t);
@@ -90,6 +92,7 @@ const exp = (await getAssemblyExports(getConfig().mainAssemblyName)).Programa;
 // para probar desde afuera (la consola del navegador o las pruebas automáticas)
 globalThis.porteo = exp;
 estado.textContent = '';
+if (globalThis.porteoCarga) porteoCarga.motor();
 const movil = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 for (const [ruta, datos] of disco.archivos) exp.PonerArchivo(ruta, Array.from(datos));
 exp.Iniciar(indice.escenas, 0, 96 * (window.devicePixelRatio || 1), movil);

@@ -232,9 +232,11 @@
   const enCola = new Uint8Array(nB);
   const enVuelo = new Set();
 
-  P.b = function () {
-    const el = document.currentScript.previousElementSibling;
-    const i = +el.dataset.i;
+  // el bloque i ya se leyó: se lo busca por su número (no "el elemento anterior": la intro y la
+  // pantalla de carga se agregan al final de la página mientras el navegador todavía la está leyendo)
+  P.b = function (i) {
+    const el = document.querySelector('script[type="porteo/b"][data-i="' + i + '"]');
+    if (!el) { console.error('porteo: no encuentro el bloque ' + i); return; }
     const texto = el.textContent;
     el.remove();   // que el texto no quede ocupando memoria en la página
     const w = elegir();
@@ -245,20 +247,25 @@
   function recibir(w, m) {
     w.tareas--;
     if (m.error) { console.error('porteo: bloque ' + m.i + ': ' + m.error); enVuelo.delete(m.i); despachar(); return; }
-    if (m.comp) {
-      comp[m.i] = m.comp;
-      llegados++;
-      const e = estado();
-      if (e && !P.arrancado) e.textContent = 'cargando… ' + Math.round(llegados * 100 / nB) + '%';
-      const l = esperanLlegada.get(m.i);
-      if (l) { esperanLlegada.delete(m.i); for (const f of l) f(); }
-      if (enCola[m.i]) despachar();
-      return;
-    }
+    if (m.comp) { llego(m.i, m.comp); return; }
     enVuelo.delete(m.i);
     enTrabajadores++;
     if (!desc[m.i]) guardar(m.i, m.datos);
     despachar();
+  }
+
+  // un bloque comprimido ya está acá (del texto de la página o bajado)
+  function llego(i, b) {
+    comp[i] = b;
+    llegados++;
+    // a la pantalla de carga (pantalla.js): en el HTML único, cuánto del archivo se leyó; en el
+    // sitio, cuánto llegó de lo que el motor está esperando
+    if (globalThis.porteoCarga) porteoCarga.datos(T.web ? fraccionUrgente() : llegados / nB);
+    const e = estado();
+    if (e && !P.arrancado) e.textContent = 'cargando… ' + Math.round(llegados * 100 / nB) + '%';
+    const l = esperanLlegada.get(i);
+    if (l) { esperanLlegada.delete(i); for (const f of l) f(); }
+    if (enCola[i]) despachar();
   }
 
   function guardar(i, d) {
@@ -289,6 +296,7 @@
   // la cola va en el orden del archivo, que es el orden en que se usan las cosas (empaquetar.py
   // --orden): el motor pide miles de recursos de una al cargar una escena, en cualquier orden
   function pedirBloque(i) {
+    if (T.web && !comp[i]) traer(i, true);
     if (desc[i] || enCola[i] || enVuelo.has(i)) return;
     enCola[i] = 1;
     let k = cola.length;
@@ -401,6 +409,7 @@
   function llegada(clave) {
     const ij = donde.get(clave);
     if (!ij || comp[ij[0]]) return Promise.resolve();
+    if (T.web) traer(ij[0], true);
     return new Promise((ok) => {
       if (!esperanLlegada.has(ij[0])) esperanLlegada.set(ij[0], []);
       esperanLlegada.get(ij[0]).push(ok);
@@ -423,6 +432,98 @@
     if (ij) sinUsar[ij[0]]--;
   }
 
+  // ── la versión para un sitio (empaquetar.py --sitio): cada bloque es un archivo b/<hash>.bin ──
+  // Se bajan en el orden del archivo (el de uso: primero el código y lo del menú), pocos a la vez;
+  // lo que el motor espera pasa adelante. Lo bajado queda en Cache Storage (el nombre lleva el
+  // hash del contenido: nunca hay que bajarlo de nuevo) y el service worker guarda la página: la
+  // segunda vez el juego arranca enseguida y sin red.
+  const EN_VUELO = 6;
+  const bajando = new Set(), urgentes = [];
+  const urgente = new Uint8Array(nB);    // lo pidió el motor: va primero y con prioridad alta
+  let siguiente = 0, cacheBloques = null, bajados = 0, fallo = false;
+
+  async function abrirCache() {
+    try { if (self.caches && isSecureContext) cacheBloques = await caches.open('porteo-bloques'); } catch (e) { cacheBloques = null; }
+    if (!cacheBloques) return;
+    // los de versiones anteriores (que ya no están en la tabla) se borran
+    try {
+      const sirven = new Set(T.bloques.map((b) => b.f));
+      for (const r of await cacheBloques.keys()) if (!sirven.has(r.url.slice(r.url.lastIndexOf('/') + 1))) cacheBloques.delete(r);
+    } catch (e) { /* no importa */ }
+  }
+
+  function traer(i, esUrgente) {
+    if (comp[i]) return;
+    if (esUrgente && !urgente[i]) { urgente[i] = 1; urgentes.push(i); avisar(); }
+    if (!bajando.has(i)) bombear();
+  }
+
+  function bombear() {
+    while (bajando.size < EN_VUELO && !fallo) {
+      let i = -1;
+      while (urgentes.length && i < 0) { const u = urgentes.shift(); if (!comp[u] && !bajando.has(u)) i = u; }
+      // lo que nadie pidió todavía, en orden, de a pocos (que no le saque ancho a lo urgente)
+      if (i < 0) {
+        if (bajando.size >= 3) return;
+        while (siguiente < nB && (comp[siguiente] || bajando.has(siguiente))) siguiente++;
+        if (siguiente >= nB) return;
+        i = siguiente++;
+      }
+      bajar(i);
+    }
+  }
+
+  // de lo que pidió el motor, qué parte ya llegó (para la barra de la pantalla de carga)
+  function fraccionUrgente() {
+    let pedido = 0, llego_ = 0;
+    for (let i = 0; i < nB; i++) if (urgente[i]) { pedido += T.bloques[i].c; if (comp[i]) llego_ += T.bloques[i].c; }
+    return pedido ? llego_ / pedido : 0;
+  }
+
+  // mientras el motor espera algo que se está bajando: cuánto falta (con una conexión lenta es lo
+  // que dice que el juego no se colgó)
+  function avisar() {
+    const el = estado();
+    if (!el || fallo) return;
+    let falta = 0;
+    for (let i = 0; i < nB; i++) if (urgente[i] && !comp[i]) falta += T.bloques[i].c;
+    if (falta > 0) el.textContent = 'bajando… ' + (falta / 1048576).toFixed(1) + ' MB';
+    else if (el.textContent.startsWith('bajando')) el.textContent = '';
+  }
+
+  async function bajar(i) {
+    bajando.add(i);
+    const b = T.bloques[i], url = 'b/' + b.f;
+    for (let intento = 0; ; intento++) {
+      try {
+        let r = cacheBloques && await cacheBloques.match(url);
+        if (!r) {
+          r = await fetch(url, { priority: urgente[i] ? 'high' : 'low' });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          if (cacheBloques) await cacheBloques.put(url, r.clone()).catch(() => {});
+        }
+        const c = new Uint8Array(await r.arrayBuffer());
+        if (c.length !== b.c) { if (cacheBloques) cacheBloques.delete(url); throw new Error('llegó con otro tamaño'); }
+        bajando.delete(i);
+        bajados += c.length;
+        llego(i, c);
+        if (urgente[i]) avisar();
+        bombear();
+        return;
+      } catch (e) {
+        if (intento >= 5) {
+          fallo = true;
+          bajando.delete(i);
+          console.error('porteo: no pude bajar ' + url + ': ' + e);
+          const el = estado();
+          if (el) el.textContent = 'No se pudo bajar una parte del juego. Revisá la conexión y recargá la página.';
+          return;
+        }
+        await new Promise((ok) => setTimeout(ok, 1000 * 2 ** intento));
+      }
+    }
+  }
+
   // ── la fuente de datos del motor (la misma forma que datos.js) ──
   P.fuente = {
     async indice() {
@@ -442,7 +543,8 @@
     usado: (id) => usar('r' + id),
     alLlegar: (id, f) => { llegada('r' + id).then(f); },
     resumen: () => `${desc.filter(Boolean).length} bloques en memoria (${(enMemoria / 1048576).toFixed(0)} MB), ` +
-      `${enTrabajadores} descomprimidos en trabajadores y ${sincronicos} en el momento, ${llegados}/${nB} llegados`,
+      `${enTrabajadores} descomprimidos en trabajadores y ${sincronicos} en el momento, ${llegados}/${nB} llegados` +
+      (T.web ? ` (${(bajados / 1048576).toFixed(1)} MB bajados o de la caché)` : ''),
   };
 
   // ── el código: módulos JS como blob: y el runtime de .NET desde adentro ──
@@ -481,4 +583,11 @@
     await descomprimido(ij[0]);
     await import(P.url('main.js'));
   };
+
+  if (T.web) {
+    // la página guardada para arrancar sin red, y que el navegador no borre lo bajado si le falta lugar
+    if ('serviceWorker' in navigator && isSecureContext) navigator.serviceWorker.register('sw.js').catch((e) => console.warn('porteo: sin service worker', e));
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    abrirCache().then(() => { bombear(); P.arrancar(); });
+  }
 })();

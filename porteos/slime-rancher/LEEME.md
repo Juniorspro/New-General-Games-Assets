@@ -1,13 +1,31 @@
-# Slime Rancher → navegador (WebGL)
+# Slime Rancher → navegador
 
-La versión **fiel**: el mismo juego (su C#, su física, su mundo) recompilado con Unity para
-WebGL, desde el APK del dueño. Análisis previo: [`ANALISIS.md`](ANALISIS.md).
+El juego original corriendo en el navegador, también en el teléfono: su IL (el C# compilado del
+APK, sin tocar) sobre nuestro UnityEngine en C# ([`herramientas/unity/motor`](../../herramientas/unity/motor)),
+en .NET 10 para WebAssembly (AOT), con WebGL 2 y PhysX 4.1. Los datos salen del APK con
+`exportar/exportar.py` y viajan comprimidos con LZMA, sin pérdida. Análisis previo:
+[`ANALISIS.md`](ANALISIS.md).
 
-**Estado:**
-- **Hecho:** el proyecto de Unity sale del APK arreglado y verificado: compila sin errores
-  como WebGL y como editor.
-- **Falta:** compilarlo con Unity 2018.4.36f1, que pide una licencia activada. La Personal es
-  gratis, pero se activa con la cuenta del dueño.
+**Estado:** el menú, la partida nueva, todas las zonas, la física, el audio, el guardado (IndexedDB)
+y lo básico del juego (caminar, mirar, saltar, aspirar, disparar, alimentar, plorts, vender)
+andan y están probados con guiones de entrada en la prueba de consola (`Prueba/`, `guion`). Falta
+seguir probando corrales, mejoras, puertas y teletransportes, y el rendimiento en teléfonos.
+
+**Entregas** (los pasos están en el LEEME del motor):
+- `slime-rancher.html`: el HTML único (≈199 MB), se abre como archivo. Al abrir: la intro de
+  JXStudios y la pantalla de carga con el slime rosa girando, la barra y "Saltar".
+- La versión para un sitio propio (`empaquetar.py --sitio`): baja sólo lo que hace falta, queda
+  en caché y se instala como app; `abrir.html` es el lanzador.
+
+La pantalla de carga usa `carga.json` (título, aviso de la intro, consejos) y el ícono del slime
+rosa del juego: la textura `iconSlimePink` (512×512, ETC2 RGBA), decodificada con
+`texture2ddecoder.decode_etc2a8`, dada vuelta y pasada a WebP de 256×256 (`--imagen-carga`).
+
+## El camino anterior: recompilar con Unity
+
+La primera versión: el mismo juego recompilado con Unity para WebGL, desde el APK del dueño. El
+proyecto de Unity sale del APK arreglado y compila sin errores como WebGL y como editor, pero hace
+falta Unity 2018.4.36f1 con una licencia activada, y en el navegador del teléfono no entraba.
 
 | archivo | qué es |
 |---|---|
@@ -99,8 +117,8 @@ compila y deja el juego en `entrega-slime/web/`.
 - **Los avisos de la consola.** Por ejemplo, el mensaje del día, que pide datos a un servidor
   de Monomi Park.
 
-## ¿Y en el teléfono?
+## ¿Y en el teléfono? (camino anterior)
 
-En un navegador de teléfono no entra (ver `ANALISIS.md`). El teléfono ya tiene el APK, que es
-de 32 bits. Con este mismo proyecto y el módulo de Android se puede compilar uno de **64
+Con la recompilación de Unity, el navegador del teléfono no alcanzaba (ver `ANALISIS.md`); por eso
+el camino de ahora es el motor propio. El teléfono ya tiene el APK, que es de 32 bits. Con este mismo proyecto y el módulo de Android se puede compilar uno de **64
 bits**, que instale en los teléfonos nuevos.

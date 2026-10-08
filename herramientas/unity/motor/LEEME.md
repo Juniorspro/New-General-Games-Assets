@@ -40,8 +40,21 @@ dotnet Prueba/bin/Release/net10.0/PruebaMotor.dll SALIDA_DATOS 0 400
 dotnet publish -c Release Web -p:JUEGO=JUEGO_REPARADO -p:FISICA=libporteo_fisica.a
 empaquetar/compilar-lzma.sh        # sólo si cambió lzma.c (lzma.wasm ya viene)
 python3 -I empaquetar/empaquetar.py Web/bin/Release/net10.0/publish/wwwroot SALIDA_DATOS juego.html \
-    [--orden orden.json]
+    [--orden orden.json] [--carga carga.json --imagen-carga personaje.webp]
+# la versión para subir a un sitio propio (carpeta con index.html, b/, sw.js, manifest y abrir.html)
+python3 -I empaquetar/empaquetar.py ... CARPETA --sitio --bloque 8 [--icono icono.png] [--carga ...]
 ```
+
+- `--carga`: al abrir, la intro de la marca (`herramientas/porteo/intro.js`) y después la pantalla
+  de carga (`herramientas/porteo/carga.js`: el personaje girando, la barra, consejos y "Saltar" para
+  empezar ya con lo que haya). El JSON tiene el título, el aviso de la intro y los consejos por
+  idioma (ver `porteos/slime-rancher/carga.json`); `pantalla.js` la une al motor.
+- `--sitio`: cada bloque es un archivo `b/<hash>.bin` que se baja cuando hace falta (lo que el motor
+  espera primero, lo demás de a poco), queda en Cache Storage y el service worker guarda la página:
+  la segunda vez arranca enseguida y sin red, y se instala como app. Anda en cualquier hosting
+  estático (todo viene comprimido con LZMA, no depende de cómo comprime el servidor); `_headers`
+  le dice a Netlify o Cloudflare Pages que guarden los bloques para siempre. `abrir.html` es el
+  lanzador: pide la dirección una vez y después abre directo.
 
 El orden (`--orden`) es la lista de recursos en el orden en que el motor los usó la primera vez:
 `globalThis.porteoOrden` en la consola del navegador, después de jugar un rato con la versión que

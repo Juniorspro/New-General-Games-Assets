@@ -280,6 +280,77 @@ def a_utf16(datos):
     return bytes(memoryview(salida).cast("B")[:m * 2]).decode("utf-16-le")
 
 
+def pantalla_de_carga(a):
+    """<script> con la intro de la marca, la pantalla de carga y lo que las une al motor (o nada)."""
+    if not a.carga:
+        return ""
+    porteo = AQUI.parent.parent.parent / "porteo"
+    config = json.loads(Path(a.carga).read_text(encoding="utf-8"))
+    if a.imagen_carga:
+        img = Path(a.imagen_carga)
+        tipo = "image/webp" if img.suffix.lower() == ".webp" else "image/png"
+        config["imagen"] = f"data:{tipo};base64," + base64.b64encode(img.read_bytes()).decode()
+    pegamento = (AQUI / "pantalla.js").read_text(encoding="utf-8").replace("/*CONFIG*/null", json.dumps(config, ensure_ascii=False))
+    js = "\n".join([(porteo / "intro.js").read_text(encoding="utf-8"), (porteo / "carga.js").read_text(encoding="utf-8"), pegamento])
+    return f"<script>\n{js}\n</script>\n"
+
+
+def escribir_sitio(carpeta, tabla, comprimidos, web, a):
+    """La versión para subir a un sitio: index.html (el arranque con la tabla, sin los datos), cada
+    bloque comprimido en b/<hash>.bin (el nombre cambia si cambia el contenido: se puede guardar
+    para siempre), sw.js (la página sin red), manifest e íconos (se instala como app) y _headers
+    (Netlify y Cloudflare Pages: cuánto guardar cada cosa)."""
+    import shutil
+    carpeta.mkdir(parents=True, exist_ok=True)
+    (carpeta / "b").mkdir(exist_ok=True)
+    nombres = set()
+    for b, c in zip(tabla["bloques"], comprimidos):
+        b["f"] = hashlib.sha256(c).hexdigest()[:20] + ".bin"
+        b["c"] = len(c)
+        nombres.add(b["f"])
+        destino = carpeta / "b" / b["f"]
+        if not destino.exists() or destino.stat().st_size != len(c):
+            destino.write_bytes(c)
+    for f in (carpeta / "b").iterdir():   # los de una versión anterior
+        if f.name not in nombres:
+            f.unlink()
+    tabla["web"] = True
+    arranque = (AQUI / "arranque.js").read_text(encoding="utf-8").replace("/*TABLA*/null", json.dumps(tabla, separators=(",", ":")))
+    estilo = re.search(r"<style>.*?</style>", (web / "index.html").read_text(encoding="utf-8"), re.S).group(0)
+    titulo = a.titulo
+    (carpeta / "index.html").write_text(
+        "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\">\n"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover\">\n"
+        f"<title>{titulo}</title>\n<meta name=\"theme-color\" content=\"#000000\">\n"
+        "<link rel=\"manifest\" href=\"manifest.webmanifest\">\n<link rel=\"icon\" href=\"icono-192.png\">\n"
+        "<link rel=\"apple-touch-icon\" href=\"icono-192.png\">\n<meta name=\"mobile-web-app-capable\" content=\"yes\">\n"
+        "<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n"
+        f"{estilo}\n</head>\n<body>\n<canvas id=\"lienzo\"></canvas>\n<div id=\"estado\">cargando…</div>\n"
+        f"{pantalla_de_carga(a)}<script>\n{arranque}\n</script>\n</body>\n</html>\n", encoding="utf-8")
+    shutil.copyfile(AQUI / "sw.js", carpeta / "sw.js")
+    manifest = {"name": titulo, "short_name": titulo, "start_url": "./", "scope": "./", "display": "fullscreen",
+                "orientation": "landscape", "background_color": "#000000", "theme_color": "#000000",
+                "icons": [{"src": "icono-192.png", "sizes": "192x192", "type": "image/png"},
+                          {"src": "icono-512.png", "sizes": "512x512", "type": "image/png"}]}
+    (carpeta / "manifest.webmanifest").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
+    if a.icono:
+        try:
+            from PIL import Image
+            im = Image.open(a.icono).convert("RGBA")
+            for lado in (192, 512):
+                im.resize((lado, lado), Image.LANCZOS).save(carpeta / f"icono-{lado}.png")
+        except ImportError:
+            for lado in (192, 512):
+                shutil.copyfile(a.icono, carpeta / f"icono-{lado}.png")
+    (carpeta / "_headers").write_text(
+        "/b/*\n  Cache-Control: public, max-age=31536000, immutable\n"
+        "/index.html\n  Cache-Control: no-cache\n/\n  Cache-Control: no-cache\n/sw.js\n  Cache-Control: no-cache\n", encoding="utf-8")
+    lanzador = (AQUI / "abrir.html").read_text(encoding="utf-8").replace("TITULO", titulo)
+    (carpeta / "abrir.html").write_text(lanzador, encoding="utf-8")
+    total = sum(len(c) for c in comprimidos)
+    log(f"{carpeta}: {len(comprimidos)} bloques, {total / 1e6:.1f} MB; index.html {(carpeta / 'index.html').stat().st_size / 1e3:.0f} KB")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("web")
@@ -292,6 +363,13 @@ def main():
     ap.add_argument("--cache", help="carpeta donde guardar los bloques comprimidos (rearmar es mucho más rápido)")
     ap.add_argument("--sin-proxies", action="store_true", help="no predecir las mallas proxy (proxies.py, necesita numpy)")
     ap.add_argument("--vorbis-opt", help="el ejecutable de vorbis-opt/ (cargo build --release): el audio más chico, mismas muestras")
+    ap.add_argument("--sitio", action="store_true", help="en vez del HTML único, la versión para subir a un sitio: SALIDA es una "
+                    "carpeta con index.html, los bloques en b/ (bajan a medida que hacen falta y quedan en caché), el service "
+                    "worker y el manifest (se instala como app). Conviene con --bloque 8")
+    ap.add_argument("--icono", help="PNG cuadrado para la app instalable (--sitio)")
+    ap.add_argument("--carga", help="JSON con el título, el aviso de la intro y los consejos: al abrir, la intro de la marca "
+                    "y después la pantalla de carga con el personaje girando y \"Saltar\" (ver pantalla.js)")
+    ap.add_argument("--imagen-carga", help="la imagen del personaje que gira en la pantalla de carga (webp o png)")
     a = ap.parse_args()
     web, datos = Path(a.web), Path(a.datos)
     BLOQUE = int(a.bloque * 1048576)
@@ -403,15 +481,18 @@ def main():
              "bloques": [{"t": tam, "p": list(PARAMETROS[clase]),
                           "e": [[e[0], desde, len(e[1]), e[3]] for e, desde in es]}
                          for clase, es, tam in bloques]}
+    if a.sitio:
+        escribir_sitio(Path(a.salida), tabla, comprimidos, web, a)
+        return
     arranque = (AQUI / "arranque.js").read_text(encoding="utf-8").replace("/*TABLA*/null", json.dumps(tabla, separators=(",", ":")))
     estilo = re.search(r"<style>.*?</style>", (web / "index.html").read_text(encoding="utf-8"), re.S).group(0)
     partes = ["﻿<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-16\">\n",
               "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover\">\n",
               f"<title>{a.titulo}</title>\n{estilo}\n</head>\n<body>\n<canvas id=\"lienzo\"></canvas>\n<div id=\"estado\">cargando…</div>\n",
-              "<script>\n", arranque, "\n</script>\n"]
+              pantalla_de_carga(a) + "<script>\n", arranque, "\n</script>\n"]
     for i, c in enumerate(comprimidos):
         texto = a_utf16(c)
-        partes.append(f'<script type="porteo/b" data-i="{i}" data-n="{len(c)}">{texto}</script><script>P.b()')
+        partes.append(f'<script type="porteo/b" data-i="{i}" data-n="{len(c)}">{texto}</script><script>P.b({i})')
         if i == 0:
             partes.append(";P.arrancar()")
         partes.append("</script>\n")
