@@ -1,0 +1,11 @@
+[package]
+name = "vorbis-opt"
+version = "0.1.0"
+edition = "2021"
+description = "Ogg Vorbis más chico sin cambiar una muestra (OptiVorbis), para el HTML único"
+
+[dependencies]
+optivorbis = "0.3.2"
+
+[profile.release]
+opt-level = 3

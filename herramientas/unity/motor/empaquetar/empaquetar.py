@@ -181,6 +181,47 @@ def transformar(datos, trans):
     raise ValueError(trans)
 
 
+# ── el audio ────────────────────────────────────────────────────────────────
+
+def optimizar_audio(programa, ids, carpeta, cache):
+    """{id: Ogg rearmado} con vorbis-opt (OptiVorbis): los códigos de Huffman óptimos para cada
+    archivo y sin comentarios; se decodifica a las mismas muestras (probado en Chromium con los 635
+    del juego). Lo que no se pudo o no achicó queda como estaba."""
+    import subprocess
+    import tempfile
+    salida = {}
+    pendientes = []
+    for rid in ids:
+        b = (carpeta / f"{rid}.bin").read_bytes()
+        clave = hashlib.sha256(b"vorbis-opt1" + b).hexdigest()
+        f = Path(cache) / clave if cache else None
+        if f and f.exists():
+            o = f.read_bytes()
+            if o:
+                salida[rid] = o
+            continue
+        pendientes.append((rid, b, f))
+    with tempfile.TemporaryDirectory() as tmp:
+        for k in range(0, len(pendientes), 64):
+            tanda = pendientes[k:k + 64]
+            args = []
+            for rid, b, f in tanda:
+                args += [str(carpeta / f"{rid}.bin"), f"{tmp}/{rid}.ogg"]
+            subprocess.run([programa, *args], capture_output=True)
+            for rid, b, f in tanda:
+                o = Path(f"{tmp}/{rid}.ogg")
+                o = o.read_bytes() if o.exists() else b""
+                if not o or len(o) >= len(b):
+                    o = b""
+                if f:
+                    f.write_bytes(o)   # vacío: "no sirvió", para no volver a intentar
+                if o:
+                    salida[rid] = o
+    antes = sum((carpeta / f"{r}.bin").stat().st_size for r in salida)
+    log(f"   audio con OptiVorbis: {len(salida)} de {len(ids)}, {antes / 1e6:.1f} → {sum(map(len, salida.values())) / 1e6:.1f} MB")
+    return salida
+
+
 # ── bloques ─────────────────────────────────────────────────────────────────
 
 def comprimir(args):
@@ -235,6 +276,7 @@ def main():
     ap.add_argument("--titulo", default="Slime Rancher")
     ap.add_argument("--cache", help="carpeta donde guardar los bloques comprimidos (rearmar es mucho más rápido)")
     ap.add_argument("--sin-proxies", action="store_true", help="no predecir las mallas proxy (proxies.py, necesita numpy)")
+    ap.add_argument("--vorbis-opt", help="el ejecutable de vorbis-opt/ (cargo build --release): el audio más chico, mismas muestras")
     a = ap.parse_args()
     web, datos = Path(a.web), Path(a.datos)
     BLOQUE = int(a.bloque * 1048576)
@@ -278,9 +320,14 @@ def main():
         if descs:
             cub = sum(sg[1] for d in descs.values() for sg in d["segmentos"])
             log(f"   {len(descs)} proxies: {cub} de {sum(d['n'] for d in descs.values())} vértices se predicen")
+    # el audio, con OptiVorbis (vorbis-opt/): mismas muestras, 5% menos
+    vorbis = {}
+    if a.vorbis_opt:
+        vorbis = optimizar_audio(a.vorbis_opt, [r for r in ids if info.get(r, ("",))[0] == "audio"],
+                                 datos / "recursos", a.cache)
     sin_trans = 0
     for rid in ids:
-        b = (datos / "recursos" / f"{rid}.bin").read_bytes()
+        b = vorbis.get(rid) or (datos / "recursos" / f"{rid}.bin").read_bytes()
         clase, trans = info.get(rid, ("otros", None))
         if rid in descs:
             b = proxies.restar(b, descs[rid], fuente)
