@@ -346,7 +346,7 @@ namespace Porteo.Render
             float mitadTan = (float)Math.Tan(cam.fov * 0.5f * Math.PI / 180);
             // el nivel de cada LODGroup se elige cuando aparece el primero de sus renderers
             int marca = ++marcaJuntar;
-            LucesObjeto.Empezar(cam);
+            LucesObjeto.Empezar(cam, planos);
             int mascara = cam.mascara;
             int cuadro = Time.frameCount;
             recorridos = 0;

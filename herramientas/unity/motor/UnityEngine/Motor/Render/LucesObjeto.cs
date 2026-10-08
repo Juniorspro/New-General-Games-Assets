@@ -5,10 +5,13 @@ using UnityEngine;
 namespace Porteo.Render
 {
     // Las luces de cada objeto, como en el forward de Unity: la direccional principal en la pasada
-    // base; las más importantes (hasta pixelLightCount, contando la principal) por píxel en
-    // pasadas extra; las 4 siguientes puntuales por vértice (VERTEXLIGHT_ON); el resto se ignora
-    // (Unity las suma a los armónicos del objeto). Los objetos con las mismas luces comparten
-    // configuración, así se pueden dibujar juntos.
+    // base; las más importantes (hasta pixelLightCount, contando la principal y las Important) por
+    // píxel en pasadas extra; las 4 siguientes puntuales por vértice (VERTEXLIGHT_ON); el resto se
+    // ignora (Unity las suma a los armónicos del objeto). La importancia es la de Unity: la caída de
+    // la luz en el centro de la caja del objeto, así que en un objeto enorme (todas las paredes de
+    // una casa en una malla) las luces lejos del centro quedan por vértice aunque estén al lado de
+    // la cámara; y las luces que no tocan lo que ve la cámara no cuentan. Los objetos con las mismas
+    // luces comparten configuración, así se pueden dibujar juntos.
     public static class LucesObjeto
     {
         public sealed class Conf
@@ -48,14 +51,19 @@ namespace Porteo.Render
         const float LADO = 24f;
         static readonly Dictionary<long, List<Light>> grilla = new Dictionary<long, List<Light>>();
         static readonly List<List<Light>> sobrantes = new List<List<Light>>();
+        // todas las puntuales y spot que cuentan (para los objetos enormes, sin recorrer la grilla)
+        static readonly List<Light> puntuales = new List<Light>();
         static int pixeles;
 
-        public static void Empezar(Camera cam)
+        // planos: los de la cámara (Gribb-Hartmann, normales hacia adentro); sin planos no se descarta
+        // ninguna luz por estar fuera de vista
+        public static void Empezar(Camera cam, Plane[] planos = null)
         {
             confs.Clear();
             porClave.Clear();
             Array.Clear(principalHecha, 0, 32);
             direccionales.Clear();
+            puntuales.Clear();
             foreach (var l in grilla.Values) { l.Clear(); sobrantes.Add(l); }
             grilla.Clear();
             pixeles = QualitySettings.pixelLightCount;
@@ -66,6 +74,10 @@ namespace Porteo.Render
                 if (l.tipo != LightType.Point && l.tipo != LightType.Spot) continue;
                 var p = l.transform.position;
                 float r = l.rango;
+                // fuera de lo que ve la cámara no ilumina nada visible, y Unity no la cuenta: si no,
+                // le quita su lugar por píxel a otra en los objetos enormes
+                if (planos != null && FueraDeVista(planos, p, r)) continue;
+                puntuales.Add(l);
                 int x0 = Celda(p.x - r), x1 = Celda(p.x + r), y0 = Celda(p.y - r), y1 = Celda(p.y + r), z0 = Celda(p.z - r), z1 = Celda(p.z + r);
                 for (int x = x0; x <= x1; x++)
                     for (int y = y0; y <= y1; y++)
@@ -83,6 +95,13 @@ namespace Porteo.Render
             }
         }
 
+        static bool FueraDeVista(Plane[] planos, Vector3 p, float r)
+        {
+            for (int i = 0; i < planos.Length; i++)
+                if (Vector3.Dot(planos[i].normal, p) + planos[i].distance < -r) return true;
+            return false;
+        }
+
         static int Celda(float v) => (int)Math.Floor(v / LADO);
         static long Clave(int x, int y, int z) => ((long)(x & 0x1FFFFF) << 42) | ((long)(y & 0x1FFFFF) << 21) | (uint)(z & 0x1FFFFF);
 
@@ -98,6 +117,21 @@ namespace Porteo.Render
         static readonly List<(Light l, float imp)> candidatas = new List<(Light, float)>(16);
         static readonly HashSet<Light> vistas = new HashSet<Light>();
 
+        // una puntual o spot para el objeto de caja c±e: si su esfera toca la caja, con la
+        // importancia de Unity (su caída en el centro de la caja; las Important primero)
+        static void Considerar(Light l, int bit, Vector3 c, Vector3 e)
+        {
+            if ((l.mascara & bit) == 0 || !vistas.Add(l)) return;
+            var p = l.transform.position;
+            float r2 = Math.Max(l.rango * l.rango, 1e-6f);
+            float dx = Math.Max(Math.Abs(p.x - c.x) - e.x, 0), dy = Math.Max(Math.Abs(p.y - c.y) - e.y, 0), dz = Math.Max(Math.Abs(p.z - c.z) - e.z, 0);
+            if (dx * dx + dy * dy + dz * dz >= r2) return;
+            float cx = p.x - c.x, cy = p.y - c.y, cz = p.z - c.z;
+            float imp = l.Brillo / (1f + 25f * (cx * cx + cy * cy + cz * cz) / r2);
+            if (l.modo == LightRenderMode.ForcePixel) imp += 1000;
+            candidatas.Add((l, imp));
+        }
+
         public static int Para(Renderer r, in Bounds b)
         {
             int capa = r.go.capa;
@@ -109,29 +143,24 @@ namespace Porteo.Render
                 if (l != principal && (l.mascara & bit) != 0) candidatas.Add((l, l.Brillo + (l.modo == LightRenderMode.ForcePixel ? 1000 : 0)));
             var c = b.center; var e = b.extents;
             int x0 = Celda(c.x - e.x), x1 = Celda(c.x + e.x), y0 = Celda(c.y - e.y), y1 = Celda(c.y + e.y), z0 = Celda(c.z - e.z), z1 = Celda(c.z + e.z);
-            // objetos enormes (terreno): no recorrer miles de celdas, mirar sólo el centro
-            if ((long)(x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1) > 64) { x0 = x1 = Celda(c.x); y0 = y1 = Celda(c.y); z0 = z1 = Celda(c.z); }
-            for (int x = x0; x <= x1; x++)
-                for (int y = y0; y <= y1; y++)
-                    for (int z = z0; z <= z1; z++)
-                    {
-                        if (!grilla.TryGetValue(Clave(x, y, z), out var lista)) continue;
-                        foreach (var l in lista)
-                        {
-                            if ((l.mascara & bit) == 0 || !vistas.Add(l)) continue;
-                            var p = l.transform.position;
-                            // distancia de la luz a la caja del objeto
-                            float dx = Math.Max(Math.Abs(p.x - c.x) - e.x, 0), dy = Math.Max(Math.Abs(p.y - c.y) - e.y, 0), dz = Math.Max(Math.Abs(p.z - c.z) - e.z, 0);
-                            float d2 = dx * dx + dy * dy + dz * dz, r2 = l.rango * l.rango;
-                            if (d2 >= r2) continue;
-                            float imp = l.Brillo / (1f + 25f * d2 / Math.Max(r2, 1e-6f));
-                            if (l.modo == LightRenderMode.ForcePixel) imp += 1000;
-                            candidatas.Add((l, imp));
-                        }
-                    }
+            // objetos enormes (terreno, las paredes de toda una casa): todas las luces en vez de
+            // recorrer cientos de celdas. Mirar sólo la celda del centro dejaba afuera a las que
+            // están lejos de él (a las paredes de Bad Parenting les llegaba sólo la de la cocina)
+            if ((long)(x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1) > 64)
+                foreach (var l in puntuales) Considerar(l, bit, c, e);
+            else
+                for (int x = x0; x <= x1; x++)
+                    for (int y = y0; y <= y1; y++)
+                        for (int z = z0; z <= z1; z++)
+                            if (grilla.TryGetValue(Clave(x, y, z), out var lista))
+                                foreach (var l in lista) Considerar(l, bit, c, e);
             candidatas.Sort((a, b2) => b2.imp.CompareTo(a.imp));
             var conf = new Conf { Principal = principal };
-            int libres = Math.Max(0, pixeles - (principal != null ? 1 : 0));
+            // la principal y las Important también ocupan lugar: "si con eso hay menos luces que
+            // pixelLightCount, más luces van por píxel" (Unity, Forward Rendering Path Details)
+            int libres = pixeles - (principal != null ? 1 : 0);
+            foreach (var (l, imp) in candidatas)
+                if (l.modo == LightRenderMode.ForcePixel) libres--;
             foreach (var (l, imp) in candidatas)
             {
                 bool forzarPixel = l.modo == LightRenderMode.ForcePixel, forzarVertice = l.modo == LightRenderMode.ForceVertex;

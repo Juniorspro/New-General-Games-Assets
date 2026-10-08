@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -38,6 +39,8 @@ namespace Porteo
                     case "textos": return Textos();
                     case "desplegables": return Desplegables();
                     case "materiales": return Materiales(arg);
+                    case "luces": return Luces(arg);
+                    case "campos": return Campos(arg);
                     default: return "diagnóstico: no sé " + partes[0];
                 }
             }
@@ -475,6 +478,80 @@ namespace Porteo
                 }
             }
             return sb.ToString();
+        }
+
+        // las luces activas y, con un texto, las que el forward le da a cada renderer cuya ruta lo
+        // contiene (la principal, las por píxel y las por vértice): para entender por qué algo sale
+        // oscuro o quemado
+        public static string Luces(string arg)
+        {
+            var sb = new StringBuilder("luces:");
+            foreach (var l in Porteo.Render.Luces.activas)
+                sb.Append($"\n   {Ruta(l.transform)} {l.tipo} pos={l.transform.position} rango={l.rango:G4} intensidad={l.intensidad:G4} color={l.colorLuz} modo={l.modo} sombras={l.sombraTipo} horneado={l.horneado} máscara={l.mascara:X}");
+            if (arg.Length == 0) return sb.ToString();
+            // la grilla de luces se arma al dibujar cada cámara; la prueba de consola no dibuja (y
+            // entre cuadros rearmarla no molesta: el próximo cuadro la vuelve a armar)
+            Porteo.Render.LucesObjeto.Empezar(Camera.main);
+            int n = 0;
+            foreach (var r in UnityEngine.Object.FindObjectsOfType<Renderer>())
+            {
+                var ruta = Ruta(r.transform);
+                if (!ruta.Contains(arg) || ++n > 10) continue;
+                var b = r.bounds;
+                var c = Porteo.Render.LucesObjeto.Config(Porteo.Render.LucesObjeto.Para(r, b));
+                sb.Append($"\n   {ruta} caja={b.center}±{b.extents} principal={c.Principal?.name}");
+                for (int i = 0; i < c.NPixel; i++) sb.Append($"\n      píxel {c.Pixel[i].name} {c.Pixel[i].transform.position}");
+                for (int i = 0; i < c.NVertice; i++) sb.Append($"\n      vértice {c.Vertice[i].name} {c.Vertice[i].transform.position}");
+            }
+            return sb.ToString();
+        }
+
+        // los campos de cada objeto de un tipo (por nombre, MonoBehaviour o ScriptableObject), por
+        // reflexión y hasta 4 niveles: lo que un perfil de posproceso o un efecto tiene cargado
+        public static string Campos(string arg)
+        {
+            var sb = new StringBuilder("campos:");
+            foreach (var o in Resources.FindObjectsOfTypeAll<UnityEngine.Object>())
+                if (o.GetType().Name == arg)
+                {
+                    sb.Append($"\n   {(o is Component c ? Ruta(c.transform) : o.name)}:");
+                    CamposDe(o, sb, 2, 0, new HashSet<object>(ReferenceEqualityComparer.Instance));
+                }
+            return sb.ToString();
+        }
+
+        static void CamposDe(object o, StringBuilder sb, int sangria, int nivel, HashSet<object> vistos)
+        {
+            if (o == null || nivel > 4 || !vistos.Add(o)) return;
+            const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+            for (var t = o.GetType(); t != null && t != typeof(MonoBehaviour) && t != typeof(ScriptableObject) && t != typeof(object); t = t.BaseType)
+                foreach (var f in t.GetFields(F | System.Reflection.BindingFlags.DeclaredOnly))
+                {
+                    if (f.IsStatic || f.Name.Contains("k__BackingField") && !f.FieldType.IsValueType) continue;
+                    object v;
+                    try { v = f.GetValue(o); } catch { continue; }
+                    sb.Append('\n').Append(' ', sangria * 3).Append(f.Name).Append(" = ");
+                    switch (v)
+                    {
+                        case null: sb.Append("null"); break;
+                        case UnityEngine.Object uo: sb.Append(uo ? $"{uo.GetType().Name} {uo.name}" : "null (destruido)"); break;
+                        case string s: sb.Append('"').Append(s).Append('"'); break;
+                        case System.Collections.IList l when !(v is Array a && a.Rank > 1):
+                            sb.Append($"[{l.Count}]");
+                            for (int i = 0; i < Math.Min(l.Count, 12); i++)
+                            {
+                                var e = l[i];
+                                if (e == null || e.GetType().IsPrimitive || e is UnityEngine.Object || e.GetType().IsEnum) sb.Append(' ').Append(e is UnityEngine.Object eo ? eo.name : e);
+                                else { sb.Append('\n').Append(' ', (sangria + 1) * 3).Append($"[{i}] {e.GetType().Name}"); CamposDe(e, sb, sangria + 2, nivel + 1, vistos); }
+                            }
+                            break;
+                        default:
+                            var tv = v.GetType();
+                            if (tv.IsPrimitive || tv.IsEnum || tv.Namespace == "UnityEngine") sb.Append(v);
+                            else { sb.Append(tv.Name); CamposDe(v, sb, sangria + 1, nivel + 1, vistos); }
+                            break;
+                    }
+                }
         }
 
         // las listas desplegables (Dropdown y TMP_Dropdown, por reflexión): sus opciones en orden
