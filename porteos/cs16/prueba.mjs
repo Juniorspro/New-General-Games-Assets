@@ -486,7 +486,9 @@ if (conSW) {
     await navigator.serviceWorker.ready;
     for (let i = 0; i < 240; i++) {
       const ks = await caches.keys();
-      for (const k of ks) { const c = await caches.open(k); if (await c.match('motor/xash.wasm') && await c.match('datos/indice.json')) return true; }
+      // (sw.js guarda cada archivo con su huella en la dirección: motor/xash.wasm?porteo=…)
+      const o = { ignoreSearch: true };
+      for (const k of ks) { const c = await caches.open(k); if (await c.match('motor/xash.wasm', o) && await c.match('datos/indice.json', o)) return true; }
       await new Promise((r) => setTimeout(r, 500));
     }
     return false;

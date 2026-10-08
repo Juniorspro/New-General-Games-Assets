@@ -302,4 +302,74 @@
       navigator.serviceWorker.register(cfg.offline || 'sw.js').catch(function () {});
     }
   };
+
+  // ───────────────── antes de arrancar: ¿se publicó una versión nueva? ─────────────────
+  // La página que se abre sale de lo guardado (sw.js), así que puede ser de una versión
+  // vieja. Con `pwa.py --espera` la nueva se instala de fondo y espera; esto la busca,
+  // espera a que termine de bajar lo que cambió, la deja pasar y dice true: hay que
+  // recargar la página antes de arrancar el juego. Sin internet, si el servidor tarda o si
+  // la instalación se traba, dice false y se juega con lo que hay. (Si ya le pidió pasar y
+  // tarda más de 45 s, dice true igual: se recarga y se vuelve a intentar.)
+  //
+  //   Porteo.actualizar({ alAvanzar: function (hecho, total) { … } }).then(function (recargar) { … });
+  P.actualizar = function (op) {
+    op = op || {};
+    var sw = navigator.serviceWorker;
+    if (!sw || !sw.controller || !/^https?:$/.test(location.protocol)) return Promise.resolve(false);
+    return new Promise(function (ok) {
+      var listo = false, quieto = null, t = null, pedido = null;
+      var fin = function (v) { if (listo) return; listo = true; clearTimeout(quieto); clearTimeout(t); ok(v); };
+      var vigilar = function () {
+        if (pedido) return;
+        clearTimeout(quieto);
+        quieto = setTimeout(function () { fin(false); }, op.quieto || 30000);
+      };
+      var avance = function (h, total) { if (op.alAvanzar) try { op.alAvanzar(h, total); } catch (_) {} };
+      sw.addEventListener('controllerchange', function () { fin(true); });
+      sw.getRegistration().then(function (reg) {
+        if (!reg) return fin(false);
+        sw.addEventListener('message', function (e) {
+          var d = e.data;
+          if (listo || !d || d.porteo !== 'instalando' || d.ambito !== reg.scope) return;
+          vigilar();
+          avance(d.hechos, d.total);
+        });
+        if (sw.startMessages) sw.startMessages();
+        // Chrome activa la nueva recién cuando la vieja se duerme. Lo que el navegador pide al
+        // terminar de cargar la página (el ícono, el manifiesto) la despierta, y dormida otra vez
+        // tarda hasta 30 s: el paso se pide con la página ya cargada. Y una vez pedido no se
+        // juega con la vieja (la nueva pasaría a mitad de partida): si tarda, se recarga.
+        var pedir = function (w) {
+          if (pedido === w) return;
+          pedido = w;
+          clearTimeout(quieto);
+          quieto = setTimeout(function () { fin(true); }, op.paso || 45000);
+          var ya = function () { setTimeout(function () { w.postMessage('porteo-ahora'); }, 500); };
+          if (document.readyState === 'complete') ya(); else addEventListener('load', ya);
+        };
+        var seguir = function (w) {
+          if (!w) return fin(false);
+          vigilar();
+          avance(0, 0);
+          var mirar = function () {
+            if (w.state === 'installed') pedir(w);   // instalada y esperando: que pase
+            // no se pudo instalar (o la reemplazó una más nueva que ya terminó)
+            else if (w.state === 'redundant') seguir(reg.waiting !== w && reg.waiting);
+          };
+          w.addEventListener('statechange', mirar);
+          mirar();
+        };
+        // la más nueva primero: si hay una esperando y otra bajándose, la que vale es la segunda
+        if (reg.installing || reg.waiting) return seguir(reg.installing || reg.waiting);
+        t = setTimeout(function () { fin(false); }, op.tope || 5000);
+        reg.update().then(function () {
+          clearTimeout(t);
+          if (listo) return;
+          // (sin --espera la nueva pudo pasar sola: el cambio de controlador está por llegar)
+          if (!reg.installing && !reg.waiting && reg.active && reg.active !== sw.controller) return vigilar();
+          seguir(reg.installing || reg.waiting);
+        }, function () { fin(false); });   // sin internet
+      }, function () { fin(false); });
+    });
+  };
 })();

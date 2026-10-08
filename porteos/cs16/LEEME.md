@@ -27,6 +27,7 @@ El juego no está en el repo (es público): `portear.sh` lo arma desde el `.rar`
 porteos/cs16/portear.sh "CS 1.6 dani vizcarra LOQUENDO.rar" entrega-cs16
 python3 -m http.server 8851 --bind 127.0.0.1 --directory entrega-cs16 &
 node porteos/cs16/prueba.mjs http://127.0.0.1:8851/cs16/ entrega-cs16/cs16.apk file://$PWD/entrega-cs16/cs16.html
+node herramientas/porteo/prueba-pwa.mjs     # las versiones nuevas (pwa.py + web.js), con un juego de mentira
 
 # publicarlo (Cloudflare Pages, proyecto porteo-cs16 → https://porteo-cs16.pages.dev)
 export CLOUDFLARE_API_TOKEN=$(cat /root/.cloudflare-claude) CLOUDFLARE_ACCOUNT_ID=$(cat /root/.cloudflare-cuenta)
@@ -85,6 +86,22 @@ motor monta solo) que viajan con gzip y el navegador abre con `DecompressionStre
   entidades que lee Xash3D) apunta a ese archivo.
 - Instalable (`pwa.py`): el motor y el menú se guardan en la primera visita; el resto,
   la primera vez que se usa. Un mapa ya jugado anda sin internet.
+- **Versiones nuevas** (`pwa.py --espera` + `Porteo.actualizar()` en `index.html`): la página
+  sale de lo guardado, así que puede ser de una versión vieja. Antes de cargar nada pregunta si
+  hay una publicada; si la hay, baja sólo los archivos que cambiaron (cada uno se guarda con su
+  huella: tamaño y CRC-32), muestra "Actualizando el juego…" y recarga. Nunca cambia a mitad de
+  una partida: lo que se baja jugando (lo de las partidas, los mapas) tiene que ser de la misma
+  versión que lo ya cargado. Sin internet, o si la red se traba 30 s, se juega con lo que hay.
+  Lo de antes de este formato (el que lo abrió hasta el 8/10) se reemplaza solo al instalarse
+  la nueva, mientras se juega la vieja (aprovechando lo guardado que coincida con su huella);
+  al volver a abrir, ya es la nueva.
+- **El armado es reproducible:** el mismo `.rar` da los mismos bytes (fecha fija adentro de los
+  `.pk3`, y el motor sin rutas ni fecha de compilación: `SOURCE_DATE_EPOCH`, `-ffile-prefix-map`
+  y un `date` con la fecha del commit para `appversion.sh` de ReGameDLL). Si no, cada
+  publicación les haría bajar los 170 MB de nuevo a todos.
+- Los avisos del motor (un Host Error, por ejemplo) llegan como `alert()`: en vez del cartel del
+  navegador, que frena todo, salen en uno propio y el juego sigue detrás. Después de un error
+  fatal (Xash Error) el botón vuelve a abrir el juego.
 - Lo que el juego escribe (`config.cfg`: nombre, sensibilidad, video; `settings.scr`:
   las opciones de Crear partida) vive en IndexedDB.
 

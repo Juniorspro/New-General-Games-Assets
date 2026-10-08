@@ -143,13 +143,26 @@ git -C "$C/3rdparty/ReGameDLL_CS" apply "$AQUI/parches/cs16-client-ReGameDLL_CS.
 git -C "$C/3rdparty/mainui_cpp" apply "$AQUI/parches/cs16-client-mainui_cpp.patch"
 
 # ── 4. compilar: el motor (waf) y CS (cmake), todo a WebAssembly ─────────────────────────
+# Reproducible: el mismo código da los mismos bytes en cualquier máquina y carpeta (sin la ruta de
+# los fuentes en __FILE__ y con la fecha de cada commit fijado en __DATE__/__TIME__). Así una
+# versión nueva publicada sólo les hace bajar a los jugadores lo que de verdad cambió (pwa.py).
 LOG="$TRABAJO/compilar.log"; : > "$LOG"
-( cd "$X" && CC=emcc CXX=em++ AR=emar ./waf configure -T release --disable-gl --enable-gles3compat --disable-werror \
+( cd "$X" && export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) \
+    && CC=emcc CXX=em++ AR=emar CFLAGS="-ffile-prefix-map=$X=." CXXFLAGS="-ffile-prefix-map=$X=." \
+    ./waf configure -T release --disable-gl --enable-gles3compat --disable-werror \
     && ./waf build -j"$(nproc)" ) >> "$LOG" 2>&1 || { tail -30 "$LOG"; exit 1; }
+# ReGameDLL anota su fecha de compilación con `date` (version/appversion.sh, que la guarda en un
+# appversion.h fuera de git): un `date` que da la del commit, y el .h se rearma cada vez
+mkdir -p "$T/fecha"
+printf '#!/bin/sh\nexec %s -u -d "@$SOURCE_DATE_EPOCH" "$@"\n' "$(command -v date)" > "$T/fecha/date"
+chmod +x "$T/fecha/date"
+rm -f "$C/3rdparty/ReGameDLL_CS/regamedll/version/appversion.h"
 # -fvisibility=hidden: en WebAssembly los módulos comparten los nombres globales, y sin esto el
 # servidor leía el gpGlobals del cliente (y el nombre de cada modelo salía basura)
-( cd "$C" && emcmake cmake -S . -B build-web -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_YY_THUNKS=OFF -DMAINUI_USE_STB=TRUE \
-    -DCMAKE_C_FLAGS="-fPIC -fvisibility=hidden" -DCMAKE_CXX_FLAGS="-fPIC -fvisibility=hidden -fvisibility-inlines-hidden" \
+( cd "$C" && export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) PATH="$T/fecha:$PATH" \
+    && emcmake cmake -S . -B build-web -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_YY_THUNKS=OFF -DMAINUI_USE_STB=TRUE \
+    -DCMAKE_C_FLAGS="-fPIC -fvisibility=hidden -ffile-prefix-map=$C=." \
+    -DCMAKE_CXX_FLAGS="-fPIC -fvisibility=hidden -fvisibility-inlines-hidden -ffile-prefix-map=$C=." \
     -DCMAKE_SHARED_LINKER_FLAGS="-sSIDE_MODULE=1 --profiling-funcs" -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
     && cmake --build build-web -j"$(nproc)" ) >> "$LOG" 2>&1 || { tail -30 "$LOG"; exit 1; }
 
@@ -165,10 +178,19 @@ cp "$B/engine/xash.wasm" "$W/motor/"
 # (Cloudflare no comprime application/octet-stream): 3,0 → 1,0 MB por la red
 cp "$B/filesystem/filesystem_stdio.so" "$W/motor/filesystem_stdio.wasm"
 cp "$B/ref/gl/libref_gles3compat.so" "$W/motor/libref_gles3compat.wasm"
-cp "$B/3rdparty/extras/extras.pk3" "$W/motor/extras.pk3"
 # los botones y encabezados del menú vienen dibujados con texto en inglés: sin ellos, el menú
-# escribe los textos del castellano del juego (y de mainui_castellano.txt)
-zip -qd "$W/motor/extras.pk3" 'gfx/shell/btns_main.bmp' 'gfx/shell/head_*' >/dev/null
+# escribe los textos del castellano del juego (y de mainui_castellano.txt). Se rearma con fecha
+# fija (la del zip original es la de cada compilación).
+python3 -I - "$B/3rdparty/extras/extras.pk3" "$W/motor/extras.pk3" <<'EOF'
+import re, sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as a, zipfile.ZipFile(sys.argv[2], 'w') as b:
+    for i in sorted(a.infolist(), key=lambda i: i.filename):
+        if i.is_dir() or re.match(r'gfx/shell/(btns_main\.bmp|head_)', i.filename):
+            continue
+        n = zipfile.ZipInfo(i.filename, (2000, 1, 1, 0, 0, 0))
+        n.compress_type, n.external_attr = i.compress_type, 0o644 << 16
+        b.writestr(n, a.read(i), compresslevel=9)
+EOF
 cp "$BC/cl_dll/client_emscripten_wasm32.so" "$W/motor/client.wasm"
 cp "$BC/3rdparty/mainui_cpp/menu_emscripten_wasm32.so" "$W/motor/menu.wasm"
 cp "$BC/3rdparty/ReGameDLL_CS/regamedll/cs_emscripten_wasm32.so" "$W/motor/server.wasm"
@@ -199,9 +221,11 @@ if [[ $SIN_UN_ARCHIVO == 0 ]]; then
 fi
 
 # ── 7. instalable (sin bajar todo al abrir), zip y APK ───────────────────────────────────
+# --espera: una versión nueva no reemplaza a la vieja con el juego abierto (los paquetes que se
+# bajan jugando serían de otra versión); la página la deja pasar al abrir, antes de arrancar
 python3 "$H/porteo/pwa.py" "$W" --nombre "Counter-Strike 1.6" --corto "CS 1.6" \
     --orientacion landscape --icono "$ICONO" --color "#000000" \
-    --perezosos 'datos/base-*' --perezosos 'datos/mapas/*'
+    --perezosos 'datos/base-*' --perezosos 'datos/mapas/*' --espera
 (cd "$SALIDA" && rm -f cs16-web.zip && zip -qr cs16-web.zip cs16)
 if [[ $SIN_APK == 0 ]]; then
   python3 "$H/porteo/apk/armar.py" "$W" --nombre "Counter-Strike 1.6" --paquete ar.juniors.cs16 \

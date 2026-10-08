@@ -42,6 +42,8 @@ python3 -m http.server 8810 --bind 127.0.0.1 --directory <carpeta-html5>
 # 5. web instalable que anda sin red, y la versión de un solo archivo
 python3 herramientas/porteo/pwa.py <carpeta-html5> --nombre "..." --corto "..." \
     --orientacion landscape --icono icono.png --color "#000000"
+#    (si baja datos mientras se juega: --perezosos 'datos/...' --espera, y Porteo.actualizar()
+#     antes de arrancar el juego: §5, "Versiones nuevas")
 python3 herramientas/porteo/un-archivo.py <carpeta-html5> --salida juego.html [--al-final datos/grande.pak]
 
 # 6. APK
@@ -265,6 +267,34 @@ archivo (la moneda también), así anda igual en el `.html` único.
 
 **`herramientas/porteo/web.js`** — lo que hacía la parte nativa (§6).
 
+**Versiones nuevas** (`pwa.py` + `Porteo.actualizar()` de `web.js`). La página
+que se abre sale de lo que guardó el service worker, así que el que ya jugó
+abre la versión vieja aunque se haya publicado otra. `sw.js` guarda cada
+archivo con su huella (tamaño y CRC-32): una versión nueva baja sólo lo que
+cambió, y lo que no coincide con su huella (otra publicación en el medio) no se
+guarda. Con `--espera`, la nueva no reemplaza a la vieja con el juego abierto:
+la página la deja pasar al abrir, antes de arrancar.
+
+```js
+Porteo.actualizar({ alAvanzar: function (hecho, total) { /* "Actualizando…" */ } })
+  .then(function (recargar) { if (recargar) location.reload(); else arrancar(); });
+```
+
+- Sin internet, si el servidor no contesta en 5 s o si la descarga se traba
+  30 s, dice `false` y se juega con lo que hay; la nueva queda para la próxima.
+  Pero si ya le pidió pasar, no: dice `true` (recargar) aunque tarde, porque si
+  no la nueva pasaría a mitad de partida (§13).
+- Hace falta en todo juego que baje datos **mientras se juega** (mapas, niveles):
+  si la versión cambiara en el medio, lo que se baja después no coincide con lo
+  ya cargado.
+- Lo guardado con el formato de antes de `sw.js` (una caché por versión) se
+  aprovecha si coincide con su huella, y esa versión se reemplaza sin esperar:
+  su página no sabe dejar pasar a la nueva.
+- Sirve si el armado es reproducible (ver §13): si cada armado da bytes
+  distintos, cada publicación baja todo de nuevo.
+- Se prueba con `node herramientas/porteo/prueba-pwa.mjs` (un juego de mentira
+  servido como Cloudflare Pages, cambiando de versión en caliente).
+
 ## 6. Sacar un juego de su APK (cuando adentro ya es HTML5)
 
 Un APK de WebView tiene dos mitades: el juego (`assets/`) y una Activity que le
@@ -287,7 +317,7 @@ Lo habitual, y cómo lo devuelve `web.js`:
 | `FLAG_KEEP_SCREEN_ON` | Wake Lock API |
 | pantalla completa inmersiva | `requestFullscreen()` al primer toque |
 | `onPause` pausa todo | el juego suele escuchar `visibilitychange`; si no, se agrega |
-| assets locales sin red | `sw.js` (service worker): después de la primera visita anda sin internet |
+| assets locales sin red | `sw.js` (service worker): después de la primera visita anda sin internet; una versión publicada después baja sólo los archivos que cambiaron (ver "Versiones nuevas") |
 
 ```html
 <script src="web.js"></script>
@@ -407,6 +437,9 @@ La lista. Todas, cada vez:
 - [ ] el guardado sobrevive a una recarga;
 - [ ] parado, acostado y pantalla chica (360×640): nada cortado ni inalcanzable;
 - [ ] anda sin red (sin pedidos afuera);
+- [ ] si ya se publicó antes: el que lo tenía abierto recibe la versión nueva al
+      volver a abrirlo (`prueba-pwa.mjs` para la herramienta; en el juego, abrir la
+      versión anterior y después la nueva);
 - [ ] el APK: `apksigner verify` OK, `aapt2 dump badging` con nombre, ícono,
       orientación y SDK correctos, y todos los archivos del juego adentro.
 
@@ -549,6 +582,13 @@ créditos ni se tapa al autor.
 | probar con la pantalla quieta | en el teléfono la pantalla cambia de tamaño al entrar en pantalla completa o al girarlo; Xash3D rearma el HUD (`SCR_VidInit`) y pide `sprites/hud.txt`, que todavía se estaba bajando: "Host Error: Failed to get number_0 sprite index" (lo vio el dueño, no las pruebas) | relevar también qué abre el motor al cambiar el tamaño, mandarlo con el menú, y probar cambiando el tamaño con la red de un 4G (`porteos/cs16/prueba.mjs`, sección G) |
 | Playwright con un `alert()` del juego | lo cierra solo y no avisa: un Host Error pasaba la prueba | escuchar `page.on('dialog')` y contarlo como error |
 | "el sonido anda" porque el `AudioContext` está en `running` | no dice que salga algo | medir el pico de lo que escribe el procesador de audio (envolver su `onaudioprocess`), con Chromium **sin** permiso de reproducir solo |
+| un service worker que sirve primero lo guardado | al publicar un arreglo, el que ya había jugado abre la versión vieja: el dueño volvió a ver el Host Error ya arreglado. Y si la nueva se activa a mitad de partida, lo que se baja después es de otra versión (un archivo que se mudó de paquete no está en ninguno de los dos) | `pwa.py --espera` y `Porteo.actualizar()` antes de arrancar: busca la nueva, baja sólo lo que cambió y recarga; nunca cambia con el juego abierto (§5, "Versiones nuevas") |
+| guardar `index.html` en Cloudflare Pages | Pages redirige `/index.html` a `/` (308): lo guardado era una redirección, que no sirve para abrir una página (el ícono instalado abre `./index.html`) | `pwa.py` lo guarda como `./` y sirve eso para las dos direcciones |
+| `alert()` del motor (SDL lo usa para los mensajes de Xash3D: Host Error, Sys_Error) | en el teléfono es un cartel del navegador ("…pages.dev dice") que frena todo y se ve feo | `window.alert` → un aviso propio que no frena el juego, con `console.error` para que las pruebas lo cuenten (`porteos/cs16/index.html`) |
+| `page.waitForFunction` de Playwright con una función que devuelve una promesa | la promesa cuenta como "verdadero": no espera nada | sondear con `page.evaluate` en un bucle |
+| pedirle a la versión nueva que pase (`skipWaiting`) apenas abre la página | Chrome la activa recién cuando el service worker viejo se duerme; lo que el navegador pide al terminar de cargar (el ícono, el manifiesto) lo despierta, y dormido otra vez tarda hasta 30 s (con DevTools enganchado, como en Playwright, 5 min). Si la página se cansa de esperar y arranca la vieja, la nueva pasa a mitad de partida | `web.js`: el paso se pide con la página ya cargada, y una vez pedido no se juega la vieja (si tarda, se recarga). Se vio en `prueba-pwa.mjs`: fallaba 1 de cada 2 |
+| probar actualizaciones con `python3 -m http.server` | compara fechas al segundo: dos versiones armadas en el mismo segundo le dan 304 al `sw.js` nuevo y la actualización "no anda" | servir con ETag por contenido, como Cloudflare (`prueba-pwa.mjs`) |
+| armar dos veces el mismo juego da bytes distintos | la fecha de cada archivo dentro de los zip (`.pk3`), y `__FILE__`/`__DATE__`/`__TIME__` en lo compilado: cada publicación les hace bajar todo de nuevo a los jugadores aunque no haya cambiado nada (CS: 170 MB) | zip con fecha fija (`ZipInfo` de 2000-01-01), gzip con `mtime=0`, `SOURCE_DATE_EPOCH` (la fecha del commit fijado), `-ffile-prefix-map`, y un `date` que da esa fecha para los scripts que la anotan solos (`appversion.sh` de ReGameDLL) (`porteos/cs16/portear.sh` y `armar-datos.py`); comprobarlo armando dos veces y comparando |
 
 ## 14. Registro de porteos
 
@@ -753,8 +793,10 @@ Tamaños: instalado 503 MB → web 181 MB (al abrir se bajan ~8 MB por la red: e
 Publicado: https://porteo-cs16.pages.dev (Cloudflare Pages, proyecto porteo-cs16)
 Carga (servidor local, CPU sin limitar): el motor anda a los 1,4 s; de_dust2 se baja y carga en 6,5 s;
          el archivo único, 4,2 s
-Pruebas: 65/65 (porteos/cs16/prueba.mjs, contra el sitio publicado) · el dueño lo probó en su teléfono:
-         un Host Error al entrar en pantalla completa antes de bajar las partidas (arreglado, ver §13)
+Pruebas: 65/65 (porteos/cs16/prueba.mjs, contra el sitio publicado) y 16/16 de las versiones nuevas
+         (herramientas/porteo/prueba-pwa.mjs) · el dueño lo probó en su teléfono: un Host Error al entrar
+         en pantalla completa antes de bajar las partidas (arreglado); la segunda vez, el mismo error:
+         el teléfono abría la versión que tenía guardada (ahora busca la nueva antes de arrancar). Ver §13
 ```
 
 - **Qué hizo falta** (detalle en [`porteos/cs16/LEEME.md`](porteos/cs16/LEEME.md)):
@@ -781,7 +823,9 @@ Pruebas: 65/65 (porteos/cs16/prueba.mjs, contra el sitio publicado) · el dueño
     partidas, mientras se mira el menú; cada mapa al elegirlo, y el siguiente de la rotación mientras
     se juega;
   - instalable: el motor y el menú se guardan en la primera visita; cada mapa, la primera vez que se
-    juega (después anda sin red).
+    juega (después anda sin red);
+  - versiones nuevas: al abrir, si hay una publicada, se bajan sólo los archivos que cambiaron
+    ("Actualizando el juego…") y se recarga; nunca cambia a mitad de una partida.
 - **Probado (60/60):**
   - carga → Nueva Partida → de_dust2 → equipo → clase, sólo tocando;
   - comprar, saltar (+44 unidades), agacharse (−18) y pararse, caminar, mirar (−26,4° por 120 px),
@@ -797,7 +841,9 @@ Pruebas: 65/65 (porteos/cs16/prueba.mjs, contra el sitio publicado) · el dueño
   lee al arrancar); Escape en el menú de compra abría el menú del juego encima y después las teclas
   no volvían al juego; el menú de radio del servidor les robaba los números a las armas; parado,
   los botones salían 2,2× más grandes; en 16:9, "Usar" pisaba "Tirar arma"; el mensaje del día
-  (HTML) salía como código encima del menú de equipos. Ver §13.
+  (HTML) salía como código encima del menú de equipos. Y lo que vio el dueño: el HUD que se
+  rearma al entrar en pantalla completa, el sonido que no arrancaba, la versión vieja guardada
+  en su teléfono y los carteles del navegador para los avisos del motor. Ver §13.
 - **Problemas conocidos:**
   - no se probó en un teléfono real ni en Safari;
   - el menú del juego es chico en un teléfono (botones de ~21 px de alto): es el de cs16-client a

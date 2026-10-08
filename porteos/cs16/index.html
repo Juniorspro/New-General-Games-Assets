@@ -24,6 +24,16 @@
   #cs-error { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 6vw;
     background: #000; color: #fff; font: 600 20px system-ui, sans-serif; text-align: center; white-space: pre-wrap; }
   #cs-error.si { display: flex; }
+  /* los avisos del motor: en vez del cartel del navegador, que frena todo, uno propio */
+  #cs-aviso { position: fixed; inset: 0; z-index: 49; display: none; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, .55); font: 500 15px system-ui, sans-serif; }
+  #cs-aviso.si { display: flex; }
+  #cs-aviso > div { max-width: min(86vw, 520px); padding: 18px 22px; border-radius: 14px; background: #15171c;
+    border: 1px solid rgba(255, 200, 100, .5); color: #fff; text-align: center; }
+  #cs-aviso b { display: block; margin-bottom: 8px; color: #ffc864; font-size: 17px; }
+  #cs-aviso p { margin: 0 0 16px; color: rgba(255, 255, 255, .8); white-space: pre-wrap; overflow-wrap: anywhere; }
+  #cs-aviso button { min-height: 44px; padding: 0 24px; border: 0; border-radius: 99px; background: #ffc864; color: #000;
+    font: 700 15px system-ui, sans-serif; }
   /* si el teléfono todavía no dejó sonar al juego: un botón para destrabar el sonido con un toque */
   #cs-sonido { position: fixed; left: calc(10px + env(safe-area-inset-left)); top: calc(10px + env(safe-area-inset-top)); z-index: 45;
     display: none; padding: 9px 14px; border-radius: 99px; border: 1px solid rgba(255, 200, 100, .7); background: rgba(0, 0, 0, .72);
@@ -39,6 +49,7 @@
 <div id="cs-carga"><div id="cs-carga-texto">Cargando…</div><div class="barra"><div id="cs-carga-barra"></div></div><small id="cs-carga-detalle"></small></div>
 <div id="cs-fondo"></div>
 <div id="cs-error"></div>
+<div id="cs-aviso"><div><b></b><p></p><button type="button"></button></div></div>
 <button id="cs-sonido" type="button">🔇 Tocá para activar el sonido</button>
 <input id="cs-teclado" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-hidden="true" tabindex="-1">
 <script src="porteo-web.js"></script>
@@ -67,13 +78,45 @@
   addEventListener('error', (e) => estado.errores.push(String(e.message)));
   addEventListener('unhandledrejection', (e) => estado.errores.push(String(e.reason && e.reason.message || e.reason)));
 
+  // Los avisos del motor (un Host Error, por ejemplo) llegan como alert(): en el teléfono es un
+  // cartel del navegador que frena todo. Van a uno propio y el juego sigue detrás; después de un
+  // error fatal (Xash Error) el motor queda parado y el botón vuelve a abrir el juego.
+  window.alert = (txt) => {
+    const [titulo, ...resto] = String(txt == null ? '' : txt).split('\n\n');
+    const detalle = resto.join('\n\n') || titulo;
+    console.error(`${titulo}: ${detalle}`);
+    estado.errores.push(`${titulo}: ${detalle}`);
+    const fatal = /^Xash Error/.test(titulo);
+    const a = $('cs-aviso'), b = a.querySelector('button');
+    a.querySelector('b').textContent = fatal ? 'El juego se cerró por un error' : 'El juego tuvo un error';
+    a.querySelector('p').textContent = detalle;
+    b.textContent = fatal ? 'Volver a abrir' : 'Seguir';
+    b.onclick = (e) => {
+      e.stopPropagation();
+      if (fatal) { location.reload(); return; }
+      a.className = '';
+      $('canvas').focus();
+    };
+    a.className = 'si';
+  };
+
   Porteo.web({ orientacion: 'landscape', offline: window.__porteoUnArchivo ? false : undefined });
+  // La página puede haber salido de lo guardado en el teléfono: si hay una versión nueva publicada,
+  // se baja lo que cambió y se recarga antes de cargar nada (los paquetes de dos versiones no se mezclan).
+  const actualizacion = Porteo.actualizar({ tope: 4000, alAvanzar: (h, t) => {
+    estado.fase = 'actualizando';
+    mostrarCarga('Actualizando el juego…', t ? `${mb(h)} de ${mb(t)}` : '');
+    progresoCarga(t ? h / t : 0);
+  } });
+  // después de actualizar no se repite la intro
+  let sinIntro = false;
+  try { sinIntro = sessionStorage.getItem('cs-sin-intro') === '1'; sessionStorage.removeItem('cs-sin-intro'); } catch (_) {}
   let introLista = false;
-  Porteo.intro({ aviso: {
+  (sinIntro ? Promise.resolve() : Porteo.intro({ aviso: {
     es: 'Port no oficial de «Counter-Strike 1.6» (Valve) para jugar en el navegador. Motor: Xash3D FWGS + cs16-client + ReGameDLL.',
     en: 'Unofficial browser port of «Counter-Strike 1.6» (Valve). Engine: Xash3D FWGS + cs16-client + ReGameDLL.',
     pt: 'Port não oficial de «Counter-Strike 1.6» (Valve) para o navegador. Motor: Xash3D FWGS + cs16-client + ReGameDLL.',
-  } }).then(() => { introLista = true; if (estado.fase !== 'jugando') mostrarCarga('Cargando…'); });
+  } })).then(() => { introLista = true; if (estado.fase === 'cargando') mostrarCarga('Cargando…'); });
 
   // ── carga con progreso ───────────────────────────────────────────────────────────────
   let cargaDe = null;     // qué está mostrando el cartel
@@ -271,6 +314,16 @@
   }
 
   async function arrancar() {
+    if (await actualizacion) {
+      if (introLista) try { sessionStorage.setItem('cs-sin-intro', '1'); } catch (_) {}
+      location.reload();
+      return;
+    }
+    if (estado.fase === 'actualizando') {                // no se pudo (sin red, o se trabó): se sigue con lo que hay
+      estado.fase = 'cargando';
+      progresoCarga(0, '');
+      if (introLista) mostrarCarga('Cargando…'); else ocultarCarga();
+    }
     indice = await (await fetch('datos/indice.json')).json();
     const inicio = indice.inicio;
     // los .wad del sistema (calcomanías, gráficos, fuentes): sueltos, el motor los monta al iniciar

@@ -444,16 +444,23 @@ def main():
                 extras[n] = z.read(n)
 
     # ── escribir ────────────────────────────────────────────────────────────────────────
+    # Con fecha fija (el motor no la usa: compara la del .pk3 entero): el mismo juego da los mismos
+    # bytes, y una versión nueva publicada no obliga a bajar de nuevo los paquetes que no cambiaron.
+    def entrada(z, nombre, datos, metodo):
+        i = zipfile.ZipInfo(nombre, (2000, 1, 1, 0, 0, 0))
+        i.compress_type, i.external_attr = metodo, 0o644 << 16
+        z.writestr(i, datos, compresslevel=9)
+
     def pk3(nombre, archivos, carpeta, sueltos=None):
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, 'w') as z:
             for r in sorted(archivos):
                 dentro = r.split('/', 1)[1]
                 metodo = zipfile.ZIP_STORED if r.lower().endswith(('.wad', '.mp3')) else zipfile.ZIP_DEFLATED
-                z.write(J / r, dentro, compress_type=metodo, compresslevel=9)
+                entrada(z, dentro, (J / r).read_bytes(), metodo)
             for n, datos in sorted((sueltos or {}).items()):
                 metodo = zipfile.ZIP_STORED if n.lower().endswith('.wad') else zipfile.ZIP_DEFLATED
-                z.writestr(n, datos, compress_type=metodo, compresslevel=9)
+                entrada(z, n, datos, metodo)
         crudo = buf.getvalue()
         gz = gzip.compress(crudo, 9, mtime=0)
         (S / f'{nombre}.pk3.gz').parent.mkdir(parents=True, exist_ok=True)
