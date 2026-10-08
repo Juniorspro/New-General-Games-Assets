@@ -146,12 +146,13 @@ namespace UnityEngine
             return t;
         }
 
-        // los bytes del archivo: si están en un recurso aparte, se piden (y mientras tanto no hay)
-        internal byte[] Bytes()
+        // los bytes del archivo: si están en un recurso aparte, se piden (y mientras tanto no hay).
+        // sinTrabar: para dibujar, que puede esperar unos cuadros (ver Anfitrion.RecursoSinTrabar)
+        internal byte[] Bytes(bool sinTrabar = false)
         {
             if (datos != null) return datos;
             if (recurso < 0) return null;
-            var b = Anfitrion.Recurso(recurso, !pedida);
+            var b = sinTrabar ? Anfitrion.RecursoSinTrabar(recurso, !pedida) : Anfitrion.Recurso(recurso, !pedida);
             pedida = true;
             if (b != null) { datos = b; recurso = -1; }
             return datos;
@@ -164,7 +165,7 @@ namespace UnityEngine
                 if (pixeles != null && datos == null && recurso < 0) Apply();   // creada en tiempo de juego
                 else
                 {
-                    var b = Bytes();
+                    var b = Bytes(true);
                     if (b == null) return 0;
                     Texturas.Subir(this, b);
                     // lo que ya está en la GPU no hace falta en la CPU (salvo que el juego lo lea)
@@ -180,7 +181,10 @@ namespace UnityEngine
         Color32[] Pixeles()
         {
             if (pixeles != null) return pixeles;
-            var b = datos ?? (recurso >= 0 ? Cargador.Recurso(recurso) : null);
+            var b = datos ?? (recurso >= 0 ? Anfitrion.Recurso(recurso, true) : null);
+            // todavía no llegó (cuando los datos bajan de a poco, las escenas no esperan las
+            // texturas): transparente por ahora, sin guardarlo, y ya quedó pedida
+            if (b == null && recurso >= 0) return new Color32[ancho * alto];
             pixeles = b == null ? new Color32[ancho * alto] : Texturas.DecodificarNivel0(formato, ancho, alto, b);
             return pixeles;
         }
@@ -346,7 +350,7 @@ namespace UnityEngine
         {
             if (!subida)
             {
-                var b = caras?.Bytes();
+                var b = caras?.Bytes(true);
                 if (b == null) return 0;
                 Texturas.SubirCubo(this, caras.formato, b);
                 caras.datos = null;

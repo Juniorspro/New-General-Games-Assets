@@ -12,12 +12,16 @@ const { crearFuenteRed } = await import(modulo('datos.js'));
 const estado = document.getElementById('estado');
 const lienzo = document.getElementById('lienzo');
 const BASE = new URLSearchParams(location.search).get('datos') || 'datos/';
+let escenaActual = '';   // la última que terminó de cargar (de lo que avisa el motor por la consola)
 
 // el lienzo en píxeles del dispositivo (con tope: en teléfonos de mucha densidad no hace falta
-// todo); ?escala=0.5 dibuja a menos resolución
-const ESCALA = Math.min(Math.max(parseFloat(new URLSearchParams(location.search).get('escala')) || 1, 0.1), 1);
+// todo); ?escala=0.5 dibuja a menos resolución, fija. Si no, la mueve el sistema de velocidad
+// (abajo, en cuadro)
+const PARAMETROS = new URLSearchParams(location.search);
+const ESCALA_FIJA = PARAMETROS.has('escala');
+let escala = ESCALA_FIJA ? Math.min(Math.max(parseFloat(PARAMETROS.get('escala')) || 1, 0.1), 1) : 1;
 function ajustar() {
-  const r = Math.min(window.devicePixelRatio || 1, 2) * ESCALA;
+  const r = Math.min(window.devicePixelRatio || 1, 2) * escala;
   lienzo.width = Math.max(1, Math.round(lienzo.clientWidth * r));
   lienzo.height = Math.max(1, Math.round(lienzo.clientHeight * r));
 }
@@ -26,9 +30,10 @@ addEventListener('resize', ajustar);
 
 const datos = U ? U.fuente : crearFuenteRed(BASE, estado);
 const indice = await datos.indice();
-// los .paq (árboles de objetos): todos a mano antes de empezar; los recursos (texturas, mallas,
-// audio, shaders), cuando el motor los pide
-await datos.prepararPaquetes(Object.keys(indice.archivos));
+// los .paq (árboles de objetos): todos a mano antes de empezar el juego; los recursos (texturas,
+// mallas, audio, shaders), cuando el motor los pide. Se esperan recién antes de Iniciar: mientras
+// llegan, arranca .NET (compilar el WebAssembly del juego lleva su rato)
+const paquetes = datos.prepararPaquetes(Object.keys(indice.archivos));
 
 // las partidas guardadas: un archivo por clave en IndexedDB (se cargan antes de arrancar)
 const disco = await abrirDisco();
@@ -74,13 +79,18 @@ setModuleImports('porteo', {
   copiarPaquete: (n, vista) => { vista.set(datos.paquete(n)); vista.dispose(); },
   hayRecurso: (id) => datos.hay(id),
   tamanoRecurso: (id) => { const r = datos.recurso(id); return r ? r.length : -1; },
+  // lo mismo sin descomprimir acá (las texturas: ver Anfitrion.LeerRecursoListo)
+  tamanoRecursoListo: (id) => { const r = datos.recursoListo ? datos.recursoListo(id) : datos.recurso(id); return r ? r.length : -1; },
   copiarRecurso: (id, vista) => { vista.set(datos.recurso(id)); vista.dispose(); datos.usado(id); },
   pedirRecurso: (id) => datos.pedir(id),
   discoGuardar: (ruta, vista) => { const b = vista.slice(); vista.dispose(); discoEscribir((s) => s.put(b, ruta)); },
   discoBorrar: (ruta) => discoEscribir((s) => s.delete(ruta)),
   consola: (t, tipo) => {
     // a la pantalla de carga del HTML (pantalla.js): cada escena que termina de cargar
-    if (globalThis.porteoCarga && t.startsWith('porteo: escena ')) porteoCarga.escena(t.slice(15, t.indexOf(' en ')));
+    if (t.startsWith('porteo: escena ')) {
+      escenaActual = t.slice(15, t.indexOf(' en '));
+      if (globalThis.porteoCarga) porteoCarga.escena(escenaActual);
+    }
     const k = TIPOS[tipo] || 'log';
     if (k === 'error' || k === 'exception' || k === 'assert') console.error(t);
     else if (k === 'warn') console.warn(t);
@@ -89,12 +99,21 @@ setModuleImports('porteo', {
 });
 await runMain();
 const exp = (await getAssemblyExports(getConfig().mainAssemblyName)).Programa;
+await paquetes;
 // para probar desde afuera (la consola del navegador o las pruebas automáticas)
 globalThis.porteo = exp;
 estado.textContent = '';
 if (globalThis.porteoCarga) porteoCarga.motor();
 const movil = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 for (const [ruta, datos] of disco.archivos) exp.PonerArchivo(ruta, Array.from(datos));
+// los datos llegan de a poco por la red (el sitio, o datos/ al lado de la página): las escenas no
+// esperan el sonido (suena cuando llega) y, mientras la pantalla de carga tapa el juego, tampoco
+// las texturas: el menú se arma con lo mínimo y la pantalla se queda hasta que llegó lo que se ve
+// (pantalla.js). Después, cada escena espera sus texturas (ver Programa.Diferir)
+const deARatos = U ? !!U.web : true;
+const conPantalla = !!globalThis.porteoCarga;
+exp.Diferir(deARatos, deARatos && conPantalla);
+if (deARatos && conPantalla) porteoCarga.alListo(() => exp.Diferir(true, false));
 exp.Iniciar(indice.escenas, 0, 96 * (window.devicePixelRatio || 1), movil);
 // al irse de la página (o pasarla a segundo plano) se manda lo último que se guardó
 addEventListener('pagehide', () => exp.GuardarPartida());
@@ -244,15 +263,63 @@ addEventListener('blur', () => {
 
 const controles = crearControles(exp, lienzo);
 
+// ── el sistema de velocidad ──
+// Si el teléfono no da abasto (menos de 24 cuadros por segundo durante 3 segundos), se dibuja a
+// menos resolución, de a pasos y hasta la mitad; si sobra (más de 50), vuelve a subir. Si bajar no
+// sirvió (lo que pesa es la CPU, no el dibujo), vuelve a como estaba y no insiste por un minuto.
+// No mide mientras la pantalla de carga tapa el juego ni cuando hubo un cuadro de más de un
+// segundo (una carga: eso es un tirón, no lentitud). ?escala=X la deja fija; ?turbo=0 lo apaga.
+const TURBO = !ESCALA_FIJA && PARAMETROS.get('turbo') !== '0';
+const vel = { cuadros: 0, desde: 0, tiron: false, espera: 0, probando: false, fpsAntes: 0, escalaAntes: 1, inutil: 0 };
+function cambiarEscala(nueva, fps) {
+  escala = nueva;
+  ajustar();
+  vel.espera = 1;   // la ventana siguiente todavía mezcla las dos resoluciones
+  console.log(`porteo: velocidad: resolución al ${Math.round(escala * 100)}% (${fps.toFixed(0)} cuadros/s)`);
+}
+function velocidad(ahora, dt) {
+  if (!TURBO) return;
+  if (!vel.desde || document.hidden || (globalThis.porteoCarga && porteoCarga.tapado())) { vel.cuadros = 0; vel.desde = ahora; return; }
+  if (dt > 1) vel.tiron = true;
+  vel.cuadros++;
+  if (ahora - vel.desde < 3000) return;
+  const fps = vel.cuadros * 1000 / (ahora - vel.desde), tiron = vel.tiron;
+  vel.cuadros = 0; vel.desde = ahora; vel.tiron = false;
+  if (tiron) return;
+  if (vel.espera > 0) { vel.espera--; return; }
+  if (vel.probando) {
+    vel.probando = false;
+    if (fps < vel.fpsAntes * 1.15) { cambiarEscala(vel.escalaAntes, fps); vel.inutil = 20; return; }
+  }
+  if (vel.inutil > 0) { vel.inutil--; return; }
+  if (fps < 24 && escala > 0.5) {
+    vel.probando = true; vel.fpsAntes = fps; vel.escalaAntes = escala;
+    cambiarEscala(Math.max(0.5, Math.round((escala - 0.15) * 100) / 100), fps);
+  } else if (fps > 50 && escala < 1) {
+    cambiarEscala(Math.min(1, Math.round((escala + 0.1) * 100) / 100), fps);
+  }
+}
+
+// la primera escena (en Slime Rancher, el logo de la empresa: fundidos con tiempos fijos) corre a
+// toda velocidad mientras la pantalla de carga la tapa, un segundo de juego sin dibujar por
+// cuadro: nadie la ve y el menú llega unos 6 s antes. ?sinacelerar la deja como es
+const PRIMERA = (indice.escenas[0] || '').replace(/^.*\//, '').replace(/\.unity$/, '');
+const ACELERAR = !PARAMETROS.has('sinacelerar');
+
 let antes = performance.now();
 const medir = new URLSearchParams(location.search).has('perfil');
 let nCuadros = 0, enCuadro = 0, desdeMedida = antes;
 function cuadro(ahora) {
-  const dt = Math.min((ahora - antes) / 1000, 0.25);
+  const real = (ahora - antes) / 1000;
+  const dt = Math.min(real, 0.25);
   antes = ahora;
+  if (ACELERAR && escenaActual === PRIMERA && globalThis.porteoCarga && porteoCarga.tapado()) exp.Acelerar(1);
+  velocidad(ahora, real);
   const t0 = performance.now();
   controles.cuadro(ahora);
   exp.Cuadro(dt);
+  // los cuadros dibujados: la pantalla de carga espera unos con el menú antes de irse (pantalla.js)
+  globalThis.porteoCuadros = (globalThis.porteoCuadros || 0) + 1;
   if (medir) {
     enCuadro += performance.now() - t0;
     nCuadros++;

@@ -480,7 +480,8 @@ def main():
 
     # 4. el HTML
     tabla = {"wasm": base64.b64encode((AQUI / "lzma.wasm").read_bytes()).decode(),
-             "bloques": [{"t": tam, "p": list(PARAMETROS[clase]),
+             # k: la clase (en el sitio el audio se baja al final: ver arranque.js)
+             "bloques": [{"t": tam, "p": list(PARAMETROS[clase]), "k": clase,
                           "e": [[e[0], desde, len(e[1]), e[3]] for e, desde in es]}
                          for clase, es, tam in bloques]}
     if a.sitio:

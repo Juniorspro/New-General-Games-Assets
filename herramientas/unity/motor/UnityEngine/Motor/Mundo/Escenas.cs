@@ -193,7 +193,7 @@ namespace Porteo
 
         static bool Preparado(Pedido p)
         {
-            p.Datos ??= new Espera(Alcance.DeArchivo(Cargador.Archivo("level" + p.Indice)));
+            p.Datos ??= new Espera(Alcance.DeArchivo(Cargador.Archivo("level" + p.Indice), true));
             bool listo = p.Datos.Lista;
             // como en Unity: hasta 0.9 cargando; el resto es activar la escena
             p.Op.avance = 0.9f * p.Datos.Avance;

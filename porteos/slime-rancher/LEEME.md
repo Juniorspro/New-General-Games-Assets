@@ -15,7 +15,9 @@ seguir probando corrales, mejoras, puertas y teletransportes, y el rendimiento e
 - `slime-rancher.html`: el HTML único (≈199 MB), se abre como archivo. Al abrir: la intro de
   JXStudios y la pantalla de carga con el slime rosa girando, la barra y "Saltar".
 - La versión para un sitio propio (`empaquetar.py --sitio`): baja sólo lo que hace falta, queda
-  en caché y se instala como app; `abrir.html` es el lanzador.
+  en caché y se instala como app; `abrir.html` es el lanzador. El menú no espera los sonidos ni
+  las texturas que no muestra: con 20 Mbps aparece a los ~30 s en vez de 73 (ver el LEEME del
+  motor). Privada en Cloudflare Pages con `herramientas/porteo/cloudflare/subir.py`.
 
 La pantalla de carga usa `carga.json` (título, aviso de la intro, consejos) y el ícono del slime
 rosa del juego: la textura `iconSlimePink` (512×512, ETC2 RGBA), decodificada con

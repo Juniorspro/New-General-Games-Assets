@@ -16,10 +16,28 @@ namespace Porteo
         public static Func<int, bool> HayRecurso;         // si ya llegó (sin copiarlo)
         public static Action<string, LogType> Consola;
 
+        // Cuando los datos llegan de a poco por la red (la versión para un sitio), una escena no
+        // espera lo que se puede usar después de llegar (ver Alcance.Diferible): el sonido suena
+        // cuando llega y las texturas se dibujan con la de por defecto hasta que llegan.
+        public static bool DiferirAudio, DiferirTexturas;
+
+        // como LeerRecurso, pero null si para darlo habría que descomprimirlo ahora: lo descomprime
+        // otro hilo y el que lo pidió vuelve a probar en el cuadro siguiente (si no hay, LeerRecurso)
+        public static Func<int, byte[]> LeerRecursoListo;
+
         // un recurso si ya está; si no, se pide para más adelante
         public static byte[] Recurso(int id, bool pedir)
         {
             var b = LeerRecurso?.Invoke(id);
+            if (b == null && pedir) PedirRecurso?.Invoke(id);
+            return b;
+        }
+
+        // lo mismo sin trabar el cuadro, para lo que puede esperar unos cuadros (las texturas: se
+        // dibujan con la de por defecto hasta que están)
+        public static byte[] RecursoSinTrabar(int id, bool pedir)
+        {
+            var b = (LeerRecursoListo ?? LeerRecurso)?.Invoke(id);
             if (b == null && pedir) PedirRecurso?.Invoke(id);
             return b;
         }
@@ -76,6 +94,8 @@ namespace Porteo.Datos
     public static class Cargador
     {
         static readonly Dictionary<string, Archivo> archivos = new Dictionary<string, Archivo>(StringComparer.OrdinalIgnoreCase);
+        // los .paq abiertos hasta ahora (la prueba de consola: cuáles necesita cada escena)
+        public static IEnumerable<string> Abiertos => archivos.Keys;
         static readonly Queue<(Archivo a, long pid, Paquete.Entrada e, Object o)> cola = new Queue<(Archivo, long, Paquete.Entrada, Object)>();
         static readonly List<ScriptableObject> scriptablesNuevos = new List<ScriptableObject>();
         static readonly HashSet<string> avisados = new HashSet<string>();
@@ -272,13 +292,31 @@ namespace Porteo.Datos
     // de a poco desde el anfitrión, así que se piden todos antes y la escena se arma cuando están.
     public static class Alcance
     {
-        public static HashSet<int> Recursos(IEnumerable<(Archivo a, long pid)> raices)
+        const int TerrainData = 156;
+
+        // Lo que una escena puede usar después de armada, si el anfitrión lo permite: el sonido
+        // (AudioClip) y las texturas (Texture2D, Cubemap, Texture3D, Texture2DArray). En el menú
+        // de Slime Rancher son 9 de cada 10 bytes de lo que alcanza (el director de objetos del
+        // juego apunta a todos los prefabs) y casi nada de eso se ve o se oye ahí.
+        static bool Diferible(int clase) => clase switch
+        {
+            28 or 89 or 117 or 187 => Anfitrion.DiferirTexturas,
+            83 => Anfitrion.DiferirAudio,
+            _ => false,
+        };
+
+        // sinDiferibles: sólo lo que hay que tener antes de armar (lo que se espera). Las texturas
+        // de un TerrainData van igual: el juego lee sus mapas de mezcla en la CPU (GetAlphamaps).
+        public static HashSet<int> Recursos(IEnumerable<(Archivo a, long pid)> raices, bool sinDiferibles = false)
         {
             var vistos = new Dictionary<Archivo, HashSet<long>>();
             var pendientes = new Stack<(Archivo, long)>();
             var ps = new List<PPtr>();
             var rs = new List<int>();
             var res = new HashSet<int>();
+            // los diferibles se deciden al final: un TerrainData puede aparecer después de sus texturas
+            var aplazados = sinDiferibles ? new List<(Archivo, long, int[])>() : null;
+            var deTerreno = sinDiferibles ? new HashSet<(Archivo, long)>() : null;
             foreach (var r in raices) if (r.a != null) pendientes.Push(r);
             while (pendientes.Count > 0)
             {
@@ -289,22 +327,29 @@ namespace Porteo.Datos
                 if (a.objetos.ContainsKey(pid)) continue;
                 ps.Clear(); rs.Clear();
                 a.Paq.Escanear(pid, ps, rs);
-                foreach (var id in rs) res.Add(id);
+                int clase = sinDiferibles && a.Paq.Objetos.TryGetValue(pid, out var e) ? e.Clase : -1;
+                if (sinDiferibles && Diferible(clase)) aplazados.Add((a, pid, rs.ToArray()));
+                else foreach (var id in rs) res.Add(id);
                 foreach (var p in ps)
                 {
                     var b = p.Archivo == 0 ? a : a.Externo(p.Archivo - 1);
-                    if (b != null && b.Paq.Tiene(p.PathID)) pendientes.Push((b, p.PathID));
+                    if (b == null || !b.Paq.Tiene(p.PathID)) continue;
+                    if (clase == TerrainData) deTerreno.Add((b, p.PathID));
+                    pendientes.Push((b, p.PathID));
                 }
             }
+            if (aplazados != null)
+                foreach (var (a, pid, ids) in aplazados)
+                    if (deTerreno.Contains((a, pid))) foreach (var id in ids) res.Add(id);
             return res;
         }
 
-        public static HashSet<int> DeArchivo(Archivo a)
+        public static HashSet<int> DeArchivo(Archivo a, bool sinDiferibles = false)
         {
             if (a == null) return new HashSet<int>();
             var l = new List<(Archivo, long)>(a.Paq.Orden.Length);
             foreach (var pid in a.Paq.Orden) l.Add((a, pid));
-            return Recursos(l);
+            return Recursos(l, sinDiferibles);
         }
     }
 

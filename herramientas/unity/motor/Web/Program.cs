@@ -14,6 +14,7 @@ public static partial class Programa
     [JSImport("copiarPaquete", "porteo")] internal static partial void CopiarPaquete(string nombre, [JSMarshalAs<JSType.MemoryView>] Span<byte> destino);
     [JSImport("hayRecurso", "porteo")] internal static partial bool HayRecursoJS(int id);
     [JSImport("tamanoRecurso", "porteo")] internal static partial int TamanoRecurso(int id);
+    [JSImport("tamanoRecursoListo", "porteo")] internal static partial int TamanoRecursoListo(int id);
     [JSImport("copiarRecurso", "porteo")] internal static partial void CopiarRecurso(int id, [JSMarshalAs<JSType.MemoryView>] Span<byte> destino);
     [JSImport("pedirRecurso", "porteo")] internal static partial void PedirRecurso(int id);
     [JSImport("consola", "porteo")] internal static partial void Consola(string texto, int tipo);
@@ -69,11 +70,22 @@ public static partial class Programa
         return b;
     }
 
+    // sin descomprimir en este hilo: -1 si todavía no está listo (ver Anfitrion.LeerRecursoListo)
+    static byte[] RecursoListo(int id)
+    {
+        int t = TamanoRecursoListo(id);
+        if (t < 0) return null;
+        var b = new byte[t];
+        CopiarRecurso(id, b);
+        return b;
+    }
+
     [JSExport]
     public static void Iniciar(string[] escenas, int primera, double dpi, bool movil)
     {
         Anfitrion.LeerPaquete = Paquete;
         Anfitrion.LeerRecurso = Recurso;
+        Anfitrion.LeerRecursoListo = RecursoListo;
         Anfitrion.PedirRecurso = PedirRecurso;
         // sin traerlo: en el HTML único, traerlo es descomprimir su bloque
         Anfitrion.HayRecurso = HayRecursoJS;
@@ -87,6 +99,16 @@ public static partial class Programa
         Mundo.AlTerminarCuadro += Disco.Cuadro;
         try { Porteo.Motor.Iniciar(escenas, primera); }
         catch (Exception e) { Debug.LogException(e); }
+    }
+
+    // los datos llegan de a poco por la red: qué no esperan las escenas (ver Alcance.Diferible).
+    // main.js lo prende antes de Iniciar y apaga las texturas cuando aparece el menú: de ahí en
+    // más cada escena espera sus texturas (sin la pantalla de carga delante se verían llegar)
+    [JSExport]
+    public static void Diferir(bool audio, bool texturas)
+    {
+        Anfitrion.DiferirAudio = audio;
+        Anfitrion.DiferirTexturas = texturas;
     }
 
     // ── partidas guardadas ──
@@ -370,6 +392,24 @@ public static partial class Programa
             Debug.Log("porteo: nueva partida");
         }
         catch (Exception e) { Debug.LogException(e); }
+    }
+
+    // segundos de juego sin dibujar, ya (main.js: la primera escena mientras la pantalla de carga la
+    // tapa). Aparte de Adelantar, que es para las pruebas y espera a una escena
+    [JSExport]
+    public static void Acelerar(double segundos)
+    {
+        Porteo.Render.Dibujo.Omitir = true;
+        try
+        {
+            for (double t = 0; t < segundos && !Mundo.Esperando; t += 1 / 30.0)
+            {
+                Mundo.AdelantarReloj(1 / 30.0);
+                Mundo.Cuadro(1 / 30.0);
+            }
+        }
+        catch (Exception e) { Debug.LogException(e); }
+        finally { Porteo.Render.Dibujo.Omitir = false; }
     }
 
     static void Adelantando()

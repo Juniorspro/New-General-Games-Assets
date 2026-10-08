@@ -58,6 +58,24 @@ python3 -I empaquetar/empaquetar.py ... CARPETA --sitio --bloque 8 [--icono icon
   corresponde con un juego que no es nuestro): `herramientas/porteo/cloudflare/subir.py` la sube a
   Cloudflare Pages con una puerta con clave delante de todo.
 
+Cuando los datos llegan de a poco por la red (el sitio, o `datos/` al lado de la página), el motor
+no espera todo lo que una escena alcanza (`Alcance.Diferible`, `Programa.Diferir`): el sonido
+suena cuando llega, y hasta el menú tampoco espera las texturas (se dibujan con la de por defecto
+hasta que llegan; la pantalla de carga se queda hasta que llegó lo que el menú muestra). En Slime
+Rancher el menú alcanza 523 MB sin comprimir (el director de objetos apunta a todos los prefabs) y
+de eso hacen falta antes 32 MB. Lo de fondo se baja en orden de uso con el audio al final, y sólo
+cuando no hay nada urgente en camino. Las texturas se leen sin trabar el cuadro
+(`Anfitrion.RecursoSinTrabar`: si su bloque no está descomprimido, lo descomprime un trabajador).
+Medido con 20 Mbps y 60 ms (Chromium sin GPU): el menú pasó de 73 s a 31 s; sin límite de red, de
+16 s a 10 s. Además (`main.js`):
+
+- la primera escena (el logo de la empresa, con tiempos fijos) corre sin dibujar, un segundo de
+  juego por cuadro, mientras la pantalla de carga la tapa (`Programa.Acelerar`; `?sinacelerar`);
+- .NET arranca mientras llegan los `.paq`;
+- el sistema de velocidad: si el teléfono no da 24 cuadros por segundo, la resolución baja de a
+  pasos hasta la mitad, y vuelve a subir si sobra; si bajar no ayudó (manda la CPU), vuelve a como
+  estaba y no insiste por un minuto (`?turbo=0` lo apaga, `?escala=X` la deja fija).
+
 El orden (`--orden`) es la lista de recursos en el orden en que el motor los usó la primera vez:
 `globalThis.porteoOrden` en la consola del navegador, después de jugar un rato con la versión que
 lee de `datos/`. Con él, lo primero que se usa va primero en el archivo y el juego arranca

@@ -31,18 +31,28 @@ if (args.Length > 1 && args[1] == "alcance")
     var r0 = Stopwatch.StartNew();
     var siempre = Porteo.Datos.Alcance.Recursos(Porteo.Datos.Ajustes.Siempre());
     Console.WriteLine($"siempre: {Mb(siempre)} ({r0.ElapsedMilliseconds} ms)");
+    // los .paq que hace falta abrir para cada cosa (los que se podrían bajar recién para esa escena)
+    var abiertos = new System.Collections.Generic.HashSet<string>(Porteo.Datos.Cargador.Abiertos, StringComparer.OrdinalIgnoreCase);
+    Console.WriteLine($"  .paq: {string.Join(", ", abiertos.OrderBy(x => x))}");
     var todos = new System.Collections.Generic.HashSet<int>(siempre);
     for (int i = 0; i < escenas.Length; i++)
     {
         r0.Restart();
         var e = Porteo.Datos.Alcance.DeArchivo(Porteo.Datos.Cargador.Archivo("level" + i));
         Console.WriteLine($"{escenas[i]}: {Mb(e)}; sin lo de siempre: {Mb(e.Except(siempre))} ({r0.ElapsedMilliseconds} ms)");
+        var nuevos = Porteo.Datos.Cargador.Abiertos.Where(x => abiertos.Add(x)).OrderBy(x => x).ToList();
+        Console.WriteLine($"  .paq nuevos: {string.Join(", ", nuevos)}");
         todos.UnionWith(e);
     }
     // lo que ninguna escena alcanza (ni lo de siempre): candidatos a no ir en el HTML único
     var nunca = Enumerable.Range(0, tam.Length).Where(i => !todos.Contains(i)).ToList();
     Console.WriteLine($"alcanzables: {Mb(todos)}; ninguna escena: {Mb(nunca)}");
     if (Environment.GetEnvironmentVariable("NUNCA") is string fn) File.WriteAllText(fn, JsonSerializer.Serialize(nunca));
+    // lo que se espera de verdad cuando los datos llegan por la red (sin sonido ni texturas)
+    Anfitrion.DiferirAudio = Anfitrion.DiferirTexturas = true;
+    Console.WriteLine($"sin sonido ni texturas: siempre {Mb(Porteo.Datos.Alcance.Recursos(Porteo.Datos.Ajustes.Siempre(), true))}");
+    for (int i = 0; i < escenas.Length; i++)
+        Console.WriteLine($"  {escenas[i]}: {Mb(Porteo.Datos.Alcance.DeArchivo(Porteo.Datos.Cargador.Archivo("level" + i), true))}");
     return;
 }
 

@@ -137,13 +137,25 @@ def pedir(url, metodo="GET", cookie=None, formulario=None):
             time.sleep(2 ** intento)
 
 
+def pedir_firme(url, metodo="GET", cookie=None, formulario=None):
+    """pedir, pero con paciencia para lo que no es una respuesta de la subida: recién subida, algún
+    nodo de Cloudflare todavía no la tiene y contesta 404 o 5xx unos segundos. Nada de eso deja ver
+    el juego (eso sería un 200), así que se reintenta; si sigue, queda la última respuesta."""
+    for intento in range(6):
+        e, cab, cuerpo = pedir(url, metodo, cookie, formulario)
+        if e not in (0, 404) and e < 500:
+            break
+        time.sleep(3)
+    return e, cab, cuerpo
+
+
 def es_puerta(estado, cuerpo):
     return estado == 401 and b'name="clave"' in cuerpo
 
 
 def entrar(base, clave):
     """La cookie de sesión, entrando como una persona (con guiones y en mayúsculas), o None."""
-    e, cab, _ = pedir(base + "/__entrar", "POST", formulario={"clave": legible(clave).upper()})
+    e, cab, _ = pedir_firme(base + "/__entrar", "POST", formulario={"clave": legible(clave).upper()})
     m = re.match(r"(porteo=\d+\.[0-9a-f]{64})", cab.get("Set-Cookie", "") if e == 303 else "")
     return (m.group(1), cab.get("Set-Cookie", "")) if m else (None, "")
 
@@ -164,23 +176,23 @@ def verificar(base, clave, privados, libres=()):
     # 1. sin clave no sale nada, ni pidiéndolo de costado
     for ruta, contenido in privados.items():
         for v in disfrazadas(ruta):
-            e, _, cuerpo = pedir(base + v)
+            e, _, cuerpo = pedir_firme(base + v)
             if not es_puerta(e, cuerpo):
                 fallas.append(f"sin clave, GET {v} dio {e}")
             elif contenido and contenido[:4096] in cuerpo:
                 fallas.append(f"sin clave, GET {v} dejó ver el contenido")
-        e, _, _ = pedir(base + ruta, "HEAD")
+        e, _, _ = pedir_firme(base + ruta, "HEAD")
         if e != 401:
             fallas.append(f"sin clave, HEAD {ruta} dio {e}")
     una = next(iter(privados))
     # 2. cookies inventadas no sirven
     vence = int(time.time()) + 3600
     for falsa in (f"porteo={vence}.{'0' * 64}", f"porteo=1.{'a' * 64}", "porteo=", "porteo=x"):
-        e, _, cuerpo = pedir(base + una, cookie=falsa)
+        e, _, cuerpo = pedir_firme(base + una, cookie=falsa)
         if not es_puerta(e, cuerpo):
             fallas.append(f"con la cookie inventada {falsa[:20]}… dio {e}")
     # 3. una clave mala tampoco
-    e, cab, cuerpo = pedir(base + "/__entrar", "POST", formulario={"clave": "no-es-esta-" + secrets.token_hex(4)})
+    e, cab, cuerpo = pedir_firme(base + "/__entrar", "POST", formulario={"clave": "no-es-esta-" + secrets.token_hex(4)})
     if not es_puerta(e, cuerpo) or cab.get("Set-Cookie"):
         fallas.append(f"con una clave mala dio {e}")
     # 4. con la buena sí
@@ -192,7 +204,7 @@ def verificar(base, clave, privados, libres=()):
             if atributo.lower() not in galleta.lower():
                 fallas.append(f"a la cookie le falta {atributo}")
         for ruta, contenido in privados.items():
-            e, cab, cuerpo = pedir(base + ruta, cookie=cookie)
+            e, cab, cuerpo = pedir_firme(base + ruta, cookie=cookie)
             if contenido is None:
                 if e in (0, 401) or e >= 500:
                     fallas.append(f"con clave, {ruta} dio {e}")
@@ -202,12 +214,12 @@ def verificar(base, clave, privados, libres=()):
                 fallas.append(f"{ruta} sin Cache-Control private")
         # 5. la misma cookie con la firma tocada, no
         adulterada = cookie[:-1] + ("1" if cookie[-1] == "0" else "0")
-        e, _, cuerpo = pedir(base + una, cookie=adulterada)
+        e, _, cuerpo = pedir_firme(base + una, cookie=adulterada)
         if not es_puerta(e, cuerpo):
             fallas.append(f"con la cookie adulterada dio {e}")
     # 6. lo libre pasa sin clave (es lo que el navegador pide sin cookies para instalar la app)
     for ruta in libres:
-        e, _, _ = pedir(base + ruta)
+        e, _, _ = pedir_firme(base + ruta)
         if e != 200:
             fallas.append(f"sin clave, {ruta} (libre) dio {e}")
     if fallas:
@@ -250,14 +262,23 @@ def preparar_proyecto(cf, nombre, clave):
            {"deployment_configs": {"production": conf, "preview": conf}})
     if not r.get("success"):
         morir(f"no se pudo configurar {nombre}: {r.get('errors')}")
-    # se vuelve a leer: lo que importa es lo que quedó, no lo que se pidió
-    p = cf.proyecto(nombre)["result"]
-    for entorno in ("production", "preview"):
-        c = p["deployment_configs"][entorno]
-        if c.get("fail_open") is not False:
-            morir(f"{entorno}: no quedó en fail closed")
-        if ((c.get("env_vars") or {}).get("CLAVE") or {}).get("type") != "secret_text":
-            morir(f"{entorno}: no quedó el secreto CLAVE")
+    # se vuelve a leer: lo que importa es lo que quedó, no lo que se pidió. La lectura tarda unos
+    # segundos en mostrar el cambio (a veces da el proyecto sin variables): se insiste un rato
+    fin = time.time() + 60
+    while True:
+        p = cf.proyecto(nombre)["result"]
+        faltas = []
+        for entorno in ("production", "preview"):
+            c = p["deployment_configs"][entorno]
+            if c.get("fail_open") is not False:
+                faltas.append(f"{entorno}: no quedó en fail closed")
+            if ((c.get("env_vars") or {}).get("CLAVE") or {}).get("type") != "secret_text":
+                faltas.append(f"{entorno}: no quedó el secreto CLAVE")
+        if not faltas:
+            break
+        if time.time() > fin:
+            morir("; ".join(faltas))
+        time.sleep(5)
     log(f"{nombre}: secreto CLAVE puesto, fail closed")
     return p
 

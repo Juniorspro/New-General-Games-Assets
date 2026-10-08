@@ -25,7 +25,7 @@ namespace Porteo
             UI.Lienzos.Iniciar();
             // lo que se puede pedir en cualquier momento (Resources.Load, Shader.Find) se trae antes
             // de empezar; la primera escena se arma en el primer cuadro, cuando están sus datos
-            Mundo.Arranque = new Datos.Espera(Datos.Alcance.Recursos(Datos.Ajustes.Siempre()));
+            Mundo.Arranque = new Datos.Espera(Datos.Alcance.Recursos(Datos.Ajustes.Siempre(), true));
             Escenas.Pedir(primera, LoadSceneMode.Single, false);
         }
     }

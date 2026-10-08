@@ -16,6 +16,7 @@
   //   trans: null, ["d", bits] (índices en diferencias) o ["v", n, [[inicio, paso, offset, tam], ...]]
   //   (vértices por canal: ver empaquetar.py)
   const P = (globalThis.porteoUnArchivo = {});
+  P.web = !!T.web;   // los bloques llegan por la red, de a poco (main.js: el motor no espera lo diferible)
   // la base de las URLs del runtime de .NET (ver empaquetar.py: import.meta.url sería un blob:)
   globalThis.porteoBaseDotnet = new URL('_framework/dotnet.js', location.href).href;
   const estado = () => document.getElementById('estado');
@@ -295,8 +296,12 @@
 
   // la cola va en el orden del archivo, que es el orden en que se usan las cosas (empaquetar.py
   // --orden): el motor pide miles de recursos de una al cargar una escena, en cualquier orden
-  function pedirBloque(i) {
-    if (T.web && !comp[i]) traer(i, true);
+  function pedirBloque(i, urgente = true) {
+    if (T.web && !comp[i]) {
+      // sin apuro: que no ocupe lugar en la cola mientras no llegó (ver cuandoListo)
+      if (!urgente) return;
+      traer(i, true);
+    }
     if (desc[i] || enCola[i] || enVuelo.has(i)) return;
     enCola[i] = 1;
     let k = cola.length;
@@ -425,6 +430,19 @@
     });
   }
 
+  // el bloque ya descomprimido en un trabajador, para lo que se lee apenas llega (el audio): así
+  // no se traba la página descomprimiéndolo acá. urgente: lo que va a sonar ya pasa adelante en la
+  // bajada; si no, llega cuando le toca
+  function cuandoListo(i, urgente) {
+    if (desc[i]) return Promise.resolve();
+    if (comp[i]) return descomprimido(i);
+    return new Promise((ok) => {
+      if (!esperanLlegada.has(i)) esperanLlegada.set(i, []);
+      esperanLlegada.get(i).push(ok);
+      if (T.web) traer(i, urgente);
+    }).then(() => descomprimido(i));
+  }
+
   function usar(clave) {
     if (usadas.has(clave)) return;
     usadas.add(clave);
@@ -441,6 +459,12 @@
   const bajando = new Set(), urgentes = [];
   const urgente = new Uint8Array(nB);    // lo pidió el motor: va primero y con prioridad alta
   let siguiente = 0, cacheBloques = null, bajados = 0, fallo = false;
+  // lo de fondo va en el orden del archivo (el de uso), pero el audio al final: las escenas esperan
+  // sus texturas y no sus sonidos (Alcance.Diferible en el motor), y el sonido que falta suena
+  // apenas llega
+  const fondo = [];
+  for (let i = 0; i < nB; i++) if (T.bloques[i].k !== 'audio') fondo.push(i);
+  for (let i = 0; i < nB; i++) if (T.bloques[i].k === 'audio') fondo.push(i);
 
   async function abrirCache() {
     try { if (self.caches && isSecureContext) cacheBloques = await caches.open('porteo-bloques'); } catch (e) { cacheBloques = null; }
@@ -462,16 +486,30 @@
     while (bajando.size < EN_VUELO && !fallo) {
       let i = -1;
       while (urgentes.length && i < 0) { const u = urgentes.shift(); if (!comp[u] && !bajando.has(u)) i = u; }
-      // lo que nadie pidió todavía, en orden, de a pocos (que no le saque ancho a lo urgente)
+      // lo que nadie pidió todavía, de a pocos y sólo cuando no se está bajando nada que el motor
+      // espera: con una conexión lenta, todo el ancho es para eso
       if (i < 0) {
         if (bajando.size >= 3) return;
-        while (siguiente < nB && (comp[siguiente] || bajando.has(siguiente))) siguiente++;
-        if (siguiente >= nB) return;
-        i = siguiente++;
+        for (const j of bajando) if (urgente[j]) return;
+        while (siguiente < fondo.length && (comp[fondo[siguiente]] || bajando.has(fondo[siguiente]))) siguiente++;
+        if (siguiente >= fondo.length) return;
+        i = fondo[siguiente++];
       }
       bajar(i);
     }
   }
+
+  // lo que el motor pidió para dibujar y todavía no llegó, en bytes: la pantalla de carga se queda
+  // hasta que llega lo que el menú muestra (pantalla.js). El sonido no: la música entra cuando llega
+  P.faltaUrgente = function () {
+    let f = 0;
+    for (let i = 0; i < nB; i++) if (urgente[i] && !comp[i] && T.bloques[i].k !== 'audio') f += T.bloques[i].c;
+    // y lo que ya llegó pero un trabajador todavía lo está descomprimiendo para dibujarlo (ver
+    // recursoListo: a los 1,5 s se descomprime acá igual, así que lo más viejo ya no cuenta)
+    const ahora = performance.now();
+    for (const [i, t] of pedidoListo) if (!desc[i] && ahora - t < 2000) f += T.bloques[i].c;
+    return f;
+  };
 
   // de lo que pidió el motor, qué parte ya llegó (para la barra de la pantalla de carga)
   function fraccionUrgente() {
@@ -486,7 +524,8 @@
     const el = estado();
     if (!el || fallo) return;
     let falta = 0;
-    for (let i = 0; i < nB; i++) if (urgente[i] && !comp[i]) falta += T.bloques[i].c;
+    // el sonido no: el juego no lo espera (suena cuando llega)
+    for (let i = 0; i < nB; i++) if (urgente[i] && !comp[i] && T.bloques[i].k !== 'audio') falta += T.bloques[i].c;
     if (falta > 0) el.textContent = 'bajando… ' + (falta / 1048576).toFixed(1) + ' MB';
     else if (el.textContent.startsWith('bajando')) el.textContent = '';
   }
@@ -525,6 +564,7 @@
   }
 
   // ── la fuente de datos del motor (la misma forma que datos.js) ──
+  const pedidoListo = new Map();   // bloque → cuándo se lo pidió recursoListo
   P.fuente = {
     async indice() {
       await llegada('findice.json');
@@ -539,9 +579,26 @@
     paquete: (n) => { const d = obtener('p' + n); if (d) usar('p' + n); return d; },
     hay: (id) => { const ij = donde.get('r' + id); return !!ij && !!comp[ij[0]]; },
     recurso: (id) => obtener('r' + id),
+    // sin trabar: sólo si su bloque ya está descomprimido; si no, se lo pasa a un trabajador y da
+    // null (las texturas vuelven a probar en el cuadro siguiente). Si los trabajadores no llegan
+    // en un rato (la cola llena de lo que espera otro), se descomprime acá igual
+    recursoListo(id) {
+      const ij = donde.get('r' + id);
+      if (!ij) return null;
+      const i = ij[0];
+      if (!desc[i] && comp[i]) {
+        const t = pedidoListo.get(i);
+        if (t === undefined) { pedidoListo.set(i, performance.now()); pedirBloque(i); return null; }
+        if (performance.now() - t < 1500) return null;
+      }
+      pedidoListo.delete(i);
+      return obtener('r' + id);
+    },
     pedir: (id) => { const ij = donde.get('r' + id); if (ij) pedirBloque(ij[0]); },
     usado: (id) => usar('r' + id),
     alLlegar: (id, f) => { llegada('r' + id).then(f); },
+    // f() cuando se puede leer sin descomprimir acá (el audio); urgente: lo que va a sonar ya
+    cuandoListo: (id, f, urgente) => { const ij = donde.get('r' + id); if (!ij) f(); else cuandoListo(ij[0], urgente).then(f); },
     resumen: () => `${desc.filter(Boolean).length} bloques en memoria (${(enMemoria / 1048576).toFixed(0)} MB), ` +
       `${enTrabajadores} descomprimidos en trabajadores y ${sincronicos} en el momento, ${llegados}/${nB} llegados` +
       (T.web ? ` (${(bajados / 1048576).toFixed(1)} MB bajados o de la caché)` : ''),

@@ -49,14 +49,24 @@ export function crearAudio(datos) {
 
   function clip(id) {
     let c = clips.get(id);
-    if (!c) { c = { estado: 0, buffer: null, url: null, esperando: [] }; clips.set(id, c); }
+    if (!c) { c = { estado: 0, buffer: null, url: null, esperando: [], urgente: false }; clips.set(id, c); }
     return c;
   }
 
-  function cargar(id, streaming) {
+  // urgente: va a sonar ya. Si no (el motor lo precarga al cargar la escena, como Unity con
+  // preloadAudioData), los bytes llegan cuando les toca: cuando los datos bajan de a poco por la
+  // red, el sonido va al final (arranque.js) y no le saca ancho a lo que se ve
+  function cargar(id, streaming, urgente = false) {
     const c = clip(id);
-    if (c.estado !== 0) return;
+    if (c.estado !== 0) {
+      if (urgente && c.estado === 1 && !c.urgente) {
+        c.urgente = true;
+        if (datos.cuandoListo) datos.cuandoListo(id, () => {}, true); else datos.pedir(id);
+      }
+      return;
+    }
     c.estado = 1;
+    c.urgente = urgente;
     const listo = () => {
       const bytes = datos.recurso(id);
       if (!bytes) { c.estado = 3; avisar(c); return; }
@@ -77,7 +87,9 @@ export function crearAudio(datos) {
         c.estado = 3; avisar(c);
       });
     };
-    if (datos.hay(id)) listo();
+    // ya descomprimido en un trabajador (el HTML único y el sitio): no se traba la página
+    if (datos.cuandoListo) datos.cuandoListo(id, listo, urgente);
+    else if (datos.hay(id)) listo();
     else { datos.alLlegar(id, listo); datos.pedir(id); }
   }
 
@@ -167,7 +179,7 @@ export function crearAudio(datos) {
     if (c.estado === 2) arrancar(id, v);
     else {
       c.esperando.push(() => arrancar(id, v));
-      if (c.estado === 0) cargar(recurso, streaming);
+      cargar(recurso, streaming, true);
     }
   }
 
@@ -189,7 +201,9 @@ export function crearAudio(datos) {
     else if (v.filtro) v.filtro.frequency.value = ctx.sampleRate / 2;
   }
 
-  function soltar(v) {
+  // (otro nombre que soltar(id): con el mismo, esta tapaba a aquella y los bytes de los clips
+  // decodificados nunca se marcaban usados)
+  function soltarVoz(v) {
     if (v.elemento) { try { v.elemento.pause(); } catch {} v.elemento.removeAttribute('src'); }
     else if (v.nodo) { try { v.nodo.onended = null; v.nodo.stop(); } catch {} }
     for (const n of [v.nodo, v.filtro, v.ganancia, v.paneo]) if (n) try { n.disconnect(); } catch {}
@@ -199,7 +213,7 @@ export function crearAudio(datos) {
     const v = voces.get(id);
     if (!v) return;
     v.parada = true;
-    soltar(v);
+    soltarVoz(v);
     voces.delete(id);
   }
 
