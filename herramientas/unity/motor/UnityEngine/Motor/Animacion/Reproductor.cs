@@ -12,6 +12,7 @@ namespace Porteo.Animacion
     // enlazados, como el Mecanim de Unity 2018 para rigs genéricos.
     internal sealed class Reproductor
     {
+        internal bool evaluadoAlguna;   // ya se evaluó una vez (el primer cuadro no se descarta)
         readonly Animator an;
         internal readonly Controlador c;
         readonly RuntimeAnimatorController rc;

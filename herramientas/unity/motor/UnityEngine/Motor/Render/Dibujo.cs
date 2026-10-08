@@ -203,8 +203,12 @@ namespace Porteo.Render
             Camera.onPreRender?.Invoke(cam);
             Mensajes.Enviar(cam.go, "OnPreRender", null, false, SendMessageOptions.DontRequireReceiver);
 
+            long tj = Medidor.Ahora();
             Juntar(cam, VP);
+            long to = Medidor.Ahora();
             Ordenar();
+            Medidor.Juntar += to - tj; Medidor.Ordenar += Medidor.Ahora() - to;
+            Medidor.Renderers += recorridos;
             // _CameraDepthTexture: si algo la lee, la cámara dibuja en un destino intermedio con
             // profundidad (la del lienzo no se puede leer) y se copia después de lo opaco
             RenderTexture paraProfundidad = null;
@@ -296,62 +300,73 @@ namespace Porteo.Render
             soloEstaticos = Apagado.Contains("soloestaticos");
             Planos(vp);
             float mitadTan = (float)Math.Tan(cam.fov * 0.5f * Math.PI / 180);
-            foreach (var g in Renders.lods) g.Elegir(posCamara, mitadTan, cam.orto, cam.tamOrto);
+            // el nivel de cada LODGroup se elige cuando aparece el primero de sus renderers
+            int marca = ++marcaJuntar;
             LucesObjeto.Empezar(cam);
-            var lista = Renders.activos;
             int mascara = cam.mascara;
             int cuadro = Time.frameCount;
-            for (int k = 0; k < lista.Count; k++)
+            recorridos = 0;
+            for (int capa = 0; capa < 32; capa++)
             {
-                var r = lista[k];
-                var go = r.go;
-                if (go == null || (mascara & (1 << go.capa)) == 0) continue;
-                if (r.lodGrupo != null && r.lodGrupo.habilitado && r.lodGrupo.indiceDibujo())
+                if ((mascara & (1 << capa)) == 0) continue;
+                var lista = Renders.porCapa[capa];
+                recorridos += lista.Count;
+                for (int k = 0; k < lista.Count; k++)
                 {
-                    int s = r.lodGrupo.seleccion;
-                    if (s < 0 || (r.lodMascara & (1 << s)) == 0) continue;
-                }
-                if (r.estaticoPrimera >= 0 ? sinEstaticos : soloEstaticos) continue;
-                // ShadowsOnly: sólo existe para el mapa de sombras (la sombra barata de los slimes)
-                if (r.sombras == 3) continue;
-                if (Ocultos.Count > 0 && Ocultos.Contains(go.name)) continue;
-                var m = r.MallaParaDibujar();
-                if ((object)m == null || m.destruido) continue;
-                var b = r.bounds;
-                if (!Visible(b)) continue;
-                r.cuadroVisible = cuadro;
-                if (!r.PrepararDibujo(cam)) continue;
-                if (!m.Lista()) continue;
-                Matrix4x4 o2w;
-                uint piel = 0;
-                if (r.VerticesEnMundo) o2w = Matrix4x4.identity;
-                else if (r.estaticoPrimera >= 0) o2w = r.raizEstatica != null ? r.raizEstatica.localToWorldMatrix : Matrix4x4.identity;
-                else if (r is SkinnedMeshRenderer smr && m.poses.Length > 0)
-                {
-                    piel = smr.Piel();
-                    o2w = smr.Espacio.localToWorldMatrix;
-                }
-                else o2w = r.transform.localToWorldMatrix;
-                bool espejo = Determinante3(o2w) < 0;
-                var mats = r.mats;
-                int subs = m.submallas.Length;
-                float dist = (b.center - posCamara).sqrMagnitude;
-                int luces = -1;
-                for (int i = 0; i < mats.Length; i++)
-                {
-                    var mat = mats[i];
-                    if ((object)mat == null || mat.destruido || (object)mat.sh == null) continue;
-                    if (ShadersOcultos.Count > 0 && ShadersOcultos.Contains(mat.sh.m_Name)) continue;
-                    int sub = r.estaticoPrimera >= 0 ? r.estaticoPrimera + Math.Min(i, r.estaticoCantidad - 1) : Math.Min(i, subs - 1);
-                    if (sub < 0 || sub >= subs) continue;
-                    // una submalla vacía (las estelas de un sistema que no tiene)
-                    if (m.submallas[sub].Cantidad == 0) continue;
-                    if (luces < 0) luces = LucesObjeto.Para(r, b);
-                    if (nItems == items.Length) Array.Resize(ref items, items.Length * 2);
-                    items[nItems++] = new Item { R = r, M = m, Sub = sub, Mat = mat, Cola = mat.Cola, Dist = dist, Orden = r.orden, O2W = o2w, Espejo = espejo, Piel = piel, Luces = luces };
+                    var r = lista[k];
+                    var go = r.go;
+                    if (go == null) continue;
+                    var g = r.lodGrupo;
+                    if (g != null && g.habilitado && g.indiceDibujo())
+                    {
+                        if (g.marcaEleccion != marca) { g.Elegir(posCamara, mitadTan, cam.orto, cam.tamOrto); g.marcaEleccion = marca; }
+                        int s = g.seleccion;
+                        if (s < 0 || (r.lodMascara & (1 << s)) == 0) continue;
+                    }
+                    if (r.estaticoPrimera >= 0 ? sinEstaticos : soloEstaticos) continue;
+                    // ShadowsOnly: sólo existe para el mapa de sombras (la sombra barata de los slimes)
+                    if (r.sombras == 3) continue;
+                    if (Ocultos.Count > 0 && Ocultos.Contains(go.name)) continue;
+                    var m = r.MallaParaDibujar();
+                    if ((object)m == null || m.destruido) continue;
+                    var b = r.bounds;
+                    if (!Visible(b)) continue;
+                    r.cuadroVisible = cuadro;
+                    if (!r.PrepararDibujo(cam)) continue;
+                    if (!m.Lista()) continue;
+                    Matrix4x4 o2w;
+                    uint piel = 0;
+                    if (r.VerticesEnMundo) o2w = Matrix4x4.identity;
+                    else if (r.estaticoPrimera >= 0) o2w = r.raizEstatica != null ? r.raizEstatica.localToWorldMatrix : Matrix4x4.identity;
+                    else if (r is SkinnedMeshRenderer smr && m.poses.Length > 0)
+                    {
+                        piel = smr.Piel();
+                        o2w = smr.Espacio.localToWorldMatrix;
+                    }
+                    else o2w = r.transform.localToWorldMatrix;
+                    bool espejo = Determinante3(o2w) < 0;
+                    var mats = r.mats;
+                    int subs = m.submallas.Length;
+                    float dist = (b.center - posCamara).sqrMagnitude;
+                    int luces = -1;
+                    for (int i = 0; i < mats.Length; i++)
+                    {
+                        var mat = mats[i];
+                        if ((object)mat == null || mat.destruido || (object)mat.sh == null) continue;
+                        if (ShadersOcultos.Count > 0 && ShadersOcultos.Contains(mat.sh.m_Name)) continue;
+                        int sub = r.estaticoPrimera >= 0 ? r.estaticoPrimera + Math.Min(i, r.estaticoCantidad - 1) : Math.Min(i, subs - 1);
+                        if (sub < 0 || sub >= subs) continue;
+                        // una submalla vacía (las estelas de un sistema que no tiene)
+                        if (m.submallas[sub].Cantidad == 0) continue;
+                        if (luces < 0) luces = LucesObjeto.Para(r, b);
+                        if (nItems == items.Length) Array.Resize(ref items, items.Length * 2);
+                        items[nItems++] = new Item { R = r, M = m, Sub = sub, Mat = mat, Cola = mat.Cola, Dist = dist, Orden = r.orden, O2W = o2w, Espejo = espejo, Piel = piel, Luces = luces };
+                    }
                 }
             }
         }
+
+        static int marcaJuntar, recorridos;
 
         static bool indiceDibujo(this LODGroup g) => g.go != null && g.go.activoEnJerarquia;
 
@@ -530,7 +545,10 @@ namespace Porteo.Render
             var p = ProgramaPara(mat, pa, mascara);
             if (p == null) return;
             Gpu.UsarPrograma(p.Id);
-            Gpu.Aplicar(pa.Estado.Resolver(mat), a.Espejo);
+            var estado = pa.Estado.Resolver(mat);
+            Gpu.Aplicar(estado, a.Espejo);
+            if (ShaderVolcado != null && mat.sh.m_Name == ShaderVolcado && volcados.Add("estado " + mat.m_Name + "/" + pa.Nombre + "/" + pa.LightMode))
+                Anfitrion.Consola?.Invoke($"porteo: estado de {mat.sh.m_Name}/{pa.Nombre} {pa.LightMode} ({mat.m_Name}): mezcla {estado.MezclaSrc},{estado.MezclaDst} alfa {estado.MezclaSrcA},{estado.MezclaDstA} zescribe={estado.ZEscribe} zprueba={estado.ZPrueba} caras={estado.Caras} cola={a.Cola} cámara={camara?.name} o2w.pos=({a.O2W.m03:G5},{a.O2W.m13:G5},{a.O2W.m23:G5}) o2w.esc={a.O2W.lossyScale} piel={a.Piel} {(a.R as SkinnedMeshRenderer)?.LimitesPiel()} instanciado={p.Instanciado} grupo={hasta - desde}", LogType.Log);
             // por objeto (lo de la primera instancia vale para todas: el grupo comparte luces)
             objeto.Limpiar();
             objeto.Poner(ID_LODFADE, Valor.Vec(new Vector4(1, 1, 0, 0)));
@@ -709,7 +727,7 @@ namespace Porteo.Render
                 if (!objeto.Leer(u.Id, out v) && (bloque == null || !bloque.Leer(u.Id, out v)) && !mat.props.Leer(u.Id, out v) && !Globales.Tabla.Leer(u.Id, out v))
                     v = default;
                 if (volcado != null)
-                    volcado.Append($"\n  {Ids.Nombre(u.Id)} = {(v.O is Texture tx ? "tex " + tx.m_Name : v.O is float[] fa ? "[" + string.Join(",", Array.ConvertAll(fa, x => x.ToString("F2"))) + "]" : v.Tipo == TipoValor.Nada ? "(nada)" : v.V.ToString())}");
+                    volcado.Append($"\n  {Ids.Nombre(u.Id)} = {(v.O is Texture tx ? "tex " + tx.m_Name : v.O is float[] fa ? "[" + string.Join(",", Array.ConvertAll(fa, x => x.ToString("F2"))) + "]" : v.Tipo == TipoValor.Nada ? "(nada)" : $"({v.V.x:G5}, {v.V.y:G5}, {v.V.z:G5}, {v.V.w:G5})")}");
                 Poner(ref u, v, sh);
             }
             if (volcado != null) Anfitrion.Consola?.Invoke(volcado.ToString(), LogType.Log);

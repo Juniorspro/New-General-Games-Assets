@@ -77,7 +77,11 @@ namespace UnityEngine
         {
             var r = Rep();
             if (r == null) return;
-            bool visible = Visible();
+            // el primer cuadro se evalúa siempre: si la pose de reposo queda fuera de la vista (la
+            // aspiradora en la mano, que está detrás de la cámara hasta que la animación la trae),
+            // con culling nunca se vería y nunca se animaría
+            bool visible = !r.evaluadoAlguna || Visible();
+            r.evaluadoAlguna = true;
             if (!visible && culling == AnimatorCullingMode.CullCompletely) return;
             for (int l = 0; l < r.capas.Length && l < pesosCapa.Length; l++) if (l > 0 && pesosCapa[l] >= 0) r.capas[l].peso = pesosCapa[l] - 1;
             r.Paso(dt * velocidad, fireEvents);

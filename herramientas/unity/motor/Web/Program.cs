@@ -163,6 +163,7 @@ public static partial class Programa
             Nueva();
             Adelantando();
             Mundo.Cuadro(dt);
+            DiagnosticoPendiente();
         }
         catch (Exception e) { Debug.LogException(e); }
     }
@@ -173,6 +174,27 @@ public static partial class Programa
     static double adelantar;
     static string escenaAdelantar;
     [JSExport] public static void Adelantar(double segundos, string escena) { adelantar = segundos; escenaAdelantar = escena; }
+
+    // ?diag=jerarquia:FPSCamera;cerca:6[&diagen=N]: diagnósticos en la consola N cuadros después
+    // de terminar el adelanto (o de llegar a la escena)
+    static string diagnosticos;
+    static int diagnosticoEn = -1;
+    [JSExport] public static void DiagnosticoLuego(string comandos, int cuadros) { diagnosticos = comandos; diagnosticoEn = cuadros; }
+    [JSExport] public static string Diagnosticar(string comandos)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in comandos.Split(';')) if (c.Length > 0) sb.Append(Diagnostico.Correr(c)).Append('\n');
+        return sb.ToString();
+    }
+
+    static void DiagnosticoPendiente()
+    {
+        if (diagnosticos == null || adelantar > 0) return;
+        if (escenaAdelantar != null && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != escenaAdelantar) return;
+        if (diagnosticoEn-- > 0) return;
+        Debug.Log("porteo: diagnóstico\n" + Diagnosticar(diagnosticos));
+        diagnosticos = null;
+    }
 
     // ?nueva: desde el menú, una partida nueva como el botón New Game (capturas del juego)
     static bool pedirNueva;
@@ -216,6 +238,49 @@ public static partial class Programa
         if (adelantar <= 0) Debug.Log("porteo: listo el adelanto");
     }
 
+    // ── teclado y mouse sobre los controles táctiles ──
+    // La versión de Android sólo se maneja con los controles de TouchControlsKit (el joystick, el
+    // touchpad para mirar y los botones). Para jugar en una computadora, controles.js aprieta esos
+    // mismos controles con dedos virtuales: necesita saber dónde está cada uno en el lienzo.
+    static readonly System.Collections.Generic.Dictionary<string, RectTransform> controles = new();
+    static float ultimaBusqueda = -10;
+
+    // [centro x, centro y, ancho, alto, radio del joystick] en píxeles del lienzo (origen abajo a la
+    // izquierda); vacío si el control no está activo
+    [JSExport]
+    public static double[] ControlTactil(string nombre)
+    {
+        try
+        {
+            if (!controles.TryGetValue(nombre, out var rt) || rt == null)
+            {
+                // se buscan todos juntos (y no más de una vez cada 5 s: recorrer todos los objetos cuesta)
+                if (Time.realtimeSinceStartup - ultimaBusqueda < 5) return Array.Empty<double>();
+                ultimaBusqueda = Time.realtimeSinceStartup;
+                foreach (var x in Resources.FindObjectsOfTypeAll<RectTransform>())
+                    if (x.gameObject.scene.IsValid() && x.parent != null && x.parent.name == "VirtualController") controles[x.name] = x;
+                if (!controles.TryGetValue(nombre, out rt) || rt == null) return Array.Empty<double>();
+            }
+            if (rt == null || !rt.gameObject.activeInHierarchy) return Array.Empty<double>();
+            var esq = new Vector3[4];
+            rt.GetWorldCorners(esq);
+            double radio = 0;
+            // el joystick satura a (diagonal del fondo / 2) * borderSize / 16 (TCKJoystick.UpdatePosition)
+            foreach (var c in rt.GetComponents<MonoBehaviour>())
+            {
+                if (c.GetType().Name != "TCKJoystick") continue;
+                var fondo = c.GetType().GetField("backgroundRT")?.GetValue(c) as RectTransform;
+                var borde = c.GetType().GetField("borderSize")?.GetValue(c) is float b ? b : 5.85f;
+                if (fondo != null) radio = fondo.sizeDelta.magnitude / 2 * borde / 16;
+            }
+            return new double[] { (esq[0].x + esq[2].x) / 2, (esq[0].y + esq[2].y) / 2, esq[2].x - esq[0].x, esq[2].y - esq[0].y, radio };
+        }
+        catch (Exception e) { Debug.LogException(e); return Array.Empty<double>(); }
+    }
+
+    // si se está jugando (no en un menú ni en pausa): ahí el mouse trabado mira y dispara
+    [JSExport] public static bool EnJuego() => Time.timeScale > 0 && ControlTactil("Touchpad").Length > 0;
+
     // la entrada: main.js ya traduce las teclas a KeyCode y las coordenadas a píxeles del lienzo
     // con el origen abajo a la izquierda (como Input.mousePosition)
     [JSExport] public static void PerfilGpu(bool si) => Porteo.Render.Dibujo.PerfilGpu = si;
@@ -223,6 +288,7 @@ public static partial class Programa
     [JSExport] public static void VolcarUniformes(string shader) => Porteo.Render.Dibujo.ShaderVolcado = shader;
     [JSExport] public static void OcultarShader(string shader) => Porteo.Render.Dibujo.ShadersOcultos.Add(shader);
     [JSExport] public static void VerFs(string shader, string expresion) { Shader.DepurarShader = shader; Shader.DepurarExpresion = expresion; }
+    [JSExport] public static void VerVariantes(string shader) => Shader.DepurarVariantes = shader;
     [JSExport] public static void FijarCamara(double x, double y, double z, double yaw, double pitch)
     {
         Porteo.Render.Dibujo.CamaraForzada = true;

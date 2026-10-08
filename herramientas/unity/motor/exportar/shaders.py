@@ -47,9 +47,14 @@ def arreglar_swizzles(codigo, nombre="", avisos=None):
                 return u + (".xyxy" if antes.endswith("*") or despues.startswith("*") else ".zwzw")
             if u == "_Time":
                 return u + ".yyyy"  # los segundos, como el nodo Time del editor de shaders
-            if re.fullmatch(r"_Color(\d\d)?", u):
-                # el compilador guardó el color como (a, r, g, b): .x es el alfa (brillo y borde)
+            if re.fullmatch(r"_Color\d\d", u):
+                # el compilador guardó los colores de Recolor x8 como (a, r, g, b): .x es el alfa
                 return u + ".wxyz"
+            if u == "_Color":
+                # sólo si el otro operando también está en ese orden (u_xlat3.wxyz * _Color): en los
+                # shaders de Unity (UI/Default, Sprites, Standard...) `in_COLOR0 * _Color` está bien
+                # así, y darlo vuelta tiñe mal y deja el alfa en 1 (el cono de la aspiradora opaco)
+                return u + ".wxyz" if ".wxyz" in expr else u
             if u == "_Tint" and expr.strip() == u:
                 return u  # copia entera: no le faltaba nada
             if avisos is not None:

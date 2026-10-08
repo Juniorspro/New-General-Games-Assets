@@ -322,7 +322,7 @@ namespace UnityEngine
             return activo;
         }
 
-        public static string DepurarShader, DepurarExpresion;
+        public static string DepurarShader, DepurarExpresion, DepurarVariantes;
 
         // El programa de una pasada para estas palabras clave: la variante que más coincide
         // (las que no le importan a la pasada se ignoran, como en Unity).
@@ -341,10 +341,13 @@ namespace UnityEngine
             p = null;
             if (v >= 0 && f >= 0 && pa.Vertex[v].Blob < fs.Count && pa.Fragment[f].Blob < fs.Count)
             {
-                // en GLES el subprograma de vertex trae el GLSL de las dos etapas y el de fragment
-                // suele venir vacío: entonces el fragment sale del mismo código que el vertex
-                var frag = fs[pa.Fragment[f].Blob].fs;
-                if (string.IsNullOrWhiteSpace(frag)) frag = fs[pa.Vertex[v].Blob].fs;
+                // en GLES el subprograma de vertex trae el GLSL de las dos etapas: el fragment sale de
+                // ahí mismo. Mezclar el vertex de una variante con el fragment de otra (de otro tier,
+                // con las mismas palabras clave) junta varyings que no se corresponden: la niebla de
+                // la Standard quedaba en un TEXCOORD que el otro no escribía (el cono de la
+                // aspiradora salía del color de la niebla)
+                var frag = fs[pa.Vertex[v].Blob].fs;
+                if (string.IsNullOrWhiteSpace(frag)) frag = fs[pa.Fragment[f].Blob].fs;
                 // ?verfs=Shader|expresión: la salida del fragment reemplazada por una expresión (depurar)
                 if (DepurarShader != null && dueno.m_Name == DepurarShader)
                 {
@@ -353,6 +356,9 @@ namespace UnityEngine
                     Debug.Log($"porteo: depurando {dueno.m_Name}/{pa.Nombre} ({clave}): {(fin > 0 ? "reemplazado" : "sin return")}");
                 }
                 p = Porteo.Render.Programa.De(fs[pa.Vertex[v].Blob].vs, frag, dueno.m_Name + "/" + pa.Nombre, instanciar);
+                // ?variantes=Standard: qué variante se eligió para cada combinación pedida (depurar)
+                if (DepurarVariantes != null && dueno.m_Name == DepurarVariantes)
+                    Debug.Log($"porteo: variante de {dueno.m_Name}/{pa.Nombre} {pa.LightMode}: pedido [{clave}] → vertex {pa.Vertex[v].Blob} tier {pa.Vertex[v].Tier} [{string.Join(" ", pa.Vertex[v].Kw ?? Array.Empty<string>())}] fragment {pa.Fragment[f].Blob} tier {pa.Fragment[f].Tier} [{string.Join(" ", pa.Fragment[f].Kw ?? Array.Empty<string>())}]");
             }
             pa.programas[clave] = p;
             return p;

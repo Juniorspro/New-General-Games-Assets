@@ -47,7 +47,7 @@ Console.WriteLine($"porteo: arranque en {reloj.ElapsedMilliseconds} ms");
 reloj.Restart();
 // "nueva": desde el menú, una partida nueva como el botón New Game (AutoSaveDirector.LoadNewGame)
 bool nueva = args.Contains("nueva");
-int desdeMenu = -1; bool disparada = false;
+int desdeMenu = -1; bool disparada = false; int enMundo = 0;
 for (int i = 0; i < cuadros; i++)
 {
     Mundo.Cuadro(1 / 60.0);
@@ -59,6 +59,16 @@ for (int i = 0; i < cuadros; i++)
         else if (i - desdeMenu > 120) { disparada = true; NuevaPartida(); }
     }
     if (i % 300 == 0) Console.WriteLine($"porteo: cuadro {i} t={Time.time:F1} escena={activa} ({reloj.ElapsedMilliseconds} ms)");
+    // "tocar X,Y,DESDE,HASTA": un dedo apretado en (X,Y) (píxeles, origen abajo a la izquierda)
+    // entre esos cuadros contados desde que está la partida (para probar botones táctiles)
+    if (args.Contains("tocar") && activa == "worldGenerated")
+    {
+        var tq = args[Array.IndexOf(args, "tocar") + 1].Split(',').Select(float.Parse).ToArray();
+        enMundo++;
+        if (enMundo == (int)tq[2]) Entrada.Toque(5, 0, tq[0], tq[1]);
+        else if (enMundo > tq[2] && enMundo < tq[3]) Entrada.Toque(5, 1, tq[0], tq[1]);
+        else if (enMundo == (int)tq[3]) Entrada.Toque(5, 3, tq[0], tq[1]);
+    }
 }
 
 static void NuevaPartida()
@@ -107,6 +117,101 @@ if (args.Contains("particulas"))
     foreach (var g in todos.Where(s => !s.gameObject.activeInHierarchy).GroupBy(s => s.name).OrderByDescending(g => g.Count()).Take(15))
         Console.WriteLine($"   inactivo {g.Key}: {g.Count()}");
 }
+// "cerca": los renderers activos a menos de 6 m de la cámara principal (qué es cada cosa en una captura)
+if (args.Contains("cerca"))
+{
+    var cam = Camera.main;
+    Console.WriteLine($"cerca: cámara {cam?.name} en {cam?.transform.position}");
+    foreach (var c in Camera.allCameras)
+        Console.WriteLine($"   cámara {Ruta(c.transform)} prof={c.depth} máscara={c.cullingMask:X8} borrar={c.clearFlags} cerca={c.nearClipPlane} lejos={c.farClipPlane} fov={c.fieldOfView} destino={c.targetTexture?.name} habilitada={c.enabled}");
+    foreach (var r in UnityEngine.Object.FindObjectsOfType<Renderer>())
+    {
+        if (cam == null || !r.enabled) continue;
+        float d = Vector3.Distance(r.bounds.center, cam.transform.position);
+        if (d > 6) continue;
+        var mats = string.Join(", ", r.sharedMaterials.Select(m => m == null ? "null" : $"{m.name} [{m.shader?.name}] cola={m.renderQueue} tex={m.mainTexture?.name}"));
+        Console.WriteLine($"   {r.GetType().Name} {Ruta(r.transform)} d={d:F1} límites={r.bounds.size} capa={r.gameObject.layer} :: {mats}");
+    }
+}
+// "jerarquia NOMBRE": el árbol de transforms del primer objeto con ese nombre (posiciones y escalas)
+if (args.Contains("jerarquia"))
+{
+    var nombre = args[Array.IndexOf(args, "jerarquia") + 1];
+    var raiz = Resources.FindObjectsOfTypeAll<Transform>().Where(t => t.gameObject.scene.IsValid()).OrderByDescending(t => t.gameObject.activeInHierarchy).FirstOrDefault(t => t.name == nombre);
+    void Arbol(Transform t, string sangria)
+    {
+        var comps = string.Join(",", t.GetComponents<Component>().Select(c => c.GetType().Name).Where(n => n != "Transform"));
+        Console.WriteLine($"{sangria}{t.name} activo={t.gameObject.activeSelf} local={t.localPosition} rot={t.localEulerAngles} esc={t.localScale} mundo={t.position} capa={t.gameObject.layer} [{comps}]");
+        if (sangria.Length < 40) foreach (Transform h in t) Arbol(h, sangria + "  ");
+    }
+    if (raiz == null) Console.WriteLine("jerarquia: no está " + nombre); else Arbol(raiz, "jerarquia ");
+}
+// "hornear NOMBRE": los vértices con piel de ese SkinnedMeshRenderer (dónde quedan en el mundo)
+if (args.Contains("hornear"))
+{
+    var nombre = args[Array.IndexOf(args, "hornear") + 1];
+    var smr = Resources.FindObjectsOfTypeAll<SkinnedMeshRenderer>().FirstOrDefault(x => x.gameObject.scene.IsValid() && x.name == nombre);
+    if (smr == null) Console.WriteLine("hornear: no está " + nombre);
+    else
+    {
+        if (!smr.gameObject.activeInHierarchy) { for (var t = smr.transform; t != null; t = t.parent) t.gameObject.SetActive(true); Mundo.Cuadro(1 / 60.0); }
+        var m = new Mesh();
+        smr.BakeMesh(m);
+        var vs = m.vertices;
+        var min = Vector3.one * float.MaxValue; var max = -min;
+        foreach (var v in vs) { var w = smr.transform.TransformPoint(v); min = Vector3.Min(min, w); max = Vector3.Max(max, w); }
+        Console.WriteLine($"hornear {nombre}: {vs.Length} vértices, mundo de {min} a {max}; raíz={smr.rootBone?.name} huesos={smr.bones.Length} límites={smr.bounds.center}±{smr.bounds.extents}");
+        var poses = smr.sharedMesh.bindposes;
+        for (int i = 0; i < smr.bones.Length && i < 8; i++)
+        {
+            var h = smr.bones[i];
+            Console.WriteLine($"   hueso {i} {h?.name} mundo={h?.position} esc={h?.lossyScale} pose={(i < poses.Length ? poses[i].GetColumn(3).ToString() : "-")}");
+        }
+    }
+}
+// "agua": las fuentes de líquido (LiquidSource) cuyo colisionador contiene a la cámara, y si el
+// juego cree que la cámara está bajo el agua
+if (args.Contains("agua"))
+{
+    var cam = Camera.main;
+    var asm = AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == "Assembly-CSharp");
+    var tLiq = asm.GetType("LiquidSource");
+    var p0 = cam.transform.position;
+    Console.WriteLine($"agua: cámara en {p0}");
+    foreach (var c in Resources.FindObjectsOfTypeAll(tLiq).Cast<Component>())
+    {
+        if (!c.gameObject.scene.IsValid() || !c.gameObject.activeInHierarchy) continue;
+        foreach (var col in c.GetComponents<Collider>())
+        {
+            var cp = col.ClosestPoint(p0);
+            bool adentro = (cp - p0).sqrMagnitude < 1e-6f;
+            if (adentro || col.bounds.Contains(p0))
+                Console.WriteLine($"   {Ruta(c.transform)} {col.GetType().Name} trigger={col.isTrigger} límites={col.bounds.center}±{col.bounds.extents} adentro={adentro}");
+        }
+    }
+    var tSc = asm.GetType("SceneContext");
+    var sc = asm.GetType("SRSingleton`1").MakeGenericType(tSc).GetProperty("Instance").GetValue(null);
+    var amb = tSc.GetProperty("AmbianceDirector")?.GetValue(sc) ?? tSc.GetField("AmbianceDirector")?.GetValue(sc);
+    var bf = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+    Console.WriteLine($"agua: waterCount={amb?.GetType().GetField("waterCount", bf)?.GetValue(amb)} seaCount={amb?.GetType().GetField("seaCount", bf)?.GetValue(amb)} niebla={RenderSettings.fogColor} densidad={RenderSettings.fogDensity} modo={RenderSettings.fogMode} activa={RenderSettings.fog}");
+}
+// "tck": los controles táctiles (TouchControlsKit) con su rectángulo en pantalla
+if (args.Contains("tck"))
+{
+    Console.WriteLine($"tck: pantalla {Screen.width}x{Screen.height}");
+    foreach (var c in Resources.FindObjectsOfTypeAll<MonoBehaviour>())
+    {
+        var tn = c.GetType().Name;
+        if (!tn.StartsWith("TCK") || !c.gameObject.scene.IsValid()) continue;
+        var id = c.GetType().GetField("identifier")?.GetValue(c);
+        var rt = c.transform as RectTransform;
+        var esq = new Vector3[4];
+        rt?.GetWorldCorners(esq);
+        var canvas = c.GetComponentInParent<Canvas>();
+        Console.WriteLine($"   {tn} '{id}' activo={c.gameObject.activeInHierarchy} habilitado={c.enabled} esquinas={esq[0]}..{esq[2]} canvas={canvas?.name} modo={canvas?.renderMode} ruta={Ruta(c.transform)}");
+    }
+}
+static string Ruta(Transform t) => t.parent == null ? t.name : Ruta(t.parent) + "/" + t.name;
 // "diag": qué ve cada cámara (los objetos que más pantalla ocupan), para entender una captura
 if (args.Contains("diag"))
 {
@@ -191,7 +296,9 @@ if (args.Contains("slime") || args.Contains("objeto"))
 {
     // "objeto NOMBRE": los renderers y materiales del primer GameObject cuyo nombre empieza así
     var prefijo = args.Contains("objeto") ? args[Array.IndexOf(args, "objeto") + 1] : "slimePink";
-    var go = UnityEngine.Object.FindObjectsOfType<Transform>().FirstOrDefault(t => t.name.StartsWith(prefijo))?.gameObject;
+    // también los inactivos (los efectos se prenden sólo cuando se usan)
+    var go = Resources.FindObjectsOfTypeAll<Transform>().Where(t => t.gameObject.scene.IsValid()).OrderByDescending(t => t.gameObject.activeInHierarchy).FirstOrDefault(t => t.name.StartsWith(prefijo))?.gameObject;
+    if (go != null && !go.activeInHierarchy) { Console.WriteLine("slime-go inactivo: se prende para mirarlo"); for (var t = go.transform; t != null; t = t.parent) t.gameObject.SetActive(true); Mundo.Cuadro(1 / 60.0); }
     Console.WriteLine("slime-go " + (go != null ? go.name : "ninguno"));
     var anim = go != null ? go.GetComponent<Animator>() : null;
     if (anim != null)

@@ -257,6 +257,8 @@ namespace Porteo
         static int cuadros;
         static long desde;
         public static int Dibujos, Triangulos;   // los suma Dibujo
+        public static long Juntar, Ordenar;      // ticks de juntar (descartar) y ordenar lo visible
+        public static long Renderers;            // renderers activos recorridos
 
         public static long Ahora() => System.Diagnostics.Stopwatch.GetTimestamp();
 
@@ -270,9 +272,9 @@ namespace Porteo
             if (desde == 0) desde = t0;
             if ((t7 - desde) * f < Cada * 1000) return;
             double n = cuadros, seg = (t7 - desde) * f / 1000;
-            Anfitrion.Consola?.Invoke($"porteo: {n / seg:F1} cuadros/s | por cuadro (ms): inicio {suma[0] / n:F1}, fijo {suma[1] / n:F1}, update {suma[2] / n:F1}, late {suma[3] / n:F1}, canvas {suma[4] / n:F1}, dibujo {suma[5] / n:F1}, total {suma[6] / n:F1} | {Dibujos / n:F0} dibujos, {Triangulos / n / 1000:F0}k triángulos | partículas {Particulas.Particulas.Vivas} en {Particulas.Particulas.activos.Count} sistemas ({Particulas.Particulas.Simulados} simulados)", UnityEngine.LogType.Log);
+            Anfitrion.Consola?.Invoke($"porteo: {n / seg:F1} cuadros/s | por cuadro (ms): inicio {suma[0] / n:F1}, fijo {suma[1] / n:F1}, update {suma[2] / n:F1}, late {suma[3] / n:F1}, canvas {suma[4] / n:F1}, dibujo {suma[5] / n:F1}, total {suma[6] / n:F1} | {Dibujos / n:F0} dibujos, {Triangulos / n / 1000:F0}k triángulos (juntar {Juntar * f / n:F1} ms de {Renderers / n:F0} renderers, ordenar {Ordenar * f / n:F1}) | partículas {Particulas.Particulas.Vivas} en {Particulas.Particulas.activos.Count} sistemas ({Particulas.Particulas.Simulados} simulados)", UnityEngine.LogType.Log);
             Array.Clear(suma, 0, suma.Length);
-            cuadros = 0; Dibujos = 0; Triangulos = 0;
+            cuadros = 0; Dibujos = 0; Triangulos = 0; Juntar = 0; Ordenar = 0; Renderers = 0;
             desde = t7;
         }
     }

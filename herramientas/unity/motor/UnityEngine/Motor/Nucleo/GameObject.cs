@@ -58,8 +58,9 @@ namespace UnityEngine
                 if (value < 0 || value > 31) { Debug.LogError("A game object can only be in one layer. The layer needs to be in the range [0...31]"); return; }
                 if (capa == value) return;
                 capa = value;
-                // sus colisionadores cambian de filtro
+                // sus colisionadores cambian de filtro, y sus renderers de lista
                 Porteo.Fisica.Simulacion.CapaCambiada(this);
+                Porteo.Render.Renders.CapaCambiada(this);
             }
         }
 

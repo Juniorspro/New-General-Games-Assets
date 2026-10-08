@@ -21,6 +21,7 @@ namespace UnityEngine
         internal int estaticoPrimera = -1, estaticoCantidad;   // batching estático: submallas de la malla combinada
         internal Transform raizEstatica;
         internal int indiceActivo = -1;    // posición en Renders.activos
+        internal int capaLista, indiceCapa = -1;   // en qué lista por capa está (y dónde)
         internal LODGroup lodGrupo;
         internal int lodMascara;
         internal int cuadroVisible = -1;
@@ -341,6 +342,15 @@ namespace UnityEngine
             if (Gpu.Activo) Gpu.Borrar(ref vboPiel);
         }
 
+        // para depurar: dónde quedaron los vértices con piel del último cuadro (en el espacio de la raíz)
+        internal string LimitesPiel()
+        {
+            if (piel == null || piel.Length < 10) return "sin piel";
+            var min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue); var max = -min;
+            for (int i = 0; i + 2 < piel.Length; i += 10) { var v = new Vector3(piel[i], piel[i + 1], piel[i + 2]); min = Vector3.Min(min, v); max = Vector3.Max(max, v); }
+            return $"piel de {min} a {max}";
+        }
+
         public void BakeMesh(Mesh mesh)
         {
             if ((object)mesh == null || (object)malla == null) return;
@@ -376,6 +386,7 @@ namespace UnityEngine
         internal bool habilitado = true;
         internal int forzado = -1;
         internal int seleccion = 0;    // el nivel elegido para la cámara actual (-1: ninguno)
+        internal int marcaEleccion = -1;   // para qué recorrido de cámara se eligió
 
         internal override bool HabilitadoNativo => habilitado;
         internal override void AlActivarse() => Renders.AltaLod(this);
@@ -487,12 +498,23 @@ namespace Porteo.Render
     {
         internal static readonly List<Renderer> activos = new List<Renderer>(4096);
         internal static readonly List<LODGroup> lods = new List<LODGroup>(1024);
+        // los mismos, separados por capa: cada cámara recorre sólo las capas que dibuja (la del
+        // arma y la de lo que se sostiene miran una sola capa entre miles de renderers)
+        internal static readonly List<Renderer>[] porCapa = Capas();
+
+        static List<Renderer>[] Capas()
+        {
+            var l = new List<Renderer>[32];
+            for (int i = 0; i < 32; i++) l[i] = new List<Renderer>();
+            return l;
+        }
 
         internal static void Alta(Renderer r)
         {
             if (r.indiceActivo >= 0) return;
             r.indiceActivo = activos.Count;
             activos.Add(r);
+            AltaCapa(r, r.go?.capa ?? 0);
         }
 
         internal static void Baja(Renderer r)
@@ -503,6 +525,33 @@ namespace Porteo.Render
             if (i != ult) { activos[i] = activos[ult]; activos[i].indiceActivo = i; }
             activos.RemoveAt(ult);
             r.indiceActivo = -1;
+            BajaCapa(r);
+        }
+
+        static void AltaCapa(Renderer r, int capa)
+        {
+            var l = porCapa[capa & 31];
+            r.capaLista = capa & 31;
+            r.indiceCapa = l.Count;
+            l.Add(r);
+        }
+
+        static void BajaCapa(Renderer r)
+        {
+            int i = r.indiceCapa;
+            if (i < 0) return;
+            var l = porCapa[r.capaLista];
+            int ult = l.Count - 1;
+            if (i != ult) { l[i] = l[ult]; l[i].indiceCapa = i; }
+            l.RemoveAt(ult);
+            r.indiceCapa = -1;
+        }
+
+        // el objeto cambió de capa: sus renderers activos pasan a la lista de la nueva
+        internal static void CapaCambiada(GameObject go)
+        {
+            foreach (var c in go.componentes)
+                if (c is Renderer r && r.indiceActivo >= 0 && r.capaLista != go.capa) { BajaCapa(r); AltaCapa(r, go.capa); }
         }
 
         internal static void AltaLod(LODGroup g) { if (!lods.Contains(g)) lods.Add(g); }

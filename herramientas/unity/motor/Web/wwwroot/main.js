@@ -2,6 +2,7 @@
 import { dotnet } from './_framework/dotnet.js';
 import { crearAudio } from './audio.js';
 import { crearFuentes } from './fuentes.js';
+import { crearControles } from './controles.js';
 
 const estado = document.getElementById('estado');
 const lienzo = document.getElementById('lienzo');
@@ -134,6 +135,8 @@ for (const x of (new URLSearchParams(location.search).get('ocultar') || '').spli
 for (const x of (new URLSearchParams(location.search).get('sinshader') || '').split(',')) if (x) exp.OcultarShader(x);
 // ?verfs=SR/Slime/Body|normalize(vs_TEXCOORD3)*0.5+0.5: la salida de ese shader reemplazada (depurar)
 if (new URLSearchParams(location.search).has('verfs')) { const [s, e] = new URLSearchParams(location.search).get('verfs').split('|'); exp.VerFs(s, e); }
+// ?variantes=Standard: qué variante se elige para cada combinación de palabras clave
+if (new URLSearchParams(location.search).has('variantes')) exp.VerVariantes(new URLSearchParams(location.search).get('variantes'));
 // ?uniformes=SR/Slime/Body: qué valores recibe ese shader (en la consola)
 if (new URLSearchParams(location.search).has('uniformes')) exp.VolcarUniformes(new URLSearchParams(location.search).get('uniformes'));
 // ?camara=x,y,z,yaw,pitch: la cámara principal fija ahí (para mirar algo de cerca)
@@ -141,6 +144,9 @@ if (new URLSearchParams(location.search).has('camara')) {
   const c = new URLSearchParams(location.search).get('camara').split(',').map(Number);
   exp.FijarCamara(c[0] || 0, c[1] || 0, c[2] || 0, c[3] || 0, c[4] || 0);
 }
+// ?diag=jerarquia:FPSCamera;cerca:6&diagen=30: diagnósticos en la consola (cuadros después del adelanto)
+if (new URLSearchParams(location.search).has('diag'))
+  exp.DiagnosticoLuego(new URLSearchParams(location.search).get('diag'), parseInt(new URLSearchParams(location.search).get('diagen')) || 30);
 // ?nueva: una partida nueva apenas aparece el menú (capturas del juego)
 if (new URLSearchParams(location.search).has('nueva')) exp.NuevaPartida();
 // ?adelantar=N[&escena=X]: N segundos de juego sin dibujar al llegar a la escena (capturas de prueba)
@@ -253,6 +259,8 @@ addEventListener('blur', () => {
   abajo.clear();
 });
 
+const controles = crearControles(exp, lienzo);
+
 let antes = performance.now();
 const medir = new URLSearchParams(location.search).has('perfil');
 let nCuadros = 0, enCuadro = 0, desdeMedida = antes;
@@ -260,6 +268,7 @@ function cuadro(ahora) {
   const dt = Math.min((ahora - antes) / 1000, 0.25);
   antes = ahora;
   const t0 = performance.now();
+  controles.cuadro(ahora);
   exp.Cuadro(dt);
   if (medir) {
     enCuadro += performance.now() - t0;
