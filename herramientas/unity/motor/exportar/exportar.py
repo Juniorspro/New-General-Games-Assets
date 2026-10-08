@@ -181,7 +181,7 @@ class Exportador:
         r = a.get("m_Resource")
         if r and r.get("m_Size"):
             datos = self.leer_stream(o.assets_file, r["m_Source"], r["m_Offset"], r["m_Size"])
-            a["_datos"] = {"_recurso": self.recursos(datos)}   # FSB5 tal cual (ver audio.py)
+            a["_datos"] = {"_recurso": self.recursos(datos)}   # FSB5 tal cual: después fsb-ogg lo pasa a Ogg
         return a
 
     def shader(self, o, a):

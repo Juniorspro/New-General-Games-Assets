@@ -113,6 +113,7 @@ namespace UnityEngine
         internal float frecuencia = 60;
         internal WrapMode envoltura;
         internal Bounds limites;
+        internal RaizHumana raizHumana;           // cómo se saca el movimiento de la raíz en los clips humanoides
 
         public AnimationClip() { m_Name = ""; }
 
@@ -132,7 +133,8 @@ namespace UnityEngine
                 fin = mc.F("m_StopTime");
                 bucle = mc.B("m_LoopTime");
                 var d = mc.M("m_Clip")?.M("data");
-                if (d != null) LeerMecanim(d);
+                if (d != null) LeerMecanim(d, r);
+                raizHumana = RaizHumana.Leer(mc);
             }
             var bc = m.M("m_ClipBindingConstant");
             if (bc != null) LeerEnlaces(bc, r);
@@ -141,11 +143,11 @@ namespace UnityEngine
         }
 
         // ── Mecanim ──
-        void LeerMecanim(Mapa d)
+        void LeerMecanim(Mapa d, IResolutor r)
         {
             var sc = d.M("m_StreamedClip");
             int nStream = sc?.I32("curveCount") ?? 0;
-            if (nStream > 0) curvas = Stream(Enteros(sc["data"]), nStream);
+            if (nStream > 0) curvas = Stream(Enteros(sc["data"], r), nStream);
             var dc = d.M("m_DenseClip");
             if (dc != null && dc.I32("m_CurveCount") > 0)
             {
@@ -153,10 +155,10 @@ namespace UnityEngine
                 cuadrosDenso = dc.I32("m_FrameCount");
                 ritmoDenso = dc.F("m_SampleRate", 30);
                 inicioDenso = dc.F("m_BeginTime");
-                denso = Flotantes(dc["m_SampleArray"]);
+                denso = Flotantes(dc["m_SampleArray"], r);
             }
             var cc = d.M("m_ConstantClip");
-            if (cc != null) constantes = Flotantes(cc["data"]);
+            if (cc != null) constantes = Flotantes(cc["data"], r);
         }
 
         // El StreamedClip: cuadros (tiempo, cantidad de claves) con claves (curva, a, b, c, d).
@@ -189,10 +191,12 @@ namespace UnityEngine
             return r;
         }
 
-        static uint[] Enteros(object o)
+        // las listas grandes (64 KB o más) vienen en un recurso aparte, con un byte de tipo adelante
+        static uint[] Enteros(object o, IResolutor res)
         {
             switch (o)
             {
+                case Recurso rec: return Enteros(Paquete.ArregloDeRecurso(res.Recurso(rec.Id)), res);
                 case uint[] u: return u;
                 case int[] i: { var r = new uint[i.Length]; Buffer.BlockCopy(i, 0, r, 0, i.Length * 4); return r; }
                 case byte[] b: { var r = new uint[b.Length / 4]; Buffer.BlockCopy(b, 0, r, 0, r.Length * 4); return r; }
@@ -202,10 +206,11 @@ namespace UnityEngine
             }
         }
 
-        static float[] Flotantes(object o)
+        static float[] Flotantes(object o, IResolutor res)
         {
             switch (o)
             {
+                case Recurso rec: return Flotantes(Paquete.ArregloDeRecurso(res.Recurso(rec.Id)), res);
                 case float[] f: return f;
                 case byte[] b: { var r = new float[b.Length / 4]; Buffer.BlockCopy(b, 0, r, 0, r.Length * 4); return r; }
                 case List<object> l: { var r = new float[l.Count]; for (int k = 0; k < r.Length; k++) r[k] = Convert.ToSingle(l[k]); return r; }

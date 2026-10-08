@@ -4,7 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class AudioSettings
     {
-        public static double dspTime { get { global::Porteo.Falta.Llamada("UnityEngine.AudioSettings::dspTime"); return default; } }
-        public static int outputSampleRate { get { global::Porteo.Falta.Llamada("UnityEngine.AudioSettings::outputSampleRate"); return default; } }
     }
 }

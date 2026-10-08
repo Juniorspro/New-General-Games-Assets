@@ -175,6 +175,9 @@ namespace UnityEngine
         public unsafe bool Create()
         {
             if (creada || !Gpu.Activo) return creada;
+            // se puede crear en medio de un dibujo (un GrabPass, un temporal): el destino de ese
+            // momento tiene que seguir atado después
+            var previo = Destinos.Actual;
             uint t;
             Gl.GenTextures(1, &t);
             gl = t;
@@ -201,9 +204,9 @@ namespace UnityEngine
                 Gl.RenderbufferStorage(Gl.RENDERBUFFER, (uint)Gl.DEPTH24_STENCIL8, ancho, alto);
                 Gl.FramebufferRenderbuffer(Gl.FRAMEBUFFER, Gl.DEPTH_STENCIL_ATTACHMENT, Gl.RENDERBUFFER, rb);
             }
-            Gl.BindFramebuffer(Gl.FRAMEBUFFER, 0);
-            Destinos.Actual = null;
             creada = true;
+            Gl.BindFramebuffer(Gl.FRAMEBUFFER, (object)previo != null && previo != this && previo.creada ? previo.fbo : 0);
+            if ((object)previo == null || previo == this || !previo.creada) Destinos.Actual = null;
             return true;
         }
 

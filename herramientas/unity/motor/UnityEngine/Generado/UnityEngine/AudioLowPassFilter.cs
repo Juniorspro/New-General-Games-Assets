@@ -2,9 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class AudioLowPassFilter : global::UnityEngine.Behaviour
+    public sealed partial class AudioLowPassFilter
     {
-        public float cutoffFrequency { set { global::Porteo.Falta.Llamada("UnityEngine.AudioLowPassFilter::cutoffFrequency="); } }
-        public float lowpassResonanceQ { set { global::Porteo.Falta.Llamada("UnityEngine.AudioLowPassFilter::lowpassResonanceQ="); } }
     }
 }

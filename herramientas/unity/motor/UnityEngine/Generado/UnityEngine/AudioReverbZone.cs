@@ -2,8 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class AudioReverbZone : global::UnityEngine.Behaviour
+    public sealed partial class AudioReverbZone
     {
-        public float maxDistance { get { global::Porteo.Falta.Llamada("UnityEngine.AudioReverbZone::maxDistance"); return default; } }
     }
 }

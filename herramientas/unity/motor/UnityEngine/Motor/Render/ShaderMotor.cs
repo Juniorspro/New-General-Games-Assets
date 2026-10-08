@@ -284,6 +284,21 @@ namespace UnityEngine
         // el primer subshader soportado dentro del LOD; si no hay, el del shader de respaldo
         internal Shader duenoActivo;
 
+        // si algún programa lee _CameraDepthTexture (la cámara tiene que dejarla lista)
+        bool? usaProfundidad;
+        internal bool UsaProfundidad()
+        {
+            if (usaProfundidad.HasValue) return usaProfundidad.Value;
+            if (Activo() == null) return false;
+            var fs = (duenoActivo ?? this).Fuentes();
+            if (fs.Count == 0) return false;   // el GLSL todavía no llegó: se vuelve a mirar
+            bool u = false;
+            foreach (var (vs, f) in fs)
+                if ((f != null && f.Contains("_CameraDepthTexture")) || (vs != null && vs.Contains("_CameraDepthTexture"))) { u = true; break; }
+            usaProfundidad = u;
+            return u;
+        }
+
         internal SubShader Activo()
         {
             if (resuelto) return activo;

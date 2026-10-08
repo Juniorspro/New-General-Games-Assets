@@ -126,18 +126,58 @@ if (args.Contains("diag"))
         Console.WriteLine($"animador {a.name} ctrl={(a.runtimeAnimatorController != null ? a.runtimeAnimatorController.name : "-")} init={a.isInitialized} estado={info.shortNameHash} t={info.normalizedTime:F2} largo={info.length:F2} hueso {hueso.name} rot={hueso.localRotation.eulerAngles} pos={hueso.localPosition}");
     }
 }
-if (args.Contains("slime"))
+if (args.Contains("slime") || args.Contains("objeto"))
 {
-    var go = UnityEngine.Object.FindObjectsOfType<Transform>().FirstOrDefault(t => t.name.StartsWith("slimePink"))?.gameObject;
+    // "objeto NOMBRE": los renderers y materiales del primer GameObject cuyo nombre empieza así
+    var prefijo = args.Contains("objeto") ? args[Array.IndexOf(args, "objeto") + 1] : "slimePink";
+    var go = UnityEngine.Object.FindObjectsOfType<Transform>().FirstOrDefault(t => t.name.StartsWith(prefijo))?.gameObject;
     Console.WriteLine("slime-go " + (go != null ? go.name : "ninguno"));
+    var anim = go != null ? go.GetComponent<Animator>() : null;
+    if (anim != null)
+    {
+        var info = anim.GetCurrentAnimatorStateInfo(0);
+        Console.WriteLine($"animador humano={anim.isHuman} escala={anim.humanScale} raizMov={anim.applyRootMotion} estado={info.shortNameHash} t={info.normalizedTime:F2}");
+        foreach (var t in go.GetComponentsInChildren<Transform>(true))
+            if (new[] { "ROOTJ", "lAnkleJ", "rAnkleJ", "lBallJ", "rBallJ", "lWristJ", "rWristJ", "HeadJ", "lElbowJ" }.Contains(t.name))
+                Console.WriteLine($"   hueso {t.name,-8} rel={go.transform.InverseTransformPoint(t.position)} rotLocal={t.localRotation.eulerAngles}");
+    }
     if (go != null)
         foreach (var r in go.GetComponentsInChildren<Renderer>(true))
         {
             Console.WriteLine($"slime-r {r.GetType().Name} {r.name} activo={r.gameObject.activeInHierarchy} hab={r.enabled}");
             foreach (var m in r.sharedMaterials)
-                if (m != null) Console.WriteLine($"   mat {m.name} shader={m.shader?.name} cola={m.renderQueue} claves=[{string.Join(",", m.shaderKeywords)}]");
+                if (m != null)
+                {
+                    Console.WriteLine($"   mat {m.name} shader={m.shader?.name} cola={m.renderQueue} claves=[{string.Join(",", m.shaderKeywords)}]");
+                    foreach (var p in new[] { "_MainTex", "_BumpMap", "_EmissionMap", "_MetallicGlossMap", "_OcclusionMap", "_DetailAlbedoMap", "_DetailNormalMap", "_ParallaxMap", "_DetailMask" })
+                        if (m.HasProperty(p) && m.GetTexture(p) is Texture t)
+                            Console.WriteLine($"      {p} = {t.name} {t.width}x{t.height} {(t is Texture2D t2 ? t2.format.ToString() : t.GetType().Name)}");
+                    foreach (var p in new[] { "_Color", "_EmissionColor", "_SpecColor" })
+                        if (m.HasProperty(p)) Console.WriteLine($"      {p} = {m.GetColor(p)}");
+                    foreach (var p in new[] { "_Glossiness", "_GlossMapScale", "_Metallic", "_BumpScale", "_OcclusionStrength", "_Mode", "_Cutoff", "_SmoothnessTextureChannel", "_SpecularHighlights", "_GlossyReflections" })
+                        if (m.HasProperty(p)) Console.WriteLine($"      {p} = {m.GetFloat(p)}");
+                }
             var b = new MaterialPropertyBlock(); r.GetPropertyBlock(b);
             Console.WriteLine($"   bloque vacío={b.isEmpty}");
+            // la malla: si el orden de los triángulos coincide con las normales y si miran hacia afuera
+            var mf = r.GetComponent<MeshFilter>();
+            var malla = mf != null ? mf.sharedMesh : (r as SkinnedMeshRenderer)?.sharedMesh;
+            if (malla != null)
+            {
+                var vs = malla.vertices; var ns = malla.normals; var ts = malla.triangles;
+                var centro = malla.bounds.center;
+                int coinciden = 0, afuera = 0, total = 0;
+                for (int i = 0; i + 2 < ts.Length; i += 3)
+                {
+                    Vector3 a = vs[ts[i]], b2 = vs[ts[i + 1]], c = vs[ts[i + 2]];
+                    var g = Vector3.Cross(b2 - a, c - a);
+                    if (g.sqrMagnitude < 1e-12f) continue;
+                    total++;
+                    if (ns.Length == vs.Length && Vector3.Dot(g, ns[ts[i]] + ns[ts[i + 1]] + ns[ts[i + 2]]) > 0) coinciden++;
+                    if (Vector3.Dot(g, (a + b2 + c) / 3 - centro) > 0) afuera++;
+                }
+                Console.WriteLine($"   malla {malla.name} vértices={vs.Length} triángulos={total} orden=normales {coinciden} caras afuera {afuera} escala={r.transform.lossyScale}");
+            }
         }
 }
 if (args.Contains("textura"))

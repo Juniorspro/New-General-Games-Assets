@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Pasa el audio del juego (FSB5 de FMOD con Vorbis adentro) a Ogg Vorbis sin recodificar:
+       los paquetes Vorbis quedan tal cual y sólo se rearman los encabezados y las páginas Ogg. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Fmod5Sharp" Version="3.1.0" />
+    <PackageReference Include="Microsoft.Bcl.Memory" Version="10.0.12" />
+  </ItemGroup>
+</Project>

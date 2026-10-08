@@ -40,7 +40,9 @@ namespace Porteo.Animacion
         readonly float[] defecto, res, acum, cur;
         readonly bool[] escrito;
         readonly List<Valor> vals;
-        readonly int[] valorRaiz;         // RootT.xyz RootQ.xyzw por clip (índice de curva) para el movimiento de la raíz
+        readonly int[][] curvasRaiz;      // humanoides: por clip, las curvas de RootT.xyz y RootQ.xyzw
+        readonly PoseHumana pose;
+        readonly float[] humanos;
 
         // los StateMachineBehaviour de esta instancia (Unity copia los del controlador por animador)
         readonly Dictionary<(int, int), StateMachineBehaviour[]> comps = new Dictionary<(int, int), StateMachineBehaviour[]>();
@@ -65,7 +67,8 @@ namespace Porteo.Animacion
             capas = new CapaRt[c.Capas.Length];
             for (int i = 0; i < capas.Length; i++) capas[i] = new CapaRt { peso = i == 0 ? 1 : c.Capas[i].Peso };
             // enlazar
-            enl = new Enlazador(an.transform);
+            var avatar = an.avatarDatos?.humano;
+            enl = new Enlazador(an.transform) { humano = avatar != null };
             mapa = new int[nc][];
             muestras = new float[nc][];
             for (int i = 0; i < nc; i++)
@@ -83,6 +86,23 @@ namespace Porteo.Animacion
             }
             vals = enl.valores;
             int tam = enl.tam;
+            // humanoide: la pose sale de los músculos mezclados; el cuerpo de cada clip, relativo a su raíz
+            if (avatar != null && vals.Exists(x => x.Tipo == TipoValor.Musculo))
+            {
+                pose = new PoseHumana(an, avatar, enl);
+                humanos = new float[PoseHumana.TOTAL];
+                curvasRaiz = new int[nc][];
+                for (int i = 0; i < nc; i++)
+                {
+                    var clip = clips[i];
+                    if (clip == null || !clip.raizHumana.Hay) continue;
+                    var cr = new int[7];
+                    for (int k = 0; k < 7; k++) cr[k] = -1;
+                    foreach (var en in clip.enlaces)
+                        if (en.Especial == 8 && en.Atributo >= PoseHumana.RAIZ_T && en.Atributo < PoseHumana.RAIZ_T + 7) cr[en.Atributo - PoseHumana.RAIZ_T] = en.Curva;
+                    curvasRaiz[i] = cr;
+                }
+            }
             defecto = new float[tam]; res = new float[tam]; acum = new float[tam]; cur = new float[tam];
             escrito = new bool[vals.Count];
             for (int i = 0; i < vals.Count; i++) vals[i].Leer(defecto, vals[i].Off);
@@ -533,6 +553,7 @@ namespace Porteo.Animacion
             {
                 var s = muestras[e.Clip];
                 clip.Muestrear(clip.TiempoClip(t), s);
+                if (curvasRaiz?[e.Clip] != null) PoseHumana.ExtraerRaiz(clip.raizHumana, s, curvasRaiz[e.Clip]);
                 var mp = mapa[e.Clip];
                 var es = clip.enlaces;
                 for (int k = 0; k < es.Length; k++)
@@ -583,6 +604,7 @@ namespace Porteo.Animacion
         void Escribir()
         {
             int n = vals.Count;
+            bool hayHumano = false;
             // los Transform de una vez (posición, rotación y escala juntas)
             for (int i = 0; i < n; i++)
             {
@@ -595,6 +617,7 @@ namespace Porteo.Animacion
                     case TipoValor.Escala: v.T.PonerLocal(2, new Vector3(res[o], res[o + 1], res[o + 2]), default); break;
                     case TipoValor.Rotacion: v.T.PonerLocal(1, default, new Quaternion(res[o], res[o + 1], res[o + 2], res[o + 3])); break;
                     case TipoValor.PPtr: v.EscribirObjeto(v.ObjetoActual2); break;
+                    case TipoValor.Musculo: humanos[v.Musculo] = res[o]; hayHumano = true; break;
                     case TipoValor.Nada: break;
                     default: v.Escribir(res, o); break;
                 }
@@ -604,6 +627,7 @@ namespace Porteo.Animacion
                 var v = vals[i];
                 if (escrito[i] && v.T != null) v.T.AplicarLocal();
             }
+            if (hayHumano) pose.Aplicar(humanos);
         }
 
         // al deshabilitarse el animador, todo vuelve a como estaba (como Unity)

@@ -23,8 +23,9 @@ corre y lo que producen queda fuera del repo.
 ## Cómo se arma
 
 ```sh
-# 1. datos del juego (fuera del repo)
+# 1. datos del juego (fuera del repo); el audio (Vorbis dentro de FSB5) pasa a Ogg sin recodificar
 python3 -I exportar/exportar.py APK_DATA SALIDA_DATOS --arreglar-swizzles
+dotnet run -c Release --project exportar/fsb-ogg -- SALIDA_DATOS/recursos
 # 2. esqueleto de la API (después de escribir algo a mano, volver a correrlo)
 dotnet run -c Release --project generar -- --juego MANAGED --unity UNITY_MANAGED \
     --propios UnityEngine --salida UnityEngine/Generado --fachadas Fachadas

@@ -1,5 +1,6 @@
 // porteo: arranca .NET, trae los datos del juego y corre el bucle de cuadros.
 import { dotnet } from './_framework/dotnet.js';
+import { crearAudio } from './audio.js';
 
 const estado = document.getElementById('estado');
 const lienzo = document.getElementById('lienzo');
@@ -33,8 +34,19 @@ await Promise.all(nombres.map(async (n) => {
 const recursos = new Map();
 const pedidos = new Set();
 const cola = [];
+const esperas = new Map();   // recurso → funciones a llamar cuando llegue (el audio)
 let enVuelo = 0;
 const SIMULTANEOS = 8;
+function alLlegar(id, f) {
+  if (!esperas.has(id)) esperas.set(id, []);
+  esperas.get(id).push(f);
+}
+function llego(id) {
+  const l = esperas.get(id);
+  if (!l) return;
+  esperas.delete(id);
+  for (const f of l) f();
+}
 function pedir(id) {
   if (recursos.has(id) || pedidos.has(id)) return;
   pedidos.add(id);
@@ -49,13 +61,15 @@ function seguir() {
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
       .then((b) => { recursos.set(id, new Uint8Array(b)); })
       .catch((e) => console.warn('porteo: recurso ' + id, e))
-      .finally(() => { pedidos.delete(id); enVuelo--; seguir(); });
+      .finally(() => { pedidos.delete(id); enVuelo--; llego(id); seguir(); });
   }
 }
 
 const { setModuleImports, getAssemblyExports, getConfig, runMain } = await dotnet.withDiagnosticTracing(false).create();
 const TIPOS = ['error', 'assert', 'warn', 'log', 'exception'];
+const audio = crearAudio(recursos, pedir, alLlegar);
 setModuleImports('porteo', {
+  ...audio,
   tamanoPaquete: (n) => { const p = paquetes.get(n); return p ? p.length : -1; },
   copiarPaquete: (n, vista) => { vista.set(paquetes.get(n)); vista.dispose(); },
   tamanoRecurso: (id) => { const r = recursos.get(id); return r ? r.length : -1; },

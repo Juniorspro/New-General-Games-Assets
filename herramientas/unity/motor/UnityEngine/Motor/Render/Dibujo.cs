@@ -205,10 +205,30 @@ namespace Porteo.Render
 
             Juntar(cam, VP);
             Ordenar();
+            // _CameraDepthTexture: si algo la lee, la cámara dibuja en un destino intermedio con
+            // profundidad (la del lienzo no se puede leer) y se copia después de lo opaco
+            RenderTexture paraProfundidad = null;
+            if (NecesitaProfundidad(cam))
+            {
+                if (intermedia != null) paraProfundidad = intermedia;
+                else if ((object)destino != null && destino.profundidad > 0) paraProfundidad = destino;
+                else
+                {
+                    intermediaProf = RenderTexture.GetTemporary(cam.AnchoDestino, cam.AltoDestino, 24, RenderTextureFormat.ARGB32);
+                    // si la cámara no borra el color, dibuja encima de lo que ya había
+                    if (cam.borrar == CameraClearFlags.Depth || cam.borrar == CameraClearFlags.Nothing)
+                        Profundidad.CopiarColor(destino, intermediaProf, vx, vy, vw, vh);
+                    Destinos.Atar(intermediaProf);
+                    Gl.Viewport(vx, vy, vw, vh);
+                    Borrar(cam, vx, vy, vw, vh);
+                    paraProfundidad = intermediaProf;
+                }
+            }
             // opacos, cielo y transparentes
             int i = 0;
             while (i < nItems && items[i].Cola <= 2500) i = Apagado.Contains("sinopacos") ? i + 1 : DibujarDesde(i, 2500);
             if (cam.borrar == CameraClearFlags.Skybox && !Apagado.Contains("sincielo")) Cielo.Dibujar(cam);
+            if (paraProfundidad != null) Profundidad.Copiar(paraProfundidad);
             if (Proyectores.activos.Count > 0 && !Apagado.Contains("sinproyectores")) DibujarProyectores(i);
             while (i < nItems) i = Apagado.Contains("sintransparentes") ? i + 1 : DibujarDesde(i, int.MaxValue);
             Mensajes.Accion(() => EnCamara?.Invoke(cam), null);
@@ -221,8 +241,29 @@ namespace Porteo.Render
                 Encadenar(efectos, intermedia, destino);
                 RenderTexture.ReleaseTemporary(intermedia);
             }
+            else if (intermediaProf != null)
+            {
+                Profundidad.CopiarColor(intermediaProf, destino, vx, vy, vw, vh);
+                Destinos.Atar(destino);
+                RenderTexture.ReleaseTemporary(intermediaProf);
+            }
+            intermediaProf = null;
             Camaras.actual = null;
             camara = null;
+        }
+
+        static RenderTexture intermediaProf;
+
+        static bool NecesitaProfundidad(Camera cam)
+        {
+            if (Apagado.Contains("sinprofundidad")) return false;
+            if ((cam.depthTextureMode & DepthTextureMode.Depth) != 0) return true;
+            for (int k = 0; k < nItems; k++)
+            {
+                var sh = items[k].Mat?.sh;
+                if (sh != null && items[k].Cola > 2500 && sh.UsaProfundidad()) return true;
+            }
+            return false;
         }
 
         static void Borrar(Camera cam, int x, int y, int w, int h)

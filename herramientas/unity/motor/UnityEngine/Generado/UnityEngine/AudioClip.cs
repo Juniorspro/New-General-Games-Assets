@@ -2,10 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class AudioClip : global::UnityEngine.Object
+    public sealed partial class AudioClip
     {
-        public float length { get { global::Porteo.Falta.Llamada("UnityEngine.AudioClip::length"); return default; } }
-        public global::UnityEngine.AudioDataLoadState loadState { get { global::Porteo.Falta.Llamada("UnityEngine.AudioClip::loadState"); return default; } }
-        public bool LoadAudioData() { global::Porteo.Falta.Llamada("UnityEngine.AudioClip::LoadAudioData"); return default; }
     }
 }

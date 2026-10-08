@@ -16,6 +16,26 @@ public static partial class Programa
     [JSImport("copiarRecurso", "porteo")] internal static partial void CopiarRecurso(int id, [JSMarshalAs<JSType.MemoryView>] Span<byte> destino);
     [JSImport("pedirRecurso", "porteo")] internal static partial void PedirRecurso(int id);
     [JSImport("consola", "porteo")] internal static partial void Consola(string texto, int tipo);
+    [JSImport("audioCargar", "porteo")] internal static partial void AudioCargar(int recurso, bool streaming);
+    [JSImport("audioEstado", "porteo")] internal static partial int AudioEstado(int recurso);
+    [JSImport("audioTocar", "porteo")] internal static partial void AudioTocar(int voz, int recurso, bool streaming, double desde, bool bucle, double volumen, double tono, double pan, double corte);
+    [JSImport("audioAjustar", "porteo")] internal static partial void AudioAjustar(int voz, double volumen, double tono, double pan, double corte);
+    [JSImport("audioParar", "porteo")] internal static partial void AudioParar(int voz);
+    [JSImport("audioPausar", "porteo")] internal static partial void AudioPausar(int voz, bool pausa, double desde);
+    [JSImport("audioFrecuencia", "porteo")] internal static partial int AudioFrecuencia();
+
+    // el sonido del motor, con Web Audio (audio.js)
+    sealed class AudioWeb : Porteo.Audio.IAudio
+    {
+        public void Cargar(int recurso, bool streaming) => AudioCargar(recurso, streaming);
+        public int Estado(int recurso) => AudioEstado(recurso);
+        public void Tocar(int voz, int recurso, bool streaming, double desde, bool bucle, float volumen, float tono, float pan, float corte) =>
+            AudioTocar(voz, recurso, streaming, desde, bucle, volumen, tono, pan, corte);
+        public void Ajustar(int voz, float volumen, float tono, float pan, float corte) => AudioAjustar(voz, volumen, tono, pan, corte);
+        public void Parar(int voz) => AudioParar(voz);
+        public void Pausar(int voz, bool pausa, double desde) => AudioPausar(voz, pausa, desde);
+        public int Frecuencia() => AudioFrecuencia();
+    }
 
     static byte[] Paquete(string n)
     {
@@ -43,6 +63,7 @@ public static partial class Programa
         Anfitrion.PedirRecurso = PedirRecurso;
         Anfitrion.HayRecurso = id => TamanoRecurso(id) >= 0;
         Anfitrion.Consola = (t, tipo) => Consola(t, (int)tipo);
+        Porteo.Audio.Sonido.Salida = new AudioWeb();
         Pantalla.Dpi = (float)dpi;
         Plataforma.Movil = movil;
         if (Porteo.Render.Gpu.Iniciar("#lienzo", false)) Porteo.Render.Dibujo.Iniciar();

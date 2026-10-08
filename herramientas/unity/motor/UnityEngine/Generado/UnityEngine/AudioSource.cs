@@ -2,34 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class AudioSource : global::UnityEngine.AudioBehaviour
+    public sealed partial class AudioSource
     {
-        public float volume { get { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::volume"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::volume="); } }
-        public float pitch { get { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::pitch"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::pitch="); } }
-        public float time { get { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::time"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::time="); } }
-        public int timeSamples { get { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::timeSamples"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::timeSamples="); } }
-        public global::UnityEngine.AudioClip clip { get { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::clip"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::clip="); } }
-        public bool isPlaying { get { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::isPlaying"); return default; } }
-        public bool loop { get { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::loop"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::loop="); } }
-        public bool ignoreListenerVolume { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::ignoreListenerVolume="); } }
-        public bool playOnAwake { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::playOnAwake="); } }
-        public bool ignoreListenerPause { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::ignoreListenerPause="); } }
-        public global::UnityEngine.AudioVelocityUpdateMode velocityUpdateMode { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::velocityUpdateMode="); } }
-        public float panStereo { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::panStereo="); } }
-        public float spatialBlend { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::spatialBlend="); } }
-        public bool bypassEffects { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::bypassEffects="); } }
-        public bool bypassListenerEffects { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::bypassListenerEffects="); } }
-        public bool bypassReverbZones { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::bypassReverbZones="); } }
-        public float dopplerLevel { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::dopplerLevel="); } }
-        public float spread { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::spread="); } }
-        public int priority { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::priority="); } }
-        public bool mute { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::mute="); } }
-        public float minDistance { get { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::minDistance"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::minDistance="); } }
-        public float maxDistance { get { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::maxDistance"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::maxDistance="); } }
-        public global::UnityEngine.AudioRolloffMode rolloffMode { set { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::rolloffMode="); } }
-        public void Play() { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::Play"); }
-        public void Stop() { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::Stop"); }
-        public void Pause() { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::Pause"); }
-        public void PlayOneShot(global::UnityEngine.AudioClip clip) { global::Porteo.Falta.Llamada("UnityEngine.AudioSource::PlayOneShot"); }
     }
 }

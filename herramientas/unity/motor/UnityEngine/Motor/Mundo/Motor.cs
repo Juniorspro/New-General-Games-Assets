@@ -17,6 +17,7 @@ namespace Porteo
             };
             Fisica.Simulacion.Iniciar();
             Animacion.Animadores.Iniciar();
+            Audio.Sonido.Iniciar();
             Entrada.Iniciar();
             UI.Lienzos.Iniciar();
             // lo que se puede pedir en cualquier momento (Resources.Load, Shader.Find) se trae antes

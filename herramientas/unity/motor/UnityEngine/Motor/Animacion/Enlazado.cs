@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Porteo.Animacion
 {
-    internal enum TipoValor : byte { Posicion, Rotacion, Escala, Activo, Habilitado, Material, Campo, Propiedad, PPtr, Nada }
+    internal enum TipoValor : byte { Posicion, Rotacion, Escala, Activo, Habilitado, Material, Campo, Propiedad, PPtr, Musculo, Nada }
 
     // Una propiedad animada de un objeto (lo que Unity llama un "bound value"): dónde está su
     // valor en el arreglo del reproductor, cómo leerla y cómo escribirla.
@@ -27,6 +27,7 @@ namespace Porteo.Animacion
         public Object ObjetoDefecto;     // PPtr
         public Object ObjetoActual;      // el que tiene puesto
         public Object ObjetoActual2;     // el que eligió la mezcla de este cuadro
+        public int Musculo;              // humanoides: el atributo del enlace (RootT, RootQ, metas, músculos)
 
         public void Leer(float[] v, int o)
         {
@@ -40,6 +41,7 @@ namespace Porteo.Animacion
                 case TipoValor.Material: v[o] = LeerMaterial(); break;
                 case TipoValor.Campo: v[o] = LeerCampo(); break;
                 case TipoValor.Propiedad: v[o] = LeerPropiedad(); break;
+                case TipoValor.Musculo: v[o] = PoseHumana.Defecto(Musculo); break;
                 default: v[o] = 0; break;
             }
         }
@@ -218,6 +220,7 @@ namespace Porteo.Animacion
         readonly Dictionary<(Transform, int), Valor> porTransform = new Dictionary<(Transform, int), Valor>();
         readonly Dictionary<(Object, uint, int), Valor> porAtributo = new Dictionary<(Object, uint, int), Valor>();
         internal int tam;
+        internal bool humano;            // el Animator tiene un avatar humanoide: los músculos se enlazan
         static readonly HashSet<string> avisados = new HashSet<string>();
 
         internal Enlazador(Transform raiz)
@@ -267,7 +270,13 @@ namespace Porteo.Animacion
                 if (e.Atributo != ATR_ACTIVO) return Avisar(e, "GameObject");
                 return Cache(go, e.Atributo, 0, () => { var v = Nuevo(TipoValor.Activo, 1); v.G = go; return v; });
             }
-            if (e.Especial == 8) return null;   // músculos y movimiento de la raíz: los maneja el reproductor
+            // músculos, metas y cuerpo de un humanoide: los junta el reproductor y los aplica PoseHumana
+            if (e.Especial == 8)
+            {
+                if (!humano || t != raiz || e.Atributo >= PoseHumana.TOTAL) return null;
+                int atr = (int)e.Atributo;
+                return Cache(raiz, e.Atributo, 2000, () => { var v = Nuevo(TipoValor.Musculo, 1); v.Musculo = atr; return v; });
+            }
             if (e.Especial == 22 || (e.Especial == 21 && !e.EsPPtr))
             {
                 var r = Componente(go, e.Clase) as Renderer;

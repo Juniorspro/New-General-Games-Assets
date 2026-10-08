@@ -99,8 +99,8 @@ namespace UnityEngine
         public Avatar avatar { get => avatarDatos; set { avatarDatos = value; Rebind(); } }
         public bool isInitialized => Rep() != null;
         public bool hasBoundPlayables => false;
-        public bool isHuman => false;
-        public float humanScale => 1;
+        public bool isHuman => avatarDatos?.humano != null;
+        public float humanScale => avatarDatos?.humano?.Escala ?? 1;
         public bool applyRootMotion { get => raiz; set => raiz = value; }
         public AnimatorCullingMode cullingMode { get => culling; set => culling = value; }
         public AnimatorUpdateMode updateMode { get => actualizacion; set => actualizacion = value; }

@@ -2,8 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class AudioListener : global::UnityEngine.AudioBehaviour
+    public sealed partial class AudioListener
     {
-        public static bool pause { get { global::Porteo.Falta.Llamada("UnityEngine.AudioListener::pause"); return default; } }
     }
 }
