@@ -123,6 +123,19 @@ namespace Porteo.Render
         static int unidadActiva = -1;
 
         public static void UsarPrograma(uint p) { if (programa != p) { Gl.UseProgram(p); programa = p; } }
+
+        // el valor fijo de un atributo sin arreglo (estado del contexto, no del VAO)
+        static readonly Vector4[] genericos = new Vector4[32];
+        static readonly bool[] genericoPuesto = new bool[32];
+
+        public static void Generico(int loc, float x, float y, float z, float w)
+        {
+            if (loc < 0) return;
+            var v = new Vector4(x, y, z, w);
+            if (loc < genericos.Length && genericoPuesto[loc] && genericos[loc] == v) return;
+            Gl.VertexAttrib4f((uint)loc, x, y, z, w);
+            if (loc < genericos.Length) { genericos[loc] = v; genericoPuesto[loc] = true; }
+        }
         public static void UsarVao(uint v) { if (vao != v) { Gl.BindVertexArray(v); vao = v; } }
         public static void OlvidarVao() { vao = uint.MaxValue; }
 

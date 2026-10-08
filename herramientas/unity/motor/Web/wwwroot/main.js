@@ -78,6 +78,16 @@ if (new URLSearchParams(location.search).has('perfil')) exp.PerfilGpu(true);
 // ?apagar=sin3d,sinui...: partes del dibujo apagadas, para aislar problemas
 for (const x of (new URLSearchParams(location.search).get('apagar') || '').split(',')) if (x) exp.Apagar(x);
 for (const x of (new URLSearchParams(location.search).get('ocultar') || '').split(',')) if (x) exp.Ocultar(x);
+for (const x of (new URLSearchParams(location.search).get('sinshader') || '').split(',')) if (x) exp.OcultarShader(x);
+// ?verfs=SR/Slime/Body|normalize(vs_TEXCOORD3)*0.5+0.5: la salida de ese shader reemplazada (depurar)
+if (new URLSearchParams(location.search).has('verfs')) { const [s, e] = new URLSearchParams(location.search).get('verfs').split('|'); exp.VerFs(s, e); }
+// ?uniformes=SR/Slime/Body: qué valores recibe ese shader (en la consola)
+if (new URLSearchParams(location.search).has('uniformes')) exp.VolcarUniformes(new URLSearchParams(location.search).get('uniformes'));
+// ?camara=x,y,z,yaw,pitch: la cámara principal fija ahí (para mirar algo de cerca)
+if (new URLSearchParams(location.search).has('camara')) {
+  const c = new URLSearchParams(location.search).get('camara').split(',').map(Number);
+  exp.FijarCamara(c[0] || 0, c[1] || 0, c[2] || 0, c[3] || 0, c[4] || 0);
+}
 // ?adelantar=N[&escena=X]: N segundos de juego sin dibujar al llegar a la escena (capturas de prueba)
 if (new URLSearchParams(location.search).has('adelantar'))
   exp.Adelantar(parseFloat(new URLSearchParams(location.search).get('adelantar')) || 0, new URLSearchParams(location.search).get('escena') || 'MainMenu');

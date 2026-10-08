@@ -89,6 +89,15 @@ public static partial class Programa
     // con el origen abajo a la izquierda (como Input.mousePosition)
     [JSExport] public static void PerfilGpu(bool si) => Porteo.Render.Dibujo.PerfilGpu = si;
     [JSExport] public static void Ocultar(string nombre) => Porteo.Render.Dibujo.Ocultos.Add(nombre);
+    [JSExport] public static void VolcarUniformes(string shader) => Porteo.Render.Dibujo.ShaderVolcado = shader;
+    [JSExport] public static void OcultarShader(string shader) => Porteo.Render.Dibujo.ShadersOcultos.Add(shader);
+    [JSExport] public static void VerFs(string shader, string expresion) { Shader.DepurarShader = shader; Shader.DepurarExpresion = expresion; }
+    [JSExport] public static void FijarCamara(double x, double y, double z, double yaw, double pitch)
+    {
+        Porteo.Render.Dibujo.CamaraForzada = true;
+        Porteo.Render.Dibujo.PosForzada = new Vector3((float)x, (float)y, (float)z);
+        Porteo.Render.Dibujo.AngulosForzados = new Vector3((float)pitch, (float)yaw, 0);
+    }
     [JSExport] public static void Apagar(string que)
     {
         if (que == "aniso") Porteo.Render.Gpu.SinAnisotropia = true;

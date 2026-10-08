@@ -140,6 +140,27 @@ if (args.Contains("slime"))
             Console.WriteLine($"   bloque vacío={b.isEmpty}");
         }
 }
+if (args.Contains("textura"))
+{
+    var nombre = args[Array.IndexOf(args, "textura") + 1];
+    var tex = Resources.FindObjectsOfTypeAll<Texture2D>().FirstOrDefault(t => t.name == nombre);
+    if (tex == null) Console.WriteLine("textura: no está " + nombre);
+    else
+    {
+        var px = tex.GetPixels32();
+        int opacos = px.Count(c => c.a >= 128);
+        Console.WriteLine($"textura {nombre} {tex.width}x{tex.height} formato={tex.format} opacos={opacos * 100.0 / px.Length:F1}%");
+        // PPM con el alfa como gris al lado del color
+        using var f = File.Create($"/tmp/claude-0/slime/anim/{nombre}.ppm");
+        var cab = System.Text.Encoding.ASCII.GetBytes($"P6 {tex.width * 2} {tex.height} 255\n");
+        f.Write(cab);
+        for (int y = tex.height - 1; y >= 0; y--)
+        {
+            for (int x = 0; x < tex.width; x++) { var c = px[y * tex.width + x]; f.WriteByte(c.r); f.WriteByte(c.g); f.WriteByte(c.b); }
+            for (int x = 0; x < tex.width; x++) { var c = px[y * tex.width + x]; f.WriteByte(c.a); f.WriteByte(c.a); f.WriteByte(c.a); }
+        }
+    }
+}
 var faltan = Porteo.Falta.Vistos.ToList();
 Console.WriteLine($"porteo: {faltan.Count} miembros sin hacer usados:");
 foreach (var f in faltan) Console.WriteLine("  " + f);

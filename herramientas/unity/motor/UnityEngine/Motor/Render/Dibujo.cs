@@ -45,6 +45,7 @@ namespace Porteo.Render
         public static readonly HashSet<string> Apagado = new HashSet<string>();
         // los objetos con estos nombres no se dibujan (?ocultar=ocean,Clouds)
         public static readonly HashSet<string> Ocultos = new HashSet<string>();
+        public static readonly HashSet<string> ShadersOcultos = new HashSet<string>();   // ?sinshader=SR/Slime/Eyes
         static readonly Dictionary<string, (double ms, int n)> perfil = new Dictionary<string, (double, int)>();
         static long perfilDesde;
 
@@ -147,9 +148,18 @@ namespace Porteo.Render
         static Camera camara;
         static Vector3 posCamara;
 
+        // ?camara=x,y,z,yaw,pitch: la cámara principal en un lugar fijo (para mirar algo de cerca)
+        public static bool CamaraForzada;
+        public static Vector3 PosForzada, AngulosForzados;
+
         public static void Camara(Camera cam, Shader reemplazo = null, string etiqueta = null)
         {
             if (!Gpu.Activo) return;
+            if (CamaraForzada && cam == Camera.main)
+            {
+                cam.transform.position = PosForzada;
+                cam.transform.rotation = Quaternion.Euler(AngulosForzados);
+            }
             camara = cam;
             Camaras.actual = cam;
             Camera.onPreCull?.Invoke(cam);
@@ -261,6 +271,8 @@ namespace Porteo.Render
                     if (s < 0 || (r.lodMascara & (1 << s)) == 0) continue;
                 }
                 if (r.estaticoPrimera >= 0 ? sinEstaticos : soloEstaticos) continue;
+                // ShadowsOnly: sólo existe para el mapa de sombras (la sombra barata de los slimes)
+                if (r.sombras == 3) continue;
                 if (Ocultos.Count > 0 && Ocultos.Contains(go.name)) continue;
                 var m = r.MallaParaDibujar();
                 if ((object)m == null || m.destruido) continue;
@@ -286,6 +298,7 @@ namespace Porteo.Render
                 {
                     var mat = mats[i];
                     if ((object)mat == null || mat.destruido || (object)mat.sh == null) continue;
+                    if (ShadersOcultos.Count > 0 && ShadersOcultos.Contains(mat.sh.m_Name)) continue;
                     int sub = r.estaticoPrimera >= 0 ? r.estaticoPrimera + Math.Min(i, r.estaticoCantidad - 1) : Math.Min(i, subs - 1);
                     if (sub < 0 || sub >= subs) continue;
                     if (luces < 0) luces = LucesObjeto.Para(r, b);
@@ -633,18 +646,28 @@ namespace Porteo.Render
             return p;
         }
 
+        // ?uniformes=SR/Slime/Body: los valores que recibe el primer dibujo de ese shader (para depurar)
+        public static string ShaderVolcado;
+        static readonly HashSet<string> volcados = new HashSet<string>();
+
         static void Subir(Programa p, Material mat, Tabla bloque)
         {
             var us = p.Uniformes;
             var sh = mat.sh;
+            System.Text.StringBuilder volcado = null;
+            if (ShaderVolcado != null && sh.m_Name == ShaderVolcado && volcados.Add(mat.m_Name + "/" + p.Id))
+                volcado = new System.Text.StringBuilder($"porteo: uniformes de {sh.m_Name} ({mat.m_Name}):");
             for (int i = 0; i < us.Length; i++)
             {
                 ref var u = ref us[i];
                 Valor v;
                 if (!objeto.Leer(u.Id, out v) && (bloque == null || !bloque.Leer(u.Id, out v)) && !mat.props.Leer(u.Id, out v) && !Globales.Tabla.Leer(u.Id, out v))
                     v = default;
+                if (volcado != null)
+                    volcado.Append($"\n  {Ids.Nombre(u.Id)} = {(v.O is Texture tx ? "tex " + tx.m_Name : v.O is float[] fa ? "[" + string.Join(",", Array.ConvertAll(fa, x => x.ToString("F2"))) + "]" : v.Tipo == TipoValor.Nada ? "(nada)" : v.V.ToString())}");
                 Poner(ref u, v, sh);
             }
+            if (volcado != null) Anfitrion.Consola?.Invoke(volcado.ToString(), LogType.Log);
         }
 
         static void SubirObjeto(Programa p)

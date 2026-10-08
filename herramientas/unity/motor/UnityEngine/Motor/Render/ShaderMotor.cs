@@ -307,6 +307,8 @@ namespace UnityEngine
             return activo;
         }
 
+        public static string DepurarShader, DepurarExpresion;
+
         // El programa de una pasada para estas palabras clave: la variante que más coincide
         // (las que no le importan a la pasada se ignoran, como en Unity).
         internal Porteo.Render.Programa ProgramaDe(PasadaShader pa, List<string> claves, bool instanciar)
@@ -328,6 +330,13 @@ namespace UnityEngine
                 // suele venir vacío: entonces el fragment sale del mismo código que el vertex
                 var frag = fs[pa.Fragment[f].Blob].fs;
                 if (string.IsNullOrWhiteSpace(frag)) frag = fs[pa.Vertex[v].Blob].fs;
+                // ?verfs=Shader|expresión: la salida del fragment reemplazada por una expresión (depurar)
+                if (DepurarShader != null && dueno.m_Name == DepurarShader)
+                {
+                    int fin = frag.LastIndexOf("return;", StringComparison.Ordinal);
+                    if (fin > 0) frag = frag.Substring(0, fin) + "SV_Target0 = vec4(" + DepurarExpresion + ", 1.0);\n    " + frag.Substring(fin);
+                    Debug.Log($"porteo: depurando {dueno.m_Name}/{pa.Nombre} ({clave}): {(fin > 0 ? "reemplazado" : "sin return")}");
+                }
                 p = Porteo.Render.Programa.De(fs[pa.Vertex[v].Blob].vs, frag, dueno.m_Name + "/" + pa.Nombre, instanciar);
             }
             pa.programas[clave] = p;

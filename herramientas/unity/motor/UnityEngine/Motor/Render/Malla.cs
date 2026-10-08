@@ -810,6 +810,7 @@ namespace UnityEngine
             if (!Gpu.Activo) return;
             foreach (var v in vaos.Values) { uint x = v; Gl.DeleteVertexArrays(1, &x); }
             vaos.Clear();
+            faltantes.Clear();
             Gpu.OlvidarVao();
             Gpu.Borrar(ref vbo);
             Gpu.Borrar(ref ibo);
@@ -817,15 +818,30 @@ namespace UnityEngine
 
         internal override void AlLiberar() => LiberarGpu();
 
+        // los atributos que el programa pide y la malla no tiene: su valor fijo (blanco el color,
+        // como Unity) no es estado del VAO sino del contexto, así que va en cada dibujo
+        readonly Dictionary<int, int[]> faltantes = new Dictionary<int, int[]>();
+
+        void Faltantes(int clave)
+        {
+            if (!faltantes.TryGetValue(clave, out var l)) return;
+            foreach (int x in l)
+            {
+                if (x < 0) Gpu.Generico(~x, 1, 1, 1, 1);
+                else Gpu.Generico(x, 0, 0, 0, 1);
+            }
+        }
+
         // el VAO de esta malla para un programa (los atributos que pide, con los canales que hay)
         internal unsafe uint Vao(Programa p, uint vboAlternativo = 0)
         {
             int clave = p.Serie * 4 + (vboAlternativo != 0 ? 1 : 0);
-            if (vboAlternativo == 0 && vaos.TryGetValue(clave, out var v)) return v;
+            if (vboAlternativo == 0 && vaos.TryGetValue(clave, out var v)) { Faltantes(clave); return v; }
             uint vao;
             if (vboAlternativo != 0 && vaos.TryGetValue(clave, out vao)) { }
             else { Gl.GenVertexArrays(1, &vao); vaos[clave] = vao; }
             Gpu.UsarVao(vao);
+            var falta = new List<int>();
             for (int c = 0; c < Canales.CANTIDAD; c++)
             {
                 int loc = p.Atributos[c];
@@ -834,8 +850,7 @@ namespace UnityEngine
                 if (ch.Dim == 0)
                 {
                     Gl.DisableVertexAttribArray((uint)loc);
-                    if (c == Canales.COLOR) Gl.VertexAttrib4f((uint)loc, 1, 1, 1, 1);
-                    else Gl.VertexAttrib4f((uint)loc, 0, 0, 0, 1);
+                    falta.Add(c == Canales.COLOR ? ~loc : loc);
                     continue;
                 }
                 // los canales de posición, normal y tangente salen del buffer de piel si lo hay
@@ -848,6 +863,8 @@ namespace UnityEngine
                 else Gl.VertexAttribPointer((uint)loc, dePiel ? (c == Canales.TANGENTE ? 4 : 3) : ch.Dim, dePiel ? Gl.FLOAT : ch.TipoGl, (byte)(!dePiel && ch.Normalizado ? 1 : 0), paso, desde);
             }
             Gl.BindBuffer(Gl.ELEMENT_ARRAY_BUFFER, ibo);
+            faltantes[clave] = falta.ToArray();
+            Faltantes(clave);
             return vao;
         }
 
