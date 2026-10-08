@@ -1,0 +1,47 @@
+diff --git a/include/build.h b/include/build.h
+index 8eb7396..db72646 100644
+--- a/include/build.h
++++ b/include/build.h
+@@ -137,6 +137,8 @@ Then you can use another oneliner to query all variables:
+ 		#define XASH_NSWITCH 1
+ 	#elif defined __vita__
+ 		#define XASH_PSVITA 1
++	#elif defined __EMSCRIPTEN__
++		#define XASH_EMSCRIPTEN 1
+ 	#elif defined __wasi__
+ 		#define XASH_WASI 1
+ 	#elif defined __sun__
+diff --git a/include/buildenums.h b/include/buildenums.h
+index ef73e85..4478c44 100644
+--- a/include/buildenums.h
++++ b/include/buildenums.h
+@@ -60,6 +60,7 @@ For more information, please refer to <http://unlicense.org/>
+ #define PLATFORM_HURD       17
+ #define PLATFORM_PSP        18
+ #define PLATFORM_IOS    	19
++#define PLATFORM_EMSCRIPTEN 20
+ 
+ #if XASH_WIN32
+ 	#define XASH_PLATFORM PLATFORM_WIN32
+@@ -89,6 +90,8 @@ For more information, please refer to <http://unlicense.org/>
+ 	#define XASH_PLATFORM PLATFORM_NSWITCH
+ #elif XASH_PSVITA
+ 	#define XASH_PLATFORM PLATFORM_PSVITA
++#elif XASH_EMSCRIPTEN
++	#define XASH_PLATFORM PLATFORM_EMSCRIPTEN
+ #elif XASH_WASI
+ 	#define XASH_PLATFORM PLATFORM_WASI
+ #elif XASH_SUNOS
+diff --git a/src/library_suffix.c b/src/library_suffix.c
+index 134e4a0..7c67bba 100644
+--- a/src/library_suffix.c
++++ b/src/library_suffix.c
+@@ -73,6 +73,8 @@ const char *Q_PlatformStringByID( const int platform )
+ 		return "psvita";
+ 	case PLATFORM_WASI:
+ 		return "wasi";
++	case PLATFORM_EMSCRIPTEN:
++		return "emscripten";
+ 	case PLATFORM_SUNOS:
+ 		return "sunos";
+ 	case PLATFORM_HURD:

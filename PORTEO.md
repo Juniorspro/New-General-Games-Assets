@@ -152,6 +152,7 @@ anda en cada etapa** en vez de esperar al final.
 | `*.sb3` | **Scratch** |
 | `phaser`, `pixi`, `three`, `babylon` en el JS | HTML5 con esa biblioteca |
 | `main.pak` (todo con XOR 0xF7, magia `C04AC0BA`) + `properties/` + `.exe`; strings `SexyAppFramework`, `PopCap` | **PopCap / SexyApp** (PvZ, Zuma, Peggle, Bejeweled…). Se abre con `herramientas/popcap/pak.py` |
+| `hl.exe` + `valve/` + `cstrike/` (o otro mod), `*.wad`, `*.bsp`, `liblist.gam` | **GoldSrc** (Half-Life, CS 1.6 y sus mods): va con Xash3D FWGS (`porteos/cs16/`) |
 | `*.exe` de DOS, `*.jar` de Java ME, ROMs | juego viejo: va por emulación |
 
 ### 4.2 Qué se hace con cada uno
@@ -174,7 +175,7 @@ anda en cada etapa** en vez de esperar al final.
 | ROM o Java ME del dueño | emulador web (EmulatorJS / freej2me-web) + controles | 1:1 (emulado) |
 | **Unity Android Mono** (el C# viene en `Managed/`) | AssetRipper reconstruye el proyecto con los scripts decompilados y se compila para WebGL con **la misma versión de Unity** (necesita una licencia activada: la del dueño). Antes, medir con `analizar-apk.py`: audio decodificado, tamaño de las escenas y formato de las texturas dicen si entra en una pestaña de teléfono | 1:1 si entra en memoria |
 | **Unity Android sin proyecto** (IL2CPP) | no se puede pasar el binario a web. Se extraen los assets (AssetRipper/AssetStudio: modelos, texturas, audio, escenas) y se **rearma la lógica** en three.js. Si hay un build de PC Mono, las DLL se descompilan con ILSpy y la lógica se traduce leyendo el original | lo más cercano posible |
-| **juego de PC en C++ con una reimplementación abierta** (PvZ → PvZ-Portable, y las hay de muchos clásicos: OpenTTD, devilutionX, OpenRCT2…) | se compila la reimplementación a WebAssembly con Emscripten y corre con los **datos originales del dueño**. Si espera otra versión de los datos, se parchea el motor (no se inventan datos). Receta: `porteos/pvz/` | 1:1 (la lógica es la del juego; los datos, los del dueño) |
+| **juego de PC en C++ con una reimplementación abierta** (PvZ → PvZ-Portable, Half-Life/CS 1.6 → Xash3D FWGS + cs16-client, y las hay de muchos clásicos: OpenTTD, devilutionX, OpenRCT2…) | se compila la reimplementación a WebAssembly con Emscripten y corre con los **datos originales del dueño**. Si espera otra versión de los datos, se parchea el motor (no se inventan datos). Recetas: `porteos/pvz/`, `porteos/cs16/` (motor con módulos `.so`, datos de cientos de MB que se bajan por partes) | 1:1 (la lógica es la del juego; los datos, los del dueño) |
 | GameMaker / libGDX / Unreal sin fuente | igual: se extraen los assets y se rehace la lógica en HTML5 | lo más cercano posible |
 | código fuente de cualquier motor | se exporta a web desde el motor si se puede instalar acá; si no (Unity y Unreal necesitan editor con licencia), se rearma | según el caso |
 
@@ -532,6 +533,15 @@ créditos ni se tapa al autor.
 | un port de Android de un juego de PC | quien lo porteó puede **reemplazar** el teclado y el mouse por controles de pantalla: en la web de PC no se puede jugar | buscar si la entrada original sigue en el código (en Slime Rancher, `SRInput` con todas sus teclas) y que el control táctil consulte también a la de PC |
 | AssetRipper gratis con los shaders | no los decompila: en "dummy" todo se ve difuso y plano | exportarlos en YAML: conservan sus programas compilados, y los GLES2/GLES3 de Android son los mismos que usa WebGL |
 | `pkill -f patrón` o `pgrep -f patrón` en el mismo comando que menciona el patrón | mata la propia shell (sale con 144) | anclar el patrón al proceso: `pgrep -f "^python3 -m http.server"`, o matar por PID |
+| módulos de WebAssembly (`SIDE_MODULE`) con nombres globales repetidos | comparten los símbolos: el servidor de CS leía el `gpGlobals` del cliente y cada modelo salía con el nombre de otro | compilar los módulos con `-fvisibility=hidden` (`porteos/cs16/portear.sh`) |
+| la pantalla completa de SDL en el navegador | pone el lienzo en la capa de arriba de todo: tapa los controles HTML | ventana de SDL; la pantalla completa la pide la página (`web.js`) |
+| pointer lock con el dedo | Chrome da todos los toques en (0, 0) | bloquear el puntero sólo si el último toque fue de un mouse |
+| un `.wad` adentro de un `.pk3` (Xash3D) | el motor sólo monta los `.wad` sueltos de cada carpeta, al iniciar, y ahí registra las calcomanías: sin `decals.wad` suelto, ni balazos ni sangre | los `.wad` del sistema sueltos, escritos antes de arrancar (`porteos/cs16/armar-datos.py`) |
+| lo que el motor lee una sola vez al iniciar, en un paquete que se baja después | `sound/sentences.txt` de CS: la radio y los bots quedaban mudos ("no sentence named") | relevar qué abre al arrancar y meterlo con el menú, aunque "sea de las partidas" |
+| botones del menú dibujados como imagen (`btns_main.bmp` del `extras.pk3` de Xash3D) | el menú sale en inglés aunque el juego esté traducido | sacar esas imágenes: el menú escribe los textos con la traducción |
+| `radio1` + `menuselect 1` seguidos (CS) | el menú del servidor llega después de elegir y queda abierto: el próximo número elige una orden en vez de un arma | los comandos directos (`coverme`, `go`, `roger`…) |
+| medidas en `vh`/`vw` en estilos agregados después de `Porteo.web()` | con el teléfono parado `web.js` ya reescribió las reglas que había: las nuevas miden el lado equivocado y los botones salen 2,2× más grandes | `calc(n * var(--pvh, 1vh))` (`porteos/cs16/controles.js`) |
+| una prueba que juega contra bots | a veces un bot te mata en medio de la prueba y todo lo que sigue "falla" | medir con los bots quietos (`bot_zombie 1`) después de ver que entran |
 
 ## 14. Registro de porteos
 
@@ -717,6 +727,80 @@ Pruebas: 39/39 (prueba.mjs: toques reales, intro, teclado propio, pantalla ancha
 - **Rearmarlo:** `porteos/pvz/portear.sh RUTA/plantas.rar [SALIDA] [--un-archivo] [--depuracion]`.
   **Probarlo:** `node porteos/pvz/prueba.mjs http://127.0.0.1:8831/ file:///…/pvz.html`;
   con `--depuracion`, también `recorrido.mjs` (31 niveles y minijuegos) y `bailarin.mjs`.
+
+### Counter-Strike 1.6 (la copia "dani vizcarra LOQUENDO") — terminado (falta la prueba en un teléfono de verdad)
+
+```
+Origen: CS 1.6 dani vizcarra LOQUENDO.rar (231 MB, sha256 81b151db…ad18), por link de MediaFire:
+        "COUNTER STRIKE 1.6.exe" (instalador Inno Setup de la No Steam v23b) + "PARCHE IDIOMA.exe"
+        (textos y voces en castellano)
+Motor: GoldSrc (hl.exe + hw.dll, valve/ + cstrike/, client.dll y mp.dll de Windows)
+Estrategia: Xash3D FWGS (reimplementación GPL de GoldSrc) + cs16-client + ReGameDLL_CS (servidor y
+            bots ZBot) → WebAssembly con Emscripten 6.0.11, con los datos del dueño y parches para la web
+Fidelidad: casi 1:1 — la lógica de CS, los 31 mapas, modelos, sonidos y el castellano de la copia (con
+           sus voces); el menú es el de cs16-client, armado como el GameMenu.res de la copia sin lo que
+           en un navegador no anda; sin juego en red (no hay UDP): se juega contra bots
+Tamaños: instalado 503 MB → web 181 MB (al abrir se bajan 14: motor 9,6 + menú 4,1; 53 de las partidas
+         mientras se mira el menú; cada mapa, de 0,4 a 9,6, al elegirlo) · zip 176 MB · APK 177 MB
+         · un archivo 80 MB (con 4 mapas: el juego entero son 171 MB)
+Carga (servidor local, CPU sin limitar): el motor anda a los 1,4 s; de_dust2 se baja y carga en 6,5 s;
+         el archivo único, 4,2 s
+Pruebas: 60/60 (porteos/cs16/prueba.mjs) · no se pudo probar en un teléfono real
+```
+
+- **Qué hizo falta** (detalle en [`porteos/cs16/LEEME.md`](porteos/cs16/LEEME.md)):
+  - la plataforma `emscripten` en Xash3D y cs16-client, el bucle por `requestAnimationFrame`, WebGL2
+    (el shim de GL2 con VAO obligatorio) y los `.so` como módulos que la página precompila;
+  - `-fvisibility=hidden`: los módulos de WebAssembly comparten los nombres globales y el servidor
+    leía el `gpGlobals` del cliente;
+  - un error de cs16-client (`GL_PROJECTION_MATRIX` mal definido: `INVALID_ENUM` en cada cuadro);
+  - los mapas se bajan al elegirlos: el motor le pregunta a la página antes de `map`/`changelevel`;
+  - las texturas: un `.wad` por mapa con exactamente las que usa (los 29 `.wad` de texturas, 116 MB,
+    quedan afuera); los `.wad` del sistema van sueltos (si no, no hay calcomanías);
+  - el menú en castellano: sin los botones dibujados en inglés del motor y con las ~290 frases que el
+    castellano de la copia no trae (`mainui_castellano.txt`).
+- **Controles** (al estilo de Standoff 2 / Blood Strike, pedido del dueño): joystick que aparece
+  bajo el pulgar, mirar arrastrando a la derecha (también con el botón de disparo), disparo grande y
+  otro a la izquierda, saltar, agacharse fijo, recargar, mira/secundario, usar, las armas 1 a 5,
+  tirar el arma, comprar, equipo, radio (las órdenes con los textos de la copia), tabla, ajustes
+  (sensibilidad, opacidad, disparo izquierdo, agacharse fijo) y pausa. Atrás cierra el menú abierto o
+  abre el del juego; dos seguidos salen. El nombre se escribe con el teclado del teléfono.
+- **Optimización:**
+  - 503 → 171 MB de datos: sólo lo que CS usa (relevado abriendo los 31 mapas con el motor), en
+    paquetes con gzip;
+  - al abrir se bajan 14 MB (el menú, en paralelo con la compilación del motor); lo común a las
+    partidas, mientras se mira el menú; cada mapa al elegirlo, y el siguiente de la rotación mientras
+    se juega;
+  - instalable: el motor y el menú se guardan en la primera visita; cada mapa, la primera vez que se
+    juega (después anda sin red).
+- **Probado (60/60):**
+  - carga → Nueva Partida → de_dust2 → equipo → clase, sólo tocando;
+  - comprar, saltar (+44 unidades), agacharse (−18) y pararse, caminar, mirar (−26,4° por 120 px),
+    caminar y mirar a la vez, cuchillo, pistola, disparar con los dos botones, recargar, mira,
+    equipo, radio (llega la voz), ajustes (sensibilidad ×2 = giro ×2, y queda guardada), pausa,
+    continuar, atrás, Escape;
+  - segundo plano: se suelta el joystick y el sonido se calla; el nombre escrito con el teclado
+    del teléfono sobrevive a recargar;
+  - parado (girado), 640×360, sin red, el archivo único desde el disco y el APK (firma v2+v3,
+    nombre, ícono, SDK, orientación, los 31 mapas adentro).
+- **Encontrado y arreglado en el camino:** el menú salía en inglés (botones dibujados); no había
+  calcomanías (`.wad` dentro de un `.pk3`); la radio y los bots estaban mudos (`sentences.txt` se
+  lee al arrancar); Escape en el menú de compra abría el menú del juego encima y después las teclas
+  no volvían al juego; el menú de radio del servidor les robaba los números a las armas; parado,
+  los botones salían 2,2× más grandes; en 16:9, "Usar" pisaba "Tirar arma"; el mensaje del día
+  (HTML) salía como código encima del menú de equipos. Ver §13.
+- **Problemas conocidos:**
+  - no se probó en un teléfono real ni en Safari;
+  - el menú del juego es chico en un teléfono (botones de ~21 px de alto): es el de cs16-client a
+    escala del alto de la pantalla;
+  - sin juego en red: el navegador no tiene UDP;
+  - el APK pesa 177 MB porque lleva los 31 mapas (para jugar sin internet);
+  - firmado con una clave de esta sesión: para que una versión futura se instale encima, hace
+    falta guardar la clave (§7).
+- **Rearmarlo:** `porteos/cs16/portear.sh "RUTA/CS 1.6 dani vizcarra LOQUENDO.rar" [SALIDA]` (6 min
+  con Emscripten ya instalado). **Probarlo:** `node porteos/cs16/prueba.mjs http://127.0.0.1:8851/cs16/
+  entrega-cs16/cs16.apk file:///…/cs16.html`.
+- **No va al repo** (§11): ni el juego ni el motor compilado; `entrega-*/` está en `.gitignore`.
 
 ### FNaF 2 — port de otra sesión, analizado y corregido
 

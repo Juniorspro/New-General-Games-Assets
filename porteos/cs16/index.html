@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Counter-Strike 1.6</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; overscroll-behavior: none; }
+  body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; outline: none; }
+  /* la carga: la barra después de la intro y el cartel al bajar un mapa */
+  #cs-carga { position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center; flex-direction: column;
+    background: rgba(0, 0, 0, .78); color: #ffc864; font: 700 4.6vh system-ui, sans-serif; letter-spacing: .02em; pointer-events: none; }
+  #cs-carga.si { display: flex; }
+  #cs-carga .barra { width: min(60vw, 520px); height: 1.6vh; min-height: 8px; margin-top: 2.4vh; border: 1px solid rgba(255, 200, 100, .6);
+    border-radius: 99px; overflow: hidden; }
+  #cs-carga .barra div { height: 100%; width: 0; background: #ffc864; transition: width .2s; }
+  #cs-carga small { margin-top: 1.6vh; font-weight: 500; font-size: 2.8vh; color: rgba(255, 255, 255, .75); }
+  /* lo que se baja de fondo mientras se mira el menú */
+  #cs-fondo { position: fixed; right: calc(8px + env(safe-area-inset-right)); bottom: 6px; z-index: 35; display: none;
+    font: 600 12px system-ui, sans-serif; color: rgba(255, 220, 150, .85); text-shadow: 0 1px 2px #000; pointer-events: none; }
+  #cs-fondo.si { display: block; }
+  #cs-error { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 6vw;
+    background: #000; color: #fff; font: 600 20px system-ui, sans-serif; text-align: center; white-space: pre-wrap; }
+  #cs-error.si { display: flex; }
+  /* el teclado del teléfono: un campo de verdad, invisible (16px: si no, iOS hace zoom al enfocarlo) */
+  #cs-teclado { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0;
+    font-size: 16px; pointer-events: none; -webkit-user-select: text; user-select: text; }
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+<div id="cs-carga"><div id="cs-carga-texto">Cargando…</div><div class="barra"><div id="cs-carga-barra"></div></div><small id="cs-carga-detalle"></small></div>
+<div id="cs-fondo"></div>
+<div id="cs-error"></div>
+<input id="cs-teclado" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-hidden="true" tabindex="-1">
+<script src="porteo-web.js"></script>
+<script src="porteo-intro.js"></script>
+<script src="controles.js"></script>
+<script src="motor/xash.js"></script>
+<script>
+'use strict';
+// Counter-Strike 1.6 en el navegador: el motor es Xash3D FWGS (una reimplementación abierta de
+// GoldSrc) compilado a WebAssembly, con cs16-client y ReGameDLL (la lógica de CS y los bots), y
+// los datos de la copia del dueño. Este archivo carga, conecta el motor con la página (controles
+// táctiles, mapas que se bajan al elegirlos, guardado) y muestra la intro de JXStudios.
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const estado = window.__cs = { log: [], fase: 'cargando', bajado: {}, errores: [] };
+  const anotar = (t) => { estado.log.push(t); if (estado.log.length > 400) estado.log.splice(0, 100); };
+  const mb = (n) => (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+
+  const error = (e) => {
+    console.error(e);
+    estado.errores.push(String(e && e.message || e));
+    const c = $('cs-error');
+    c.textContent = 'No se pudo cargar el juego.\n\n' + (e && e.message || e) + '\n\nRevisá la conexión y volvé a abrirlo.';
+    c.className = 'si';
+  };
+  addEventListener('error', (e) => estado.errores.push(String(e.message)));
+  addEventListener('unhandledrejection', (e) => estado.errores.push(String(e.reason && e.reason.message || e.reason)));
+
+  Porteo.web({ orientacion: 'landscape', offline: window.__porteoUnArchivo ? false : undefined });
+  let introLista = false;
+  Porteo.intro({ aviso: {
+    es: 'Port no oficial de «Counter-Strike 1.6» (Valve) para jugar en el navegador. Motor: Xash3D FWGS + cs16-client + ReGameDLL.',
+    en: 'Unofficial browser port of «Counter-Strike 1.6» (Valve). Engine: Xash3D FWGS + cs16-client + ReGameDLL.',
+    pt: 'Port não oficial de «Counter-Strike 1.6» (Valve) para o navegador. Motor: Xash3D FWGS + cs16-client + ReGameDLL.',
+  } }).then(() => { introLista = true; if (estado.fase !== 'jugando') mostrarCarga('Cargando…'); });
+
+  // ── carga con progreso ───────────────────────────────────────────────────────────────
+  let cargaDe = null;     // qué está mostrando el cartel
+  function mostrarCarga(texto, detalle) {
+    cargaDe = texto;
+    $('cs-carga-texto').textContent = texto;
+    $('cs-carga-detalle').textContent = detalle || '';
+    $('cs-carga').className = 'si';
+  }
+  function progresoCarga(f, detalle) {
+    $('cs-carga-barra').style.width = Math.round(Math.min(1, f) * 100) + '%';
+    if (detalle !== undefined) $('cs-carga-detalle').textContent = detalle;
+  }
+  function ocultarCarga() { cargaDe = null; $('cs-carga').className = ''; }
+
+  // Un archivo con gzip: se baja contando los bytes y se abre con DecompressionStream.
+  async function traerGz(ruta, total, alAvanzar) {
+    const r = await fetch(ruta);
+    if (!r.ok) throw new Error(`No se pudo bajar ${ruta} (${r.status})`);
+    let flujo = r.body;
+    if (flujo && alAvanzar) {
+      let n = 0;
+      flujo = flujo.pipeThrough(new TransformStream({ transform(trozo, ctl) { n += trozo.length; alAvanzar(n, total); ctl.enqueue(trozo); } }));
+    } else if (!flujo) {
+      flujo = new Blob([await r.arrayBuffer()]).stream();
+    }
+    const abierto = flujo.pipeThrough(new DecompressionStream('gzip'));
+    return new Uint8Array(await new Response(abierto).arrayBuffer());
+  }
+
+  // ── el motor ─────────────────────────────────────────────────────────────────────────
+  let M = null, indice = null;
+  const bajados = new Map();      // paquete → Promise (bajado y escrito en el disco del motor)
+  const montados = new Set();     // paquetes que el motor ya ve (fs_rescan)
+  const progreso = new Map();     // paquete → bytes bajados
+
+  // bajar (a memoria) y escribir en el disco del motor van por separado: el menú se baja mientras
+  // el motor compila, y se escribe cuando el motor existe
+  const enMemoria = new Map();    // paquete → Promise<Uint8Array>
+  function bajar(n) {
+    if (!enMemoria.has(n)) {
+      const p = indice.paquetes[n];
+      enMemoria.set(n, traerGz('datos/' + p.archivo, p.gz, (b) => { progreso.set(n, b); }));
+      enMemoria.get(n).catch(() => enMemoria.delete(n));
+    }
+    return enMemoria.get(n);
+  }
+  function paquete(n) {
+    if (!bajados.has(n)) {
+      const p = indice.paquetes[n];
+      bajados.set(n, bajar(n).then((datos) => {
+        M.FS.writeFile(`/rodir/${p.carpeta}/porteo-${n.replace(/\//g, '-')}.pk3`, datos);
+        enMemoria.delete(n);
+        progreso.set(n, p.gz);
+        estado.bajado[n] = true;
+      }));
+      bajados.get(n).catch(() => bajados.delete(n));     // si falló, el próximo pedido lo reintenta
+    }
+    return bajados.get(n);
+  }
+  const bytesDe = (ns) => ns.reduce((a, n) => a + indice.paquetes[n].gz, 0);
+  const hechoDe = (ns) => ns.reduce((a, n) => a + (progreso.get(n) || 0), 0);
+
+  const comando = (c) => M && M.ccall('Porteo_Comando', null, ['string'], [c]);
+  const cs = {
+    comando,
+    mover: (a, c) => M && M._Porteo_Mover(a, c),
+    mirar: (g, p) => M && M._Porteo_Mirar(g, p),
+    estado: () => { try { return JSON.parse(M.ccall('Porteo_Estado', 'string', [], [])); } catch (_) { return null; } },
+  };
+  window.CS = cs;
+
+  // Antes de cargar un mapa el motor pregunta si están sus datos (Porteo_MapaListo). Si no,
+  // se bajan con un cartel y se vuelve a mandar el mismo comando; fs_rescan monta lo nuevo.
+  function mapaListo(cmd, mapa) {
+    const m = String(mapa).toLowerCase();
+    const info = indice.mapas[m];
+    if (!info) return 1;                           // no es de este juego: que el motor diga que no está
+    const hacen = [...indice.partida, ...info.paquetes];
+    const faltan = hacen.filter((n) => !montados.has(n));
+    if (!faltan.length) return 1;
+    const total = bytesDe(faltan);
+    const pendiente = faltan.some((n) => !estado.bajado[n]);
+    if (pendiente) mostrarCarga(`Bajando ${m}…`, mb(total));
+    const t = setInterval(() => progresoCarga(hechoDe(faltan) / total, `${mb(hechoDe(faltan))} de ${mb(total)}`), 150);
+    Promise.all(faltan.map(paquete)).then(() => {
+      clearInterval(t);
+      faltan.forEach((n) => montados.add(n));
+      if (cargaDe) ocultarCarga();
+      comando('fs_rescan');
+      comando(`${cmd} ${m}`);
+      siguienteMapa(m);
+    }).catch((e) => {
+      clearInterval(t);
+      mostrarCarga('No se pudo bajar el mapa', String(e.message || e) + ' — tocá para volver');
+      $('cs-carga').style.pointerEvents = 'auto';
+      $('cs-carga').onclick = () => { $('cs-carga').style.pointerEvents = ''; $('cs-carga').onclick = null; ocultarCarga(); };
+    });
+    return 0;
+  }
+
+  // Mientras se juega un mapa, se baja el siguiente de la rotación (mapcycle.txt del juego).
+  let ciclo = null;
+  function siguienteMapa(actual) {
+    try {
+      if (!ciclo) ciclo = new TextDecoder().decode(M.FS.readFile('/rodir/cstrike/mapcycle.txt')).split(/\s+/).map((s) => s.toLowerCase()).filter((s) => indice.mapas[s]);
+    } catch (_) { ciclo = []; }
+    const i = ciclo.indexOf(actual);
+    const sig = ciclo.length ? ciclo[(i + 1) % ciclo.length] : null;
+    if (sig) setTimeout(() => indice.mapas[sig].paquetes.forEach((n) => paquete(n).catch(() => {})), 15000);
+  }
+
+  // Con mouse, SDL bloquea el puntero para mirar (como en la PC). Con el dedo no hace falta, y con
+  // el puntero bloqueado Chrome da los toques en (0, 0): sólo se bloquea si el último toque fue de
+  // un mouse, y un toque con el dedo lo libera.
+  let ultimoPuntero = 'mouse';
+  addEventListener('pointerdown', (e) => {
+    ultimoPuntero = e.pointerType;
+    if (e.pointerType !== 'mouse' && document.pointerLockElement) document.exitPointerLock();
+  }, true);
+  const bloquear = HTMLCanvasElement.prototype.requestPointerLock;
+  HTMLCanvasElement.prototype.requestPointerLock = function () {
+    return ultimoPuntero === 'mouse' ? bloquear.apply(this, arguments) : undefined;
+  };
+
+  // ── el teclado del teléfono ──────────────────────────────────────────────────────────
+  // Cuando el juego pide texto (el nombre, una contraseña, el chat) el motor avisa con
+  // porteoTexto y, si se juega con el dedo, se enfoca un <input> de verdad para que salga el
+  // teclado del sistema. Lo escrito se compara con lo anterior y va al motor como letras y
+  // borrados: así anda también el autocompletado, que reemplaza palabras enteras. El relleno del
+  // principio hace que "borrar" llegue aunque en el campo no haya nada escrito todavía.
+  const teclado = $('cs-teclado');
+  const RELLENO = '\u00a0'.repeat(8);
+  let previo = RELLENO, pideTexto = false;
+  const tecla = (k) => { M._Porteo_Tecla(k, 1); M._Porteo_Tecla(k, 0); };
+  function vaciarTeclado() {
+    teclado.value = previo = RELLENO;
+    try { teclado.setSelectionRange(RELLENO.length, RELLENO.length); } catch (_) {}
+  }
+  function abrirTeclado() {
+    if (!pideTexto || ultimoPuntero === 'mouse' || document.activeElement === teclado) return;
+    vaciarTeclado();
+    teclado.focus({ preventScroll: true });
+  }
+  function porteoTexto(si, destino) {
+    pideTexto = !!si && (destino === 2 || destino === 3);   // menú o chat; en la consola de la carga, no
+    if (pideTexto) abrirTeclado();
+    else if (document.activeElement === teclado) teclado.blur();
+  }
+  teclado.addEventListener('input', () => {
+    const v = teclado.value;
+    let i = 0;
+    while (i < v.length && i < previo.length && v[i] === previo[i]) i++;
+    for (let k = i; k < previo.length; k++) tecla(127);                       // K_BACKSPACE
+    if (i < v.length) M.ccall('Porteo_Texto', null, ['string'], [v.slice(i)]);
+    previo = v;
+    if (v.length < RELLENO.length) vaciarTeclado();
+  });
+  ['keydown', 'keypress', 'keyup'].forEach((t) => teclado.addEventListener(t, (e) => {
+    e.stopPropagation();                         // que SDL no cuente la tecla otra vez
+    if (t !== 'keydown') return;
+    if (e.key === 'Enter') { e.preventDefault(); tecla(13); teclado.blur(); }    // "listo": se esconde
+    else if (e.key === 'Escape') { e.preventDefault(); tecla(27); }
+  }));
+  // tocar de nuevo mientras el juego espera texto vuelve a abrir el teclado (si se cerró, o si el
+  // navegador no lo dejó abrir fuera de un toque)
+  addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') abrirTeclado(); }, true);
+
+  // El audio de SDL arranca suspendido: se despierta con el primer toque o tecla, y se calla
+  // con la página oculta.
+  const audio = () => M && M.SDL2 && M.SDL2.audioContext;
+  ['pointerdown', 'keydown', 'touchend'].forEach((ev) => addEventListener(ev, () => { const a = audio(); if (a && a.state !== 'running') a.resume().catch(() => {}); }, true));
+  document.addEventListener('visibilitychange', () => {
+    const a = audio();
+    if (a) { if (document.hidden) a.suspend().catch(() => {}); else a.resume().catch(() => {}); }
+    if (document.hidden) guardar();
+  });
+
+  // Lo que el juego escribe (config.cfg, video, controles) vive en IndexedDB.
+  let guardando = false;
+  function guardar() {
+    if (!M || guardando) return;
+    guardando = true;
+    M.FS.syncfs(false, () => { guardando = false; });
+  }
+
+  async function arrancar() {
+    indice = await (await fetch('datos/indice.json')).json();
+    const inicio = indice.inicio;
+    // los .wad del sistema (calcomanías, gráficos, fuentes): sueltos, el motor los monta al iniciar
+    const wads = indice.wads || [];
+    const deWads = new Map();
+    const totalInicio = bytesDe(inicio) + wads.reduce((a, w) => a + w.gz, 0);
+    const hechoInicio = () => hechoDe(inicio) + [...deWads.values()].reduce((a, b) => a + b, 0);
+    const wadsBajados = wads.map((w) => traerGz('datos/' + w.archivo, w.gz, (b) => deWads.set(w.ruta, b)));
+    inicio.forEach(bajar);
+    const motorListo = XashMotor({
+      canvas: $('canvas'),
+      locateFile: (p) => 'motor/' + p,
+      print: anotar,
+      printErr: anotar,
+      // el entorno se lee una sola vez al arrancar el motor: va antes
+      preRun: [(m) => { m.ENV.XASH3D_BASEDIR = '/rwdir'; m.ENV.XASH3D_RODIR = '/rodir'; }],
+    });
+    // mientras compila el motor ya se bajan el menú y los módulos
+    const modulos = ['filesystem_stdio.so', 'libref_gles3compat.so', 'client.so', 'menu.so', 'server.so', 'extras.pk3']
+      .map((n) => fetch('motor/' + n).then((r) => { if (!r.ok) throw new Error(`No se pudo bajar motor/${n}`); return r.arrayBuffer(); }));
+    M = await motorListo;
+    window.M = M;
+    const FS = M.FS;
+    for (const d of ['/rodir', '/rodir/valve', '/rodir/cstrike', '/rodir/cstrike/cl_dlls', '/rodir/cstrike/dlls', '/rwdir', '/rwdir/cstrike']) FS.mkdir(d);
+    // lo que escribe el juego (config.cfg, controles, video) queda en IndexedDB; el resto es memoria
+    FS.mount(M.IDBFS, {}, '/rwdir/cstrike');
+    await new Promise((ok) => FS.syncfs(true, () => ok()));
+
+    const intervalo = setInterval(() => progresoCarga(hechoInicio() / totalInicio, ''), 150);
+    await Promise.all(inicio.map(paquete));
+    inicio.forEach((n) => montados.add(n));
+    (await Promise.all(wadsBajados)).forEach((datos, i) => FS.writeFile('/rodir/' + wads[i].ruta, datos));
+    clearInterval(intervalo);
+    progresoCarga(1);
+
+    // los módulos del motor: se precompilan acá porque en el hilo principal no se puede
+    // compilar un .wasm grande en el momento del dlopen
+    const [fsLib, ref, cliente, menu, servidor, extras] = await Promise.all(modulos);
+    const precompilar = (dir, nombre, datos) => new Promise((ok, mal) =>
+      FS.createPreloadedFile(dir, nombre, new Uint8Array(datos), true, false, ok, () => mal(new Error('No se pudo abrir ' + nombre))));
+    await Promise.all([
+      precompilar('/rwdir', 'filesystem_stdio.so', fsLib),          // el motor los busca en su carpeta raíz
+      precompilar('/rwdir', 'libref_gles3compat.so', ref),
+      precompilar('/rodir/cstrike/cl_dlls', 'client_emscripten_wasm32.so', cliente),
+      precompilar('/rodir/cstrike/cl_dlls', 'menu_emscripten_wasm32.so', menu),
+      precompilar('/rodir/cstrike/dlls', 'cs_emscripten_wasm32.so', servidor),
+    ]);
+    FS.writeFile('/rodir/valve/extras.pk3', new Uint8Array(extras));
+    // liblist.gam suelto: el motor reconoce la carpeta del juego por él antes de montar los pk3
+    for (const [ruta, texto] of Object.entries(indice.sueltos || {})) FS.writeFile('/rodir/' + ruta, texto);
+
+    M.porteoMapa = mapaListo;
+    M.porteoMapaExiste = (m) => !!indice.mapas[String(m).toLowerCase()];
+    M.porteoTexto = porteoTexto;
+    FS.chdir('/rwdir');
+    estado.fase = 'motor';
+    M.callMain(['-game', 'cstrike', '-ref', 'gles3compat', '+exec', 'porteo.cfg']);
+    estado.fase = 'jugando';
+    ocultarCarga();
+    $('canvas').focus();
+
+    Porteo.controlesCS(cs, { radio: indice.radio, pausa: () => {
+      for (const t of ['keydown', 'keyup']) {
+        const e = new KeyboardEvent(t, { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true });
+        Object.defineProperty(e, 'keyCode', { get: () => 27 });
+        Object.defineProperty(e, 'which', { get: () => 27 });
+        $('canvas').dispatchEvent(e);
+      }
+    } });
+    setInterval(guardar, 20000);
+
+    // de fondo: lo común a las partidas y el primer mapa de la rotación, para que al elegir
+    // "Crear partida" ya esté
+    const fondo = [...indice.partida];
+    const total = bytesDe(fondo);
+    const aviso = setInterval(() => {
+      const h = hechoDe(fondo);
+      $('cs-fondo').textContent = h < total ? `Preparando partidas… ${Math.round(h / total * 100)}%` : '';
+      $('cs-fondo').className = h < total ? 'si' : '';
+      if (h >= total) clearInterval(aviso);
+    }, 500);
+    await Promise.all(fondo.map(paquete)).catch(() => {});
+    siguienteMapa(null);
+  }
+
+  arrancar().catch(error);
+})();
+</script>
+</body>
+</html>

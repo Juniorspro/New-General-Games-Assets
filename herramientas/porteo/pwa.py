@@ -8,7 +8,10 @@ Escribe en CARPETA:
   manifest.webmanifest   nombre, ícono, pantalla completa, orientación
   icono-192.png / 512    los que pide Chrome para ofrecer "Instalar"
   sw.js                  service worker: guarda TODOS los archivos en la
-                         primera visita y después los sirve sin red
+                         primera visita y después los sirve sin red (los que
+                         coinciden con --perezosos, recién la primera vez que
+                         el juego los pide: así un juego de cientos de MB no se
+                         baja entero al abrirlo)
   porteo-web.js          copia de herramientas/porteo/web.js
 y en el <head> del inicio, entre marcas <!-- porteo:pwa -->, los <link>/<meta>.
 
@@ -30,6 +33,7 @@ GENERADOS = {"sw.js"}  # no se precachea a sí mismo
 SW = """// Generado por herramientas/porteo/pwa.py — no editar a mano.
 const VERSION = '__VERSION__';
 const ARCHIVOS = __ARCHIVOS__;
+const PEREZOSOS = __PEREZOSOS__;   // se guardan al usarlos por primera vez
 self.addEventListener('install', (e) => {
   // Todo o nada: si falta un archivo, no se instala un juego roto.
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
@@ -46,7 +50,12 @@ self.addEventListener('fetch', (e) => {
     c.match(r, { ignoreSearch: true }).then((hit) => {
       if (hit) return hit;
       if (r.mode === 'navigate') return c.match('__INICIO__').then((i) => i || fetch(r));
-      return fetch(r);
+      const ruta = new URL(r.url).pathname.slice(new URL(self.registration.scope).pathname.length);
+      if (!PEREZOSOS.includes(ruta)) return fetch(r);
+      return fetch(r).then((resp) => {
+        if (resp.ok && resp.status === 200) c.put(r, resp.clone()).catch(() => {});
+        return resp;
+      });
     })));
 });
 """
@@ -62,6 +71,9 @@ def main():
     ap.add_argument("--color", default="#000000")
     ap.add_argument("--inicio", default="index.html")
     ap.add_argument("--sin-web-js", action="store_true", help="no copiar porteo-web.js")
+    ap.add_argument("--perezosos", action="append", default=[], metavar="PATRON",
+                    help="archivos (glob relativo a la carpeta, p. ej. 'datos/mapas/*') que no se bajan "
+                         "al instalar: se guardan la primera vez que el juego los pide")
     a = ap.parse_args()
 
     from PIL import Image
@@ -110,13 +122,16 @@ def main():
     for p in archivos:
         h.update(str(p.relative_to(d)).encode())
         h.update(p.read_bytes())
-    lista = ["./"] + [p.relative_to(d).as_posix() for p in archivos]
+    perezosos = sorted({q.relative_to(d).as_posix() for pat in a.perezosos for q in d.glob(pat) if q.is_file()})
+    lista = ["./"] + [p.relative_to(d).as_posix() for p in archivos if p.relative_to(d).as_posix() not in perezosos]
     sw = (SW.replace("__VERSION__", "porteo-" + h.hexdigest()[:12])
             .replace("__ARCHIVOS__", json.dumps(lista, ensure_ascii=False))
+            .replace("__PEREZOSOS__", json.dumps(perezosos, ensure_ascii=False))
             .replace("__INICIO__", a.inicio))
     (d / "sw.js").write_text(sw, "utf-8")
-    peso = sum(p.stat().st_size for p in archivos)
-    print(f"PWA: {len(lista)} entradas, {peso / 1048576:.2f} MB en caché, versión {h.hexdigest()[:12]}")
+    peso = sum(p.stat().st_size for p in archivos if p.relative_to(d).as_posix() not in perezosos)
+    print(f"PWA: {len(lista)} entradas, {peso / 1048576:.2f} MB en caché, versión {h.hexdigest()[:12]}"
+          + (f"; {len(perezosos)} perezosos, al usarlos" if perezosos else ""))
 
 
 if __name__ == "__main__":

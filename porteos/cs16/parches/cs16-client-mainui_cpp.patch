@@ -1,0 +1,135 @@
+diff --git a/controls/BaseClientWindow.cpp b/controls/BaseClientWindow.cpp
+index 49e1cd0..076281b 100644
+--- a/controls/BaseClientWindow.cpp
++++ b/controls/BaseClientWindow.cpp
+@@ -22,6 +22,17 @@ CMenuBaseClientWindow::CMenuBaseClientWindow( const  char *name ) :
+ 
+ bool CMenuBaseClientWindow::KeyDown( int key )
+ {
++#ifdef __EMSCRIPTEN__
++	// web port: Escape (and the phone's back button) closes the team/class/buy menus, like the
++	// VGUI menus of the original (TeamFortressViewport::KeyInput) and like their own "0 Cancel"
++	// button (UI_CloseClientMenu: Hide() leaves the closed window in the client stack, and then
++	// UI_CloseMenu never gives the keys back to the game), instead of opening the game menu on top
++	if( UI::Key::IsEscape( key ))
++	{
++		UI_CloseClientMenu();
++		return true;
++	}
++#else
+ 	// copy engine behaviour
+ 	if( UI::Key::IsEscape( key ))
+ 	{
+@@ -29,6 +40,7 @@ bool CMenuBaseClientWindow::KeyDown( int key )
+ 		EngFuncs::ClientCmd( false, "escape\n" );
+ 		return true;
+ 	}
++#endif
+ 	else if( UI::Key::IsConsole( key ))
+ 	{
+ 		EngFuncs::KEY_SetDest( KEY_CONSOLE );
+diff --git a/menus/Main.cpp b/menus/Main.cpp
+index 06f0bab..4257d3c 100644
+--- a/menus/Main.cpp
++++ b/menus/Main.cpp
+@@ -135,7 +135,9 @@ bool CMenuMain::KeyDown( int key )
+ 		}
+ 		else
+ 		{
++#ifndef __EMSCRIPTEN__
+ 			QuitDialogCb( );
++#endif // a browser tab can't be quit: back twice leaves the page instead
+ 		}
+ 		return true;
+ 	}
+@@ -248,6 +250,15 @@ void CMenuMain::_Init( void )
+ 	minimizeBtn.eFocusAnimation = QM_HIGHLIGHTIFFOCUS;
+ 	minimizeBtn.onReleased.SetCommand( false, "minimize\n" );
+ 
++#ifdef __EMSCRIPTEN__
++	// web port: the menu of CS 1.6 (its GameMenu.res) without what can't work in a browser,
++	// quitting the tab, server lists and saves; "View Readme" and "Previews" slots are reused
++	multiPlayer.SetNameAndStatus( L( "GameUI_GameMenu_NewGame" ), L( "Create a server and play against bots." ) );
++	multiPlayer.onReleased = UI_CreateGame_Menu;
++	readme.SetNameAndStatus( L( "GameUI_GameMenu_Customize" ), L( "Choose your player name, and select visual options for your character" ) );
++	readme.onReleased = UI_PlayerSetup_Menu;
++#endif
++
+ 	if ( gMenu.m_gameinfo.gamemode == GAME_MULTIPLAYER_ONLY || gMenu.m_gameinfo.startmap[0] == 0 )
+ 		newGame.SetGrayed( true );
+ 
+@@ -331,6 +342,40 @@ void CMenuMain::VidInit( bool connected )
+ 	previews.SetCoord( hoffset, previews_voffset );
+ 	quit.SetCoord( hoffset, previews_voffset + ygap );
+ 
++#ifdef __EMSCRIPTEN__
++	{
++		bool single = gpGlobals->maxClients < 2;
++		int y = previews_voffset + ygap;
++
++		configuration.SetCoord( hoffset, y ); y -= ygap;
++		readme.SetCoord( hoffset, y ); y -= ygap;
++		multiPlayer.SetCoord( hoffset, y ); y -= ygap;
++		if( connected && !single )
++		{
++			disconnect.SetCoord( hoffset, y );
++			y -= ygap;
++		}
++		if( connected )
++		{
++			resumeGame.SetCoord( hoffset, y );
++			y -= ygap;
++		}
++		console.SetCoord( hoffset, y );
++
++		resumeGame.SetVisibility( connected );
++		disconnect.SetVisibility( connected && !single );
++		newGame.SetVisibility( false );
++		hazardCourse.SetVisibility( false );
++		saveRestore.SetVisibility( false );
++		customGame.SetVisibility( false );
++		previews.SetVisibility( false );
++		quit.SetVisibility( false );
++		minimizeBtn.SetVisibility( false );
++		quitButton.SetVisibility( false );
++		return;
++	}
++#endif
++
+ 	// let's start calculating positions
+ 	int yoffset = previews_voffset - ygap;
+ 
+diff --git a/sdk_includes/public/build.h b/sdk_includes/public/build.h
+index 8eb7396..db72646 100644
+--- a/sdk_includes/public/build.h
++++ b/sdk_includes/public/build.h
+@@ -137,6 +137,8 @@ Then you can use another oneliner to query all variables:
+ 		#define XASH_NSWITCH 1
+ 	#elif defined __vita__
+ 		#define XASH_PSVITA 1
++	#elif defined __EMSCRIPTEN__
++		#define XASH_EMSCRIPTEN 1
+ 	#elif defined __wasi__
+ 		#define XASH_WASI 1
+ 	#elif defined __sun__
+diff --git a/sdk_includes/public/buildenums.h b/sdk_includes/public/buildenums.h
+index 77de60c..bba2dc9 100644
+--- a/sdk_includes/public/buildenums.h
++++ b/sdk_includes/public/buildenums.h
+@@ -59,6 +59,7 @@ For more information, please refer to <http://unlicense.org/>
+ #define PLATFORM_SUNOS      16
+ #define PLATFORM_HURD       17
+ #define PLATFORM_PSP        18
++#define PLATFORM_EMSCRIPTEN 20
+ 
+ #if XASH_WIN32
+ 	#define XASH_PLATFORM PLATFORM_WIN32
+@@ -86,6 +87,8 @@ For more information, please refer to <http://unlicense.org/>
+ 	#define XASH_PLATFORM PLATFORM_NSWITCH
+ #elif XASH_PSVITA
+ 	#define XASH_PLATFORM PLATFORM_PSVITA
++#elif XASH_EMSCRIPTEN
++	#define XASH_PLATFORM PLATFORM_EMSCRIPTEN
+ #elif XASH_WASI
+ 	#define XASH_PLATFORM PLATFORM_WASI
+ #elif XASH_SUNOS

@@ -1,0 +1,73 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c80b503..e23c9f1 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -34,7 +34,8 @@ if(VITA)
+ 	add_compile_options(-fno-use-cxa-atexit)
+ endif()
+ 
+-if(NOT WIN32 AND NOT APPLE)
++# en la web (Emscripten) las bibliotecas son módulos secundarios: libc y libc++ las pone el motor
++if(NOT WIN32 AND NOT APPLE AND NOT EMSCRIPTEN)
+ 	add_link_options(-Wl,--no-undefined)
+ endif()
+ 
+@@ -67,6 +68,8 @@ if(BUILD_SERVER)
+ 	# 	BUILD_IN_SOURCE 1
+ 	# 	INSTALL_COMMAND meson install -C build --destdir ${CMAKE_INSTALL_PREFIX}
+ 	# )
++	# en la web van los bots oficiales de ReGameDLL (los del juego original), sin YaPB
++	if(NOT EMSCRIPTEN)
+ 	add_subdirectory(3rdparty/yapb)
+ 
+ 	if(MSVC)
+@@ -77,6 +80,7 @@ if(BUILD_SERVER)
+     endif()
+ 
+ 	set_target_postfix(yapb)
++	endif()
+ 
+ 	set(XASH_COMPAT ON CACHE BOOL "" FORCE)
+ 	add_subdirectory(3rdparty/ReGameDLL_CS)
+@@ -92,11 +96,15 @@ endif()
+ 
+ set(GRAPHS_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/graphs")
+ 
++if(NOT EMSCRIPTEN)
+ execute_process(
+ 	COMMAND ${Python_EXECUTABLE}
+ 	${CMAKE_CURRENT_SOURCE_DIR}/scripts/yapb_graph_dl.py
+ 	${GRAPHS_OUTPUT}/addons/yapb/data/graph
+ )
++else()
++file(MAKE_DIRECTORY ${GRAPHS_OUTPUT})
++endif()
+ 
+ set(EXTRAS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/cs16client-extras")
+ set(YAPB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/yapb/cfg")
+diff --git a/cl_dll/particleman/CFrustum.cpp b/cl_dll/particleman/CFrustum.cpp
+index fcf11f6..05c847b 100644
+--- a/cl_dll/particleman/CFrustum.cpp
++++ b/cl_dll/particleman/CFrustum.cpp
+@@ -17,7 +17,7 @@
+ #include "windows_lean.h"
+ 
+ #ifndef GL_PROJECTION_MATRIX
+-#define GL_PROJECTION_MATRIX 0x0BA1
++#define GL_PROJECTION_MATRIX 0x0BA7 // era 0x0BA1 (GL_NORMALIZE): en WebGL, INVALID_ENUM
+ #endif
+ #ifndef GL_MODELVIEW_MATRIX
+ #define GL_MODELVIEW_MATRIX 0x0BA6
+diff --git a/common/interface.cpp b/common/interface.cpp
+index a13a9fd..ba2376a 100644
+--- a/common/interface.cpp
++++ b/common/interface.cpp
+@@ -14,7 +14,7 @@
+ #include <unistd.h>
+ #define VRTLD_LIBDL_COMPAT
+ #include <vrtld.h>
+-#elif XASH_APPLE == 1
++#elif XASH_APPLE == 1 || XASH_EMSCRIPTEN == 1
+ #include <dlfcn.h>
+ #include <unistd.h>
+ #endif

@@ -1,0 +1,451 @@
+diff --git a/engine/client/input/input.c b/engine/client/input/input.c
+index 11c10b4..86c383e 100644
+--- a/engine/client/input/input.c
++++ b/engine/client/input/input.c
+@@ -574,6 +574,97 @@ static void IN_JoyAppendMove( usercmd_t *cmd, float forwardmove, float sidemove
+ 	}
+ }
+ 
++#if XASH_EMSCRIPTEN
++#include <emscripten/emscripten.h>
++// Porteo web: los controles táctiles los dibuja la página (HTML) y le hablan al motor por acá.
++// La mirada se acumula (grados) hasta el próximo cuadro; el joystick queda fijo (-1..1) hasta
++// que la página lo cambie.
++static float porteo_yaw, porteo_pitch, porteo_forward, porteo_side;
++
++EMSCRIPTEN_KEEPALIVE void Porteo_Mirar( float yaw, float pitch )
++{
++	porteo_yaw += yaw;
++	porteo_pitch += pitch;
++}
++
++EMSCRIPTEN_KEEPALIVE void Porteo_Mover( float forward, float side )
++{
++	porteo_forward = forward;
++	porteo_side = side;
++}
++
++// un comando de consola, para el próximo cuadro ("+attack", "slot1", "buy"...)
++EMSCRIPTEN_KEEPALIVE void Porteo_Comando( const char *text )
++{
++	Cbuf_AddText( text );
++	Cbuf_AddText( "\n" );
++}
++
++// texto del teclado del teléfono (la página lo lee de un <input> de verdad): igual que el
++// SDL_TEXTINPUT de host_sdl2.c, UTF-8 convertido si el que escucha no lo acepta
++EMSCRIPTEN_KEEPALIVE void Porteo_Texto( const char *text )
++{
++	VGui_ReportTextInput( text );
++
++	for( ; *text; text++ )
++	{
++		int ch = (byte)*text;
++
++		if( !cls.accept_utf8 )
++			ch = Con_UtfProcessCharForce( ch );
++
++		if( ch )
++			CL_CharEvent( ch );
++	}
++}
++
++// teclas sueltas del teclado del teléfono: borrar, enter, escape
++EMSCRIPTEN_KEEPALIVE void Porteo_Tecla( int key, int down )
++{
++	Key_Event( key, down );
++}
++
++static int porteo_radio;
++
++void Porteo_ContarRadio( void )
++{
++	porteo_radio++;
++}
++
++// el estado para la página y para las pruebas: JSON en un búfer fijo
++EMSCRIPTEN_KEEPALIVE const char *Porteo_Estado( void )
++{
++	static char buf[768];
++	char nombre[64];
++	const char *arma = clgame.viewent.model ? COM_FileWithoutPath( clgame.viewent.model->name ) : "";
++	int jugadores = 0;
++
++	for( int i = 0; i < cl.maxclients && i < MAX_CLIENTS; i++ )
++	{
++		if( cl.players[i].name[0] )
++			jugadores++;
++	}
++
++	// el nombre del jugador, sin lo que rompería el JSON
++	Q_strncpy( nombre, Cvar_VariableString( "name" ), sizeof( nombre ));
++	for( char *p = nombre; *p; p++ )
++	{
++		if( *p == '"' || *p == '\\' || (byte)*p < 32 )
++			*p = '\'';
++	}
++
++	Q_snprintf( buf, sizeof( buf ),
++		"{\"estado\":%d,\"destino\":%d,\"mapa\":\"%s\",\"vida\":%d,\"pos\":[%.1f,%.1f,%.1f],\"ang\":[%.1f,%.1f,%.1f],\"pausa\":%d,\"tiempo\":%.2f,\"nombre\":\"%s\""
++		",\"arma\":\"%s\",\"anim\":%d,\"animT\":%.2f,\"fov\":%.1f,\"suelo\":%d,\"jugadores\":%d,\"radio\":%d}",
++		cls.state, cls.key_dest, clgame.mapname, cl.local.health,
++		cl.simorg[0], cl.simorg[1], cl.simorg[2],
++		cl.viewangles[0], cl.viewangles[1], cl.viewangles[2],
++		cl.paused, cl.time, nombre,
++		arma, cl.local.weaponsequence, cl.local.weaponstarttime, cl.local.scr_fov, cl.local.onground != -1, jugadores, porteo_radio );
++	return buf;
++}
++#endif // XASH_EMSCRIPTEN
++
+ static void IN_CollectInput( float *forward, float *side, float *pitch, float *yaw, qboolean includeMouse )
+ {
+ 	if( includeMouse )
+@@ -591,6 +682,22 @@ static void IN_CollectInput( float *forward, float *side, float *pitch, float *y
+ 	IN_GyroFinalizeMove( forward, side, pitch, yaw );
+ 	Joy_FinalizeMove( forward, side, pitch, yaw );
+ 	Touch_GetMove( forward, side, pitch, yaw );
++#if XASH_EMSCRIPTEN
++	{
++		// la página manda grados; el cliente después los multiplica por "sensitivity" (la del
++		// mouse): se divide acá, así el dedo gira lo que calculó la página (y con la mira de un
++		// rifle, lo que el juego achica por el zoom)
++		float sens = Cvar_VariableValue( "sensitivity" );
++
++		if( sens < 0.01f )
++			sens = 1.0f;
++		*forward += porteo_forward;
++		*side += porteo_side;
++		*yaw += porteo_yaw / sens;
++		*pitch += porteo_pitch / sens;
++		porteo_yaw = porteo_pitch = 0.0f;
++	}
++#endif
+ 
+ 	if( look_filter.value )
+ 	{
+diff --git a/engine/client/parse/cl_parse.c b/engine/client/parse/cl_parse.c
+index 29acaf7..7168c55 100644
+--- a/engine/client/parse/cl_parse.c
++++ b/engine/client/parse/cl_parse.c
+@@ -2289,6 +2289,12 @@ void CL_ParseUserMessage( sizebuf_t *msg, int svc_num, connprotocol_t proto )
+ 	{
+ 		clgame.msg[i].func( clgame.msg[i].name, iSize, pbuf );
+ 
++#if XASH_EMSCRIPTEN
++		// Porteo web: las voces de radio que llegan (así las pruebas miden la radio del panel)
++		if( !Q_strcmp( clgame.msg[i].name, "SendAudio" ))
++			Porteo_ContarRadio();
++#endif
++
+ #ifdef HACKS_RELATED_HLMODS
+ 		// run final credits for Half-Life because hl1 doesn't have call END_SECTION
+ 		if( !Q_stricmp( clgame.msg[i].name, "HudText" ) && !Q_stricmp( GI->gamefolder, "valve" ))
+diff --git a/engine/common/common.h b/engine/common/common.h
+index a6a6ee0..b724afb 100644
+--- a/engine/common/common.h
++++ b/engine/common/common.h
+@@ -597,6 +597,11 @@ void Host_ExitInMain( void ) NORETURN;
+ void COM_InitHostState( void );
+ void COM_NewGame( char const *pMapName );
+ void COM_LoadLevel( char const *pMapName, qboolean background );
++#if XASH_EMSCRIPTEN
++qboolean Porteo_MapaListo( const char *cmd, const char *mapa );
++qboolean Porteo_MapaExiste( const char *mapa );
++void Porteo_ContarRadio( void );
++#endif
+ void COM_LoadGame( char const *pSaveFileName );
+ void COM_ChangeLevel( char const *pNewLevel, char const *pLandmarkName, qboolean background );
+ void COM_Frame( double time );
+diff --git a/engine/common/con_utils.c b/engine/common/con_utils.c
+index 4766a7c..c201d68 100644
+--- a/engine/common/con_utils.c
++++ b/engine/common/con_utils.c
+@@ -855,6 +855,23 @@ static qboolean Cmd_CheckMapsList_R( qboolean fRefresh, qboolean onlyingamedir )
+ 	if( FS_FileSize( "maps.lst", onlyingamedir ) > 0 && !fRefresh )
+ 		return true; // exist
+ 
++#if XASH_EMSCRIPTEN
++	{
++		// porteo web: todos los mapas del juego, estén bajados o no (los arma portear.sh)
++		fs_offset_t len = 0;
++		byte *lista = FS_LoadFile( "porteo_mapas.lst", &len, false );
++
++		if( lista && len > 0 )
++		{
++			qboolean ok = FS_WriteFile( "maps.lst", lista, len );
++			Mem_Free( lista );
++			return ok;
++		}
++		if( lista )
++			Mem_Free( lista );
++	}
++#endif
++
+ 	// setup mpfilter
+ 	Q_snprintf( mpfilter, sizeof( mpfilter ), "maps/%s", GI->mp_filter );
+ 	search_t *t = FS_Search( "maps/*.bsp", false, onlyingamedir );
+diff --git a/engine/common/host.c b/engine/common/host.c
+index f726046..1d819e5 100644
+--- a/engine/common/host.c
++++ b/engine/common/host.c
+@@ -334,6 +334,9 @@ Host_CalcSleep
+ */
+ static int Host_CalcSleep( void )
+ {
++#if XASH_EMSCRIPTEN
++	return 0; // dormir en el hilo del navegador es esperar activamente: el ritmo lo da requestAnimationFrame
++#endif
+ 	if( Host_IsDedicated( ))
+ 	{
+ 		if( sv_hibernate_when_empty.value )
+@@ -1166,6 +1169,47 @@ static void Sys_Quit_f( void )
+ 	Sys_Quit( Cmd_Argc() > 1 ? Cmd_Argv( 1 ) : "command" );
+ }
+ 
++#if XASH_EMSCRIPTEN
++/*
++=================
++Porteo_MapaListo
++
++Porteo web: los datos de cada mapa se bajan recién cuando se lo pide. Antes de cargar un mapa
++se le pregunta a la página: si todavía no están, los trae y vuelve a mandar el mismo comando.
++=================
++*/
++qboolean Porteo_MapaListo( const char *cmd, const char *mapa )
++{
++	return EM_ASM_INT({
++		return Module.porteoMapa ? Module.porteoMapa( UTF8ToString( $0 ), UTF8ToString( $1 )) : 1;
++	}, cmd, mapa ) != 0;
++}
++
++// ¿Es un mapa del juego, aunque todavía no se haya bajado? (el menú y la rotación de mapas)
++qboolean Porteo_MapaExiste( const char *mapa )
++{
++	return EM_ASM_INT({
++		return Module.porteoMapaExiste ? Module.porteoMapaExiste( UTF8ToString( $0 )) : 0;
++	}, mapa ) != 0;
++}
++
++static double host_web_oldtime;
++
++static void Host_WebFrame( void )
++{
++	double newtime = Platform_DoubleTime();
++
++	if( host.status == HOST_CRASHED )
++	{
++		emscripten_cancel_main_loop();
++		return;
++	}
++
++	COM_Frame( newtime - host_web_oldtime );
++	host_web_oldtime = newtime;
++}
++#endif
++
+ /*
+ =================
+ Host_Main
+@@ -1335,6 +1379,12 @@ int EXPORT Host_Main( int argc, char **argv, const char *progname, int bChangeGa
+ 	// check after all configs were executed
+ 	HPAK_CheckIntegrity( hpk_custom_file.string );
+ 
++#if XASH_EMSCRIPTEN
++	// en el navegador no se puede quedar en un bucle: cada cuadro es una llamada desde
++	// requestAnimationFrame (simulate_infinite_loop: main no vuelve)
++	host_web_oldtime = oldtime;
++	emscripten_set_main_loop( Host_WebFrame, 0, 1 );
++#else
+ 	// main window message loop
+ 	while( host.status != HOST_CRASHED )
+ 	{
+@@ -1342,6 +1392,7 @@ int EXPORT Host_Main( int argc, char **argv, const char *progname, int bChangeGa
+ 		COM_Frame( newtime - oldtime );
+ 		oldtime = newtime;
+ 	}
++#endif
+ 
+ 	return 0;
+ }
+diff --git a/engine/platform/sdl2/in_sdl2.c b/engine/platform/sdl2/in_sdl2.c
+index 6d66e09..1448c24 100644
+--- a/engine/platform/sdl2/in_sdl2.c
++++ b/engine/platform/sdl2/in_sdl2.c
+@@ -22,6 +22,9 @@ GNU General Public License for more details.
+ #include "platform_sdl2.h"
+ #include "sound.h"
+ #include "vid_common.h"
++#if XASH_EMSCRIPTEN
++#include <emscripten/emscripten.h>
++#endif
+ 
+ static struct
+ {
+@@ -185,6 +188,11 @@ SDLash_EnableTextInput
+ */
+ void Platform_EnableTextInput( qboolean enable, int x, int y, int w, int h )
+ {
++#if XASH_EMSCRIPTEN
++	// Porteo web: en el teléfono no hay teclado; la página enfoca un <input> para que salga el
++	// del sistema y escribe con Porteo_Texto (key_dest: no en la consola de la carga)
++	EM_ASM({ if( Module.porteoTexto ) Module.porteoTexto( $0, $1 ); }, enable, cls.key_dest );
++#endif
+ 	if( !enable )
+ 	{
+ 		SDL_StopTextInput();
+diff --git a/engine/platform/sdl2/vid_sdl2.c b/engine/platform/sdl2/vid_sdl2.c
+index e85afd2..eb876d5 100644
+--- a/engine/platform/sdl2/vid_sdl2.c
++++ b/engine/platform/sdl2/vid_sdl2.c
+@@ -1017,6 +1017,14 @@ qboolean VID_SetMode( void )
+ 	}
+ #endif
+ 
++#if XASH_EMSCRIPTEN
++	// porteo web: siempre en ventana. La pantalla completa la pide la página entera (web.js); si
++	// SDL la pidiera para el lienzo, el lienzo pasaría a la capa de arriba del navegador y taparía
++	// los controles táctiles. La ventana sigue el tamaño del lienzo (CSS) al girar o cambiar.
++	if( Q_strcmp( vid_fullscreen.string, "0" ))
++		Cvar_DirectSet( &vid_fullscreen, "0" );
++#endif
++
+ 	window_mode_t window_mode = bound( 0, vid_fullscreen.value, WINDOW_MODE_COUNT - 1 );
+ 	SetBits( gl_vsync.flags, FCVAR_CHANGED );
+ 
+diff --git a/engine/server/sv_cmds.c b/engine/server/sv_cmds.c
+index ed1ee09..6fdc02e 100644
+--- a/engine/server/sv_cmds.c
++++ b/engine/server/sv_cmds.c
+@@ -208,6 +208,11 @@ static void SV_Map_f( void )
+ 	Q_strncpy( mapname, Cmd_Argv( 1 ), sizeof( mapname ));
+ 	COM_StripExtension( mapname );
+ 
++#if XASH_EMSCRIPTEN
++	if( !Porteo_MapaListo( "map", mapname ))
++		return;
++#endif
++
+ 	if( !SV_ValidateMap( mapname ))
+ 		return;
+ 
+diff --git a/engine/server/sv_game.c b/engine/server/sv_game.c
+index 11d358f..173acd5 100644
+--- a/engine/server/sv_game.c
++++ b/engine/server/sv_game.c
+@@ -718,6 +718,11 @@ void SV_QueueChangeLevel( const char *level, const char *landname )
+ 	Q_strncpy( mapname, level, sizeof( mapname ));
+ 	COM_StripExtension( mapname );
+ 
++#if XASH_EMSCRIPTEN
++	if( COM_StringEmptyOrNULL( landname ) && !Porteo_MapaListo( "changelevel", mapname ))
++		return;
++#endif
++
+ 	if( !COM_StringEmptyOrNULL( landname ))
+ 		smooth = true;
+ 
+@@ -3728,6 +3733,11 @@ int GAME_EXPORT pfnIsMapValid( char *filename )
+ 
+ 	if( FBitSet( flags, MAP_IS_EXIST ))
+ 		return true;
++#if XASH_EMSCRIPTEN
++	// porteo web: un mapa que todavía no se bajó también vale (se baja al cargarlo)
++	if( Porteo_MapaExiste( filename ))
++		return true;
++#endif
+ 	return false;
+ }
+ 
+diff --git a/engine/wscript b/engine/wscript
+index a544774..1004ad5 100644
+--- a/engine/wscript
++++ b/engine/wscript
+@@ -299,14 +299,15 @@ def build(bld):
+ 		linkflags = []
+ 
+ 		if bld.env.DEST_OS == 'emscripten':
+-			linkflags = ['-sINITIAL_MEMORY=134217728', '-sALLOW_MEMORY_GROWTH=1', '-sSTACK_SIZE=16777216']
+-
+-			linkflags += ['-sASYNCIFY=1']
+-
+-			node = bld.srcnode.find_node('rodir')
+-			if not node:
+-				bld.fatal('Put game data into rodir folder in source tree root')
+-			linkflags += ['--preload-file', '%s@/rodir' % node.path_from(bld.bldnode)]
++			# Porteo web: módulo principal de WebAssembly. El bucle va con requestAnimationFrame
++			# (host.c), sin Asyncify; los datos los pone la página en el sistema de archivos
++			# antes de llamar a main.
++			linkflags = ['-sMAIN_MODULE=1', '-sMODULARIZE=1', '-sEXPORT_NAME=XashMotor',
++				'-sINITIAL_MEMORY=134217728', '-sALLOW_MEMORY_GROWTH=1', '-sSTACK_SIZE=8388608',
++				'-sINVOKE_RUN=0', '-sEXIT_RUNTIME=0', '-sFORCE_FILESYSTEM=1', '-lidbfs.js',
++				'-sEXPORTED_RUNTIME_METHODS=FS,IDBFS,callMain,ccall,cwrap,ENV,addRunDependency,removeRunDependency,loadDynamicLibrary,HEAPU8,HEAPF32',
++				'-sMIN_WEBGL_VERSION=2', '-sMAX_WEBGL_VERSION=2', '-sFULL_ES3=1', '-sGL_ENABLE_GET_PROC_ADDRESS=1',
++				'-sENVIRONMENT=web']
+ 
+ 		f(source = source,
+ 			target = 'xash',
+diff --git a/ref/gl/gl2_shim/gl2_shim.c b/ref/gl/gl2_shim/gl2_shim.c
+index 91541c9..c3e66d9 100644
+--- a/ref/gl/gl2_shim/gl2_shim.c
++++ b/ref/gl/gl2_shim/gl2_shim.c
+@@ -605,6 +605,9 @@ int GL2_ShimInit( void )
+ 		gl2wrap_config.incremental = gl2wrap_config.buf_storage = false;
+ 
+ 	gl2wrap_config.version = 310;
++#if XASH_EMSCRIPTEN
++	gl2wrap_config.version = 300; // WebGL2: GLSL ES 3.00, sin probar 3.10 antes
++#endif
+ 	if( gEngfuncs.Sys_CheckParm( "-minshaders" ))
+ 		gl2wrap_config.version = 100;
+ 	if( gl2wrap_config.buf_storage )
+@@ -617,6 +620,16 @@ int GL2_ShimInit( void )
+ 		gl2wrap_config.cycle_buffers = 4;
+ 	if( !gl2wrap_config.vao_mandatory )
+ 		gl2wrap_config.cycle_buffers = 1;
++#if XASH_EMSCRIPTEN
++	// WebGL2 (Emscripten): los vértices siempre en buffers con VAO, porque la emulación de
++	// Emscripten no acepta punteros del cliente con un buffer de índices (los quads lo usan), y
++	// sin mapear buffers, que WebGL no tiene: se suben con glBufferData, rotando 16
++	gl2wrap_config.vao_mandatory = true;
++	gl2wrap_config.incremental = false;
++	gl2wrap_config.buf_storage = false;
++	gl2wrap_config.supports_mapbuffer = false;
++	gl2wrap_config.cycle_buffers = 16;
++#endif
+ 	gEngfuncs.Con_Printf( S_NOTE "GL2_ShimInit: config: %s%s%s%s%s%s%sCYCLE=%d VER=%d\n",
+ 		gl2wrap_config.buf_storage ? "BUF_STOR " : "",
+ 		gl2wrap_config.buf_storage&&gl2wrap_config.coherent ? "COHERENT " : "",
+diff --git a/scripts/waifulib/xcompile.py b/scripts/waifulib/xcompile.py
+index 8a7c8f1..afb76d9 100644
+--- a/scripts/waifulib/xcompile.py
++++ b/scripts/waifulib/xcompile.py
+@@ -814,6 +814,8 @@ def configure(conf):
+ 	for k in c_config.MACRO_TO_DESTOS:
+ 		MACRO_TO_DESTOS[k] = c_config.MACRO_TO_DESTOS[k] # ordering is important
+ 	c_config.MACRO_TO_DESTOS  = MACRO_TO_DESTOS
++	c_config.MACRO_TO_DEST_CPU['__wasm32__'] = 'wasm32' # Emscripten
++	c_config.MACRO_TO_DEST_CPU['__wasm64__'] = 'wasm64'
+ 
+ def post_compiler_cxx_configure(conf):
+ 	conf.msg('Target OS', conf.env.DEST_OS)
+diff --git a/wscript b/wscript
+index ffb4aad..61898b4 100644
+--- a/wscript
++++ b/wscript
+@@ -399,6 +399,16 @@ def configure(conf):
+ 		linkflags.append('-Wl,-undefined,error')
+ 	elif conf.env.SAILFISH:
+ 		conf.define('XASH_SAILFISH', 1)
++	# Emscripten (porteo web): enlace dinámico de WebAssembly. Todo el código va con -fPIC, el
++	# motor es el módulo principal y filesystem, renderer, menú, cliente y servidor son módulos
++	# secundarios (SIDE_MODULE) que el motor abre con dlopen.
++	if conf.env.DEST_OS == 'emscripten':
++		cflags.append('-fPIC')
++		cxxflags.append('-fPIC')
++		if '-Wl,--no-undefined' in linkflags:
++			linkflags.remove('-Wl,--no-undefined')
++		conf.env.append_unique('LINKFLAGS_cshlib', ['-sSIDE_MODULE=1'])
++		conf.env.append_unique('LINKFLAGS_cxxshlib', ['-sSIDE_MODULE=1'])
+ 
+ 	conf.check_cc(cflags=cflags, linkflags=linkflags, msg='Checking for required C flags')
+ 	conf.check_cxx(cxxflags=cxxflags, linkflags=linkflags, msg='Checking for required C++ flags')
