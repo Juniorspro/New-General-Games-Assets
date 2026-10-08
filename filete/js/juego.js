@@ -1,11 +1,12 @@
 /* ============================================================================
-   FILETE: las escenas (intro, idioma, menú, barrios, partida, pausa, fin,
+   FILETE: las escenas (idioma, menú, barrios, partida, pausa, fin,
    controles), el arrastre de las piezas, los efectos y el bucle.
    ========================================================================== */
 
 const lienzoP = document.getElementById('lienzo');
 const g = lienzoP.getContext('2d');
-let escena = 'intro', tEsc = 0, trans = null, fondo = null, ESQS = null;
+let escena = 'menu', tEsc = 0, trans = null, fondo = null, ESQS = null;
+let RES = 1;                  // píxeles reales del lienzo por píxel del juego
 let G = null;                 // la partida en curso
 
 /* -------------------------------------------------------------- controles */
@@ -20,7 +21,10 @@ function ajustar() {
   let esc = Math.floor(Math.min(vw / W, vh / 384));
   if (esc < 1) esc = Math.min(vw / W, vh / 384);
   H = clamp(Math.floor(vh / esc), 384, 520);
-  lienzoP.width = W; lienzoP.height = H;
+  // el lienzo va a la resolución real (hasta ×4) y se dibuja escalado: los píxeles quedan iguales
+  // y las letras del sistema (árabe, japonés, tailandés, birmano…) se ven nítidas
+  RES = clamp(Math.floor(esc), 1, 4); ESCALA_TEXTO = RES;
+  lienzoP.width = W * RES; lienzoP.height = H * RES;
   const cw = W * esc / dpr, ch = H * esc / dpr;
   Object.assign(lienzoP.style, { width: cw + 'px', height: ch + 'px', left: Math.round((innerWidth - cw) / 2) + 'px', top: Math.round((innerHeight - ch) / 2) + 'px' });
   const libre = H - 384;
@@ -105,22 +109,21 @@ function titulo(y, t) {
   escribir(g, sub, W / 2, y + c.height - 1 + bob, { alin: 'centro', grad: GRAD_CREMA, borde: K });
 }
 
-/* ------------------------------------------------------------------ intro */
-let intro = null, musicaIntro = null;
-function escenaIntro(dt) {
-  if (E.toque || apretada('Enter', 'Space', 'Escape')) { intro.saltar(); if (intro.listo && musicaIntro) musicaIntro.cortar(); }
-  intro.pasar(dt); intro.dibujar(g);
-  if (intro.listo && !trans) irA('idioma');
-}
+/* ----------------------------------------------------------------- idioma */
+/* los 13 idiomas, cada uno escrito en su idioma; el que está puesto va en oro */
 function escenaIdioma(t) {
   fondoMenu(t);
-  titulo(26, t);
-  const y0 = Math.round(H * 0.38);
-  ['es', 'en', 'pt'].forEach((l, i) => escribir(g, TXT[l].idioma, W / 2, y0 + i * 11, { alin: 'centro', grad: [GRAD_ORO, GRAD_CELESTE, GRAD_VERDE][i], borde: K }));
-  const nombres = { es: 'ESPAÑOL', en: 'ENGLISH', pt: 'PORTUGUÊS' };
-  ['es', 'en', 'pt'].forEach((l, i) => {
-    if (boton(40, y0 + 42 + i * 32, W - 80, 24, nombres[l], { col: [F.rojo, F.azul, F.verde][i] })) { IDIOMA = l; Guardado.escribir('idioma', l); irA('menu'); }
+  g.save(); g.translate(W / 2 - 7, 8); g.scale(2, 2); globoPx(g, 0, 0, F.oro); g.restore();
+  const tit = tr('idioma');
+  escribir(g, tit, W / 2, 28, { alin: 'centro', esc: tituloEsc(tit, W - 24), grad: GRAD_ORO, sombra: F.rojoOsc });
+  const top = 56, paso = Math.min(26, Math.floor((H - 36 - top) / IDIOMAS.length)), cols = [F.rojo, F.azul, F.verde];
+  IDIOMAS.forEach((l, i) => {
+    const sel = l.id === IDIOMA;
+    if (boton(34, top + i * paso, W - 68, paso - 4, l.nombre.toUpperCase(), { col: sel ? F.oroOsc : cols[i % 3], grad: sel ? GRAD_ORO : undefined })) {
+      IDIOMA = l.id; Guardado.escribir('idioma', l.id); irA('menu');
+    }
   });
+  if (boton(W / 2 - 45, H - 28, 90, 20, tr('volver'), { col: '#5a3a6a' }) || apretada('Escape')) irA('menu');
 }
 
 /* ------------------------------------------------------------------- menú */
@@ -139,7 +142,7 @@ function escenaMenu(t) {
   const hr = DATOS.diaFecha === hoy() ? DATOS.diaRecord : 0;
   escribir(g, tr('hoyRec', hr), W / 2, y0 + 111, { alin: 'centro', grad: GRAD.gris, borde: 'no', sinSombra: true });
   if (boton(x, y0 + 124, w / 2 - 3, 18, tr('controles'), { col: '#5a3a6a' })) irA('controles');
-  if (boton(x + w / 2 + 3, y0 + 124, w / 2 - 3, 18, tr('idiomaBtn'), { col: '#5a3a6a' })) irA('idioma');
+  if (boton(x + w / 2 + 3, y0 + 124, w / 2 - 3, 18, tr('idiomaBtn'), { col: '#5a3a6a', icono: (ix, iy) => globoPx(g, ix - 4, Math.round(iy) - 4, F.crema) })) irA('idioma');
   const yb = H - 30;
   cinta(g, W / 2 - 50, yb, 100, 15, F.rojo, F.rojoOsc);
   escribir(g, tr('record') + ' ' + DATOS.record, W / 2, yb + 4, { alin: 'centro', grad: GRAD_ORO, borde: K });
@@ -188,7 +191,7 @@ function estrella(gg, x, y, llena, r) {
   }
 }
 /* título grande que se achica si no entra */
-function tituloEsc(txt, max) { return anchoTexto(txt) * 3 <= (max || W - 16) ? 3 : 2; }
+function tituloEsc(txt, max) { const a = anchoTexto(txt), m = max || W - 16; return a * 3 <= m ? 3 : a * 2 <= m ? 2 : 1; }
 
 /* ----------------------------------------------------------------- partida */
 function empezar(modo, nivel) {
@@ -403,8 +406,10 @@ function dibujarPartida(t) {
   g.globalAlpha = 1;
   for (const q of P.textos) {
     if (!q.txt) continue;
+    // si no entra grande va chico, y nunca se sale de la pantalla
+    const e = q.grande && anchoTexto(q.txt) * 2 + 8 <= W ? 2 : 1, m = anchoTexto(q.txt) * e / 2 + 3;
     g.globalAlpha = clamp(1.1 - q.t, 0, 1);
-    escribir(g, q.txt, q.x, q.y, { alin: 'centro', esc: q.grande ? 2 : 1, grad: GRAD_ORO, borde: K, filete: true, sombra: F.rojoOsc });
+    escribir(g, q.txt, clamp(q.x, m, W - m), q.y, { alin: 'centro', esc: e, grad: GRAD_ORO, borde: K, filete: true, sombra: F.rojoOsc });
     g.globalAlpha = 1;
   }
   for (const q of P.vuelan) {
@@ -417,9 +422,9 @@ function dibujarPartida(t) {
   if (P.banner) dibujarBanner(P.banner);
   if (!DATOS.ayuda && !P.arr) {
     const txt = P.modo === 'barrio' ? tr('ayudaFlores') : tr('ayuda');
-    const lin = envolver(txt, W - 30);
-    g.fillStyle = 'rgba(13,11,16,0.8)'; g.fillRect(8, TY + TAB / 2 - 14, W - 16, lin.length * 9 + 10);
-    lin.forEach((l, i) => escribir(g, l, W / 2, TY + TAB / 2 - 9 + i * 9, { alin: 'centro', grad: GRAD_CREMA, borde: K }));
+    const lin = envolver(txt, W - 30), lh = esPx(txt) ? 9 : 13;   // las letras del sistema piden más renglón
+    g.fillStyle = 'rgba(13,11,16,0.8)'; g.fillRect(8, TY + TAB / 2 - 14, W - 16, lin.length * lh + 10);
+    lin.forEach((l, i) => escribir(g, l, W / 2, TY + TAB / 2 - 9 + i * lh, { alin: 'centro', grad: GRAD_CREMA, borde: K }));
     const k = (t % 1.6) / 1.6, hx = lerp(slotX(1), W / 2, k), hy = lerp(BANDEJA_Y, TY + TAB * 0.7, salida(k));
     disco(g, hx, hy, 4, 'rgba(255,248,236,0.8)'); disco(g, hx, hy, 2, F.rojo);
   }
@@ -492,9 +497,10 @@ function dibujarHUD(t) {
 }
 function dibujarBanner(b) {
   const k = b.t < 0.25 ? rebote(b.t / 0.25) : b.t > 1.25 ? 1 - salida((b.t - 1.25) / 0.25) : 1;
-  const w = Math.max(60, anchoTexto(b.txt) * 2 + 24), x = W / 2 - w / 2 + (1 - k) * -W, y = TY + TAB / 2 - 14;
+  const e = anchoTexto(b.txt) * 2 + 32 <= W ? 2 : 1;
+  const w = Math.max(60, anchoTexto(b.txt) * e + 24), x = W / 2 - w / 2 + (1 - k) * -W, y = TY + TAB / 2 - 14;
   cinta(g, x, y, w, 26, b.col, K);
-  escribir(g, b.txt, x + w / 2, y + 7, { alin: 'centro', esc: 2, grad: GRAD_CREMA, sombra: K });
+  escribir(g, b.txt, x + w / 2, y + (e === 2 ? 7 : 10), { alin: 'centro', esc: e, grad: GRAD_CREMA, sombra: K });
 }
 
 /* -------------------------------------------------------- otras escenas */
@@ -603,9 +609,9 @@ function cuadro(ts) {
   const t = ts / 1000;
   tEsc += dt;
   if (trans) { trans.t += dt; if (!trans.hecho && trans.t >= trans.dur) { trans.hecho = true; trans.alMedio(); } if (trans.t >= trans.dur * 2) trans = null; }
+  g.setTransform(RES, 0, 0, RES, 0, 0); g.imageSmoothingEnabled = false;
   try {
     switch (escena) {
-      case 'intro': escenaIntro(dt); break;
       case 'idioma': escenaIdioma(t); break;
       case 'menu': escenaMenu(t); break;
       case 'barrios': Sonido.musica(TEMAS.menu); escenaBarrios(t); break;
@@ -621,11 +627,9 @@ function cuadro(ts) {
 }
 function arrancar() {
   ajustar();
-  intro = crearIntroJXS({ W, H, presenta: TXT[IDIOMA].presenta, vibrar, estilo: ESTILO_FILETE });
   Sonido.iniciar();
-  if (Sonido.ctx && Sonido.ctx.state === 'running') musicaIntro = jingleJXS(Sonido.ctx, Sonido.total, ESTILO_FILETE);
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (escena === 'juego' && G && !G.fin) { escena = 'pausa'; tEsc = 0; } Sonido.pausar(true); } else Sonido.pausar(false); });
   requestAnimationFrame(cuadro);
-  window.__filete = { get G() { return G; }, get escena() { return escena; }, empezar, colocar, terminar, irA, DATOS, CTRL, FORMAS };
+  window.__filete = { get G() { return G; }, get escena() { return escena; }, empezar, colocar, terminar, irA, tr, DATOS, CTRL, FORMAS };
 }
 arrancar();

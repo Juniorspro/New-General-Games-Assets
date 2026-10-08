@@ -1,10 +1,6 @@
 /* ============================================================================
-   La intro de JXSTUDIOS a pincel: misma coreografía que la de La Cripta, otro
-   material. La pantalla negra se abre con un tajo de luz y aparece el papel de
-   arroz; el monograma JXS se pinta con tinta (aguada corrida + trazo seco),
-   en el golpe cae el sello rojo con salpicón de tinta, y JXSTUDIOS se escribe
-   en serif entintada. La música: un glissando de koto, el taiko en el golpe y
-   una nota larga de shakuhachi.
+   El papel de arroz, el sello rojo (hanko) y el salpicón de tinta: lo que usan
+   el fondo, el título y los cortes.
    ========================================================================== */
 
 /* el papel de arroz: tono cálido, fibras, motas y una aguada de montañas en la niebla */
@@ -68,54 +64,3 @@ function salpicon(g, x, y, tam, col, rnd, ang, alfa) {
   }
   g.globalAlpha = 1;
 }
-
-const ESTILO_SUMI = {
-  negro: '#120e0b',
-  chispa: 2,
-  anchoLogo: (Wl) => Math.round(Wl * 0.62),
-  puntas: ['#16110d', '#2a221c', '#4a4038'],
-  golpe: ['#16110d', '#16110d', '#2a221c', BERMELLON],
-  destello: 'rgba(200,50,30,0.28)',
-  fondo: (Wl, Hl) => papelWashi(Wl, Hl, 3, true),
-  logo(g, i) {
-    const G = 14.5 * i.esc;
-    for (const capa of [0, 1]) for (const tz of i.TRAZOS) {
-      if (tz.capa !== capa) continue;
-      const p = i.camino2d(tz, i.esc, i.x0, i.y0), l = i.largo(tz) * i.esc;
-      g.save();
-      if (i.avance < 1) g.setLineDash([Math.max(0.01, l * i.avance), l + 20]);
-      g.lineCap = 'round'; g.lineJoin = 'round';
-      // la tinta que se corre en el papel, el trazo y el pincel seco por encima
-      g.strokeStyle = 'rgba(22,17,13,0.13)'; g.lineWidth = G * 1.55; g.stroke(p);
-      g.strokeStyle = 'rgba(22,17,13,0.92)'; g.lineWidth = G; g.stroke(p);
-      g.strokeStyle = 'rgba(239,229,207,0.3)'; g.lineWidth = G * 0.12;
-      g.save(); g.translate(G * 0.2, -G * 0.12); g.stroke(p); g.restore();
-      g.save(); g.translate(-G * 0.18, G * 0.22); g.lineWidth = G * 0.07; g.stroke(p); g.restore();
-      g.restore();
-    }
-    if (i.golpe) {
-      // el sello cae grande y se asienta con un rebote
-      const k = clamp(i.tGolpe / 0.18, 0, 1), esc = 1 + (1 - salida(k)) * 0.9, tam = 34 * esc;
-      const x = i.x0 + i.ancho * 0.96, y = i.y0 + i.ancho * 0.44;
-      if (i.tGolpe < 0.5) { const r = rngSemilla(5); salpicon(g, x - 6, y + 4, 9, TINTA, r, Math.PI * 0.9, 0.85 * clamp(i.tGolpe * 8, 0, 1)); }
-      hanko(g, x, y, tam, 'JX', -0.08, clamp(k * 1.4, 0, 1));
-    }
-  },
-  letras(g, parte, I, t, y) {
-    const tam = 25, total = medir(g, 'JXSTUDIOS', tam), x = I.cx - total / 2;
-    texto(g, parte, x, y + 14, { tam, alin: 'left', col: TINTA });
-  },
-  presentaTxt(g, txt, I, t, y) { texto(g, txt.toUpperCase(), I.cx, y + 42, { tam: 12, col: BERMELLON, peso: '700' }); },
-  jingle(ctx, bus, t0, tg, h) {
-    const { tono, soplo, f, T } = h;
-    soplo(0.18, 0.18, 'bandpass', 900, 6000, t0);                                   // el tajo de luz
-    // el glissando de koto en la escala "in" (mi y si bemoles)
-    [['D4', 1], ['E4', 0.944], ['G4', 1], ['A4', 1], ['B4', 0.944], ['D5', 1], ['E5', 0.944], ['G5', 1]]
-      .forEach(([n, b], k) => tono('triangle', f(n) * b, 0, 0.55, 0.07, t0 + 0.32 + k * 0.06, 0.003));
-    tono('sine', 150, 40, 0.8, 0.7, tg, 0.003); soplo(0.3, 0.3, 'lowpass', 600, 120, tg);  // el taiko con el sello
-    tono('sine', f('D3'), 0, 1.6, 0.12, tg + 0.02);
-    tono('sine', f('A4'), 0, 1.3, 0.07, t0 + T.T_LETRAS + 0.1, 0.15);              // el shakuhachi
-    soplo(1.0, 0.04, 'bandpass', 880, 1000, t0 + T.T_LETRAS + 0.1);
-    for (let k = 0; k < 9; k++) tono('sine', 1800 + (k % 3) * 120, 0, 0.03, 0.025, t0 + T.T_LETRAS + k * 0.04);
-  },
-};

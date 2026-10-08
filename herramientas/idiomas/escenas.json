@@ -1,0 +1,227 @@
+{
+ "tajo": [
+  {
+   "nombre": "menu",
+   "espera": 600
+  },
+  {
+   "nombre": "idioma",
+   "js": "__tajo.irA('idioma')",
+   "espera": 900
+  },
+  {
+   "nombre": "dojo",
+   "js": "__tajo.irA('dojo')",
+   "espera": 900
+  },
+  {
+   "nombre": "controles",
+   "js": "__tajo.irA('controles')",
+   "espera": 900
+  },
+  {
+   "nombre": "ayuda",
+   "js": "localStorage.removeItem('tajo.datos'); __tajo.DATOS.ayuda = false; __tajo.irA('juego', () => __tajo.empezar('clasico'))",
+   "espera": 1000
+  },
+  {
+   "nombre": "juego",
+   "js": "__tajo.G.ayuda = false; __tajo.DATOS.ayuda = true; __tajo.G.poder.doble = 5; __tajo.G.poder.hielo = 5",
+   "espera": 2500
+  },
+  {
+   "nombre": "pausa",
+   "js": "dispatchEvent(new KeyboardEvent('keydown', {code: 'Escape'})); setTimeout(() => dispatchEvent(new KeyboardEvent('keyup', {code: 'Escape'})), 50)",
+   "espera": 500
+  },
+  {
+   "nombre": "fin",
+   "js": "__tajo.G.puntos = 123; __tajo.G.comboMax = 4; __tajo.terminar()",
+   "espera": 2200
+  }
+ ],
+ "dorado": [
+  {
+   "nombre": "menu",
+   "espera": 900
+  },
+  {
+   "nombre": "idioma",
+   "js": "__dorado.irA('idioma')",
+   "espera": 900
+  },
+  {
+   "nombre": "controles",
+   "js": "__dorado.irA('controles')",
+   "espera": 900
+  },
+  {
+   "nombre": "editor",
+   "js": "__dorado.CTRL.modo = 1; __dorado.irA('editor')",
+   "espera": 900
+  },
+  {
+   "nombre": "ayuda",
+   "js": "__dorado.CTRL.modo = 0; __dorado.DATOS.ayuda = false; __dorado.irA('juego', () => __dorado.empezar('clasico'))",
+   "espera": 1100
+  },
+  {
+   "nombre": "juego",
+   "js": "__dorado.G.ayuda = false; __dorado.DATOS.ayuda = true; __dorado.G.mult = 3; __dorado.G.banners.push({txt: 'X', t: 0, vida: 0}); __dorado.bot = true",
+   "espera": 3500
+  },
+  {
+   "nombre": "banner",
+   "js": "__dorado.G.banner = null; __dorado.G.banners = []; __dorado.G.banners.push({ txt: 'BANNER', t: 0, vida: 3 }); (function(){ const G = __dorado.G; G.banners = [{ txt: (window.__trJ || ((k)=>k))('cumplida'), sub: 'X', t: 0, vida: 3, grande: true }]; })()",
+   "espera": 500
+  },
+  {
+   "nombre": "pausa",
+   "js": "__dorado.bot = false; dispatchEvent(new KeyboardEvent('keydown', {code: 'Escape'})); setTimeout(() => dispatchEvent(new KeyboardEvent('keyup', {code: 'Escape'})), 50)",
+   "espera": 500
+  },
+  {
+   "nombre": "fin",
+   "js": "__dorado.G.puntos = 1234567; __dorado.G.rango = 3; __dorado.G.misionesHechas = 4; __dorado.G.jackpotMax = 250000; __dorado.terminar()",
+   "espera": 2400
+  }
+ ],
+ "nebulosa": [
+  {
+   "nombre": "menu",
+   "espera": 700
+  },
+  {
+   "nombre": "idioma",
+   "js": "__nebulosa.irA('idioma')",
+   "espera": 900
+  },
+  {
+   "nombre": "catalogo",
+   "js": "__nebulosa.DATOS.visto = 10; __nebulosa.irA('catalogo')",
+   "espera": 900
+  },
+  {
+   "nombre": "controles",
+   "js": "__nebulosa.irA('controles')",
+   "espera": 900
+  },
+  {
+   "nombre": "ayuda",
+   "js": "localStorage.removeItem('nebulosa.partida'); __nebulosa.DATOS.ayuda = false; __nebulosa.empezar('clasico')",
+   "espera": 1200
+  },
+  {
+   "nombre": "juego",
+   "js": "__nebulosa.DATOS.ayuda = true; const G = __nebulosa.G; for (let i = 0; i < 9; i++) G.cuerpos.push(__nebulosa.nuevoCuerpo(i % 6, 50 + (i % 5) * 60, 420 + Math.floor(i / 5) * 40)); G.rayoActivo = true; G.puntos = 4321",
+   "espera": 1600
+  },
+  {
+   "nombre": "pausa",
+   "js": "dispatchEvent(new KeyboardEvent('keydown', {code: 'Escape'})); setTimeout(() => dispatchEvent(new KeyboardEvent('keyup', {code: 'Escape'})), 50)",
+   "espera": 600
+  },
+  {
+   "nombre": "fin",
+   "js": "__nebulosa.irA('juego'); setTimeout(() => { __nebulosa.G.rayoActivo = false; __nebulosa.G.puntos = 1234; __nebulosa.terminar(); }, 500)",
+   "espera": 3200
+  }
+ ],
+ "filete": [
+  {
+   "nombre": "menu",
+   "espera": 700
+  },
+  {
+   "nombre": "idioma",
+   "js": "__filete.irA('idioma')",
+   "espera": 900
+  },
+  {
+   "nombre": "barrios",
+   "js": "__filete.irA('barrios')",
+   "espera": 900
+  },
+  {
+   "nombre": "controles",
+   "js": "__filete.irA('controles')",
+   "espera": 900
+  },
+  {
+   "nombre": "ayuda",
+   "js": "__filete.DATOS.ayuda = false; __filete.empezar('barrio', 1)",
+   "espera": 1300
+  },
+  {
+   "nombre": "juego",
+   "js": "__filete.DATOS.ayuda = true; const G = __filete.G; G.combo = 3; G.banner = { txt: __filete.tr('elogios')[4], t: 0.5, col: '#2fae4e' }; G.textos.push({ txt: '+120', x: 200, y: 150, t: 0, grande: true })",
+   "espera": 500
+  },
+  {
+   "nombre": "pausa",
+   "js": "dispatchEvent(new KeyboardEvent('keydown', {code: 'Escape'})); setTimeout(() => dispatchEvent(new KeyboardEvent('keyup', {code: 'Escape'})), 50)",
+   "espera": 600
+  },
+  {
+   "nombre": "fin",
+   "js": "__filete.irA('juego'); setTimeout(() => __filete.terminar(false), 450)",
+   "espera": 3200
+  },
+  {
+   "nombre": "gano",
+   "js": "__filete.empezar('barrio', 2); setTimeout(() => __filete.terminar(true), 900)",
+   "espera": 3600
+  }
+ ],
+ "salamanca": [
+  {
+   "nombre": "menu",
+   "espera": 700
+  },
+  {
+   "nombre": "idioma",
+   "js": "__salamanca.irA('idioma')",
+   "espera": 900
+  },
+  {
+   "nombre": "altar",
+   "js": "__salamanca.DATOS.almas = 300; __salamanca.irA('altar')",
+   "espera": 900
+  },
+  {
+   "nombre": "controles",
+   "js": "__salamanca.irA('controles')",
+   "espera": 900
+  },
+  {
+   "nombre": "historia",
+   "js": "__salamanca.DATOS.historia = false; __salamanca.empezarPartida(false)",
+   "espera": 2600
+  },
+  {
+   "nombre": "juego",
+   "js": "__salamanca.DATOS.historia = true; __salamanca.escena = 'juego'; __salamanca.J.cartel = { txt: __salamanca.tr('jefes')[2], sub: __salamanca.tr('piso', 3), t: 2.4, jefe: true }",
+   "espera": 700
+  },
+  {
+   "nombre": "cartas",
+   "js": "__salamanca.J.cartel = null; __salamanca.abrirCartas('trato', 'epica'); setTimeout(() => { __salamanca.oferta.sel = 1; }, 200)",
+   "espera": 1500
+  },
+  {
+   "nombre": "fogon",
+   "js": "__salamanca.escena = 'fogon'",
+   "espera": 600
+  },
+  {
+   "nombre": "pausa",
+   "js": "__salamanca.escena = 'pausa'",
+   "espera": 600
+  },
+  {
+   "nombre": "fin",
+   "js": "__salamanca.terminarPartida(); __salamanca.escena = 'fin'",
+   "espera": 2500
+  }
+ ]
+}

@@ -37,10 +37,11 @@ const Guardado = {
 const DATOS = Object.assign({ record: 0, diaFecha: 0, diaRecord: 0, estrellas: {}, ayuda: false, partidas: 0 }, Guardado.leer('datos', {}));
 const guardarDatos = () => Guardado.escribir('datos', DATOS);
 
-let IDIOMA = Guardado.leer('idioma', null) || ((navigator.language || 'es').toLowerCase().startsWith('pt') ? 'pt' : (navigator.language || '').toLowerCase().startsWith('en') ? 'en' : 'es');
+// el del celular al arrancar; después, el que se elija en el menú (motor2d/idiomas.js)
+let IDIOMA = idiomaInicial(Guardado.leer('idioma', null));
 const TXT = {
   es: {
-    idioma: 'ELEGÍ TU IDIOMA', presenta: 'presenta', subtitulo: 'EL ROMPECABEZAS PORTEÑO',
+    idioma: 'ELEGÍ TU IDIOMA', subtitulo: 'EL ROMPECABEZAS PORTEÑO',
     clasico: 'CLÁSICO', clasicoD: 'HASTA DONDE LLEGUES', aventura: 'LOS BARRIOS', aventuraD: 'JUNTÁ LAS FLORES', diario: 'DESAFÍO DEL DÍA',
     controles: 'CONTROLES', idiomaBtn: 'IDIOMA', record: 'RÉCORD', hoyRec: 'HOY {0}', seguirPartida: 'SEGUIR LA PARTIDA',
     elogios: ['¡LINDO!', '¡GROSO!', '¡BÁRBARO!', '¡DE PELÍCULA!', '¡UNA OBRA DE ARTE!'], limpio: '¡TABLERO LIMPIO!', combo: 'COMBO',
@@ -53,7 +54,7 @@ const TXT = {
     tocar: 'TOCÁ PARA SEGUIR', cambioD: 'CAMBIA LAS TRES PIEZAS',
   },
   en: {
-    idioma: 'CHOOSE YOUR LANGUAGE', presenta: 'presents', subtitulo: 'THE BUENOS AIRES PUZZLE',
+    idioma: 'CHOOSE YOUR LANGUAGE', subtitulo: 'THE BUENOS AIRES PUZZLE',
     clasico: 'CLASSIC', clasicoD: 'AS FAR AS YOU CAN', aventura: 'NEIGHBORHOODS', aventuraD: 'COLLECT THE FLOWERS', diario: 'DAILY CHALLENGE',
     controles: 'CONTROLS', idiomaBtn: 'LANGUAGE', record: 'BEST', hoyRec: 'TODAY {0}', seguirPartida: 'CONTINUE GAME',
     elogios: ['NICE!', 'GREAT!', 'AWESOME!', 'AMAZING!', 'A MASTERPIECE!'], limpio: 'CLEAN BOARD!', combo: 'COMBO',
@@ -66,7 +67,7 @@ const TXT = {
     tocar: 'TAP TO CONTINUE', cambioD: 'SWAPS THE THREE PIECES',
   },
   pt: {
-    idioma: 'ESCOLHA SEU IDIOMA', presenta: 'apresenta', subtitulo: 'O QUEBRA-CABEÇA PORTENHO',
+    idioma: 'ESCOLHA SEU IDIOMA', subtitulo: 'O QUEBRA-CABEÇA PORTENHO',
     clasico: 'CLÁSSICO', clasicoD: 'ATÉ ONDE CHEGAR', aventura: 'OS BAIRROS', aventuraD: 'JUNTE AS FLORES', diario: 'DESAFIO DO DIA',
     controles: 'CONTROLES', idiomaBtn: 'IDIOMA', record: 'RECORDE', hoyRec: 'HOJE {0}', seguirPartida: 'CONTINUAR PARTIDA',
     elogios: ['LEGAL!', 'DEMAIS!', 'INCRÍVEL!', 'DE CINEMA!', 'UMA OBRA DE ARTE!'], limpio: 'TABULEIRO LIMPO!', combo: 'COMBO',
@@ -80,7 +81,7 @@ const TXT = {
   },
 };
 function tr(k, ...a) {
-  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.es[k] ?? k;
+  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.en[k] ?? TXT.es[k] ?? k;
   if (typeof s === 'string') a.forEach((v, i) => { s = s.replace('{' + i + '}', v); });
   return s;
 }

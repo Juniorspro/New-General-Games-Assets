@@ -34,7 +34,8 @@ const Guardado = {
 const DATOS = Object.assign({ record: 0, recordRayo: 0, diaFecha: 0, diaRecord: 0, visto: 0, partidas: 0, ayuda: false, supernovas: 0 }, Guardado.leer('datos', {}));
 const guardarDatos = () => Guardado.escribir('datos', DATOS);
 
-let IDIOMA = Guardado.leer('idioma', null) || ((navigator.language || 'es').toLowerCase().startsWith('pt') ? 'pt' : (navigator.language || '').toLowerCase().startsWith('en') ? 'en' : 'es');
+// el del celular al arrancar; después, el que se elija en el menú (motor2d/idiomas.js)
+let IDIOMA = idiomaInicial(Guardado.leer('idioma', null));
 const TXT = {
   es: {
     idioma: 'ELEGÍ TU IDIOMA', presenta: 'presenta', subtitulo: 'FUSIONÁ EL UNIVERSO',
@@ -77,22 +78,28 @@ const TXT = {
   },
 };
 function tr(k, ...a) {
-  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.es[k] ?? k;
+  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.en[k] ?? TXT.es[k] ?? k;
   if (typeof s === 'string') a.forEach((v, i) => { s = s.replace('{' + i + '}', v); });
   return s;
 }
 
 /* texto con letra de sistema gruesa y en cursiva (el synthwave), con brillo de neón */
 const FUENTE = '"Arial Black", "Segoe UI Black", "Helvetica Neue", Roboto, Arial, sans-serif';
+/* la cursiva gruesa es solo para lo latino; cada escritura usa su letra del sistema y el árabe va de derecha a izquierda */
+function fuenteNeon(str, tam, peso, cursiva) {
+  const esc = escrituraDe(str);
+  return { css: (esc === 'latn' ? peso || '900' : '700') + ' ' + (cursiva !== false && esc === 'latn' ? 'italic ' : '') + tam * escalaEscritura(esc) + 'px ' + (fuenteEscritura(esc, 'sans') || FUENTE), rtl: esc === 'arab' };
+}
 function texto(g, str, x, y, o) {
-  o = o || {};
-  const tam = o.tam || 14;
-  g.font = (o.peso || '900') + ' ' + (o.cursiva === false ? '' : 'italic ') + tam + 'px ' + FUENTE;
+  o = o || {}; str = String(str);
+  const tam = o.tam || 14, f = fuenteNeon(str, tam, o.peso, o.cursiva);
+  g.font = f.css; g.direction = f.rtl ? 'rtl' : 'ltr';
   g.textAlign = o.alin || 'center'; g.textBaseline = 'middle';
   if (o.glow) { g.shadowColor = o.glow; g.shadowBlur = (o.blur || 10); }
   if (o.borde) { g.lineWidth = o.bordeAncho || 3; g.strokeStyle = o.borde; g.lineJoin = 'round'; g.strokeText(str, x, y); }
   g.fillStyle = o.col || '#fff';
   g.fillText(str, x, y);
-  g.shadowBlur = 0; g.shadowColor = 'transparent';
+  g.shadowBlur = 0; g.shadowColor = 'transparent'; g.direction = 'ltr';
 }
-function medir(g, str, tam, peso) { g.font = (peso || '900') + ' italic ' + tam + 'px ' + FUENTE; return g.measureText(str).width; }
+function medir(g, str, tam, peso) { str = String(str); const f = fuenteNeon(str, tam, peso); g.font = f.css; g.direction = f.rtl ? 'rtl' : 'ltr'; const w = g.measureText(str).width; g.direction = 'ltr'; return w; }
+function tamQueEntra(g, str, tam, ancho, peso) { while (tam > 8 && medir(g, str, tam, peso) > ancho) tam -= 0.5; return tam; }

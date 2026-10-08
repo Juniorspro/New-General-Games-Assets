@@ -10,7 +10,7 @@ arriba de la línea de peligro 3 segundos, se terminó.
 - Música synthwave sintetizada que se pone más intensa cuando el frasco se llena.
 - Controles a gusto: apuntar al dedo o arrastrando (con sensibilidad), soltar al levantar o con botón, línea guía,
   tamaño de botones, zurdo y vibración (con zona para probar).
-- Intro: la de JXSTUDIOS compartida (`motor2d/intro-jxs.js`) vestida de cartel de neón (`js/intro.js`).
+- 13 idiomas: arranca en el del celu y se cambia en el menú (el botón del globito); sin intro (`js/idiomas.js`).
 - Un solo archivo `nebulosa.html` (unos 105 KB, sin internet). Armar: `node motor2d/armar.mjs nebulosa`.
 - No es de píxeles: el lienzo va a la resolución real y se dibuja en unidades de 360 de ancho (`S`).
 
@@ -20,5 +20,5 @@ arriba de la línea de peligro 3 segundos, se terminó.
 | `js/cuerpos.js` | los once cuerpos pintados, brillos, anillos, disco, cola |
 | `js/fisica.js` | círculos con gravedad, separación, rebote, fusiones |
 | `js/sonido.js` | synthwave y efectos |
-| `js/intro.js` | el estilo neón de la intro |
+| `js/idiomas.js` | los 10 idiomas que se sumaron (es-MX, ar, id, ms, fil, tr, ur, th, my, ja) |
 | `js/juego.js` | escenas, apuntado, fusiones, peligro, el bucle |

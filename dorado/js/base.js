@@ -33,7 +33,8 @@ const DATOS = Object.assign({ rec: {}, diaFecha: 0, diaRecord: 0, partidas: 0, r
 DATOS.rec = Object.assign({ clasico: 0, reloj: 0 }, DATOS.rec);
 const guardarDatos = () => Guardado.escribir('datos', DATOS);
 
-let IDIOMA = Guardado.leer('idioma', null) || ((navigator.language || 'es').toLowerCase().startsWith('pt') ? 'pt' : (navigator.language || '').toLowerCase().startsWith('en') ? 'en' : 'es');
+// el del celular al arrancar; después, el que se elija en el menú (motor2d/idiomas.js)
+let IDIOMA = idiomaInicial(Guardado.leer('idioma', null));
 const TXT = {
   es: {
     idioma: 'ELEGÍ TU IDIOMA', presenta: 'presenta', subtitulo: 'PINBALL DEL GRAN HOTEL',
@@ -97,12 +98,11 @@ const TXT = {
   },
 };
 function tr(k, ...a) {
-  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.es[k] ?? k;
+  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.en[k] ?? TXT.es[k] ?? k;
   if (typeof s === 'string') a.forEach((v, i) => { s = s.replace('{' + i + '}', v); });
   return s;
 }
 function lienzoHD(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w * S)); c.height = Math.max(1, Math.ceil(h * S)); const g = c.getContext('2d'); g.scale(S, S); return [c, g]; }
-function partir(s, n) { const out = []; let l = ''; for (const p of s.split(' ')) { if ((l + ' ' + p).trim().length > n && l) { out.push(l); l = p; } else l = (l + ' ' + p).trim(); } if (l) out.push(l); return out; }
 
 /* los colores: laca negra, verde esmeralda, marfil, oro (con su sombra) y rubí */
 const NEGRO = '#07080a', ESMERALDA = '#1f8a6a', ESM_CLARO = '#5fe0b4', MARFIL = '#f4ead2', ORO = '#e8b850', ORO_CLARO = '#fff1c2', ORO_OSCURO = '#8a5e16', RUBI = '#d23a4a';
@@ -115,11 +115,34 @@ function glifo(ch) {
   return p;
 }
 const avanceGlifo = (ch) => (LETRA.g[ch] ? LETRA.g[ch][0] : 300);
-function anchoDeco(str, tam, esp) { str = String(str).toUpperCase(); let w = 0; for (const ch of str) w += avanceGlifo(ch); return w * tam / 1000 + (esp || 0) * tam * Math.max(0, str.length - 1); }
+/* lo que Limelight no tiene se escribe con la letra del sistema (con serifa), igual de oro */
+const cubreDeco = (str) => { for (const ch of str) if (ch !== ' ' && !LETRA.g[ch]) return false; return true; };
+const medidorDeco = document.createElement('canvas').getContext('2d');
+function fuenteDecoSis(str, tam) { const esc = escrituraDe(str); return { css: '700 ' + tam * escalaEscritura(esc) * 0.95 + 'px ' + (fuenteEscritura(esc, 'serif') || 'Georgia,serif'), rtl: esc === 'arab' }; }
+function textoDecoSis(g, str, x, y, tam, o) {
+  const f = fuenteDecoSis(str, tam), w = anchoDeco(str, tam);
+  g.save(); g.font = f.css; g.direction = f.rtl ? 'rtl' : 'ltr'; g.textBaseline = 'middle';
+  g.textAlign = o.alin === 'left' ? 'left' : o.alin === 'right' ? 'right' : 'center';
+  if (o.sombra) { g.fillStyle = o.sombraCol || 'rgba(0,0,0,0.6)'; g.fillText(str, x + o.sombra[0], y + o.sombra[1]); }
+  if (o.borde) { g.lineJoin = 'round'; g.lineWidth = o.bordeAncho || 3; g.strokeStyle = o.borde; g.strokeText(str, x, y); }
+  if (o.oro) {
+    const gr = g.createLinearGradient(0, y - tam * 0.55, 0, y + tam * 0.5);
+    gr.addColorStop(0, ORO_CLARO); gr.addColorStop(0.42, '#f3cc68'); gr.addColorStop(0.5, '#a8741c'); gr.addColorStop(0.62, '#e2aa3e'); gr.addColorStop(1, '#fbe3a0');
+    g.fillStyle = gr;
+  } else g.fillStyle = o.col || MARFIL;
+  g.fillText(str, x, y);
+  g.restore();
+  return w;
+}
+function anchoDeco(str, tam, esp) {
+  str = String(str).toUpperCase();
+  if (!cubreDeco(str)) { const f = fuenteDecoSis(str, tam); medidorDeco.font = f.css; medidorDeco.direction = f.rtl ? 'rtl' : 'ltr'; return medidorDeco.measureText(str).width; }
+  let w = 0; for (const ch of str) w += avanceGlifo(ch); return w * tam / 1000 + (esp || 0) * tam * Math.max(0, str.length - 1); }
 /* y es el centro de las mayúsculas (alto de 722 en la letra) */
 function textoDeco(g, str, x, y, tam, o) {
   o = o || {};
   str = String(str).toUpperCase();
+  if (!cubreDeco(str)) return textoDecoSis(g, str, x, y, tam, o);
   const esp = o.esp || 0, w = anchoDeco(str, tam, esp), k = tam / 1000;
   let cx = o.alin === 'left' ? x : o.alin === 'right' ? x - w : x - w / 2;
   const base = y + 0.361 * tam;
@@ -145,21 +168,28 @@ function tamDecoQueEntra(str, tam, ancho, esp) { while (tam > 8 && anchoDeco(str
 
 /* la sans espaciada para lo chico (en celus sin Futura cae en la del sistema) */
 const SANS = '"Futura","Century Gothic","Avenir Next","Trebuchet MS","Segoe UI",Roboto,Arial,sans-serif';
+/* el espaciado de letras rompería el árabe y desarma el tailandés y el birmano: solo para lo latino */
+function fuenteSans(g, str, tam, peso, esp) {
+  const esc = escrituraDe(str);
+  g.font = (peso || '600') + ' ' + tam * escalaEscritura(esc) + 'px ' + (fuenteEscritura(esc, 'sans') || SANS);
+  g.direction = esc === 'arab' ? 'rtl' : 'ltr';
+  if ('letterSpacing' in g) g.letterSpacing = esc === 'latn' ? (esp == null ? tam * 0.12 : esp) + 'px' : '0px';
+}
 function texto(g, str, x, y, o) {
-  o = o || {};
-  const tam = o.tam || 12;
-  g.font = (o.peso || '600') + ' ' + tam + 'px ' + SANS;
+  o = o || {}; str = String(str);
+  fuenteSans(g, str, o.tam || 12, o.peso, o.esp);
   g.textAlign = o.alin || 'center'; g.textBaseline = 'middle';
-  if ('letterSpacing' in g) g.letterSpacing = (o.esp == null ? tam * 0.12 : o.esp) + 'px';
   if (o.borde) { g.lineWidth = o.bordeAncho || 3; g.strokeStyle = o.borde; g.lineJoin = 'round'; g.strokeText(str, x, y); }
   g.fillStyle = o.col || MARFIL; g.fillText(str, x, y);
   if ('letterSpacing' in g) g.letterSpacing = '0px';
+  g.direction = 'ltr';
 }
 function medir(g, str, tam, peso, esp) {
-  g.font = (peso || '600') + ' ' + tam + 'px ' + SANS;
-  if ('letterSpacing' in g) g.letterSpacing = (esp == null ? tam * 0.12 : esp) + 'px';
+  str = String(str);
+  fuenteSans(g, str, tam, peso, esp);
   const w = g.measureText(str).width;
   if ('letterSpacing' in g) g.letterSpacing = '0px';
+  g.direction = 'ltr';
   return w;
 }
 function tamQueEntra(g, str, tam, ancho, peso) { while (tam > 7 && medir(g, str, tam, peso) > ancho) tam -= 0.5; return tam; }

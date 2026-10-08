@@ -212,7 +212,7 @@ function dibujarHUD(g, t) {
   g.fillStyle = '#c8902a'; g.fillRect(W - 14, vy + 4, 10, 9);
   g.fillStyle = '#2a1408'; g.fillRect(W - 12, vy + 6, 2, 5); g.fillRect(W - 8, vy + 6, 2, 5);
   // experiencia
-  textoPx(g, tr('nv') + j.nivel, 3, vy + 16, { grad: GRAD.oro, sinSombra: true });
+  textoPx(g, tr('nv') + (esPx(tr('nv')) ? '' : ' ') + j.nivel, 3, vy + 16, { grad: GRAD.oro, sinSombra: true });
   const xw = W - 34, xp = clamp(j.xp / xpSig(j.nivel), 0, 1);
   g.fillStyle = K; g.fillRect(29, vy + 18, xw + 2, 5);
   g.fillStyle = '#24123a'; g.fillRect(30, vy + 19, xw, 3);

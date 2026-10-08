@@ -1,5 +1,5 @@
 {
   "salida": "nebulosa.html",
   "css": ["nebulosa/nebulosa.css"],
-  "js": ["motor2d/fuente.js", "motor2d/intro-jxs.js", "nebulosa/js/base.js", "nebulosa/js/cuerpos.js", "nebulosa/js/fisica.js", "nebulosa/js/sonido.js", "nebulosa/js/intro.js", "nebulosa/js/juego.js"]
+  "js": ["motor2d/idiomas.js", "nebulosa/js/base.js", "nebulosa/js/idiomas.js", "nebulosa/js/cuerpos.js", "nebulosa/js/fisica.js", "nebulosa/js/sonido.js", "nebulosa/js/juego.js"]
 }

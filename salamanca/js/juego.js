@@ -1,5 +1,5 @@
 /* ============================================================================
-   El juego: la pantalla, las escenas (intro, idioma, menú, altar, controles,
+   El juego: la pantalla, las escenas (idioma, menú, altar, controles,
    partida, cartas, fogón, pausa, fin) y el bucle. La interfaz se dibuja en el
    mismo lienzo de píxeles, con botones de piedra y borde de oro, y las mejoras
    salen como naipes españoles que se dan vuelta.
@@ -7,7 +7,8 @@
 
 const lienzo = document.getElementById('lienzo');
 const g = lienzo.getContext('2d');
-let escena = 'intro', tEsc = 0, transicion = null, fondoMenu = null;
+let escena = 'menu', tEsc = 0, transicion = null, fondoMenu = null;
+let RES = 1;                  // píxeles reales del lienzo por píxel del juego
 let oferta = null, resumen = null, desdePausa = false, arrastre = null, historiaPag = 0;
 
 /* ------------------------------------------------------------ la pantalla */
@@ -16,7 +17,10 @@ function ajustar() {
   let esc = Math.floor(Math.min(vw / W, vh / 320));
   if (esc < 1) esc = Math.min(vw / W, vh / 320);
   H = clamp(Math.floor(vh / esc), 320, 420);
-  lienzo.width = W; lienzo.height = H;
+  // el lienzo va a la resolución real (hasta ×4) y se dibuja escalado: los píxeles quedan iguales
+  // y las letras del sistema (árabe, japonés, tailandés, birmano…) se ven nítidas
+  RES = clamp(Math.floor(esc), 1, 4); ESCALA_TEXTO = RES; cacheCarta.clear();
+  lienzo.width = W * RES; lienzo.height = H * RES;
   const cw = W * esc / dpr, ch = H * esc / dpr;
   Object.assign(lienzo.style, { width: cw + 'px', height: ch + 'px', left: Math.round((innerWidth - cw) / 2) + 'px', top: Math.round((innerHeight - ch) / 2) + 'px' });
   const libre = H - HUD_H - SALA_H - 12;
@@ -27,9 +31,9 @@ function ajustar() {
 }
 addEventListener('resize', ajustar);
 
-function irA(nueva, alMedio, iris) {
+function irA(nueva, alMedio) {
   if (transicion) return;
-  transicion = { t: 0, dur: iris ? 0.3 : 0.32, iris, alMedio: () => { if (alMedio) alMedio(); if (nueva) { escena = nueva; tEsc = 0; } }, hecho: false };
+  transicion = { t: 0, dur: 0.32, alMedio: () => { if (alMedio) alMedio(); if (nueva) { escena = nueva; tEsc = 0; } }, hecho: false };
 }
 /* el telón de rombos */
 function dibujarTelon(g, p) {
@@ -132,7 +136,9 @@ const cacheCarta = new Map();
 function lienzoCarta(id, nivel) {
   const k = id + nivel + IDIOMA;
   if (cacheCarta.has(k)) return cacheCarta.get(k);
-  const C = CARTAS[id], P = PALOS[C.palo], c = hacerLienzo(CARTA_W, CARTA_H), s = c.getContext('2d');
+  // a la resolución del lienzo: el dibujo de píxeles queda igual y el nombre en otras letras, nítido
+  const C = CARTAS[id], P = PALOS[C.palo], c = hacerLienzo(CARTA_W * RES, CARTA_H * RES), s = c.getContext('2d');
+  s.scale(RES, RES); s.imageSmoothingEnabled = false;
   s.fillStyle = K; s.fillRect(1, 0, CARTA_W - 2, CARTA_H); s.fillRect(0, 1, CARTA_W, CARTA_H - 2);
   s.fillStyle = RAREZA[C.rar].col; s.fillRect(1, 1, CARTA_W - 2, CARTA_H - 2);
   s.fillStyle = '#f2e8d0'; s.fillRect(3, 3, CARTA_W - 6, CARTA_H - 6);
@@ -142,8 +148,8 @@ function lienzoCarta(id, nivel) {
   const mx = CARTA_W / 2, my = 28;
   circulo(s, mx, my, 15, K); circulo(s, mx, my, 14, P.col); circulo(s, mx, my, 12, P.fondo);
   s.drawImage(icono(id, C.palo), mx - 9, my - 9, 18, 18);
-  const lineas = envolver(nombreCarta(id), CARTA_W - 8);
-  lineas.slice(0, 2).forEach((l, i) => textoPx(s, l, CARTA_W / 2, 48 + i * 9 + (lineas.length === 1 ? 4 : 0), { alin: 'centro', col: '#2a1408', borde: 'no', sinSombra: true }));
+  const lineas = envolver(nombreCarta(id), CARTA_W - 8), lh = pasoRenglon(nombreCarta(id), 9) - (esPx(nombreCarta(id)) ? 0 : 2);
+  lineas.slice(0, 2).forEach((l, i) => textoPx(s, l, CARTA_W / 2, 48 + i * lh + (lineas.length === 1 ? 4 : 0), { alin: 'centro', col: '#2a1408', borde: 'no', sinSombra: true }));
   if (C.max <= 5) for (let i = 0; i < C.max; i++) { s.fillStyle = K; s.fillRect(CARTA_W / 2 - C.max * 3 + i * 6, 69, 5, 4); s.fillStyle = i < nivel ? P.col : '#c8b898'; s.fillRect(CARTA_W / 2 - C.max * 3 + i * 6 + 1, 70, 3, 2); }
   cacheCarta.set(k, c);
   return c;
@@ -187,7 +193,7 @@ function escenaCartas(t) {
   const O = oferta;
   O.t += 1 / 60;
   const tit = O.origen === 'trato' ? tr('trato') : O.origen === 'yapa' ? tr('yapa') : tr('nivel');
-  textoPx(g, tit, W / 2, SY + 30, { alin: 'centro', grad: GRAD.oro, escala: O.origen === 'nivel' ? 1 : 2 });
+  textoPx(g, tit, W / 2, SY + 30, { alin: 'centro', grad: GRAD.oro, escala: O.origen === 'nivel' ? 1 : escTitulo(tit) });
   textoPx(g, tr('tocaCarta'), W / 2, SY + 46, { alin: 'centro', grad: GRAD.gris });
   const y0 = SY + 62;
   O.ids.forEach((id, i) => {
@@ -209,10 +215,11 @@ function escenaCartas(t) {
   if (!oferta) return;
   if (O.sel >= 0) {
     const id = O.ids[O.sel], py = y0 + CARTA_H + 12;
-    placa(g, 8, py, W - 16, 44, { borde: RAREZA[CARTAS[id].rar].col });
+    const lh = pasoRenglon(descCarta(id), 9), alto = 17 + 3 * lh;
+    placa(g, 8, py, W - 16, alto, { borde: RAREZA[CARTAS[id].rar].col });
     textoPx(g, nombreCarta(id), W / 2, py + 5, { alin: 'centro', col: PALOS[CARTAS[id].palo].col });
-    envolver(descCarta(id), W - 28).slice(0, 3).forEach((l, i) => textoPx(g, l, W / 2, py + 16 + i * 9, { alin: 'centro', grad: GRAD.blanco }));
-    if (boton(W / 2 - 40, py + 52, 80, 18, tr('elegir'))) elegirCarta(O.sel);
+    envolver(descCarta(id), W - 28).slice(0, 3).forEach((l, i) => textoPx(g, l, W / 2, py + 16 + i * lh, { alin: 'centro', grad: GRAD.blanco }));
+    if (boton(W / 2 - 40, py + alto + 8, 80, 18, tr('elegir'))) elegirCarta(O.sel);
   }
   if (Entrada.usoTeclado) {
     if (Entrada.apretada('Digit1', 'Numpad1')) elegirCarta(0);
@@ -222,20 +229,29 @@ function escenaCartas(t) {
 }
 
 /* ---------------------------------------------------------------- escenas */
+/* los 13 idiomas, cada uno escrito en su idioma; el que está puesto va con fuego */
 function escenaIdioma(t) {
   dibujarFondoMenu(g, t, false);
-  titulo(g, 34, t);
-  const nombres = { es: 'ESPAÑOL', en: 'ENGLISH', pt: 'PORTUGUÊS' };
-  const y0 = Math.round(H * 0.33);
-  placa(g, 16, y0, W - 32, 138);
-  ['es', 'en', 'pt'].forEach((l, i) => textoPx(g, TXT[l].idioma, W / 2, y0 + 7 + i * 10, { alin: 'centro', grad: [GRAD.oro, GRAD.ocre, GRAD.ambar][i] }));
-  ['es', 'en', 'pt'].forEach((l, i) => {
-    if (boton(30, y0 + 42 + i * 30, W - 60, 22, nombres[l], { borde: ['#ffcf4a', '#ff7a5a', '#7ad860'][i] })) {
-      IDIOMA = l; Guardado.escribir('idioma', l); cacheCarta.clear();
+  g.save(); g.translate(W / 2 - 7, 6); g.scale(2, 2); globoPx(g, 0, 0, '#ffcf4a'); g.restore();
+  textoPx(g, tr('idioma'), W / 2, 25, { alin: 'centro', grad: GRAD.fuego });
+  const top = 40, paso = Math.min(24, Math.floor((H - 30 - top) / IDIOMAS.length));
+  IDIOMAS.forEach((l, i) => {
+    const sel = l.id === IDIOMA;
+    if (boton(26, top + i * paso, W - 52, paso - 3, l.nombre.toUpperCase(), { borde: sel ? '#ffcf4a' : '#8a6a3a', fondo: sel ? '#4a2010' : undefined, grad: sel ? GRAD.fuego : GRAD.oro })) {
+      IDIOMA = l.id; Guardado.escribir('idioma', l.id); cacheCarta.clear();
       irA('menu');
     }
   });
+  if (boton(W / 2 - 40, H - 24, 80, 18, tr('volver')) || Entrada.apretada('Escape')) irA('menu');
 }
+/* el globito del botón de idioma, en un lienzo de 9 × 9 como los íconos */
+let globoIcono = null;
+function iconoGlobo() {
+  if (!globoIcono) { globoIcono = hacerLienzo(9, 9); globoPx(globoIcono.getContext('2d'), 1, 1, '#f2e8d0'); }
+  return globoIcono;
+}
+/* un título va al doble si entra; si no, al tamaño normal */
+const escTitulo = (s, max) => (anchoTexto(s) * 2 <= (max || W - 8) ? 2 : 1);
 function escenaMenu(t) {
   Sonido.musica(TEMAS.menu);
   dibujarFondoMenu(g, t, true);
@@ -246,13 +262,13 @@ function escenaMenu(t) {
   if (boton(x, y0 + 28, bw, 18, tr('diario'))) empezarPartida(true);
   textoPx(g, tr('hoyRec', salaTexto(hoyR)), W / 2, y0 + 49, { alin: 'centro', grad: GRAD.gris });
   if (boton(x, y0 + 62, bw, 18, tr('altar'), { icono: icono('revivir', 'oros') })) irA('altar');
-  if (boton(x, y0 + 84, 58, 16, tr('controles'))) { desdePausa = false; irA('controles'); }
-  if (boton(x + 62, y0 + 84, 58, 16, tr('idiomaBtn'))) irA('idioma');
+  if (boton(x, y0 + 84, bw, 16, tr('controles'))) { desdePausa = false; irA('controles'); }
+  if (boton(x, y0 + 104, bw, 16, tr('idiomaBtn'), { icono: iconoGlobo() })) irA('idioma');
   // abajo: almas y récord
   const yb = H - 28;
   placa(g, 4, yb, 64, 22); dibujarSpr(g, 'alma', Math.floor(t * 4) % 2, 13, yb + 17); textoPx(g, String(DATOS.almas), 21, yb + 8, { grad: GRAD.celeste });
   placa(g, W - 68, yb, 64, 22); textoPx(g, tr('record', salaTexto(DATOS.record)), W - 36, yb + 8, { alin: 'centro', grad: GRAD.oro });
-  textoPx(g, 'JXSTUDIOS', W / 2, H - 18, { alin: 'centro', grad: GRAD.gris, sinSombra: true });
+  textoPx(g, 'JXSTUDIOS', W / 2, H - 38, { alin: 'centro', grad: GRAD.gris, sinSombra: true });   // arriba de las placas: entre ellas no entra
   if (Entrada.apretada('Enter', 'Space')) empezarPartida(false);
 }
 function empezarPartida(diaria) {
@@ -270,7 +286,8 @@ function escenaHistoria(t) {
   const txt = lineas[historiaPag];
   const r = envolver(txt, W - 30), cuantas = Math.floor(tEsc * 40);
   let n = 0;
-  r.forEach((l, i) => { textoLetras(g, l, Math.round(W / 2 - anchoTexto(l) / 2), H * 0.38 + i * 11, { grad: historiaPag === 2 ? GRAD.oro : GRAD.blanco }, Math.max(0, cuantas - n)); n += l.length; });
+  const lh = pasoRenglon(txt, 11);
+  r.forEach((l, i) => { textoLetras(g, l, Math.round(W / 2 - anchoTexto(l) / 2), H * 0.38 + i * lh, { grad: historiaPag === 2 ? GRAD.oro : GRAD.blanco }, Math.max(0, cuantas - n)); n += l.length; });
   if (historiaPag === 0) dibujarSpr(g, 'mandinga', Math.floor(t * 2) % 2, W / 2, H * 0.34, {});
   if (historiaPag === 1) { dibujarSpr(g, 'jug', 0, W / 2, H * 0.34, {}); dibujarSpr(g, 'farol', 0, W / 2 + 6, H * 0.34 - 3); }
   if (Math.floor(t * 2) % 2) textoPx(g, tr('tocar'), W / 2, H * 0.78, { alin: 'centro', grad: GRAD.gris });
@@ -283,7 +300,7 @@ function escenaHistoria(t) {
 function escenaAltar(t) {
   dibujarFondoMenu(g, t, false);
   g.fillStyle = 'rgba(8,4,14,0.6)'; g.fillRect(0, 0, W, H);
-  textoPx(g, tr('altar'), W / 2, 14, { alin: 'centro', grad: GRAD.fuego, escala: 2 });
+  textoPx(g, tr('altar'), W / 2, 14, { alin: 'centro', grad: GRAD.fuego, escala: escTitulo(tr('altar')) });
   textoPx(g, tr('mejorar'), W / 2, 34, { alin: 'centro', grad: GRAD.ocre });
   placa(g, W / 2 - 34, 46, 68, 16); dibujarSpr(g, 'alma', Math.floor(t * 4) % 2, W / 2 - 24, 59); textoPx(g, String(DATOS.almas), W / 2 - 16, 51, { grad: GRAD.celeste });
   const iconos = { vida: ['vida', 'copas'], danio: ['fuerza', 'espadas'], cadencia: ['mano', 'espadas'], suerte: ['suerte', 'oros'], yapa: ['yapa', 'bastos'], revivir: ['revivir', 'copas'] };
@@ -293,8 +310,8 @@ function escenaAltar(t) {
     placa(g, 6, y, W - 12, alto - 4, { fondo: '#1c1026' });
     const [ic, palo] = iconos[a.id];
     g.drawImage(icono(ic, palo), 10, y + 6, 18, 18);
-    textoPx(g, a.n[iIdioma()], 33, y + 4, { grad: GRAD.oro });
-    textoPx(g, a.d[iIdioma()], 33, y + 14, { grad: GRAD.gris, sinSombra: true });
+    textoPx(g, nombreAltar(a), 33, y + 4, { grad: GRAD.oro });
+    textoPx(g, descAltar(a), 33, y + 14, { grad: GRAD.gris, sinSombra: true });
     for (let k = 0; k < a.max; k++) { g.fillStyle = K; g.fillRect(33 + k * 6, y + 24, 5, 4); g.fillStyle = k < nv ? '#ffcf4a' : '#4a3a50'; g.fillRect(34 + k * 6, y + 25, 3, 2); }
     if (max) textoPx(g, tr('max'), W - 28, y + 11, { alin: 'centro', grad: GRAD.verde });
     else if (boton(W - 48, y + 6, 38, alto - 16, String(costo), { apagado: DATOS.almas < costo, grad: GRAD.celeste })) {
@@ -306,7 +323,7 @@ function escenaAltar(t) {
 function escenaControles(t) {
   if (desdePausa && J) { dibujarJuegoCompleto(t); g.fillStyle = 'rgba(8,4,14,0.7)'; g.fillRect(0, 0, W, H); }
   else { dibujarFondoMenu(g, t, false); g.fillStyle = 'rgba(8,4,14,0.55)'; g.fillRect(0, 0, W, H); }
-  textoPx(g, tr('controles'), W / 2, 10, { alin: 'centro', grad: GRAD.fuego, escala: 2 });
+  textoPx(g, tr('controles'), W / 2, 10, { alin: 'centro', grad: GRAD.fuego, escala: escTitulo(tr('controles')) });
   let y = 32;
   const fila = (txt) => { textoPx(g, txt, 8, y + 5, { grad: GRAD.ocre }); };
   fila(tr('palanca'));
@@ -358,7 +375,7 @@ function escenaControles(t) {
 function escenaPausa(t) {
   dibujarJuegoCompleto(t);
   g.fillStyle = 'rgba(8,4,14,0.8)'; g.fillRect(0, 0, W, H);
-  textoPx(g, tr('pausa'), W / 2, SY + 12, { alin: 'centro', grad: GRAD.oro, escala: 2 });
+  textoPx(g, tr('pausa'), W / 2, SY + 12, { alin: 'centro', grad: GRAD.oro, escala: escTitulo(tr('pausa')) });
   const x = 30, w = W - 60;
   let y = SY + 36;
   if (boton(x, y, w, 20, tr('seguir'), { grad: GRAD.fuego }) || Entrada.apretada('Escape', 'KeyP')) { escena = 'juego'; Sonido.pausar(false); return; }
@@ -385,19 +402,19 @@ function escenaFogon(t) {
   dibujarJuegoCompleto(t);
   g.fillStyle = 'rgba(8,4,14,0.6)'; g.fillRect(0, 0, W, H);
   const y = SY + 40;
-  placa(g, 8, y, W - 16, 156, { fondo: '#1e1018' });
-  textoPx(g, tr('fogon'), W / 2, y + 8, { alin: 'centro', grad: GRAD.fuego, escala: 2 });
+  placa(g, 8, y, W - 16, 160, { fondo: '#1e1018' });
+  textoPx(g, tr('fogon'), W / 2, y + 8, { alin: 'centro', grad: GRAD.fuego, escala: escTitulo(tr('fogon'), W - 24) });
   dibujarSpr(g, 'pombero', Math.floor(t * 2) % 2, W / 2, y + 60, { escX: 2, escY: 2 });
-  envolver(tr('fogonTxt'), W - 30).forEach((l, i) => textoPx(g, l, W / 2, y + 66 + i * 9, { alin: 'centro', grad: GRAD.blanco }));
+  envolver(tr('fogonTxt'), W - 30).forEach((l, i) => textoPx(g, l, W / 2, y + 66 + i * pasoRenglon(l, 9) * (esPx(l) ? 1 : 0.85), { alin: 'centro', grad: GRAD.blanco }));
   if (boton(16, y + 88, W - 32, 26, '', { borde: '#7ad860' }) || Entrada.apretada('Digit1', 'Numpad1')) { curar(J.jug.vidaMax * 0.4); J.fogonListo = true; abrirPuertaFogon(); escena = 'juego'; return; }
   textoPx(g, tr('descansar'), W / 2, y + 92, { alin: 'centro', grad: GRAD.verde });
   textoPx(g, tr('descansarD'), W / 2, y + 102, { alin: 'centro', grad: GRAD.gris, sinSombra: true });
-  if (boton(16, y + 120, W - 32, 28, '', { borde: '#ff5a64' }) || Entrada.apretada('Digit2', 'Numpad2')) {
+  if (boton(16, y + 120, W - 32, 32, '', { borde: '#ff5a64' }) || Entrada.apretada('Digit2', 'Numpad2')) {
     J.jug.factorVida *= 0.85; recalcular(); J.jug.vida = Math.min(J.jug.vida, J.jug.vidaMax);
     Sonido.sfx('rugido'); abrirCartas('trato', 'epica'); return;
   }
   textoPx(g, tr('trato'), W / 2, y + 124, { alin: 'centro', grad: GRAD.rojo });
-  envolver(tr('tratoD'), W - 40).slice(0, 2).forEach((l, i) => textoPx(g, l, W / 2, y + 133 + i * 8, { alin: 'centro', grad: GRAD.gris, sinSombra: true }));
+  envolver(tr('tratoD'), W - 40).slice(0, 2).forEach((l, i) => textoPx(g, l, W / 2, y + 133 + i * (esPx(l) ? 8 : 10), { alin: 'centro', grad: GRAD.gris, sinSombra: true }));
 }
 function terminarPartida() {
   if (!J || resumen && resumen.J === J) return;
@@ -414,7 +431,7 @@ function escenaFin(t, gano) {
   g.fillStyle = 'rgba(8,4,14,0.84)'; g.fillRect(0, 0, W, H);
   const R = resumen; R.t += 1 / 60;
   let y = SY + 20;
-  envolver(gano ? tr('victoria') : tr('muerte'), W - 16).forEach((l) => { textoPx(g, l, W / 2, y, { alin: 'centro', grad: gano ? GRAD.oro : GRAD.rojo }); y += 10; });
+  envolver(gano ? tr('victoria') : tr('muerte'), W - 16).forEach((l) => { textoPx(g, l, W / 2, y, { alin: 'centro', grad: gano ? GRAD.oro : GRAD.rojo }); y += pasoRenglon(l, 10); });
   if (gano) { y += 2; textoPx(g, tr('victoriaTxt'), W / 2, y, { alin: 'centro', grad: GRAD.gris }); y += 10; }
   y += 8;
   textoPx(g, tr('llegaste', salaTexto(R.valor)), W / 2, y, { alin: 'centro', grad: GRAD.ocre, escala: 1 }); y += 14;
@@ -493,7 +510,7 @@ function dibujarJuegoCompleto(t) {
     g.globalAlpha = clamp(a, 0, 1);
     g.fillStyle = 'rgba(8,4,14,0.7)'; g.fillRect(0, y - 6, W, 40);
     g.fillStyle = c.jefe ? '#c8323c' : '#c8902a'; g.fillRect(0, y - 6, W, 1); g.fillRect(0, y + 33, W, 1);
-    textoPx(g, c.txt, W / 2, y, { alin: 'centro', grad: c.jefe ? GRAD.rojo : GRAD.oro, escala: 2 });
+    textoPx(g, c.txt, W / 2, y, { alin: 'centro', grad: c.jefe ? GRAD.rojo : GRAD.oro, escala: escTitulo(c.txt) });
     textoPx(g, c.sub, W / 2, y + 20, { alin: 'centro', grad: GRAD.ocre });
     g.globalAlpha = 1;
   }
@@ -505,7 +522,7 @@ function dibujarJuegoCompleto(t) {
   }
   if (J.sala === 1 && J.piso === 1 && J.tSala < 6 && escena === 'juego' && !J.cartel) {
     g.globalAlpha = clamp(6 - J.tSala, 0, 1);
-    envolver(Entrada.usoTeclado ? tr('ayudaPC') : tr('ayuda'), W - 20).forEach((l, i) => textoPx(g, l, W / 2, SY + 150 + i * 9, { alin: 'centro', grad: GRAD.blanco }));
+    envolver(Entrada.usoTeclado ? tr('ayudaPC') : tr('ayuda'), W - 20).forEach((l, i) => textoPx(g, l, W / 2, SY + 150 + i * pasoRenglon(l, 9), { alin: 'centro', grad: GRAD.blanco }));
     g.globalAlpha = 1;
   }
 }
@@ -524,9 +541,9 @@ function cuadroPrincipal(ts) {
     if (transicion.t >= transicion.dur * 2) transicion = null;
   }
   Entrada.modoJuego = escena === 'juego' && !transicion;
+  g.setTransform(RES, 0, 0, RES, 0, 0); g.imageSmoothingEnabled = false;
   try {
     switch (escena) {
-      case 'intro': escenaIntro(dt); break;
       case 'idioma': escenaIdioma(t); break;
       case 'menu': escenaMenu(t); break;
       case 'altar': escenaAltar(t); break;
@@ -541,21 +558,8 @@ function cuadroPrincipal(ts) {
       case 'victoria': escenaFin(t, true); break;
     }
   } catch (e) { console.error(e); }
-  if (transicion && transicion.iris) {
-    // el iris de la intro de JXSTUDIOS: se cierra y se abre con rebote
-    const R = Math.hypot(W, H), p = transicion.t / transicion.dur;
-    irisJXS(g, W, H, W / 2, H / 2, p < 1 ? (1 - IntroJXS_.salida(clamp(p, 0, 1))) * R : IntroJXS_.salidaAtras(clamp(p - 1, 0, 1)) * R);
-  } else if (transicion) dibujarTelon(g, transicion.t < transicion.dur ? transicion.t / transicion.dur : 2 - transicion.t / transicion.dur);
+  if (transicion) dibujarTelon(g, transicion.t < transicion.dur ? transicion.t / transicion.dur : 2 - transicion.t / transicion.dur);
   Entrada.finCuadro();
-}
-
-/* ------------------------------------------------- la intro de JXSTUDIOS */
-let intro = null, musicaIntro = null;
-function escenaIntro(dt) {
-  if (Entrada.toque || Entrada.apretada('Enter', 'Space', 'Escape')) { intro.saltar(); if (intro.listo && musicaIntro) musicaIntro.cortar(); }
-  intro.pasar(dt);
-  intro.dibujar(g);
-  if (intro.listo && !transicion) irA('idioma', null, true);
 }
 
 /* ----------------------------------------------------------------- arranque */
@@ -564,11 +568,8 @@ function arrancar() {
   Entrada.iniciar(lienzo);
   Entrada.alTocarJuego = tocarJuego;
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (escena === 'juego') pausar(); Sonido.pausar(true); } else Sonido.pausar(false); });
-  // la intro arranca sola; si el navegador deja sonar sin un toque, con su música
-  intro = crearIntroJXS({ W, H, presenta: TXT[IDIOMA].presenta, vibrar });
   Sonido.iniciar();
-  if (Sonido.ctx && Sonido.ctx.state === 'running') musicaIntro = jingleJXS(Sonido.ctx, Sonido.total);
   requestAnimationFrame(cuadroPrincipal);
-  window.__salamanca = { get J() { return J; }, get escena() { return escena; }, DATOS, CTRL, empezarPartida, tomarCarta, siguienteSala };
+  window.__salamanca = { get J() { return J; }, get escena() { return escena; }, set escena(v) { escena = v; tEsc = 0; }, get oferta() { return oferta; }, DATOS, CTRL, empezarPartida, tomarCarta, siguienteSala, abrirCartas, terminarPartida, irA, tr };
 }
 arrancar();

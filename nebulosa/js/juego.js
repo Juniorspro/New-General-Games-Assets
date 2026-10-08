@@ -1,12 +1,12 @@
 /* ============================================================================
-   NEBULOSA: escenas (intro, idioma, menú, catálogo, partida, pausa, fin,
+   NEBULOSA: escenas (menú, idioma, catálogo, partida, pausa, fin,
    controles), el apuntado y la tirada, las fusiones con sus efectos, el
    peligro y el bucle. Todo en unidades de 360 de ancho; S lo pasa a píxeles.
    ========================================================================== */
 
 const lienzoP = document.getElementById('lienzo');
 const g = lienzoP.getContext('2d');
-let escena = 'intro', tEsc = 0, trans = null, fondo = null, G = null, ahora = 0;
+let escena = 'menu', tEsc = 0, trans = null, fondo = null, G = null, ahora = 0;
 
 const CTRL_BASE = { apuntar: 'dedo', sensib: 1.2, soltar: 'levantar', guia: true, zurdo: false, vibrar: true, tamBot: 1 };
 const CTRL = Object.assign({}, CTRL_BASE, Guardado.leer('controles', {}));
@@ -97,7 +97,9 @@ function boton(x, y, w, h, txt, o) {
   rrect(x, y, w, h, h / 2);
   g.fillStyle = apr ? 'rgba(255,255,255,0.18)' : 'rgba(10,4,24,0.7)'; g.fill();
   g.shadowColor = col; g.shadowBlur = apr ? 18 : 10; g.strokeStyle = o.apagado ? '#5a4a70' : col; g.lineWidth = 2; g.stroke(); g.shadowBlur = 0;
-  texto(g, txt, x + w / 2, y + h / 2 + 1, { tam: o.tam || 15, col: o.apagado ? '#8a7aa0' : '#ffffff', glow: o.apagado ? null : col, blur: 8 });
+  const gl = o.globo ? 18 : 0;
+  if (o.globo) { g.shadowColor = col; g.shadowBlur = 8; dibujarGlobo(g, x + 15, y + h / 2, 6.5, '#ffffff', 1.4); g.shadowBlur = 0; }
+  texto(g, txt, x + w / 2 + gl / 2, y + h / 2 + 1, { tam: tamQueEntra(g, txt, o.tam || 15, w - 22 - gl), col: o.apagado ? '#8a7aa0' : '#ffffff', glow: o.apagado ? null : col, blur: 8 });
   const si = !o.apagado && clicEn(x, y, w, h);
   if (si) Sonido.sfx('boton');
   return si;
@@ -125,20 +127,18 @@ function tituloNeon(y, t) {
   texto(g, tr('subtitulo'), W / 2, y + 38, { tam: 14, col: '#c8faff', glow: '#3ef0ff', blur: 10 });
 }
 
-/* ------------------------------------------------------------------ intro */
-let intro = null, musicaIntro = null;
-function escenaIntro(dt) {
-  if (E.toque || apretada('Enter', 'Space', 'Escape')) { intro.saltar(); if (intro.listo && musicaIntro) musicaIntro.cortar(); }
-  intro.pasar(dt); intro.dibujar(g);
-  if (intro.listo && !trans) irA('idioma');
-}
+/* ---------------------------------------------------------------- idioma */
+/* la lista de los 13 idiomas, cada uno escrito en su idioma; el elegido, en amarillo */
 function escenaIdioma(t) {
+  Sonido.musica(TEMAS.menu);
   dibujarFondo(t);
-  tituloNeon(H * 0.16, t);
-  const y0 = Math.round(H * 0.36);
-  ['es', 'en', 'pt'].forEach((l, i) => texto(g, TXT[l].idioma, W / 2, y0 + i * 18, { tam: 13, col: '#ffffff', glow: ['#ff3ec8', '#3ef0ff', '#b46aff'][i], blur: 8 }));
-  const nombres = { es: 'ESPAÑOL', en: 'ENGLISH', pt: 'PORTUGUÊS' };
-  ['es', 'en', 'pt'].forEach((l, i) => { if (boton(70, y0 + 70 + i * 54, W - 140, 40, nombres[l], { col: ['#ff3ec8', '#3ef0ff', '#b46aff'][i], tam: 17 })) { IDIOMA = l; Guardado.escribir('idioma', l); irA('menu'); } });
+  g.shadowColor = '#3ef0ff'; g.shadowBlur = 12; dibujarGlobo(g, W / 2, 30, 11, '#c8faff', 2); g.shadowBlur = 0;
+  texto(g, tr('idioma'), W / 2, 62, { tam: tamQueEntra(g, tr('idioma'), 22, W - 40), col: '#ffe0f8', glow: '#ff3ec8', blur: 16 });
+  const cols = ['#ff3ec8', '#3ef0ff', '#b46aff'], top = 88, bajo = H - 70, paso = Math.min(46, (bajo - top) / IDIOMAS.length), h = Math.min(32, paso - 6);
+  IDIOMAS.forEach((l, i) => {
+    if (boton(56, top + i * paso, W - 112, h, l.nombre, { col: l.id === IDIOMA ? '#ffd84a' : cols[i % 3], tam: 14 })) { IDIOMA = l.id; Guardado.escribir('idioma', l.id); irA('menu'); }
+  });
+  if (boton(W / 2 - 80, H - 56, 160, 38, tr('volver'), { col: '#8a7aff', tam: 14 }) || apretada('Escape')) irA('menu');
 }
 
 /* ------------------------------------------------------------------- menú */
@@ -169,14 +169,14 @@ function escenaMenu(t) {
   texto(g, tr('hoyRec', DATOS.diaFecha === hoy() ? DATOS.diaRecord : 0), W / 2, y0 + 185, { tam: 11, col: '#c8faff', cursiva: false, peso: '700' });
   if (boton(x, y0 + 200, w, 34, tr('catalogo') + '  ' + tr('descubiertos', DATOS.visto + 1), { col: '#b46aff', tam: 14 })) irA('catalogo');
   if (boton(x, y0 + 244, w / 2 - 4, 32, tr('controles'), { col: '#8a7aff', tam: 12 })) irA('controles');
-  if (boton(x + w / 2 + 4, y0 + 244, w / 2 - 4, 32, tr('idiomaBtn'), { col: '#8a7aff', tam: 12 })) irA('idioma');
+  if (boton(x + w / 2 + 4, y0 + 244, w / 2 - 4, 32, tr('idiomaBtn'), { col: '#8a7aff', tam: 12, globo: true })) irA('idioma');
   texto(g, 'JXSTUDIOS', W / 2, H - 16, { tam: 10, col: '#8a7aa0', cursiva: false, peso: '700' });
   if (apretada('Enter', 'Space')) empezar('clasico');
 }
 function escenaCatalogo(t) {
   dibujarFondo(t);
   texto(g, tr('catalogo'), W / 2, 40, { tam: 30, col: '#ffe0f8', glow: '#b46aff', blur: 16 });
-  texto(g, tr('descubiertos', DATOS.visto + 1) + (DATOS.supernovas ? '  ·  ' + tr('supernova').replace(/[!¡]/g, '') + ' ×' + DATOS.supernovas : ''), W / 2, 66, { tam: 11, col: '#c8faff', cursiva: false, peso: '700' });
+  texto(g, tr('descubiertos', DATOS.visto + 1) + (DATOS.supernovas ? '  ·  ' + tr('supernova').replace(/[!¡！]/g, '') + ' ×' + DATOS.supernovas : ''), W / 2, 66, { tam: 11, col: '#c8faff', cursiva: false, peso: '700' });
   const fila = Math.min(78, (H - 140) / 6);
   for (let k = 0; k <= MAX; k++) {
     const col = k % 2, fi = Math.floor(k / 2), x = col ? W * 0.73 : W * 0.27, y = 100 + fi * fila + (col ? fila / 2 : 0);
@@ -411,7 +411,7 @@ function dibujarPartida(t) {
     while (y < P.rayoVisual.y) { y += 18; x = lerp(x, P.rayoVisual.x, 0.3) + azar(-10, 10); g.lineTo(x, Math.min(y, P.rayoVisual.y)); }
     g.stroke(); g.shadowBlur = 0;
   }
-  for (const q of P.textos) { g.globalAlpha = clamp(1.2 - q.t, 0, 1); texto(g, q.txt, q.x, q.y, { tam: q.tam || 14, col: '#ffffff', glow: q.col, blur: 10 }); }
+  for (const q of P.textos) { const tam = q.tam || 14, m = medir(g, q.txt, tam) / 2 + 6; g.globalAlpha = clamp(1.2 - q.t, 0, 1); texto(g, q.txt, clamp(q.x, m, W - m), q.y, { tam, col: '#ffffff', glow: q.col, blur: 10 }); }
   g.globalAlpha = 1;
   g.restore();
   if (P.destello > 0) { g.fillStyle = 'rgba(255,240,255,' + P.destello * 0.6 + ')'; g.fillRect(0, 0, W, H); }
@@ -423,13 +423,12 @@ function dibujarPartida(t) {
   if (P.banner) banner(P.banner, t);
   if (P.rayoActivo) texto(g, tr('rayoAyuda'), W / 2, JT + 70, { tam: 12, col: '#ffffff', glow: '#3ef0ff', blur: 10 });
   if (!DATOS.ayuda) {
-    const lin = partir(tr('ayuda'), 26);
+    const lin = partirMedido(tr('ayuda'), JR - JL - 24, (s) => medir(g, s, 13));
     lin.forEach((l, i) => texto(g, l, W / 2, JT + 120 + i * 18, { tam: 13, col: '#ffffff', glow: '#ff3ec8', blur: 8 }));
     const k = (t % 2) / 2, hx = lerp(JL + 40, JR - 40, Math.sin(k * Math.PI * 2) * 0.5 + 0.5);
     g.fillStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.arc(hx, JT + 210, 10, 0, Math.PI * 2); g.fill();
   }
 }
-function partir(s, n) { const out = []; let l = ''; for (const p of s.split(' ')) { if ((l + ' ' + p).trim().length > n && l) { out.push(l); l = p; } else l = (l + ' ' + p).trim(); } if (l) out.push(l); return out; }
 function dibujarHUD(t) {
   const P = G;
   // pausa
@@ -550,7 +549,6 @@ function cuadro(ts) {
   g.setTransform(S, 0, 0, S, 0, 0);
   try {
     switch (escena) {
-      case 'intro': escenaIntro(dt); break;
       case 'idioma': escenaIdioma(t); break;
       case 'menu': escenaMenu(t); break;
       case 'catalogo': Sonido.musica(TEMAS.menu); escenaCatalogo(t); break;
@@ -565,9 +563,7 @@ function cuadro(ts) {
 }
 function arrancar() {
   ajustar();
-  intro = crearIntroJXS({ W, H, presenta: TXT[IDIOMA].presenta, vibrar, estilo: ESTILO_NEON });
   Sonido.iniciar();
-  if (Sonido.ctx && Sonido.ctx.state === 'running') musicaIntro = jingleJXS(Sonido.ctx, Sonido.total, ESTILO_NEON);
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (escena === 'juego' && G && !G.fin) { escena = 'pausa'; tEsc = 0; } Sonido.pausar(true); } else Sonido.pausar(false); });
   requestAnimationFrame(cuadro);
   window.__nebulosa = { get G() { return G; }, get escena() { return escena; }, empezar, tirar, terminar, irA, DATOS, CTRL, nuevoCuerpo };

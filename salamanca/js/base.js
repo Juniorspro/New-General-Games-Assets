@@ -46,11 +46,12 @@ DATOS.meta = Object.assign({ vida: 0, danio: 0, cadencia: 0, suerte: 0, revivir:
 const guardarDatos = () => Guardado.escribir('datos', DATOS);
 
 /* ---------------------------------------------------------------- textos */
-let IDIOMA = Guardado.leer('idioma', null) || ((navigator.language || 'es').toLowerCase().startsWith('pt') ? 'pt' : (navigator.language || '').toLowerCase().startsWith('en') ? 'en' : 'es');
+// el del celular al arrancar; después, el que se elija en el menú (motor2d/idiomas.js)
+let IDIOMA = idiomaInicial(Guardado.leer('idioma', null));
 
 const TXT = {
   es: {
-    idioma: 'ELEGÍ TU IDIOMA', presenta: 'presenta', subtitulo: 'LA CUEVA DEL MANDINGA',
+    idioma: 'ELEGÍ TU IDIOMA', subtitulo: 'LA CUEVA DEL MANDINGA',
     jugar: 'JUGAR', diario: 'DESAFÍO DEL DÍA', altar: 'ALTAR', controles: 'CONTROLES', idiomaBtn: 'IDIOMA',
     record: 'RÉCORD {0}', hoyRec: 'HOY {0}', almas: 'ALMAS',
     historia: ['EL MANDINGA SE LLEVÓ LAS ALMAS DEL PUEBLO A SU SALAMANCA.', 'BAJÁ CON EL FAROL DE LA ABUELA Y TRAELAS DE VUELTA.'],
@@ -66,10 +67,10 @@ const TXT = {
     palanca: 'PALANCA', flotante: 'FLOTANTE', fija: 'FIJA', tamPal: 'TAMAÑO PALANCA', tamBtn: 'TAMAÑO BOTÓN', opac: 'TRANSPARENCIA',
     zurdo: 'ZURDO', vibrar: 'VIBRAR', arrastra: 'ARRASTRÁ LA PALANCA Y EL BOTÓN', restablecer: 'RESTABLECER', listo: 'LISTO',
     comprar: 'COMPRAR', max: 'MÁX', mejorar: 'MEJORAS PARA SIEMPRE', ganadas: '+{0} ALMAS', nivelAlcanzado: 'NIVEL {0}', muertos: '{0} ENEMIGOS',
-    jefes: ['SAPO REY', 'LA VIUDA', 'LOBIZÓN', 'MANDINGA'], tocar: 'TOCÁ PARA SEGUIR', nuevo: 'NUEVO',
+    jefes: ['SAPO REY', 'LA VIUDA', 'LOBIZÓN', 'MANDINGA'], tocar: 'TOCÁ PARA SEGUIR', nuevo: 'NUEVO', volver: 'VOLVER',
   },
   en: {
-    idioma: 'CHOOSE YOUR LANGUAGE', presenta: 'presents', subtitulo: "THE DEVIL'S CAVE",
+    idioma: 'CHOOSE YOUR LANGUAGE', subtitulo: "THE DEVIL'S CAVE",
     jugar: 'PLAY', diario: 'DAILY CHALLENGE', altar: 'ALTAR', controles: 'CONTROLS', idiomaBtn: 'LANGUAGE',
     record: 'BEST {0}', hoyRec: 'TODAY {0}', almas: 'SOULS',
     historia: ["THE DEVIL TOOK THE TOWN'S SOULS DOWN TO HIS SALAMANCA.", "GO DOWN WITH GRANDMA'S LANTERN AND BRING THEM BACK."],
@@ -85,10 +86,10 @@ const TXT = {
     palanca: 'STICK', flotante: 'FLOATING', fija: 'FIXED', tamPal: 'STICK SIZE', tamBtn: 'BUTTON SIZE', opac: 'OPACITY',
     zurdo: 'LEFT-HANDED', vibrar: 'VIBRATE', arrastra: 'DRAG THE STICK AND THE BUTTON', restablecer: 'RESET', listo: 'DONE',
     comprar: 'BUY', max: 'MAX', mejorar: 'UPGRADES FOREVER', ganadas: '+{0} SOULS', nivelAlcanzado: 'LEVEL {0}', muertos: '{0} ENEMIES',
-    jefes: ['TOAD KING', 'THE WIDOW', 'WEREWOLF', 'MANDINGA'], tocar: 'TAP TO CONTINUE', nuevo: 'NEW',
+    jefes: ['TOAD KING', 'THE WIDOW', 'WEREWOLF', 'MANDINGA'], tocar: 'TAP TO CONTINUE', nuevo: 'NEW', volver: 'BACK',
   },
   pt: {
-    idioma: 'ESCOLHA SEU IDIOMA', presenta: 'apresenta', subtitulo: 'A CAVERNA DO MANDINGA',
+    idioma: 'ESCOLHA SEU IDIOMA', subtitulo: 'A CAVERNA DO MANDINGA',
     jugar: 'JOGAR', diario: 'DESAFIO DO DIA', altar: 'ALTAR', controles: 'CONTROLES', idiomaBtn: 'IDIOMA',
     record: 'RECORDE {0}', hoyRec: 'HOJE {0}', almas: 'ALMAS',
     historia: ['O MANDINGA LEVOU AS ALMAS DO POVOADO PARA A SUA SALAMANCA.', 'DESÇA COM A LANTERNA DA VOVÓ E TRAGA TODAS DE VOLTA.'],
@@ -104,11 +105,11 @@ const TXT = {
     palanca: 'ALAVANCA', flotante: 'FLUTUANTE', fija: 'FIXA', tamPal: 'TAMANHO ALAVANCA', tamBtn: 'TAMANHO BOTÃO', opac: 'TRANSPARÊNCIA',
     zurdo: 'CANHOTO', vibrar: 'VIBRAR', arrastra: 'ARRASTE A ALAVANCA E O BOTÃO', restablecer: 'REDEFINIR', listo: 'PRONTO',
     comprar: 'COMPRAR', max: 'MÁX', mejorar: 'MELHORIAS PARA SEMPRE', ganadas: '+{0} ALMAS', nivelAlcanzado: 'NÍVEL {0}', muertos: '{0} INIMIGOS',
-    jefes: ['SAPO REI', 'A VIÚVA', 'LOBISOMEM', 'MANDINGA'], tocar: 'TOQUE PARA CONTINUAR', nuevo: 'NOVO',
+    jefes: ['SAPO REI', 'A VIÚVA', 'LOBISOMEM', 'MANDINGA'], tocar: 'TOQUE PARA CONTINUAR', nuevo: 'NOVO', volver: 'VOLTAR',
   },
 };
 function tr(k, ...a) {
-  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.es[k] ?? k;
+  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.en[k] ?? TXT.es[k] ?? k;
   if (typeof s === 'string') a.forEach((v, i) => { s = s.replace('{' + i + '}', v); });
   return s;
 }

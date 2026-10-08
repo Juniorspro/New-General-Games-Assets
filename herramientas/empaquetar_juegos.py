@@ -22,6 +22,12 @@ TIKTOK = os.path.join(RAIZ, 'herramientas', 'tiktok')
 NO_ENTRA = {'node_modules', '.git', '__pycache__', 'dist'}
 VERSIONES = {'esbuild': '0.25.12', 'three': '0.186.0'}
 
+# los juegos que pasaron a los 13 idiomas (motor2d/idiomas.js): sin cartel al arrancar
+IDIOMAS_13 = """Arranca en el idioma del
+celular (o de la compu) y se cambia desde el menú, con el botón del globito:
+español de Argentina y de México, inglés, portugués de Brasil, árabe,
+indonesio, malayo, filipino, turco, urdu, tailandés, birmano y japonés."""
+
 JUEGOS = {
     'zonda': {
         'titulo': 'ZONDA',
@@ -80,7 +86,8 @@ JUEGOS = {
     },
     'salamanca': {
         'titulo': 'SALAMANCA',
-        'que': 'Roguelite vertical en pixel art tipo Archero en la cueva de la Salamanca: 4 pisos con jefe, cartas, altar, desafío del día, 3 idiomas.',
+        'que': 'Roguelite vertical en pixel art tipo Archero en la cueva de la Salamanca: 4 pisos con jefe, cartas, altar, desafío del día, 13 idiomas.',
+        'idiomas': IDIOMAS_13,
         'carpetas': ['motor2d', 'salamanca'],
         'html': 'salamanca/salamanca.html',
         'portada': 'salamanca/portada-salamanca.jpg',
@@ -90,7 +97,8 @@ JUEGOS = {
     },
     'filete': {
         'titulo': 'FILETE',
-        'que': 'Rompecabezas de bloques tipo Block Blast en filete porteño: tango sintetizado, 30 niveles por barrios, desafío del día, 3 idiomas.',
+        'que': 'Rompecabezas de bloques tipo Block Blast en filete porteño: tango sintetizado, 30 niveles por barrios, desafío del día, 13 idiomas.',
+        'idiomas': IDIOMAS_13,
         'carpetas': ['motor2d', 'filete'],
         'html': 'filete/filete.html',
         'portada': 'filete/portada-filete.jpg',
@@ -100,7 +108,8 @@ JUEGOS = {
     },
     'nebulosa': {
         'titulo': 'NEBULOSA',
-        'que': 'Fusionar cuerpos celestes con física (tipo Suika), del polvo estelar al agujero negro, en neón synthwave: 3 modos, catálogo, 3 idiomas.',
+        'que': 'Fusionar cuerpos celestes con física (tipo Suika), del polvo estelar al agujero negro, en neón synthwave: 3 modos, catálogo, 13 idiomas.',
+        'idiomas': IDIOMAS_13,
         'carpetas': ['motor2d', 'nebulosa'],
         'html': 'nebulosa/nebulosa.html',
         'portada': 'nebulosa/portada-nebulosa.jpg',
@@ -110,7 +119,8 @@ JUEGOS = {
     },
     'tajo': {
         'titulo': 'TAJO',
-        'que': 'Cortar fruta con el dedo en tinta sumi-e: 4 modos, combos, bombas, poderes, dojo de filos, koto sintetizado, 3 idiomas.',
+        'que': 'Cortar fruta con el dedo en tinta sumi-e: 4 modos, combos, bombas, poderes, dojo de filos, koto sintetizado, 13 idiomas.',
+        'idiomas': IDIOMAS_13,
         'carpetas': ['motor2d', 'tajo'],
         'html': 'tajo/tajo.html',
         'portada': 'tajo/portada-tajo.jpg',
@@ -120,7 +130,8 @@ JUEGOS = {
     },
     'dorado': {
         'titulo': 'DORADO',
-        'que': 'Pinball vertical en Art Déco, el Gran Hotel de los años 20: misiones y rangos, multibola, jazz sintetizado, 3 modos, 3 idiomas.',
+        'que': 'Pinball vertical en Art Déco, el Gran Hotel de los años 20: misiones y rangos, multibola, jazz sintetizado, 3 modos, 13 idiomas.',
+        'idiomas': IDIOMAS_13,
         'carpetas': ['motor2d', 'dorado'],
         'html': 'dorado/dorado.html',
         'portada': 'dorado/portada-dorado.jpg',
@@ -148,8 +159,7 @@ def leeme(id_, j, con_guia=True):
 ## Jugar
 
 Abrí `jugar/{html}` con doble clic. Anda sin internet, en la compu (teclado
-o mando) y en el celular (con los dedos). Primero se elige el idioma:
-español, inglés o portugués.
+o mando) y en el celular (con los dedos). {j.get('idiomas') or 'Primero se elige el idioma:' + chr(10) + 'español, inglés o portugués.'}
 
 ## Armar de nuevo
 
@@ -172,8 +182,18 @@ runtime nativo de TikTok Mini Games.
 """ if j.get('portada') else '')
 
 
+def usados_del_motor(j):
+    """del motor compartido va solo lo que el juego arma (su juego.json) y el armador"""
+    ruta = os.path.join(RAIZ, os.path.dirname(j['html']), 'juego.json')
+    if not os.path.exists(ruta):
+        return None
+    cfg = json.load(open(ruta, encoding='utf-8'))
+    return {'motor2d/armar.mjs'} | {r for r in cfg.get('js', []) + cfg.get('css', []) if r.startswith('motor2d/')}
+
+
 def empaquetar(id_):
     j = JUEGOS[id_]
+    usados = usados_del_motor(j)
     print(f'{j["titulo"]}:')
     armar(j)
     os.makedirs(SALIDA, exist_ok=True)
@@ -200,6 +220,8 @@ def empaquetar(id_):
                         continue  # el de un archivo ya va en jugar/ (13 MB): no se duplica
                     if rel == j.get('portada'):
                         continue  # ya va arriba como portada
+                    if carpeta == 'motor2d' and usados is not None and rel not in usados:
+                        continue  # lo del motor que este juego no usa (otras intros, otras piezas)
                     z.write(ruta, f'{base}/fuente/{rel}')
                     n += 1
     print(f'  entregas/{id_}.zip · {os.path.getsize(destino) / 1048576:.1f} MB · {n} archivos de fuente')

@@ -11,6 +11,6 @@ Pinball vertical en Art Déco (el Gran Hotel de los años 20). Un solo archivo: 
   en 12 subpasos.
 - `js/mesa.js` — el dibujo de la mesa: lo quieto en caché y lo que se mueve (lámparas, hongos, flippers, bola).
 - `js/sonido.js` — trío de jazz sintetizado (contrabajo, piano, platillo; trompeta en la multibola) y los efectos.
-- `js/intro.js` — la intro de JXSTUDIOS en oro sobre abanico de rayos.
+- `js/idiomas.js` — los 10 idiomas que se sumaron (13 idiomas: arranca en el del celu y se cambia en el menú (el botón del globito); sin intro).
 - `js/juego.js` — escenas, reglas (misiones y rangos, multibola, jackpots, tiro maestro, bola salvada, bonus),
   modos (clásico, a reloj, del día), controles (mitades o botones que se arrastran) y el bucle.

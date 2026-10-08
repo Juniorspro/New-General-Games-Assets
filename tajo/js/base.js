@@ -30,7 +30,8 @@ const DATOS = Object.assign({ rec: {}, diaFecha: 0, diaRecord: 0, cortadas: 0, c
 DATOS.rec = Object.assign({ clasico: 0, zen: 0, tormenta: 0 }, DATOS.rec);
 const guardarDatos = () => Guardado.escribir('datos', DATOS);
 
-let IDIOMA = Guardado.leer('idioma', null) || ((navigator.language || 'es').toLowerCase().startsWith('pt') ? 'pt' : (navigator.language || '').toLowerCase().startsWith('en') ? 'en' : 'es');
+// el del celular al arrancar; después, el que se elija en el menú (motor2d/idiomas.js)
+let IDIOMA = idiomaInicial(Guardado.leer('idioma', null));
 const TXT = {
   es: {
     idioma: 'ELEGÍ TU IDIOMA', presenta: 'presenta', subtitulo: 'EL CAMINO DEL FILO', elegir: 'CORTÁ UNA FRUTA PARA EMPEZAR',
@@ -73,7 +74,7 @@ const TXT = {
   },
 };
 function tr(k, ...a) {
-  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.es[k] ?? k;
+  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.en[k] ?? TXT.es[k] ?? k;
   if (typeof s === 'string') a.forEach((v, i) => { s = s.replace('{' + i + '}', v); });
   return s;
 }
@@ -85,17 +86,22 @@ function lienzoHD(w, h) { const c = document.createElement('canvas'); c.width = 
    pincel que se corre en el papel) */
 const SERIF = 'Georgia, "Times New Roman", "Noto Serif", serif';
 const TINTA = '#16110d', PAPEL = '#efe5cf', BERMELLON = '#c8321e';
+/* el árabe y el urdu van de derecha a izquierda; cada escritura usa su letra del sistema (con serifa) */
+function fuenteTexto(str, tam, peso, cursiva) {
+  const esc = escrituraDe(str);
+  return { css: (peso || 'bold') + ' ' + (cursiva && esc === 'latn' ? 'italic ' : '') + tam * escalaEscritura(esc) + 'px ' + (fuenteEscritura(esc, 'serif') || SERIF), rtl: esc === 'arab' };
+}
 function texto(g, str, x, y, o) {
-  o = o || {};
-  const tam = o.tam || 14;
-  g.font = (o.peso || 'bold') + ' ' + (o.cursiva ? 'italic ' : '') + tam + 'px ' + SERIF;
+  o = o || {}; str = String(str);
+  const tam = o.tam || 14, f = fuenteTexto(str, tam, o.peso, o.cursiva);
+  g.font = f.css; g.direction = f.rtl ? 'rtl' : 'ltr';
   g.textAlign = o.alin || 'center'; g.textBaseline = 'middle';
   if (o.borde) { g.lineWidth = o.bordeAncho || 4; g.strokeStyle = o.borde; g.lineJoin = 'round'; g.strokeText(str, x, y); }
   g.fillStyle = o.col || TINTA;
   if (o.tinta !== false) { const a = g.globalAlpha; g.globalAlpha = a * 0.28; g.fillText(str, x + tam * 0.05, y + tam * 0.04); g.globalAlpha = a; }
   g.fillText(str, x, y);
+  g.direction = 'ltr';
 }
-function medir(g, str, tam, peso) { g.font = (peso || 'bold') + ' ' + tam + 'px ' + SERIF; return g.measureText(str).width; }
+function medir(g, str, tam, peso) { str = String(str); const f = fuenteTexto(str, tam, peso); g.font = f.css; g.direction = f.rtl ? 'rtl' : 'ltr'; const w = g.measureText(str).width; g.direction = 'ltr'; return w; }
 // achica la letra hasta que el renglón entre en el ancho
 function tamQueEntra(g, str, tam, ancho, peso) { while (tam > 8 && medir(g, str, tam, peso) > ancho) tam -= 1; return tam; }
-function partir(s, n) { const out = []; let l = ''; for (const p of s.split(' ')) { if ((l + ' ' + p).trim().length > n && l) { out.push(l); l = p; } else l = (l + ' ' + p).trim(); } if (l) out.push(l); return out; }

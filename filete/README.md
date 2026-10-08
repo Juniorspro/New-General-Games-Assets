@@ -8,7 +8,7 @@ para todos ese día). Música: un tango sintetizado (bandoneón, marcato, contra
 
 - Un solo archivo: `filete.html` (unos 110 KB, abre con doble clic, sin internet).
 - Armar: `node motor2d/armar.mjs filete`.
-- Intro: la de JXSTUDIOS compartida (`motor2d/intro-jxs.js`) con el estilo filete de `js/intro.js`.
+- 13 idiomas: arranca en el del celu y se cambia en el menú (el botón del globito); sin intro (`js/idiomas.js`).
 - Controles a gusto: altura de la pieza sobre el dedo, velocidad del arrastre, tamaño de la bandeja, guía de
   jugada, zurdo y vibración (con zona para probar).
 
@@ -18,5 +18,5 @@ para todos ese día). Música: un tango sintetizado (bandoneón, marcato, contra
 | `js/arte.js` | volutas, hojas, flores, cintas, letras de filete, fichas |
 | `js/tablero.js` | formas, dónde entra cada una, borrar líneas, la tanda justa, puntaje, niveles |
 | `js/sonido.js` | el tango y los efectos |
-| `js/intro.js` | el estilo filete de la intro de JXSTUDIOS |
+| `js/idiomas.js` | los 10 idiomas que se sumaron (es-MX, ar, id, ms, fil, tr, ur, th, my, ja) |
 | `js/juego.js` | escenas, arrastre, efectos y el bucle |

@@ -187,6 +187,8 @@ function escribir(g, str, x, y, o) {
   o = o || {};
   const esc = o.esc || 1;
   if (esc === 1 && !o.filete) { textoPx(g, str, x, y, { alin: o.alin, grad: o.grad, col: o.col, borde: o.borde, sinSombra: o.sinSombra }); return; }
+  // árabe, japonés, tailandés, birmano…: sin letras de cartel, con la letra del sistema al tamaño del cartel
+  if (!esPx(str)) { textoPx(g, str, x, y, { alin: o.alin, grad: o.grad || GRAD_ORO, borde: K, escala: esc }); return; }
   const c = letrasFilete(str, esc, o.grad || GRAD_ORO, o.sombra);
   let dx = x - esc - 1;
   if (o.alin === 'centro') dx = Math.round(x - c.width / 2 + 1);

@@ -41,10 +41,12 @@ const FUENTE_PX = {
 const ACENTOS_PX = {
   'Á': ['A', 'a'], 'É': ['E', 'a'], 'Í': ['I', 'a'], 'Ó': ['O', 'a'], 'Ú': ['U', 'a'], 'Ñ': ['N', 't'], 'Ü': ['U', 'd'],
   'Â': ['A', 'c'], 'Ã': ['A', 't'], 'À': ['A', 'g'], 'Ê': ['E', 'c'], 'Ô': ['O', 'c'], 'Õ': ['O', 't'], 'Ç': ['C', 'z'],
+  'Ö': ['O', 'd'], 'Ş': ['S', 'z'], 'Ğ': ['G', 'b'], 'İ': ['I', 'p'],          // las del turco
 };
 const MARCAS_PX = {
   a: [[3, -3], [2, -2]], t: [[0, -2], [1, -3], [2, -3], [3, -2], [4, -3]], d: [[1, -2], [3, -2]],
   c: [[1, -2], [2, -3], [3, -2]], g: [[1, -3], [2, -2]], z: [[2, 7], [3, 8], [2, 8]],
+  b: [[1, -3], [3, -3], [2, -2]], p: [[2, -2]],
 };
 
 function glifoPx(ch) {
@@ -66,7 +68,43 @@ function puntosTexto(str) {
   }
   return { pts, w: Math.max(1, x - 1) };
 }
+/* lo que la fuente de píxeles no tiene (árabe, japonés, tailandés, birmano…) se
+   escribe con la letra del sistema, a la resolución real (ESCALA_TEXTO = píxeles
+   reales por píxel de juego, la pone el juego) y con el mismo contorno, sombra y
+   degradé, así se lee nítido sin cambiar el lugar que ocupa */
+let ESCALA_TEXTO = 1;
+const cubrePx = (ch) => { const c = ch.toUpperCase(); return !!(FUENTE_PX[c] || ACENTOS_PX[c]) || /\s/.test(ch); };
+function esPx(str) { for (const ch of String(str)) if (!cubrePx(ch)) return false; return true; }
+const medidorTxt = document.createElement('canvas').getContext('2d');
+function fuenteSis(str) {
+  const esc = typeof escrituraDe === 'function' ? escrituraDe(str) : 'latn';
+  const fam = (typeof fuenteEscritura === 'function' && fuenteEscritura(esc, 'sans')) || '"Trebuchet MS",Arial,sans-serif';
+  return { esc, tam: 9 * (typeof escalaEscritura === 'function' ? escalaEscritura(esc) : 1), fam };
+}
+function anchoSis(str) {
+  const f = fuenteSis(str);
+  medidorTxt.font = '700 ' + f.tam + 'px ' + f.fam; medidorTxt.direction = f.esc === 'arab' ? 'rtl' : 'ltr';
+  return Math.ceil(medidorTxt.measureText(str).width);
+}
+function lienzoSis(str, o, e) {
+  const K = Math.max(1, ESCALA_TEXTO * (e || 1)), f = fuenteSis(str), w = anchoSis(str), LW = w + 4, LH = 16, cy = 8;
+  const c = document.createElement('canvas');
+  c.width = Math.ceil(LW * K); c.height = Math.ceil(LH * K);
+  const g = c.getContext('2d');
+  g.scale(K, K); g.font = '700 ' + f.tam + 'px ' + f.fam; g.textBaseline = 'middle'; g.textAlign = 'left';
+  g.direction = f.esc === 'arab' ? 'rtl' : 'ltr'; g.lineJoin = 'round';
+  if (!o.sinSombra) { g.fillStyle = g.strokeStyle = 'rgba(10,6,16,0.75)'; g.lineWidth = 2; g.strokeText(str, 2, cy + 1); g.fillText(str, 2, cy + 1); }
+  if (o.borde !== 'no') { g.strokeStyle = o.borde || '#141018'; g.lineWidth = 2; g.strokeText(str, 2, cy); }
+  if (o.grad) { const gr = g.createLinearGradient(0, cy - 4.5, 0, cy + 4.5); o.grad.forEach((col, i) => gr.addColorStop(i / 6, col)); g.fillStyle = gr; }
+  else g.fillStyle = o.col || '#fff';
+  g.fillText(str, 2, cy);
+  c.sis = true; c.lw = LW; c.lh = LH; c.cy = cy;
+  return c;
+}
+/* el paso entre renglones: la letra del sistema pide un poco más que la de píxeles */
+const pasoRenglon = (str, base) => (esPx(str) ? base : Math.max(base, 12));
 function anchoTexto(str) {
+  if (!esPx(str)) return anchoSis(str);
   let x = 0;
   for (const ch of str) x += glifoPx(ch).f[0].length + 1;
   return Math.max(0, x - 1);
@@ -89,11 +127,13 @@ const GRAD = {
 /* texto a un lienzo de 1 px por píxel de fuente: sombra, contorno y degradé
    por fila. Arriba deja 3 filas de aire para las tildes */
 const cacheTxt = new Map();
-function lienzoTexto(str, o) {
+function lienzoTexto(str, o, e) {
   o = o || {};
-  const clave = str + '|' + (o.grad ? o.grad[0] + o.grad[6] : o.col) + '|' + (o.borde || '') + '|' + (o.sinSombra ? 1 : 0);
+  const sis = !esPx(str);
+  const clave = str + '|' + (o.grad ? o.grad[0] + o.grad[6] : o.col) + '|' + (o.borde || '') + '|' + (o.sinSombra ? 1 : 0) + (sis ? '|' + ESCALA_TEXTO * (e || 1) : '');
   let c = cacheTxt.get(clave);
   if (c) return c;
+  if (sis) { c = lienzoSis(str, o, e); c.txt = str; if (cacheTxt.size > 500) cacheTxt.clear(); cacheTxt.set(clave, c); return c; }
   const { pts, w } = puntosTexto(str);
   const arriba = 3;
   c = document.createElement('canvas');
@@ -108,6 +148,7 @@ function lienzoTexto(str, o) {
     for (const [x, y] of pts) g.fillRect(ox + x - 1, oy + y - 1, 3, 3);
   }
   for (const [x, y, r] of pts) { g.fillStyle = o.grad ? o.grad[r] : (o.col || '#fff'); g.fillRect(ox + x, oy + y, 1, 1); }
+  c.txt = str;                                  // para las pruebas: qué texto es este lienzo
   if (cacheTxt.size > 500) cacheTxt.clear();
   cacheTxt.set(clave, c);
   return c;
@@ -117,7 +158,14 @@ function lienzoTexto(str, o) {
    o.alin: 'izq' | 'centro' | 'der'; o.escala: entero, para títulos */
 function textoPx(g, str, x, y, o) {
   o = o || {};
-  const c = lienzoTexto(str, o), e = o.escala || 1;
+  const e = o.escala || 1, c = lienzoTexto(str, o, e);
+  if (c.sis) {
+    // el centro del texto va con el centro de las mayúsculas de píxeles (de y a y + 7·e)
+    const w = (c.lw - 4) * e;
+    const dx = o.alin === 'centro' ? x - w / 2 : o.alin === 'der' ? x - w : x;
+    g.drawImage(c, dx - 2 * e, y + 3.5 * e - c.cy * e, c.lw * e, c.lh * e);
+    return;
+  }
   let dx = x - e;
   if (o.alin === 'centro') dx = x - Math.floor((c.width - 3) * e / 2) - e;
   else if (o.alin === 'der') dx = x - (c.width - 3) * e - e;
@@ -126,6 +174,14 @@ function textoPx(g, str, x, y, o) {
 /* letra por letra: para escribir de a poco y para las palabras que tiemblan */
 function textoLetras(g, str, x, y, o, cuantas, desplazar) {
   o = o || {};
+  if (!esPx(str)) {
+    // letra por letra rompería el árabe y el tailandés: se destapa el renglón entero (de derecha a izquierda si es árabe)
+    const total = Array.from(str).length, k = cuantas == null ? 1 : Math.min(1, cuantas / Math.max(1, total)), w = anchoTexto(str);
+    g.save(); g.beginPath();
+    if (fuenteSis(str).esc === 'arab') g.rect(x + w * (1 - k) - 2, y - 12, w * k + 4, 32); else g.rect(x - 2, y - 12, w * k + 2, 32);
+    g.clip(); textoPx(g, str, x, y, o); g.restore();
+    return;
+  }
   let cx = x, i = 0;
   for (const ch of str) {
     if (cuantas != null && i >= cuantas) break;
@@ -139,6 +195,7 @@ function textoLetras(g, str, x, y, o, cuantas, desplazar) {
 }
 /* partir un texto en renglones que entren en "ancho" píxeles */
 function envolver(str, ancho) {
+  if (typeof partirMedido === 'function') return partirMedido(str, ancho, anchoTexto);
   const renglones = [];
   for (const parrafo of str.split('\n')) {
     let linea = '';

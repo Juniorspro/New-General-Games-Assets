@@ -16,6 +16,7 @@ qué archivo tiene qué: `salamanca/README.md`.
 - Probar: `node salamanca/pruebas/recorrido.mjs /ruta/afuera/` (bot inmortal, ~70 s llega a 1-6). Para un
   jefe: `__salamanca.J.piso = n; J.sala = 7; __salamanca.siguienteSala()`.
 
+- **08/10: sin intro y en 13 idiomas** ([idiomas](idiomas.md)); la intro de abajo quedó en git: `git show 1f2f036:salamanca/js/intro.js`.
 - La intro es la compartida `motor2d/intro-jxs.js` (la de La Cripta): `crearIntroJXS({W,H,presenta,vibrar})`,
   `pasar/dibujar` por cuadro, `jingleJXS(ctx, destino)` si el audio ya anda, `irisJXS` para el corte.
 

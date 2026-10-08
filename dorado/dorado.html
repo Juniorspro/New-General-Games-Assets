@@ -17,538 +17,133 @@ body { background: #020303 radial-gradient(ellipse at 50% 40%, #12201b 0%, #0203
 <canvas id="lienzo"></canvas>
 <script>
 (()=>{'use strict';
-/* ==== motor2d/fuente.js ==== */
+/* ==== motor2d/idiomas.js ==== */
 /* ============================================================================
-   motor2d/fuente.js — la fuente de píxeles 5x7 de EL TIPO, con tildes, Ñ, Ü,
-   ¡¿ y las letras del portugués, más los signos que piden los diálogos. Las minúsculas se dibujan como
-   mayúsculas: en un juego alcanza y se lee mejor a este tamaño.
+   motor2d/idiomas.js — los 13 idiomas de los juegos (pedido del 08/10 para
+   Brasil, Egipto, Indonesia, Irak, Japón, Myanmar, México, Malasia,
+   Filipinas, Pakistán, Arabia Saudita, Tailandia y Turquía, más los tres que
+   ya estaban). Egipto, Irak y Arabia Saudita comparten el árabe estándar.
+
+   Lo común a todos: la lista con el nombre de cada idioma en su idioma, el
+   idioma del celular al arrancar (sin cartel: se cambia desde el menú), qué
+   letra del sistema usar para cada escritura, el árabe y el urdu de derecha a
+   izquierda, y el corte de renglones midiendo (el japonés, el tailandés y el
+   birmano no separan las palabras con espacios: se corta con Intl.Segmenter).
    ========================================================================== */
 
-const FUENTE_PX = {
-  A: [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"], B: ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."],
-  C: [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."], D: ["####.", "#...#", "#...#", "#...#", "#...#", "#...#", "####."],
-  E: ["#####", "#....", "#....", "####.", "#....", "#....", "#####"], F: ["#####", "#....", "#....", "####.", "#....", "#....", "#...."],
-  G: [".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".####"], H: ["#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
-  I: [".###.", "..#..", "..#..", "..#..", "..#..", "..#..", ".###."], J: ["..###", "...#.", "...#.", "...#.", "#..#.", "#..#.", ".##.."],
-  K: ["#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#"], L: ["#....", "#....", "#....", "#....", "#....", "#....", "#####"],
-  M: ["#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#"], N: ["#...#", "#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#"],
-  O: [".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."], P: ["####.", "#...#", "#...#", "####.", "#....", "#....", "#...."],
-  Q: [".###.", "#...#", "#...#", "#...#", "#.#.#", "#..#.", ".##.#"], R: ["####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"],
-  S: [".####", "#....", "#....", ".###.", "....#", "....#", "####."], T: ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."],
-  U: ["#...#", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."], V: ["#...#", "#...#", "#...#", "#...#", "#...#", ".#.#.", "..#.."],
-  W: ["#...#", "#...#", "#...#", "#.#.#", "#.#.#", "#.#.#", ".#.#."], X: ["#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#"],
-  Y: ["#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", "..#.."], Z: ["#####", "....#", "...#.", "..#..", ".#...", "#....", "#####"],
-  0: [".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."], 1: ["..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."],
-  2: [".###.", "#...#", "....#", "...#.", "..#..", ".#...", "#####"], 3: ["####.", "....#", "....#", ".###.", "....#", "....#", "####."],
-  4: ["...#.", "..##.", ".#.#.", "#..#.", "#####", "...#.", "...#."], 5: ["#####", "#....", "####.", "....#", "....#", "#...#", ".###."],
-  6: [".###.", "#....", "#....", "####.", "#...#", "#...#", ".###."], 7: ["#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..."],
-  8: [".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."], 9: [".###.", "#...#", "#...#", ".####", "....#", "....#", ".###."],
-  ' ': ["...", "...", "...", "...", "...", "...", "..."], '!': ["#", "#", "#", "#", "#", ".", "#"], '¡': ["#", ".", "#", "#", "#", "#", "#"],
-  '?': [".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."], '¿': ["..#..", ".....", "..#..", ".#...", "#....", "#...#", ".###."],
-  '.': [".", ".", ".", ".", ".", ".", "#"], ',': ["..", "..", "..", "..", "..", ".#", "#."], ':': [".", "#", ".", ".", ".", "#", "."],
-  ';': ["..", ".#", "..", "..", "..", ".#", "#."], '-': ["....", "....", "....", "####", "....", "....", "...."],
-  "'": ["#", "#", ".", ".", ".", ".", "."], '"': ["#.#", "#.#", "...", "...", "...", "...", "..."],
-  '/': ["....#", "...#.", "...#.", "..#..", ".#...", ".#...", "#...."], '+': [".....", "..#..", "..#..", "#####", "..#..", "..#..", "....."],
-  '×': [".....", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "....."], '·': [".", ".", ".", "#", ".", ".", "."],
-  '%': ["##..#", "##.#.", "...#.", "..#..", ".#...", ".#.##", "#..##"], '>': ["#....", ".#...", "..#..", "...#.", "..#..", ".#...", "#...."],
-  '<': ["....#", "...#.", "..#..", ".#...", "..#..", "...#.", "....#"], '=': ["....", "....", "####", "....", "####", "....", "...."],
-  '(': ["..#", ".#.", "#..", "#..", "#..", ".#.", "..#"], ')': ["#..", ".#.", "..#", "..#", "..#", ".#.", "#.."],
-  '…': [".....", ".....", ".....", ".....", ".....", ".....", "#.#.#"], '*': [".....", "#.#.#", ".###.", "#####", ".###.", "#.#.#", "....."],
-  '—': [".....", ".....", ".....", "#####", ".....", ".....", "....."], '_': ["....", "....", "....", "....", "....", "....", "####"],
-};
-/* las letras con marca: la base más la marca. Con las del portugués (Â Ã À Ç Ê Ô Õ)
-   alcanza para los tres idiomas de los juegos */
-const ACENTOS_PX = {
-  'Á': ['A', 'a'], 'É': ['E', 'a'], 'Í': ['I', 'a'], 'Ó': ['O', 'a'], 'Ú': ['U', 'a'], 'Ñ': ['N', 't'], 'Ü': ['U', 'd'],
-  'Â': ['A', 'c'], 'Ã': ['A', 't'], 'À': ['A', 'g'], 'Ê': ['E', 'c'], 'Ô': ['O', 'c'], 'Õ': ['O', 't'], 'Ç': ['C', 'z'],
-};
-const MARCAS_PX = {
-  a: [[3, -3], [2, -2]], t: [[0, -2], [1, -3], [2, -3], [3, -2], [4, -3]], d: [[1, -2], [3, -2]],
-  c: [[1, -2], [2, -3], [3, -2]], g: [[1, -3], [2, -2]], z: [[2, 7], [3, 8], [2, 8]],
-};
+const IDIOMAS = [
+  { id: 'es', nombre: 'Español (Argentina)' },
+  { id: 'es-MX', nombre: 'Español (México)' },
+  { id: 'en', nombre: 'English' },
+  { id: 'pt', nombre: 'Português (Brasil)' },
+  { id: 'ar', nombre: 'العربية', rtl: true },
+  { id: 'id', nombre: 'Bahasa Indonesia' },
+  { id: 'ms', nombre: 'Bahasa Melayu' },
+  { id: 'fil', nombre: 'Filipino' },
+  { id: 'tr', nombre: 'Türkçe' },
+  { id: 'ur', nombre: 'اردو', rtl: true },
+  { id: 'th', nombre: 'ไทย' },
+  { id: 'my', nombre: 'မြန်မာ' },
+  { id: 'ja', nombre: '日本語' },
+];
+const nombreIdioma = (id) => (IDIOMAS.find((i) => i.id === id) || IDIOMAS[2]).nombre;
 
-function glifoPx(ch) {
-  const c = ch.toUpperCase();
-  if (FUENTE_PX[c]) return { f: FUENTE_PX[c], m: null };
-  const a = ACENTOS_PX[c];
-  if (a) return { f: FUENTE_PX[a[0]], m: MARCAS_PX[a[1]] };
-  return { f: FUENTE_PX['?'], m: null };
-}
-/* puntos encendidos de un texto: [x, y, fila], con y = 0 en la línea de las mayúsculas */
-function puntosTexto(str) {
-  const pts = [];
-  let x = 0;
-  for (const ch of str) {
-    const g = glifoPx(ch), w = g.f[0].length;
-    for (let r = 0; r < 7; r++) for (let k = 0; k < w; k++) if (g.f[r][k] === '#') pts.push([x + k, r, r]);
-    if (g.m) for (const [mx, my] of g.m) pts.push([x + mx, my, my > 6 ? 6 : 0]);
-    x += w + 1;
+/* el idioma del equipo: el rioplatense queda para Argentina, Uruguay y Paraguay;
+   el resto del español va con el de México (tuteo) */
+function idiomaDelEquipo() {
+  const lista = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en']).map((l) => String(l).toLowerCase());
+  for (const l of lista) {
+    const [base, region] = l.split(/[-_]/);
+    if (base === 'es') return ['ar', 'uy', 'py'].includes(region) ? 'es' : 'es-MX';
+    if (base === 'pt') return 'pt';
+    if (base === 'tl' || base === 'fil') return 'fil';
+    if (base === 'in') return 'id';
+    if (IDIOMAS.some((i) => i.id === base)) return base;
   }
-  return { pts, w: Math.max(1, x - 1) };
+  return 'en';
 }
-function anchoTexto(str) {
-  let x = 0;
-  for (const ch of str) x += glifoPx(ch).f[0].length + 1;
-  return Math.max(0, x - 1);
-}
+function idiomaInicial(guardado) { return guardado && IDIOMAS.some((i) => i.id === guardado) ? guardado : idiomaDelEquipo(); }
 
-const GRAD = {
-  blanco: ['#ffffff', '#ffffff', '#f1f3fa', '#e2e6f2', '#cfd4e6', '#b8bed6', '#a3a9c4'],
-  oro: ['#fff6b0', '#ffe066', '#ffd24a', '#ffb43a', '#f5a02a', '#e0862a', '#c46a22'],
-  rojo: ['#ffc2b8', '#ff8a7a', '#ff6a5a', '#ff5a50', '#e8404a', '#c42a3c', '#9a1f34'],
-  verde: ['#d6ffd8', '#9cffae', '#7ef09a', '#63d98a', '#4cc076', '#3aa062', '#2c8050'],
-  azul: ['#d0f0ff', '#9fe0ff', '#7ad2ff', '#5ac8ff', '#3aa8e8', '#2a88c8', '#1e6aa8'],
-  gris: ['#e8ebf5', '#cdd3e8', '#b8bed6', '#a3a9c4', '#8d96b5', '#78809e', '#636b88'],
-  fuego: ['#fff6b0', '#ffe066', '#ffb43a', '#ff7a2a', '#f04a2a', '#c42a3c', '#7a1f4a'],
-  ocre: ['#fff0d0', '#ffd9a0', '#f3b877', '#e39b55', '#cc7c3c', '#a85f2e', '#7d4424'],
-  celeste: ['#f0fbff', '#d4f3ff', '#b5e8fb', '#93d6f2', '#76c0e6', '#5aa4d4', '#4486bb'],
-  ambar: ['#fff4c2', '#ffe08a', '#ffc85a', '#f6a93a', '#e08a24', '#bf6c1c', '#8f4f18'],
-  violeta: ['#f3e6ff', '#dcc2ff', '#c29dff', '#a87cf5', '#8e5fe0', '#7446c4', '#5a33a0'],
+/* la escritura de un texto, por su primera letra que no sea latina */
+function escrituraDe(str) {
+  for (const ch of String(str)) {
+    const c = ch.codePointAt(0);
+    if (c < 0x0370) continue;
+    if ((c >= 0x0600 && c <= 0x06ff) || (c >= 0x0750 && c <= 0x077f) || (c >= 0xfb50 && c <= 0xfdff) || (c >= 0xfe70 && c <= 0xfeff)) return 'arab';
+    if (c >= 0x0e00 && c <= 0x0e7f) return 'thai';
+    if ((c >= 0x1000 && c <= 0x109f) || (c >= 0xa9e0 && c <= 0xa9ff) || (c >= 0xaa60 && c <= 0xaa7f)) return 'mymr';
+    if ((c >= 0x3000 && c <= 0x30ff) || (c >= 0x3400 && c <= 0x9fff) || (c >= 0xff00 && c <= 0xffef)) return 'jpan';
+  }
+  return 'latn';
+}
+const esRTL = (str) => escrituraDe(str) === 'arab';
+
+/* las letras del sistema por escritura (las trae cada celular para su idioma).
+   Dos estilos: 'sans' (palo seco) y 'serif' (para los juegos de letra con serifa) */
+const FUENTES_ESCRITURA = {
+  arab: { sans: '"Noto Naskh Arabic","Noto Sans Arabic","Geeza Pro","Segoe UI","Tahoma",sans-serif', serif: '"Noto Naskh Arabic","Amiri","Geeza Pro","Times New Roman",serif' },
+  urdu: { sans: '"Noto Naskh Arabic","Noto Nastaliq Urdu","Geeza Pro","Segoe UI","Tahoma",sans-serif', serif: '"Noto Naskh Arabic","Noto Nastaliq Urdu","Geeza Pro","Times New Roman",serif' },
+  thai: { sans: '"Noto Sans Thai","Noto Sans Thai UI","Leelawadee UI","Leelawadee","Thonburi","Tahoma",sans-serif', serif: '"Noto Serif Thai","Noto Sans Thai","Leelawadee UI","Thonburi",serif' },
+  mymr: { sans: '"Noto Sans Myanmar","Noto Sans Myanmar UI","Myanmar Text","Myanmar Sangam MN","Padauk",sans-serif', serif: '"Noto Serif Myanmar","Noto Sans Myanmar","Myanmar Text","Myanmar Sangam MN","Padauk",serif' },
+  jpan: { sans: '"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Noto Sans CJK JP","Yu Gothic","Meiryo",sans-serif', serif: '"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP","Noto Serif CJK JP","MS Mincho",serif' },
 };
+function fuenteEscritura(esc, estilo) {
+  if (esc === 'latn') return null;
+  const f = FUENTES_ESCRITURA[esc === 'arab' && IDIOMA === 'ur' ? 'urdu' : esc];
+  return f[estilo === 'serif' ? 'serif' : 'sans'];
+}
+/* a igual tamaño en píxeles, las mayúsculas latinas se ven más grandes que el
+   árabe o el tailandés y más chicas que el japonés: se compensa */
+const escalaEscritura = (esc) => ({ latn: 1, arab: 1.18, thai: 1.12, mymr: 1.02, jpan: 0.92 })[esc] || 1;
 
-/* texto a un lienzo de 1 px por píxel de fuente: sombra, contorno y degradé
-   por fila. Arriba deja 3 filas de aire para las tildes */
-const cacheTxt = new Map();
-function lienzoTexto(str, o) {
-  o = o || {};
-  const clave = str + '|' + (o.grad ? o.grad[0] + o.grad[6] : o.col) + '|' + (o.borde || '') + '|' + (o.sinSombra ? 1 : 0);
-  let c = cacheTxt.get(clave);
-  if (c) return c;
-  const { pts, w } = puntosTexto(str);
-  const arriba = 3;
-  c = document.createElement('canvas');
-  c.width = w + 3; c.height = arriba + 7 + 3;
-  const g = c.getContext('2d'), ox = 1, oy = arriba + 1, borde = o.borde || '#141018';
-  if (!o.sinSombra) {
-    g.fillStyle = 'rgba(10,6,16,0.75)';
-    for (const [x, y] of pts) g.fillRect(ox + x - 1, oy + y, 3, 3);
-  }
-  if (o.borde !== 'no') {
-    g.fillStyle = borde;
-    for (const [x, y] of pts) g.fillRect(ox + x - 1, oy + y - 1, 3, 3);
-  }
-  for (const [x, y, r] of pts) { g.fillStyle = o.grad ? o.grad[r] : (o.col || '#fff'); g.fillRect(ox + x, oy + y, 1, 1); }
-  if (cacheTxt.size > 500) cacheTxt.clear();
-  cacheTxt.set(clave, c);
-  return c;
-}
-
-/* dibuja texto en el lienzo del mundo. y = la línea de arriba de las mayúsculas.
-   o.alin: 'izq' | 'centro' | 'der'; o.escala: entero, para títulos */
-function textoPx(g, str, x, y, o) {
-  o = o || {};
-  const c = lienzoTexto(str, o), e = o.escala || 1;
-  let dx = x - e;
-  if (o.alin === 'centro') dx = x - Math.floor((c.width - 3) * e / 2) - e;
-  else if (o.alin === 'der') dx = x - (c.width - 3) * e - e;
-  g.drawImage(c, Math.round(dx), Math.round(y - 4 * e), c.width * e, c.height * e);
-}
-/* letra por letra: para escribir de a poco y para las palabras que tiemblan */
-function textoLetras(g, str, x, y, o, cuantas, desplazar) {
-  o = o || {};
-  let cx = x, i = 0;
-  for (const ch of str) {
-    if (cuantas != null && i >= cuantas) break;
-    const w = glifoPx(ch).f[0].length;
-    if (ch !== ' ') {
-      const c = lienzoTexto(ch, o), d = desplazar ? desplazar(i) : null;
-      g.drawImage(c, Math.round(cx - 1 + (d ? d[0] : 0)), Math.round(y - 4 + (d ? d[1] : 0)));
-    }
-    cx += w + 1; i++;
-  }
-}
-/* partir un texto en renglones que entren en "ancho" píxeles */
-function envolver(str, ancho) {
-  const renglones = [];
-  for (const parrafo of str.split('\n')) {
+/* partir en renglones que entren en `ancho`, con `medir(texto)` → ancho. Corta en
+   espacios; si la escritura no los usa entre palabras, corta por palabras (Segmenter) */
+function partirMedido(str, ancho, medir) {
+  const out = [];
+  for (const parrafo of String(str).split('\n')) {
+    const esc = escrituraDe(parrafo);
+    let piezas;
+    if ((esc === 'jpan' || esc === 'thai' || esc === 'mymr') && typeof Intl !== 'undefined' && Intl.Segmenter) {
+      piezas = Array.from(new Intl.Segmenter(IDIOMA, { granularity: 'word' }).segment(parrafo), (s) => s.segment);
+    } else if (esc === 'jpan') piezas = Array.from(parrafo);
+    else piezas = parrafo.split(/(\s+)/);
     let linea = '';
-    for (const pal of parrafo.split(' ')) {
-      const prueba = linea ? linea + ' ' + pal : pal;
-      if (anchoTexto(prueba) > ancho && linea) { renglones.push(linea); linea = pal; }
+    for (const p of piezas) {
+      if (!p) continue;
+      const prueba = linea + p;
+      if (linea.trim() && medir(prueba.trim()) > ancho) { out.push(linea.trim()); linea = /^\s+$/.test(p) ? '' : p; }
       else linea = prueba;
     }
-    renglones.push(linea);
+    out.push(linea.trim());
   }
-  return renglones;
+  return out;
 }
 
-/* pone un texto del DOM en pixel art sin perder el texto original */
-function pixelar(el, S, o) {
-  if (!el) return;
-  const txt = el.textContent.trim() !== '' ? el.textContent.trim() : (el.dataset.px || '');
-  if (!txt) return;
-  const clave = txt + '|' + S + '|' + (o && o.grad ? o.grad[0] : '');
-  if (el.dataset.pxk === clave && el.querySelector('canvas.px')) return;
-  el.dataset.px = txt; el.dataset.pxk = clave; el.textContent = '';
-  const src = lienzoTexto(txt, o), c = document.createElement('canvas');
-  c.width = src.width; c.height = src.height;
-  c.getContext('2d').drawImage(src, 0, 0);
-  c.className = 'px';
-  c.style.width = (c.width * S) + 'px'; c.style.height = (c.height * S) + 'px';
-  c.setAttribute('aria-label', txt);
-  el.appendChild(c);
+/* el globito del botón de idioma: se reconoce aunque no se lea el idioma de ahora */
+function dibujarGlobo(g, x, y, r, col, ancho) {
+  g.save(); g.strokeStyle = col; g.lineWidth = ancho || Math.max(1, r * 0.16);
+  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+  g.beginPath(); g.ellipse(x, y, r * 0.42, r, 0, 0, Math.PI * 2); g.stroke();
+  g.beginPath(); g.moveTo(x - r, y); g.lineTo(x + r, y);
+  g.moveTo(x - r * 0.86, y - r * 0.5); g.lineTo(x + r * 0.86, y - r * 0.5); g.moveTo(x - r * 0.86, y + r * 0.5); g.lineTo(x + r * 0.86, y + r * 0.5); g.stroke();
+  g.restore();
 }
-
-const ICONOS_PX = {
-  corazon: [".##.##.", "#######", "#######", "#######", ".#####.", "..###..", "...#..."],
-  carta: ["#######", "##...##", "#.#.#.#", "#..#..#", "#.....#", "#.....#", "#######"],
-  calavera: [".#####.", "#######", "#..#..#", "#######", ".##.##.", ".#####.", "..#.#.."],
-  reloj: ["..###..", ".#...#.", "#..#..#", "#..##.#", "#.....#", ".#...#.", "..###.."],
-  ambar: ["..###..", ".#####.", "#######", "#######", ".#####.", "..###..", "...#..."],
-  chispa: ["...#...", "...#...", "..###..", "#######", "..###..", "...#...", "...#..."],
-  piedra: ["..###..", ".#####.", "#######", "#######", "#######", ".#####.", "......."],
-  viento: ["####...", "....#..", "######.", "......#", "#####..", ".....#.", "####..."],
-  pausa: [".##.##.", ".##.##.", ".##.##.", ".##.##.", ".##.##.", ".##.##.", ".##.##."],
-  mapa: ["#.#.#.#", "#######", "#.#.#.#", "#######", "#.#.#.#", "#######", "#.#.#.#"],
-  flecha: ["...#...", "..###..", ".#####.", "#######", "..###..", "..###..", "..###.."],
-  candado: ["..###..", ".#...#.", ".#...#.", "#######", "###.###", "###.###", "#######"],
-  estrella: ["...#...", "..###..", "#######", ".#####.", "..###..", ".##.##.", "#.....#"],
-  mano: [".#.#.#.", ".#.#.#.", ".#####.", "#######", "#######", ".#####.", "..###.."],
-  espina: ["......#", ".....#.", "....#..", "...#...", "..#....", ".#.....", "#......"],
-  luz: ["...#...", ".#.#.#.", "..###..", "###.###", "..###..", ".#.#.#.", "...#..."],
-};
-function iconoPx(nombre, col, S) {
-  const f = ICONOS_PX[nombre], c = document.createElement('canvas');
-  c.width = 10; c.height = 10;
-  const g = c.getContext('2d');
-  g.fillStyle = 'rgba(10,6,16,0.75)';
-  for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) if (f[y][x] === '#') g.fillRect(x + 1, y + 2, 3, 3);
-  g.fillStyle = '#141018';
-  for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) if (f[y][x] === '#') g.fillRect(x, y, 3, 3);
-  for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) if (f[y][x] === '#') { g.fillStyle = y < 2 ? '#ffffff' : col; g.fillRect(x + 1, y + 1, 1, 1); }
-  if (S) { c.className = 'px'; c.style.width = (10 * S) + 'px'; c.style.height = (10 * S) + 'px'; }
-  return c;
+/* el mismo globito en píxeles (9 × 9), para los juegos de píxeles */
+const GLOBO_PX = ['..###..', '.#.#.#.', '#######', '#..#..#', '#######', '.#.#.#.', '..###..'];
+function globoPx(g, x, y, col) {
+  g.fillStyle = col;
+  GLOBO_PX.forEach((fila, j) => { for (let i = 0; i < fila.length; i++) if (fila[i] === '#') g.fillRect(x + i, y + j, 1, 1); });
 }
-
-/* ==== motor2d/intro-jxs.js ==== */
-/* ============================================================================
-   motor2d/intro-jxs.js — LA intro de JXSTUDIOS para todos los juegos ("así las
-   quiero a las intro", 07/10, mostrando la de La Cripta). Sacada tal cual de
-   cripta/cripta.html (M_logojxs + M_intro + sonido › jingleJXS), sin depender
-   de nada de ese juego salvo la fuente de píxeles (motor2d/fuente.js).
-
-   En pixel art y rápida (2,1 s): una raya de luz abre la fibra de carbono, el
-   monograma JXS se escribe en metal con chispas en las puntas, golpe (destello,
-   sacudida, chispazo), una franja de brillo lo cruza, "JXSTUDIOS" se tipea y
-   abajo "presenta". Después, el iris (círculo que se cierra y se abre).
-
-   Uso:
-     const intro = crearIntroJXS({ W, H, presenta: 'PRESENTA', vibrar });
-     cada cuadro: intro.pasar(dt); intro.dibujar(g);   // g en píxeles del juego
-     un toque: intro.saltar();  ¿terminó?: intro.listo
-     con el audio andando (después de un toque no se puede antes): jingleJXS(ctx, destino)
-     transiciones: irisJXS(g, W, H, cx, cy, r)
-
-   Cada juego la viste a su estilo ("con su intro respectiva a su estilo", 07/10) con `estilo`:
-   la misma coreografía, otro material. Todo es opcional (sin estilo = La Cripta):
-     metal: [8 colores de arriba a abajo], filo, bisel, borde: '#rrggbb'
-     sombra: { dx, dy, col }                  el monograma proyecta una sombra plana (filete)
-     fondo(W, H, cx, cy) → lienzo             el fondo (por defecto la fibra de carbono)
-     puntas: [colores], golpe: [colores], destello: 'rgba(...)'
-     palabra: { col, borde }, presenta: color, negro: color del fondo
-     antes(g, t, I) / despues(g, t, I)        dibujar algo más (I.cx, I.cy, I.ancho, I.yPalabra)
-     jingle(ctx, bus, t0, tg, h)              otra música; h = { tono, soplo, f, T }
-   Para juegos que no son de píxeles (lienzo liso, con escala propia):
-     anchoLogo(W, H) → ancho del monograma; logo(g, i) lo dibuja a mano (i = { avance, t, x0, y0, esc,
-     ancho, golpe, tGolpe, TRAZOS, camino2d, largo, muestrear }); letras(g, parte, I, t, y) y presentaTxt(g, txt, I, t, y)
-     escriben con otra letra; chispa: px de las chispas (por defecto 1)
-   ========================================================================== */
-
-const IntroJXS_ = (() => {
-  const CAJA = { w: 350, h: 172 };
-  const GROSOR = 14.5;
-  // el monograma: cuatro trazos de metal (A va abajo en el cruce: se dibuja primero)
-  const TRAZOS = [
-    { id: 'A', capa: 0, d: [['M', 40, 19], ['L', 114, 19], ['L', 176, 101], ['C', 194, 128, 222, 168, 268, 169], ['C', 310, 170, 342, 152, 342, 122]] },
-    { id: 'J', capa: 0, d: [['M', 40, 43], ['L', 98, 43], ['L', 98, 116], ['C', 98, 148, 44, 158, 36, 124]] },
-    { id: 'S', capa: 0, d: [['M', 312, 66], ['C', 306, 46, 288, 36, 266, 36], ['C', 242, 36, 226, 48, 226, 63], ['C', 226, 80, 248, 86, 272, 92], ['C', 302, 99, 320, 108, 320, 126], ['C', 320, 142, 300, 148, 272, 148], ['C', 246, 148, 226, 138, 216, 118]] },
-    { id: 'B', capa: 1, d: [['M', 10, 130], ['C', 18, 158, 50, 168, 86, 166], ['C', 108, 165, 122, 158, 134, 142], ['L', 200, 46], ['C', 216, 24, 244, 12, 272, 12], ['C', 310, 12, 340, 30, 340, 62]] },
-  ];
-  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-  const salida = (t) => 1 - Math.pow(1 - t, 3);
-  const salidaAtras = (t) => 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2);
-
-  function camino2d(t, esc, ox, oy) {
-    const p = new Path2D();
-    for (const [op, ...n] of t.d) {
-      const q = n.map((v, i) => (i % 2 ? oy + v * esc : ox + v * esc));
-      if (op === 'M') p.moveTo(q[0], q[1]);
-      else if (op === 'L') p.lineTo(q[0], q[1]);
-      else p.bezierCurveTo(q[0], q[1], q[2], q[3], q[4], q[5]);
-    }
-    return p;
-  }
-  function muestrear(t, cada) {
-    const pts = [];
-    let x = 0, y = 0;
-    for (const [op, ...n] of t.d) {
-      if (op === 'M') { x = n[0]; y = n[1]; pts.push([x, y]); continue; }
-      if (op === 'L') {
-        const [x1, y1] = n, largo = Math.hypot(x1 - x, y1 - y), k = Math.max(1, Math.ceil(largo / cada));
-        for (let i = 1; i <= k; i++) pts.push([x + ((x1 - x) * i) / k, y + ((y1 - y) * i) / k]);
-        x = x1; y = y1; continue;
-      }
-      const [c1x, c1y, c2x, c2y, x1, y1] = n;
-      const aprox = Math.hypot(c1x - x, c1y - y) + Math.hypot(c2x - c1x, c2y - c1y) + Math.hypot(x1 - c2x, y1 - c2y);
-      const k = Math.max(2, Math.ceil(aprox / cada));
-      for (let i = 1; i <= k; i++) {
-        const s = i / k, r = 1 - s;
-        pts.push([r * r * r * x + 3 * r * r * s * c1x + 3 * r * s * s * c2x + s * s * s * x1, r * r * r * y + 3 * r * r * s * c1y + 3 * r * s * s * c2y + s * s * s * y1]);
-      }
-      x = x1; y = y1;
-    }
-    return pts;
-  }
-  const largos = new Map();
-  function largo(t) {
-    if (largos.has(t.id)) return largos.get(t.id);
-    const p = muestrear(t, 2);
-    let l = 0;
-    for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
-    largos.set(t.id, l);
-    return l;
-  }
-  // el monograma en píxeles: se traza chico, se separa metal de borde por color y se
-  // repinta en escalones de cromo con filo de luz y bisel en sombra
-  function monogramaPixel(anchoPx, avance, E) {
-    E = E || {};
-    const esc = anchoPx / CAJA.w, alto = Math.ceil(CAJA.h * esc) + 4, ancho = Math.ceil(anchoPx) + 4;
-    const c = document.createElement('canvas');
-    c.width = ancho; c.height = alto;
-    const g = c.getContext('2d');
-    for (const capa of [0, 1]) for (const t of TRAZOS) {
-      if (t.capa !== capa) continue;
-      const p = camino2d(t, esc, 2, 2), l = largo(t) * esc;
-      g.save();
-      if (avance < 1) g.setLineDash([Math.max(0.01, l * avance), l + 10]);
-      g.lineCap = 'butt';
-      g.lineWidth = GROSOR * esc + 2.2; g.strokeStyle = '#ff0000'; g.stroke(p);
-      g.lineWidth = GROSOR * esc; g.strokeStyle = '#00ff00'; g.stroke(p);
-      g.restore();
-    }
-    const img = g.getImageData(0, 0, ancho, alto), d = img.data;
-    const metal = new Uint8Array(ancho * alto), borde = new Uint8Array(ancho * alto);
-    for (let i = 0; i < ancho * alto; i++) {
-      if (d[i * 4 + 3] < 90) continue;
-      if (d[i * 4 + 1] > 110) metal[i] = 1; else if (d[i * 4] > 110) borde[i] = 1;
-    }
-    const ESCALON = E.metal || ['#f4f5f8', '#d9dbe1', '#b7bbc4', '#8d929c', '#a9adb6', '#d3d6dc', '#9ea3ad', '#767b85'];
-    const FILO = E.filo || '#ffffff', BISEL = E.bisel || '#5b5f68', BO = parseInt((E.borde || '#050608').slice(1), 16);
-    for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
-      const i = y * ancho + x, k = i * 4;
-      if (metal[i]) {
-        const arriba = y > 0 && metal[i - ancho], abajo = y < alto - 1 && metal[i + ancho];
-        const izq = x > 0 && metal[i - 1], der = x < ancho - 1 && metal[i + 1];
-        let col = ESCALON[Math.min(ESCALON.length - 1, Math.floor(((y - 2) / (alto - 4)) * ESCALON.length))];
-        if (!arriba || !izq) col = FILO;
-        else if (!abajo || !der) col = BISEL;
-        const n = parseInt(col.slice(1), 16);
-        d[k] = n >> 16; d[k + 1] = (n >> 8) & 255; d[k + 2] = n & 255; d[k + 3] = 255;
-      } else if (borde[i]) { d[k] = BO >> 16; d[k + 1] = (BO >> 8) & 255; d[k + 2] = BO & 255; d[k + 3] = 255; }
-      else d[k + 3] = 0;
-    }
-    g.putImageData(img, 0, 0);
-    if (E.sombra) {   // una sombra plana corrida, debajo del dibujo
-      const s = document.createElement('canvas'); s.width = ancho + Math.abs(E.sombra.dx); s.height = alto + Math.abs(E.sombra.dy);
-      const sg = s.getContext('2d');
-      sg.drawImage(c, E.sombra.dx, E.sombra.dy); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = E.sombra.col; sg.fillRect(0, 0, s.width, s.height);
-      sg.globalCompositeOperation = 'source-over'; sg.drawImage(c, 0, 0);
-      g.clearRect(0, 0, ancho, alto); c.width = s.width; c.height = s.height; c.getContext('2d').drawImage(s, 0, 0);
-      const m2 = new Uint8Array(c.width * c.height);
-      for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) m2[y * c.width + x] = metal[y * ancho + x];
-      c.mascara = m2; c.esc = esc;
-      return c;
-    }
-    c.mascara = metal; c.esc = esc;
-    return c;
-  }
-  const muestras = new Map();
-  function puntas(avance) {
-    const out = [];
-    for (const t of TRAZOS) {
-      if (!muestras.has(t.id)) {
-        const p = muestrear(t, 2), acum = [0];
-        for (let i = 1; i < p.length; i++) acum.push(acum[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
-        muestras.set(t.id, { p, acum });
-      }
-      const { p, acum } = muestras.get(t.id), meta = acum[acum.length - 1] * avance;
-      let i = 1;
-      while (i < acum.length - 1 && acum[i] < meta) i++;
-      out.push(p[i]);
-    }
-    return out;
-  }
-  // la fibra de carbono de a píxel, con la reja de metal a 45° afuera del rombo
-  function fondoCarbono(W, H, cx, cy, rombo) {
-    const c = document.createElement('canvas');
-    c.width = W; c.height = H;
-    const g = c.getContext('2d'), img = g.createImageData(W, H), d = img.data;
-    const pon = (x, y, r, gg, b) => { const k = (y * W + x) * 4; d[k] = r; d[k + 1] = gg; d[k + 2] = b; d[k + 3] = 255; };
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const sarga = ((x >> 1) + (y >> 1)) % 4 < 2;
-      const luz = 1 - Math.min(1, Math.hypot(x - cx, y - cy) / Math.max(W, H));
-      const v = (sarga ? 24 : 16) + Math.round(luz * 10);
-      pon(x, y, v, v + 1, v + 3);
-      const dr = Math.abs(x - cx) + Math.abs(y - cy) - rombo;
-      if (dr >= 0 && dr < 3) { if (dr < 1) pon(x, y, 0x9a, 0xa0, 0xaa); else pon(x, y, 0x4d, 0x50, 0x58); continue; }
-      if (dr < 2) continue;
-      const u = x - cx + (y - cy), w = x - cx - (y - cy);
-      const eu = ((u % 22) + 22) % 22, ev = ((w % 22) + 22) % 22;
-      if (eu < 2 || ev < 2) { if (eu === 0 || ev === 0) pon(x, y, 0x7a, 0x7e, 0x88); else pon(x, y, 0x44, 0x47, 0x4f); }
-    }
-    g.putImageData(img, 0, 0);
-    return c;
-  }
-
-  const T_CORTE = 0.12, T_ABRE = 0.42, T_TRAZA0 = 0.3, T_TRAZA1 = 0.86, T_GOLPE = 0.88;
-  const T_BRILLO = [0.95, 1.35], T_LETRAS = 1.02, T_FIN = 2.1;
-
-  function crear(o) {
-    const W = o.W, H = o.H, cx = W >> 1, cy = Math.round(H * 0.42), E = o.estilo || {};
-    const ancho = E.anchoLogo ? E.anchoLogo(W, H) : Math.round(Math.min(W * 0.66, H * 0.9, 120));
-    const fondo = E.fondo ? E.fondo(W, H, cx, cy) : fondoCarbono(W, H, cx, cy, Math.min(W, H) * 0.44);
-    const PUNTAS = E.puntas || ['#ffffff', '#ffd27a'], GOLPE = E.golpe || ['#ffffff', '#ffd27a', '#c9ccd4', '#7ad7ff'];
-    let chispas = [], sacudida = 0, golpeado = false, letras = 0, pts = null, cache = { avance: -1, c: null };
-    const I = {
-      t: 0, listo: false, cx, cy, ancho, yPalabra: Math.round(cy + ancho * 0.29 + 4), W, H,
-      saltar() { if (I.t > 0.35) I.listo = true; },
-      pasar(dt) {
-        I.t += dt;
-        if (I.t > T_TRAZA0 && I.t < T_TRAZA1 && pts) {
-          for (const [x, y] of pts) for (let k = 0; k < 2; k++) {
-            const a = Math.random() * Math.PI * 2, v = 20 + Math.random() * 50;
-            chispas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, t: 0, vida: 0.25 + Math.random() * 0.2, col: PUNTAS[(Math.random() * PUNTAS.length) | 0] });
-          }
-        }
-        if (!golpeado && I.t >= T_GOLPE) {
-          golpeado = true; sacudida = 4;
-          if (o.vibrar) o.vibrar([30, 20, 40]);
-          for (let k = 0; k < 70; k++) {
-            const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 120;
-            chispas.push({ x: cx + (Math.random() - 0.5) * ancho, y: cy + (Math.random() - 0.5) * ancho * 0.4, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 20, t: 0, vida: 0.5 + Math.random() * 0.5, col: GOLPE[k % GOLPE.length] });
-          }
-        }
-        letras = clamp(Math.floor((I.t - T_LETRAS) / 0.04) + 1, 0, 9);
-        for (const c of chispas) { c.t += dt; c.x += c.vx * dt; c.y += c.vy * dt; c.vy += 120 * dt; c.vx *= 0.96; }
-        chispas = chispas.filter((c) => c.t < c.vida);
-        sacudida *= Math.pow(0.84, dt * 60);
-        if (I.t >= T_FIN) I.listo = true;
-      },
-      dibujar(g) {
-        const t = I.t;
-        g.fillStyle = E.negro || '#05040b'; g.fillRect(0, 0, W, H);
-        const s = Math.round(sacudida), sx = s ? Math.round((Math.random() * 2 - 1) * s) : 0, sy = s ? Math.round((Math.random() * 2 - 1) * s) : 0;
-        if (t < T_CORTE) {
-          const w = Math.round(W * t / T_CORTE);
-          g.fillStyle = '#f6f3ff'; g.fillRect(Math.round(cx - w / 2), cy, w, 1);
-          return;
-        }
-        const abre = clamp((t - T_CORTE) / (T_ABRE - T_CORTE), 0, 1), alto = Math.round((Math.max(cy, H - cy) + 4) * salidaAtras(abre));
-        g.save(); g.beginPath(); g.rect(0, cy - alto, W, alto * 2); g.clip(); g.drawImage(fondo, sx, sy, W, H); if (E.antes) E.antes(g, t, I); g.restore();
-        if (abre < 1) { g.fillStyle = '#d9dce3'; g.fillRect(0, cy - alto, W, 1); g.fillRect(0, cy + alto - 1, W, 1); }
-        const avance = clamp((t - T_TRAZA0) / (T_TRAZA1 - T_TRAZA0), 0, 1);
-        if (avance > 0 && E.logo) {
-          const esc = ancho / CAJA.w, x0 = cx - ancho / 2 + sx, y0 = cy - CAJA.h * esc / 2 + sy;
-          pts = avance < 1 ? puntas(avance).map(([px, py]) => [x0 + px * esc, y0 + py * esc]) : null;
-          E.logo(g, { avance, t, x0, y0, esc, ancho, golpe: t >= T_GOLPE, tGolpe: t - T_GOLPE, TRAZOS, camino2d, largo, muestrear });
-          if (t >= T_GOLPE && t < T_GOLPE + 0.06) { g.fillStyle = E.destello || 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, W, H); }
-        } else if (avance > 0) {
-          const a = Math.round(avance * 40) / 40;
-          if (cache.avance !== a) cache = { avance: a, c: monogramaPixel(ancho, a, E) };
-          const m = cache.c, x0 = Math.round(cx - m.width / 2) + sx, y0 = Math.round(cy - m.height / 2) + sy;
-          pts = avance < 1 ? puntas(avance).map(([px, py]) => [x0 + 2 + px * m.esc, y0 + 2 + py * m.esc]) : null;
-          g.drawImage(m, x0, y0);
-          if (t >= T_GOLPE && t < T_GOLPE + 0.06) { g.fillStyle = E.destello || 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, W, H); }
-          if (t > T_BRILLO[0] && t < T_BRILLO[1]) {
-            const k = (t - T_BRILLO[0]) / (T_BRILLO[1] - T_BRILLO[0]), bx = Math.round(-10 + k * (m.width + 20));
-            g.fillStyle = 'rgba(255,255,255,0.6)';
-            for (let y = 0; y < m.height; y++) for (let dx = -2; dx <= 2; dx++) {
-              const px = bx + dx - Math.round(y * 0.5);
-              if (px >= 0 && px < m.width && m.mascara[y * m.width + px]) g.fillRect(x0 + px, y0 + y, 1, 1);
-            }
-          }
-        }
-        if (letras > 0) {
-          const esc = W >= 200 ? 2 : 1, palabra = 'JXSTUDIOS', an = anchoTexto(palabra) * esc;
-          const x = Math.round(cx - an / 2), y = Math.round(cy + ancho * 0.29 + 4);
-          const parte = palabra.slice(0, letras);
-          if (E.palabraFondo) E.palabraFondo(g, t, I, letras);
-          if (E.letras) { E.letras(g, parte, I, t, y + sy); if (t > T_LETRAS + 0.5 && E.presentaTxt) E.presentaTxt(g, o.presenta || 'PRESENTA', I, t, y + sy); }
-          else {
-          textoPx(g, parte, x + sx, y + sy, { col: (E.palabra && E.palabra.col) || '#e4e6ec', borde: (E.palabra && E.palabra.borde) || '#3d4048', escala: esc });
-          if (letras < 9 && ((t * 20) | 0) % 2) { g.fillStyle = '#f6f3ff'; g.fillRect(x + anchoTexto(parte) * esc + esc, y, esc, 7 * esc); }
-          if (t > T_LETRAS + 0.5) textoPx(g, o.presenta || 'PRESENTA', cx, y + 12 * esc, { alin: 'centro', col: E.presenta || '#8d88ad', borde: 'no' });
-          }
-        }
-        if (E.despues) E.despues(g, t, I);
-        for (const c of chispas) {
-          if (c.t > c.vida * 0.7 && ((c.t * 30) | 0) % 2) continue;
-          g.fillStyle = c.col; g.fillRect(Math.round(c.x), Math.round(c.y), E.chispa || 1, E.chispa || 1);
-        }
-      },
-    };
-    return I;
-  }
-
-  // la música de la intro, agendada con el reloj del audio para que cada golpe caiga con su
-  // cuadro: el corte (soplido), el metal que se escribe (cuatro zumbidos), el golpe (bombo grave +
-  // campana de metal), el brillo (arpegio), las letras (tics) y un acorde que queda sonando
-  function jingle(ctx, destino, E) {
-    if (!ctx || ctx.state !== 'running') return null;
-    const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(destino || ctx.destination);
-    const f = (n) => 440 * Math.pow(2, ({ C: -9, D: -7, E: -5, F: -4, G: -2, A: 0, B: 2 }[n[0]] + (+n.slice(1) - 4) * 12) / 12);
-    const tono = (onda, f0, f1, dur, vol, t, ataque) => {
-      const o = ctx.createOscillator(), gn = ctx.createGain();
-      o.type = onda; o.frequency.setValueAtTime(f0, t);
-      if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-      gn.gain.setValueAtTime(0.0001, t); gn.gain.linearRampToValueAtTime(vol, t + (ataque || 0.005)); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      o.connect(gn); gn.connect(bus); o.start(t); o.stop(t + dur + 0.05);
-    };
-    const n = ctx.sampleRate, buf = ctx.createBuffer(1, n, n), dd = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) dd[i] = Math.random() * 2 - 1;
-    const soplo = (dur, vol, tipo, f0, f1, t) => {
-      const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), gn = ctx.createGain();
-      s.buffer = buf; fl.type = tipo; fl.Q.value = 1.2; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(f1, t + dur);
-      gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      s.connect(fl); fl.connect(gn); gn.connect(bus); s.start(t); s.stop(t + dur + 0.05);
-    };
-    const t0 = ctx.currentTime + 0.03, tg = t0 + T_GOLPE;
-    if (E && E.jingle) { E.jingle(ctx, bus, t0, tg, { tono, soplo, f, T: { T_LETRAS, T_GOLPE, T_FIN } }); return { cortar: () => bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05) }; }
-    soplo(0.2, 0.12, 'bandpass', 700, 5200, t0);
-    [0.3, 0.38, 0.46, 0.54].forEach((d, k) => tono('square', 240 + k * 70, 1300 + k * 240, 0.16, 0.035, t0 + d));
-    tono('sine', 115, 30, 0.95, 0.55, tg);
-    for (const [fr, v, d] of [[523, 0.08, 1.3], [1247, 0.05, 1], [2011, 0.035, 0.75], [3150, 0.025, 0.5], [4430, 0.015, 0.35]]) tono('sine', fr, 0, d, v, tg);
-    soplo(0.4, 0.25, 'lowpass', 4200, 260, tg);
-    ['C6', 'E6', 'G6', 'B6', 'D7', 'G7'].forEach((nn, k) => tono('triangle', f(nn), 0, 0.28, 0.05, tg + 0.07 + k * 0.035));
-    for (let k = 0; k < 9; k++) tono('square', 1320 + (k % 3) * 110, 0, 0.022, 0.03, t0 + T_LETRAS + k * 0.04);
-    for (const nn of ['C3', 'G3', 'E4', 'B4', 'D5']) tono('triangle', f(nn), 0, 1.35, 0.05, t0 + 1.1, 0.25);
-    return { cortar: () => bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05) };
-  }
-
-  // el iris: negro afuera de un círculo de radio r, de a filas (borde de píxel)
-  function iris(g, W, H, cx, cy, r) {
-    g.fillStyle = '#05040b';
-    if (r <= 0) { g.fillRect(0, 0, W, H); return; }
-    for (let y = 0; y < H; y++) {
-      const dy = y + 0.5 - cy;
-      if (Math.abs(dy) >= r) { g.fillRect(0, y, W, 1); continue; }
-      const m = Math.sqrt(r * r - dy * dy), a = Math.round(cx - m), b = Math.round(cx + m);
-      if (a > 0) g.fillRect(0, y, a, 1);
-      if (b < W) g.fillRect(b, y, W - b, 1);
-    }
-  }
-  return { crear, jingle, iris, salida, salidaAtras, DURA: T_FIN };
-})();
-const crearIntroJXS = IntroJXS_.crear, jingleJXS = IntroJXS_.jingle, irisJXS = IntroJXS_.iris;
 
 /* ==== dorado/js/letra.js ==== */
 /* ============================================================================
    La letra déco: los contornos de Limelight (Eric Fischer, SIL Open Font License
-   1.1) solo para mayúsculas, números y acentos, sacados del TTF con
-   herramientas/glifos.py. Unidades de 1000 por em, y hacia abajo.
+   1.1) solo para mayúsculas, números y acentos (con los del turco), sacados del
+   TTF con herramientas/glifos.py. Unidades de 1000 por em, y hacia abajo. Lo que
+   no está acá (árabe, japonés, tailandés, birmano) se escribe con la del sistema.
    ========================================================================== */
 
-const LETRA = {"e":1000,"a":910,"g":{" ":[223,""],"A":[662,"M208 -87Q119 -87 86 -88L72 -55Q66 -41 61 -25Q49 5 29 5Q20 5 14 0Q8 -6 8 -13Q8 -23 18 -37Q32 -57 46 -90Q4 -94 4 -115Q4 -135 28 -135Q43 -135 62 -130L306 -722L640 0L386 0L345 -87L208 -87ZM102 -126Q149 -123 186 -123L329 -123L207 -386L102 -126Z"],"B":[734,"M86 -691Q218 -691 296 -691Q374 -691 391 -690Q463 -687 493 -674Q522 -660 540 -644Q578 -606 578 -554Q578 -501 541 -462Q530 -450 515 -441Q595 -426 646 -374Q701 -317 701 -236Q701 -153 649 -93Q578 -10 428 -2Q390 0 353 0L86 0L86 -691ZM407 -451L432 -448L439 -448Q478 -448 506 -476Q537 -506 537 -550Q537 -604 490 -633Q467 -647 444 -650Q420 -653 407 -654Q380 -656 335 -656L335 -36L390 -36Q473 -36 525 -57Q587 -78 624 -126Q659 -171 659 -221Q659 -271 644 -305Q629 -339 602 -363Q545 -413 444 -413L410 -410Q395 -410 387 -416Q380 -422 380 -431Q380 -451 407 -451Z"],"C":[701,"M646 -116Q667 -116 667 -93Q667 -75 638 -56Q585 -21 549 -11Q481 9 407 9Q332 9 263 -17Q194 -44 145 -92Q43 -192 43 -352Q43 -428 72 -492Q101 -557 151 -603Q259 -700 421 -700Q513 -700 582 -668Q656 -636 656 -613Q656 -604 650 -597Q644 -590 636 -590Q620 -590 607 -604Q595 -618 573 -629Q551 -640 525 -648Q473 -665 429 -665Q386 -665 358 -659L358 -33Q392 -27 418 -27Q445 -27 472 -30Q500 -34 526 -42Q585 -59 615 -93Q625 -106 632 -111Q638 -116 646 -116Z"],"D":[771,"M86 -691L290 -691Q432 -691 498 -671Q574 -647 615 -611Q656 -574 680 -535Q728 -456 728 -354Q728 -195 613 -97Q532 -26 422 -9Q361 0 251 0L86 0L86 -691ZM335 -41Q343 -40 350 -40L361 -40Q493 -40 587 -123Q686 -209 686 -354Q686 -444 643 -517Q580 -623 443 -646Q399 -653 335 -654L335 -41Z"],"E":[584,"M515 -42Q540 -42 540 -22Q540 -14 529 -7Q518 0 492 0L78 0L78 -691Q271 -691 463 -691L503 -692Q540 -692 540 -671Q540 -663 533 -656Q527 -648 520 -648Q507 -648 493 -651Q472 -656 435 -656L327 -656L327 -507L416 -507Q416 -507 476 -509Q487 -509 494 -504Q502 -499 502 -490Q502 -469 475 -469L454 -470Q438 -471 427 -471L327 -471L327 -36L435 -36Q471 -36 486 -39Q504 -42 515 -42Z"],"F":[565,"M492 -443L472 -444Q461 -445 445 -445L335 -445L335 0L86 0L86 -691L474 -691L522 -692L531 -692Q568 -692 568 -671Q568 -663 561 -656Q555 -648 547 -648Q534 -648 522 -651Q500 -656 464 -656L335 -656L335 -480L434 -480Q434 -480 494 -482Q521 -482 521 -463Q521 -443 492 -443Z"],"G":[791,"M666 -36L667 -69L667 -146Q598 -32 464 0Q421 9 365 9Q309 9 248 -14Q188 -38 143 -82Q43 -179 43 -336Q43 -487 148 -592Q258 -700 424 -700Q508 -700 576 -668Q618 -650 635 -634Q652 -618 652 -609Q652 -599 646 -592Q640 -585 630 -585Q619 -585 606 -597Q569 -630 540 -640Q512 -650 495 -655Q478 -659 464 -661Q443 -664 414 -664Q385 -664 361 -659L361 -27Q366 -27 372 -27L381 -27Q526 -27 616 -137Q647 -174 667 -226L667 -272Q667 -272 665 -316Q665 -342 685 -342Q696 -342 702 -335Q708 -328 708 -318L705 -277L705 -96L708 -20Q708 -8 701 -1Q694 5 686 5Q664 5 664 -17Q664 -23 666 -36Z"],"H":[713,"M619 -71L621 -21Q621 -8 613 -1Q606 5 596 5Q587 5 581 -1Q576 -7 576 -17Q576 -27 578 -39Q582 -54 582 -115L582 -471L336 -471L336 0L86 0L86 -691L336 -691L336 -507Q441 -507 504 -507Q567 -507 582 -507L582 -592Q582 -635 580 -647L578 -662Q578 -669 578 -674Q578 -696 598 -696Q605 -696 613 -690Q621 -685 621 -671L619 -608L619 -509L650 -514Q659 -514 665 -509Q670 -503 670 -495Q670 -476 640 -474Q635 -473 630 -472Q625 -472 619 -472L619 -71Z"],"I":[405,"M78 -691L327 -691L327 0L78 0L78 -691Z"],"J":[557,"M103 -36Q121 -30 142 -27Q162 -23 182 -23Q203 -23 221 -28L221 -691L471 -691L471 -261Q471 -132 406 -65Q333 9 179 9Q77 9 24 -37L16 -45Q-1 -64 0 -78Q3 -101 21 -99Q37 -96 47 -80Q56 -63 71 -53Q85 -43 103 -36Z"],"K":[709,"M86 -691L335 -691L335 -489L509 -620Q546 -648 562 -666Q579 -683 583 -687Q587 -690 591 -692Q597 -696 606 -696Q615 -696 620 -691Q625 -686 625 -680Q625 -674 624 -670Q623 -666 618 -660Q608 -648 581 -627L472 -544L655 -97Q660 -84 665 -74L673 -57L682 -40Q685 -33 688 -27Q690 -21 689 -15Q689 -9 686 -4Q679 7 669 7Q656 7 649 -1Q640 -12 636 -25L627 -52Q623 -66 615 -85L438 -519L335 -441L335 0L86 0L86 -691Z"],"L":[538,"M505 -44Q531 -44 531 -22Q531 -14 520 -7Q510 0 483 0L86 0L86 -691L335 -691L335 -32L427 -32Q458 -32 480 -38Q502 -44 505 -44Z"],"M":[939,"M24 7Q15 6 10 -1Q5 -8 6 -17Q8 -32 15 -45Q22 -58 25 -64Q28 -70 32 -78L50 -121L251 -722L467 -305L676 -722L927 0L665 0L543 -373L356 18L159 -334L90 -121Q74 -85 67 -60Q61 -35 56 -21Q46 9 24 7Z"],"N":[750,"M130 -70L132 -21Q132 -8 125 -1Q118 5 109 5Q99 5 93 -1Q86 -7 86 -15Q86 -22 88 -29Q89 -36 90 -44Q92 -58 92 -115L92 -722L623 -301L623 -592Q623 -625 621 -640Q619 -663 619 -672Q619 -696 640 -696Q648 -696 656 -690Q663 -685 663 -673L663 -656L661 -585L661 27L130 -390L130 -70Z"],"O":[817,"M159 -88Q110 -135 82 -202Q53 -270 53 -349Q53 -428 80 -491Q107 -555 155 -601Q258 -700 413 -700Q566 -700 665 -603Q764 -504 764 -347Q764 -190 662 -89Q598 -26 505 -2Q458 9 397 9Q336 9 271 -16Q207 -41 159 -88ZM412 -664Q385 -664 362 -660L362 -30Q384 -26 412 -26Q542 -26 632 -113Q725 -204 725 -347Q725 -483 638 -573Q549 -664 412 -664Z"],"P":[741,"M410 -203L453 -201Q548 -201 609 -263Q672 -326 675 -426Q680 -581 526 -635Q469 -655 376 -655L335 -655L335 0L86 0L86 -691L273 -691Q425 -691 456 -687Q487 -682 521 -675Q555 -668 594 -646Q634 -623 661 -591Q716 -526 714 -439Q711 -329 649 -255Q586 -181 476 -163Q443 -159 425 -159Q381 -159 381 -183Q381 -191 389 -197Q396 -203 410 -203Z"],"Q":[797,"M603 -49Q513 9 397 9Q326 9 261 -16Q197 -41 148 -88Q43 -191 43 -354Q43 -502 145 -601Q248 -700 402 -700Q556 -700 654 -603Q754 -504 754 -347Q754 -258 721 -188Q688 -118 631 -71L677 -35Q710 -10 720 -7Q730 -5 741 -4Q763 -2 763 14Q763 34 737 34Q716 34 698 22Q679 11 657 -6L603 -49ZM402 -664Q375 -664 352 -660L352 -30Q374 -26 411 -26Q495 -26 572 -74Q520 -112 477 -112Q462 -112 455 -118Q448 -124 448 -132Q448 -151 474 -151Q525 -151 601 -95Q653 -137 684 -200Q715 -264 715 -339Q715 -414 692 -472Q669 -530 627 -573Q539 -664 402 -664Z"],"R":[733,"M416 -237L456 -234Q542 -234 602 -294Q662 -354 662 -443Q662 -561 559 -617Q502 -648 438 -653Q410 -656 387 -656L354 -656Q343 -656 335 -655L335 0L86 0L86 -691Q201 -691 271 -691Q342 -691 364 -690Q385 -690 402 -689Q419 -688 434 -688Q455 -686 494 -678Q534 -671 572 -650Q611 -630 639 -600Q699 -535 699 -446Q699 -358 643 -291Q586 -222 491 -202Q536 -62 606 -34Q628 -26 649 -26L688 -35Q706 -35 706 -17Q706 9 646 9Q602 9 565 -15Q508 -49 468 -148L454 -183Q450 -191 448 -193Q445 -195 438 -195Q432 -195 427 -194L415 -193Q396 -193 388 -201Q381 -208 381 -216Q381 -237 416 -237Z"],"S":[581,"M86 -35Q69 -45 57 -56Q44 -66 44 -79Q44 -102 64 -102Q78 -102 94 -87Q110 -73 130 -62Q150 -51 173 -43Q222 -27 263 -27Q304 -27 326 -32Q348 -38 363 -47Q396 -67 396 -98Q396 -127 368 -156Q344 -181 301 -216L218 -281Q92 -378 70 -458Q62 -486 62 -520Q62 -554 77 -587Q93 -621 123 -646Q188 -700 300 -700Q357 -700 402 -683Q448 -666 464 -653Q481 -640 481 -629Q481 -606 462 -606Q452 -606 439 -617Q427 -628 412 -636Q397 -644 378 -650Q337 -664 298 -664Q225 -664 225 -616Q225 -596 238 -579Q262 -549 330 -494Q398 -438 439 -397Q480 -355 502 -322Q536 -270 536 -214Q536 -157 516 -118Q497 -79 461 -50Q386 9 274 9Q163 9 86 -35Z"],"T":[605,"M588 -678Q588 -656 541 -656L427 -656L427 0L177 0L177 -656L104 -656Q66 -656 52 -652Q34 -648 25 -648Q0 -648 0 -668Q0 -691 49 -691L484 -691Q518 -691 534 -694Q554 -697 563 -697Q588 -697 588 -678Z"],"U":[767,"M695 -670L692 -610L692 -318Q692 -173 609 -83Q524 9 384 9Q233 9 149 -85Q71 -171 71 -307L71 -691L321 -691L321 -32Q358 -27 404 -27Q449 -27 495 -45Q542 -63 577 -102Q653 -185 654 -344L654 -609Q654 -624 652 -644Q650 -664 650 -671Q650 -696 674 -696Q695 -696 695 -670Z"],"V":[615,"M579 -696Q599 -696 599 -675Q599 -665 593 -651Q586 -637 582 -628L317 27L-4 -691L262 -691L417 -326L526 -598Q544 -642 549 -662Q555 -681 561 -689Q567 -696 579 -696Z"],"W":[958,"M943 -675Q943 -667 939 -657Q928 -625 918 -602L660 27L476 -384L285 27L-4 -691L263 -691L400 -325L586 -722L760 -326L882 -613Q888 -629 893 -645L901 -674Q906 -696 925 -696Q943 -696 943 -675Z"],"X":[644,"M56 5Q36 5 36 -14Q36 -28 57 -47Q77 -65 89 -82Q89 -82 224 -279L26 -691L285 -691L402 -447L504 -593Q532 -635 546 -672Q557 -696 575 -696Q594 -696 594 -675Q594 -664 568 -625L422 -405L617 0L359 0L245 -237L120 -58Q83 -6 67 2Q62 5 56 5Z"],"Y":[645,"M269 -20Q256 5 235 5Q214 5 214 -16Q214 -29 227 -45Q252 -75 275 -115L300 -159L10 -691L295 -691L435 -396L560 -619Q573 -644 583 -670Q593 -696 609 -696Q629 -696 629 -676Q629 -665 620 -649L286 -54Q281 -44 277 -38L269 -20Z"],"Z":[577,"M527 -42Q553 -42 553 -22Q553 -14 542 -7Q531 0 504 0L25 0L280 -656L155 -656Q118 -656 103 -652Q84 -648 76 -648Q51 -648 51 -668Q51 -691 99 -691L535 -691L286 -36L449 -36Q485 -36 500 -39Q517 -42 527 -42Z"],"0":[658,"M327 9Q260 9 208 -14Q155 -37 119 -83Q43 -177 43 -359Q43 -521 119 -610Q195 -700 335 -700Q470 -700 543 -609Q615 -520 615 -353Q615 -176 538 -82Q463 9 327 9ZM331 -24Q504 -24 558 -202Q577 -264 577 -351Q577 -438 559 -498Q541 -558 509 -596Q447 -668 334 -668L329 -668L329 -24L331 -24Z"],"1":[481,"M137 -592L105 -583Q75 -574 60 -566Q33 -551 20 -552Q-1 -552 0 -570Q1 -588 33 -595Q51 -600 69 -605L386 -701L386 0L136 0L137 -592Z"],"2":[609,"M542 -24Q542 0 493 0L19 0Q31 -98 171 -295Q333 -516 344 -536Q356 -556 360 -565Q367 -580 367 -595Q367 -610 361 -624Q354 -637 341 -646Q312 -667 259 -667Q208 -667 172 -651Q110 -625 92 -595Q79 -575 62 -575Q45 -575 45 -596Q45 -622 92 -652Q166 -700 268 -700Q393 -700 468 -646Q540 -596 540 -517Q540 -471 527 -441Q515 -411 503 -390Q491 -368 475 -342L381 -202Q313 -103 287 -35L430 -35Q457 -35 480 -40Q509 -45 520 -45Q531 -45 537 -38Q542 -32 542 -24Z"],"3":[634,"M275 -402Q287 -402 298 -403L298 -663L287 -664Q282 -665 277 -665Q272 -665 256 -665Q240 -665 217 -661Q193 -658 174 -652Q136 -642 121 -624Q106 -606 93 -605Q66 -604 65 -623Q63 -652 147 -681Q207 -700 279 -700Q351 -700 399 -687Q448 -674 479 -652Q542 -609 542 -535Q542 -462 469 -413Q443 -396 409 -385Q521 -349 557 -260Q568 -231 568 -191Q568 -152 548 -114Q527 -76 489 -48Q409 9 271 9Q152 9 66 -57Q36 -80 25 -106Q22 -114 23 -120Q24 -141 42 -139Q59 -137 69 -117Q79 -98 96 -83Q113 -67 137 -55Q190 -27 253 -27L298 -27L298 -364Q280 -366 266 -366L247 -366L196 -363Q163 -363 163 -382Q163 -406 195 -406L275 -402ZM356 -651Q346 -655 333 -657L356 -651Z"],"4":[721,"M77 -136L57 -136L50 -136Q38 -136 27 -143Q17 -150 17 -163Q17 -175 19 -183Q21 -190 26 -199Q31 -207 38 -218L359 -690L561 -690L561 -173Q621 -173 632 -176Q648 -180 657 -180Q666 -180 671 -174Q677 -169 677 -160Q677 -141 647 -139Q629 -136 595 -136L561 -136L561 0L311 0L311 -136Q194 -136 77 -136ZM311 -173L311 -551L69 -188Q62 -179 66 -176Q69 -173 84 -173L311 -173Z"],"5":[615,"M132 -450Q208 -483 283 -483Q357 -483 409 -463Q461 -443 497 -409Q569 -339 569 -238Q569 -134 491 -64Q410 9 276 9Q183 9 93 -47Q62 -68 48 -95Q44 -102 44 -108Q44 -132 62 -132Q79 -132 91 -112Q103 -92 120 -77Q138 -62 162 -50Q215 -25 281 -25L295 -25Q302 -25 308 -26L308 -446Q292 -448 265 -448Q239 -448 201 -438Q163 -427 143 -417Q117 -402 107 -402Q98 -402 94 -409Q89 -415 90 -422L116 -645Q117 -648 117 -652L117 -661Q117 -686 121 -690Q126 -695 141 -695L212 -690L309 -690Q429 -690 479 -700Q483 -701 491 -701Q498 -701 504 -694Q510 -687 510 -680Q510 -657 455 -656Q441 -656 428 -656L156 -656L132 -450Z"],"6":[682,"M536 -613Q493 -667 397 -667Q356 -667 327 -660L327 -27Q340 -25 355 -25Q469 -25 536 -90Q599 -150 599 -242Q599 -322 556 -368Q513 -415 441 -415Q416 -415 405 -410Q375 -399 361 -404Q355 -407 353 -417Q352 -426 357 -432Q362 -438 372 -440Q396 -449 439 -449Q483 -449 518 -437Q553 -424 580 -398Q637 -342 637 -237Q637 -124 552 -55Q474 9 360 9Q233 9 154 -71Q66 -161 66 -330Q66 -501 162 -604Q252 -700 392 -700Q475 -700 537 -665Q583 -638 583 -610Q583 -594 564 -594Q554 -594 547 -601L536 -613Z"],"7":[598,"M438 -86Q438 -36 439 0L164 0Q161 -26 161 -71Q161 -116 166 -172Q171 -228 180 -284Q189 -340 201 -395Q213 -450 228 -499Q257 -599 289 -656L275 -656L148 -656L114 -656Q98 -656 88 -655Q87 -638 84 -627Q82 -616 81 -609Q78 -583 76 -575Q70 -555 50 -560Q41 -562 35 -570Q30 -578 31 -586Q33 -594 36 -603Q39 -612 42 -624Q50 -653 50 -672Q50 -690 74 -690L568 -690Q520 -600 481 -438Q438 -254 438 -86Z"],"8":[665,"M126 -40Q91 -64 71 -98Q50 -132 50 -167Q50 -202 58 -226Q66 -250 80 -268Q107 -305 146 -311Q155 -312 161 -306Q167 -300 167 -293Q167 -285 160 -278Q154 -271 141 -269Q128 -267 117 -256Q106 -246 100 -232Q88 -208 88 -174Q88 -140 105 -112Q122 -83 152 -64Q215 -24 317 -24Q367 -24 409 -46Q452 -68 452 -98Q452 -124 430 -149Q396 -187 309 -238Q223 -289 179 -322Q135 -354 110 -385Q66 -438 66 -506Q67 -591 147 -646Q226 -700 353 -700Q434 -700 500 -667Q549 -644 570 -604Q581 -583 581 -554Q581 -524 573 -502Q565 -479 552 -465Q529 -438 485 -428Q479 -427 473 -427Q466 -427 461 -432Q456 -438 456 -445Q456 -452 462 -459Q468 -466 481 -467Q495 -467 507 -473Q518 -478 526 -488Q545 -510 545 -541Q545 -572 536 -590Q526 -608 511 -621Q495 -634 475 -644Q456 -653 435 -659Q396 -669 355 -669Q282 -669 250 -640Q238 -628 238 -611Q238 -594 246 -577Q253 -559 271 -540Q311 -498 387 -455Q464 -412 509 -380Q555 -348 581 -320Q628 -270 628 -206Q627 -125 570 -72Q481 9 311 9Q200 9 126 -40Z"],"9":[666,"M355 -662Q341 -664 326 -664Q208 -664 143 -599Q84 -540 84 -446Q84 -364 134 -317Q180 -274 260 -271Q270 -271 279 -273L293 -276Q327 -283 329 -259Q330 -237 281 -237Q275 -237 270 -237Q265 -237 243 -238Q221 -239 182 -250Q144 -261 113 -286Q45 -342 45 -454Q45 -567 130 -636Q209 -700 322 -700Q449 -700 528 -619Q615 -530 615 -361Q615 -188 520 -87Q430 9 291 9Q206 9 145 -26Q99 -53 99 -81Q99 -97 118 -97Q128 -97 135 -90L146 -77Q190 -24 294 -24Q325 -24 355 -31L355 -662Z"],"Á":[662,"M208 -87Q119 -87 86 -88L72 -55Q66 -41 61 -25Q49 5 29 5Q20 5 14 0Q8 -6 8 -13Q8 -23 18 -37Q32 -57 46 -90Q4 -94 4 -115Q4 -135 28 -135Q43 -135 62 -130L306 -722L640 0L386 0L345 -87L208 -87ZM102 -126Q149 -123 186 -123L329 -123L207 -386L102 -126ZM375 -885L511 -885L393 -746L317 -746L375 -885Z"],"É":[584,"M515 -42Q540 -42 540 -22Q540 -14 529 -7Q518 0 492 0L78 0L78 -691Q271 -691 463 -691L503 -692Q540 -692 540 -671Q540 -663 533 -656Q527 -648 520 -648Q507 -648 493 -651Q472 -656 435 -656L327 -656L327 -507L416 -507Q416 -507 476 -509Q487 -509 494 -504Q502 -499 502 -490Q502 -469 475 -469L454 -470Q438 -471 427 -471L327 -471L327 -36L435 -36Q471 -36 486 -39Q504 -42 515 -42ZM378 -885L515 -885L396 -746L321 -746L378 -885Z"],"Í":[405,"M78 -691L327 -691L327 0L78 0L78 -691ZM262 -885L398 -885L280 -746L204 -746L262 -885Z"],"Ó":[817,"M159 -88Q110 -135 82 -202Q53 -270 53 -349Q53 -428 80 -491Q107 -555 155 -601Q258 -700 413 -700Q566 -700 665 -603Q764 -504 764 -347Q764 -190 662 -89Q598 -26 505 -2Q458 9 397 9Q336 9 271 -16Q207 -41 159 -88ZM412 -664Q385 -664 362 -660L362 -30Q384 -26 412 -26Q542 -26 632 -113Q725 -204 725 -347Q725 -483 638 -573Q549 -664 412 -664ZM466 -885L603 -885L484 -746L408 -746L466 -885Z"],"Ú":[767,"M695 -670L692 -610L692 -318Q692 -173 609 -83Q524 9 384 9Q233 9 149 -85Q71 -171 71 -307L71 -691L321 -691L321 -32Q358 -27 404 -27Q449 -27 495 -45Q542 -63 577 -102Q653 -185 654 -344L654 -609Q654 -624 652 -644Q650 -664 650 -671Q650 -696 674 -696Q695 -696 695 -670ZM470 -885L607 -885L488 -746L413 -746L470 -885Z"],"Ü":[767,"M695 -670L692 -610L692 -318Q692 -173 609 -83Q524 9 384 9Q233 9 149 -85Q71 -171 71 -307L71 -691L321 -691L321 -32Q358 -27 404 -27Q449 -27 495 -45Q542 -63 577 -102Q653 -185 654 -344L654 -609Q654 -624 652 -644Q650 -664 650 -671Q650 -696 674 -696Q695 -696 695 -670ZM622 -807Q622 -781 598 -764Q575 -747 545 -747Q516 -747 500 -752Q484 -757 473 -765Q450 -782 450 -809Q450 -852 498 -866Q514 -871 536 -871Q557 -871 573 -865Q589 -860 600 -852Q622 -833 622 -807ZM376 -807Q376 -781 353 -764Q330 -747 300 -747Q271 -747 255 -752Q239 -757 228 -765Q204 -782 204 -809Q204 -852 252 -866Q269 -871 290 -871Q312 -871 328 -865Q343 -860 354 -852Q376 -833 376 -807Z"],"Ñ":[750,"M130 -70L132 -21Q132 -8 125 -1Q118 5 109 5Q99 5 93 -1Q86 -7 86 -15Q86 -22 88 -29Q89 -36 90 -44Q92 -58 92 -115L92 -722L623 -301L623 -592Q623 -625 621 -640Q619 -663 619 -672Q619 -696 640 -696Q648 -696 656 -690Q663 -685 663 -673L663 -656L661 -585L661 27L130 -390L130 -70ZM255 -754Q251 -752 245 -752Q239 -752 234 -759Q228 -765 228 -781Q228 -797 238 -818Q248 -839 265 -856Q303 -895 352 -895Q393 -895 445 -854L470 -834Q498 -813 507 -813Q516 -813 524 -826Q532 -838 535 -857Q538 -877 542 -884Q545 -890 553 -890Q562 -890 567 -883Q573 -875 573 -860Q573 -845 563 -823Q553 -802 536 -785Q498 -747 449 -747Q410 -747 357 -785L322 -812Q307 -824 299 -824Q292 -824 287 -821Q282 -817 277 -812Q266 -799 264 -786L261 -768Q259 -756 255 -754Z"],"Ã":[662,"M208 -87Q119 -87 86 -88L72 -55Q66 -41 61 -25Q49 5 29 5Q20 5 14 0Q8 -6 8 -13Q8 -23 18 -37Q32 -57 46 -90Q4 -94 4 -115Q4 -135 28 -135Q43 -135 62 -130L306 -722L640 0L386 0L345 -87L208 -87ZM102 -126Q149 -123 186 -123L329 -123L207 -386L102 -126ZM178 -754Q174 -752 168 -752Q162 -752 156 -759Q151 -765 151 -781Q151 -797 161 -818Q170 -839 188 -856Q226 -895 275 -895Q316 -895 368 -854L393 -834Q421 -813 430 -813Q438 -813 447 -826Q455 -838 458 -857Q461 -877 464 -884Q468 -890 476 -890Q484 -890 490 -883Q496 -875 496 -860Q496 -845 486 -823Q476 -802 459 -785Q421 -747 372 -747Q333 -747 280 -785L245 -812Q229 -824 222 -824Q215 -824 210 -821Q205 -817 200 -812Q189 -799 187 -786L184 -768Q182 -756 178 -754Z"],"Õ":[817,"M159 -88Q110 -135 82 -202Q53 -270 53 -349Q53 -428 80 -491Q107 -555 155 -601Q258 -700 413 -700Q566 -700 665 -603Q764 -504 764 -347Q764 -190 662 -89Q598 -26 505 -2Q458 9 397 9Q336 9 271 -16Q207 -41 159 -88ZM412 -664Q385 -664 362 -660L362 -30Q384 -26 412 -26Q542 -26 632 -113Q725 -204 725 -347Q725 -483 638 -573Q549 -664 412 -664ZM269 -754Q266 -752 260 -752Q253 -752 248 -759Q242 -765 242 -781Q242 -797 252 -818Q262 -839 279 -856Q317 -895 366 -895Q407 -895 459 -854L484 -834Q512 -813 521 -813Q530 -813 538 -826Q546 -838 549 -857Q552 -877 556 -884Q559 -890 567 -890Q576 -890 581 -883Q587 -875 587 -860Q587 -845 577 -823Q567 -802 550 -785Q512 -747 463 -747Q424 -747 372 -785L336 -812Q321 -824 313 -824Q306 -824 301 -821Q296 -817 291 -812Q280 -799 278 -786L275 -768Q273 -756 269 -754Z"],"Ç":[701,"M443 34Q548 36 548 95Q548 141 484 159Q464 165 442 165Q368 165 334 138Q320 127 320 117Q320 96 340 96Q350 96 360 105Q371 114 379 118Q388 122 397 124Q417 129 447 129Q476 129 494 119Q511 108 511 97Q511 86 493 78Q475 70 447 69Q418 69 412 63Q405 58 405 42L405 9Q241 5 142 -96Q43 -195 43 -352Q43 -428 72 -492Q101 -557 151 -603Q259 -700 421 -700Q513 -700 582 -668Q656 -636 656 -613Q656 -604 650 -597Q644 -590 636 -590Q620 -590 607 -604Q595 -618 573 -629Q551 -640 525 -648Q473 -665 429 -665Q386 -665 358 -659L358 -33Q392 -27 418 -27Q445 -27 472 -30Q500 -34 526 -42Q585 -59 615 -93Q625 -106 632 -111Q638 -116 646 -116Q667 -116 667 -93Q667 -75 638 -56Q585 -21 552 -12Q494 5 443 8L443 34Z"],"Ê":[584,"M515 -42Q540 -42 540 -22Q540 -14 529 -7Q518 0 492 0L78 0L78 -691Q271 -691 463 -691L503 -692Q540 -692 540 -671Q540 -663 533 -656Q527 -648 520 -648Q507 -648 493 -651Q472 -656 435 -656L327 -656L327 -507L416 -507Q416 -507 476 -509Q487 -509 494 -504Q502 -499 502 -490Q502 -469 475 -469L454 -470Q438 -471 427 -471L327 -471L327 -36L435 -36Q471 -36 486 -39Q504 -42 515 -42ZM208 -769L194 -754Q183 -743 175 -743Q167 -743 161 -748Q156 -753 156 -760Q156 -773 176 -790Q183 -796 192 -805Q202 -813 221 -832L274 -886L399 -886L527 -747L377 -747L289 -852Q228 -790 220 -781Q212 -772 208 -769Z"],"Â":[662,"M208 -87Q119 -87 86 -88L72 -55Q66 -41 61 -25Q49 5 29 5Q20 5 14 0Q8 -6 8 -13Q8 -23 18 -37Q32 -57 46 -90Q4 -94 4 -115Q4 -135 28 -135Q43 -135 62 -130L306 -722L640 0L386 0L345 -87L208 -87ZM102 -126Q149 -123 186 -123L329 -123L207 -386L102 -126ZM205 -769L190 -754Q179 -743 171 -743Q163 -743 157 -748Q152 -753 152 -760Q152 -773 172 -790Q179 -796 188 -805Q198 -813 217 -832L271 -886L395 -886L523 -747L373 -747L285 -852Q224 -790 216 -781Q208 -772 205 -769Z"],"Ô":[817,"M159 -88Q110 -135 82 -202Q53 -270 53 -349Q53 -428 80 -491Q107 -555 155 -601Q258 -700 413 -700Q566 -700 665 -603Q764 -504 764 -347Q764 -190 662 -89Q598 -26 505 -2Q458 9 397 9Q336 9 271 -16Q207 -41 159 -88ZM412 -664Q385 -664 362 -660L362 -30Q384 -26 412 -26Q542 -26 632 -113Q725 -204 725 -347Q725 -483 638 -573Q549 -664 412 -664ZM296 -769L281 -754Q271 -743 262 -743Q254 -743 249 -748Q244 -753 244 -760Q244 -773 264 -790Q270 -796 280 -805Q290 -813 308 -832L362 -886L486 -886L615 -747L464 -747L376 -852Q315 -790 308 -781Q300 -772 296 -769Z"],"!":[406,"M195 -221Q181 -221 174 -248Q167 -274 160 -298Q153 -322 145 -345Q125 -395 104 -432Q83 -470 73 -490Q62 -511 57 -525Q47 -551 47 -577Q47 -603 58 -625Q69 -647 88 -664Q131 -700 197 -700Q267 -700 308 -666Q347 -633 347 -578Q347 -549 340 -531Q333 -513 323 -494L296 -443Q252 -366 234 -303Q228 -279 223 -256Q214 -221 195 -221ZM96 -74Q96 -116 123 -139Q149 -163 196 -163Q243 -163 271 -137Q295 -113 295 -74Q295 -39 268 -16Q239 9 194 9Q124 9 103 -41Q96 -56 96 -74Z"],"¡":[406,"M196 -528Q149 -528 123 -551Q96 -575 96 -616Q96 -653 121 -676Q147 -700 194 -700Q239 -700 268 -675Q295 -651 295 -617Q295 -556 239 -535Q221 -528 196 -528ZM88 -27Q69 -43 58 -66Q47 -88 47 -107Q47 -126 49 -138Q51 -150 57 -165Q67 -192 91 -234Q114 -276 125 -299Q136 -323 145 -346Q158 -380 168 -419Q178 -458 183 -464Q188 -469 195 -469Q202 -469 209 -464Q217 -458 222 -434Q228 -411 235 -387Q241 -364 249 -343Q264 -303 289 -259L323 -197Q342 -160 344 -143Q347 -126 347 -106Q347 -85 337 -63Q327 -41 308 -24Q267 9 197 9Q131 9 88 -27Z"],"?":[452,"M329 -245Q268 -212 191 -234Q126 -253 97 -308Q82 -335 82 -363Q82 -390 85 -407Q89 -425 98 -444Q115 -481 145 -517Q174 -553 186 -570Q199 -588 207 -602Q221 -626 221 -639Q221 -664 192 -664Q150 -664 115 -633Q103 -620 93 -620Q73 -620 73 -638Q73 -651 90 -666Q107 -680 131 -688Q169 -700 213 -700Q256 -700 289 -689Q321 -679 344 -661Q392 -623 392 -566Q392 -510 362 -453Q333 -396 299 -352Q264 -309 259 -299Q253 -290 253 -282Q253 -265 271 -265Q295 -265 311 -277Q335 -296 349 -296Q363 -296 363 -280Q363 -264 329 -245ZM125 -74Q125 -116 153 -139Q181 -163 227 -163Q273 -163 300 -137Q325 -112 325 -74Q325 -39 298 -16Q270 9 224 9Q155 9 132 -41Q125 -56 125 -74Z"],"¿":[452,"M229 -433Q182 -433 155 -457Q127 -480 127 -521Q127 -558 153 -582Q180 -605 226 -605Q271 -605 299 -580Q326 -557 326 -522Q326 -461 271 -440Q253 -433 229 -433ZM255 -315Q255 -300 295 -250Q334 -200 364 -143Q393 -85 393 -45Q393 -5 381 21Q368 47 345 65Q296 104 218 104Q169 104 139 94Q109 84 92 70Q74 56 74 45Q74 24 91 24Q104 24 120 40Q151 68 194 68Q208 68 215 62Q222 56 222 48Q222 40 219 30Q216 20 208 6Q192 -22 164 -56Q137 -90 123 -112Q108 -133 100 -152Q83 -188 83 -224Q83 -260 98 -288Q113 -315 137 -334Q187 -372 256 -370Q297 -369 321 -355Q364 -332 364 -316Q364 -300 349 -300Q337 -300 321 -312Q296 -331 276 -331Q255 -331 255 -315Z"],".":[334,"M55 -53Q47 -73 47 -94Q47 -116 56 -134Q64 -151 80 -165Q113 -195 163 -195Q214 -195 246 -161Q275 -130 275 -89Q275 -47 242 -20Q208 9 160 9Q79 9 55 -53Z"],",":[333,"M218 -7Q192 9 160 9Q129 9 109 1Q89 -8 76 -21Q47 -51 47 -88Q47 -129 77 -157Q108 -186 154 -186Q209 -186 242 -152Q274 -120 274 -68Q274 10 223 71Q196 104 181 109Q167 115 158 115Q135 115 135 94Q135 86 141 83L159 76Q184 64 206 32Q216 17 218 -7Z"],":":[334,"M159 -283Q133 -283 112 -290Q91 -298 77 -312Q47 -340 47 -388Q47 -428 80 -457Q113 -487 163 -487Q214 -487 246 -453Q275 -422 275 -381Q275 -339 242 -312Q208 -283 159 -283ZM55 -53Q47 -73 47 -94Q47 -116 56 -134Q64 -151 80 -165Q113 -195 163 -195Q214 -195 246 -161Q275 -130 275 -89Q275 -47 242 -20Q208 9 160 9Q79 9 55 -53Z"],";":[334,"M159 -283Q133 -283 112 -290Q91 -298 77 -312Q47 -340 47 -388Q47 -428 80 -457Q113 -487 163 -487Q214 -487 246 -453Q275 -422 275 -381Q275 -339 242 -312Q208 -283 159 -283ZM218 -7Q192 9 161 9Q129 9 110 1Q90 -8 76 -21Q48 -51 48 -88Q48 -129 78 -157Q108 -186 155 -186Q210 -186 243 -152Q274 -120 274 -68Q274 10 224 71Q197 104 182 109Q167 115 159 115Q136 115 136 94Q136 86 142 83L159 76Q184 64 207 32Q216 17 218 -7Z"],"-":[360,"M128 -298L74 -295Q62 -295 55 -301Q47 -307 47 -316Q47 -338 74 -338Q74 -338 144 -333L195 -333L273 -338Q301 -338 301 -317Q301 -295 271 -295Q263 -295 255 -296L240 -297Q227 -298 201 -298Q165 -298 128 -298Z"],"+":[495,"M259 -178L263 -102Q263 -93 258 -87Q252 -81 242 -81Q232 -81 226 -88Q219 -95 220 -107L223 -180L223 -257Q173 -257 143 -257Q113 -257 104 -257Q82 -255 71 -254Q61 -253 54 -260Q47 -267 47 -277Q47 -286 53 -292Q59 -297 66 -297Q85 -297 98 -296L115 -294Q126 -293 143 -293L223 -293L223 -371L220 -444Q219 -456 226 -463Q232 -470 242 -470Q252 -470 258 -464Q263 -458 263 -449L259 -374L259 -293L339 -293Q355 -293 363 -294L377 -295Q398 -297 411 -297Q436 -297 436 -276Q436 -267 428 -260Q421 -253 413 -254Q380 -257 364 -257L259 -257L259 -178Z"],"×":[432,"M57 -417Q57 -435 77 -435Q91 -435 109 -410Q111 -408 115 -403L136 -380Q142 -374 147 -369L214 -301Q255 -342 278 -365Q301 -387 304 -391Q308 -395 311 -399Q314 -403 323 -414Q340 -435 352 -435Q374 -435 374 -416Q374 -401 353 -385L334 -369Q324 -360 310 -345L239 -275L313 -202Q324 -190 330 -185L349 -169Q372 -150 374 -143Q376 -136 376 -130Q376 -124 371 -119Q365 -114 357 -114Q345 -114 333 -128Q322 -142 312 -152L214 -250L117 -153Q105 -141 94 -127Q83 -114 69 -114Q52 -114 52 -134Q52 -149 78 -168Q83 -172 87 -176Q91 -179 95 -182Q99 -186 103 -190L189 -275L95 -370Q83 -381 75 -387Q57 -403 57 -417Z"],"/":[332,"M60 9Q40 9 40 -14Q40 -27 53 -45Q63 -67 77 -111L227 -625Q246 -690 262 -697Q267 -700 274 -700Q292 -700 292 -682Q292 -671 287 -661Q282 -651 279 -646Q276 -640 273 -633L269 -619Q266 -611 264 -605L106 -72Q91 -19 84 -8Q74 9 60 9Z"],"%":[777,"M168 9Q149 9 149 -12Q149 -23 158 -34Q167 -45 175 -55Q191 -72 220 -117L542 -621Q559 -648 567 -666Q576 -684 581 -690Q585 -696 596 -696Q606 -696 613 -691Q620 -686 620 -679Q620 -672 617 -667Q615 -662 611 -656L601 -642Q595 -633 587 -621L219 -40Q197 -5 187 2Q176 9 168 9ZM224 -385Q190 -385 160 -396Q130 -407 108 -427Q61 -471 61 -539Q61 -603 109 -645Q156 -687 226 -687Q292 -687 337 -646Q384 -603 384 -536Q384 -471 337 -428Q292 -386 224 -385ZM223 -418Q276 -418 311 -448Q348 -480 348 -535Q348 -587 311 -621Q275 -653 223 -653L220 -653Q218 -653 215 -653L215 -418L223 -418ZM403 -153Q403 -187 416 -214Q428 -241 450 -261Q497 -303 567 -303Q633 -303 678 -262Q725 -219 725 -152Q725 -87 678 -43Q632 0 566 0Q496 0 449 -43Q403 -86 403 -153ZM564 -34Q616 -34 651 -64Q689 -96 689 -151Q689 -203 652 -236Q616 -269 564 -269Q562 -269 561 -269Q559 -269 557 -269L557 -34L564 -34Z"],"·":[334,"M158 -252Q132 -252 111 -260Q90 -268 76 -281Q47 -310 47 -357Q47 -396 80 -426Q113 -456 162 -456Q214 -456 246 -422Q275 -392 275 -350Q275 -309 242 -281Q208 -252 158 -252Z"],"(":[458,"M414 -750Q414 -728 375 -730Q337 -732 292 -710L292 37Q336 58 381 60Q414 62 414 79Q414 97 381 97Q348 97 309 83Q271 69 235 43Q198 17 166 -21Q133 -59 108 -107Q54 -212 54 -341Q54 -515 151 -642Q212 -722 296 -753Q338 -768 368 -768Q414 -768 414 -750Z"],")":[458,"M44 79Q44 62 83 59Q123 57 166 37L166 -710Q120 -732 91 -730Q62 -729 53 -734Q44 -739 44 -748Q44 -768 83 -768Q121 -768 163 -753Q205 -737 241 -709Q277 -681 307 -642Q337 -603 359 -555Q404 -457 404 -341Q404 -212 351 -107Q302 -13 224 43Q149 97 76 97Q44 97 44 79Z"],"\"":[433,"M326 -404Q301 -404 297 -429Q287 -499 271 -547L248 -614Q242 -632 242 -645Q242 -658 247 -669Q252 -680 262 -688Q285 -707 326 -707Q366 -707 388 -690Q410 -673 410 -646Q410 -634 404 -616L389 -572Q363 -496 353 -431Q349 -410 334 -405Q330 -404 326 -404ZM106 -404Q82 -404 77 -429Q67 -499 51 -547L28 -614Q22 -632 22 -645Q22 -658 27 -669Q32 -680 42 -688Q65 -707 106 -707Q146 -707 168 -690Q190 -673 190 -646Q190 -634 185 -616L169 -572Q144 -496 133 -431Q129 -410 114 -405Q110 -404 106 -404Z"],"#":[458,"M311 -307L377 -311Q388 -311 396 -305Q403 -299 403 -290Q403 -281 395 -275Q388 -269 379 -269Q360 -269 350 -270L304 -271L266 -72Q252 -3 234 6Q229 9 220 9Q212 9 207 2Q202 -4 202 -13Q202 -24 208 -39L217 -61Q228 -86 239 -149L262 -271L161 -271L123 -72Q109 -3 91 6Q86 9 78 9Q70 9 65 2Q60 -4 60 -13Q60 -26 65 -39Q71 -52 74 -61Q78 -69 81 -81Q90 -114 97 -149L119 -271L80 -270Q70 -269 54 -269Q38 -269 30 -275Q22 -281 22 -290Q22 -309 44 -309L57 -309L84 -307L126 -307L145 -409L83 -406Q70 -406 62 -413Q55 -419 55 -428Q55 -448 77 -448L125 -445L151 -445L184 -625Q197 -690 212 -697Q217 -700 224 -700Q244 -700 244 -680Q244 -673 240 -662Q236 -651 234 -645Q232 -639 230 -631L227 -616Q225 -608 223 -601L193 -445L293 -445L327 -625Q336 -672 343 -684Q352 -700 367 -700Q387 -700 387 -680Q387 -673 383 -662Q379 -651 377 -645Q375 -639 374 -631L370 -616Q368 -608 366 -601L336 -445Q366 -445 378 -447Q399 -449 409 -449Q435 -449 435 -428Q435 -419 427 -413Q420 -406 412 -406Q393 -406 385 -407Q377 -408 370 -408L343 -409Q335 -410 330 -410L311 -307ZM268 -307L287 -410L187 -410L167 -307L268 -307Z"],"'":[213,"M106 -404Q82 -404 77 -429Q67 -499 51 -547L28 -614Q22 -632 22 -645Q22 -658 27 -669Q32 -680 42 -688Q65 -707 106 -707Q146 -707 168 -690Q190 -673 190 -646Q190 -634 185 -616L169 -572Q144 -496 133 -431Q129 -410 114 -405Q110 -404 106 -404Z"]}}
+const LETRA = {"e":1000,"a":910,"g":{" ":[223,""],"A":[662,"M208 -87Q119 -87 86 -88L72 -55Q66 -41 61 -25Q49 5 29 5Q20 5 14 0Q8 -6 8 -13Q8 -23 18 -37Q32 -57 46 -90Q4 -94 4 -115Q4 -135 28 -135Q43 -135 62 -130L306 -722L640 0L386 0L345 -87L208 -87ZM102 -126Q149 -123 186 -123L329 -123L207 -386L102 -126Z"],"B":[734,"M86 -691Q218 -691 296 -691Q374 -691 391 -690Q463 -687 493 -674Q522 -660 540 -644Q578 -606 578 -554Q578 -501 541 -462Q530 -450 515 -441Q595 -426 646 -374Q701 -317 701 -236Q701 -153 649 -93Q578 -10 428 -2Q390 0 353 0L86 0L86 -691ZM407 -451L432 -448L439 -448Q478 -448 506 -476Q537 -506 537 -550Q537 -604 490 -633Q467 -647 444 -650Q420 -653 407 -654Q380 -656 335 -656L335 -36L390 -36Q473 -36 525 -57Q587 -78 624 -126Q659 -171 659 -221Q659 -271 644 -305Q629 -339 602 -363Q545 -413 444 -413L410 -410Q395 -410 387 -416Q380 -422 380 -431Q380 -451 407 -451Z"],"C":[701,"M646 -116Q667 -116 667 -93Q667 -75 638 -56Q585 -21 549 -11Q481 9 407 9Q332 9 263 -17Q194 -44 145 -92Q43 -192 43 -352Q43 -428 72 -492Q101 -557 151 -603Q259 -700 421 -700Q513 -700 582 -668Q656 -636 656 -613Q656 -604 650 -597Q644 -590 636 -590Q620 -590 607 -604Q595 -618 573 -629Q551 -640 525 -648Q473 -665 429 -665Q386 -665 358 -659L358 -33Q392 -27 418 -27Q445 -27 472 -30Q500 -34 526 -42Q585 -59 615 -93Q625 -106 632 -111Q638 -116 646 -116Z"],"D":[771,"M86 -691L290 -691Q432 -691 498 -671Q574 -647 615 -611Q656 -574 680 -535Q728 -456 728 -354Q728 -195 613 -97Q532 -26 422 -9Q361 0 251 0L86 0L86 -691ZM335 -41Q343 -40 350 -40L361 -40Q493 -40 587 -123Q686 -209 686 -354Q686 -444 643 -517Q580 -623 443 -646Q399 -653 335 -654L335 -41Z"],"E":[584,"M515 -42Q540 -42 540 -22Q540 -14 529 -7Q518 0 492 0L78 0L78 -691Q271 -691 463 -691L503 -692Q540 -692 540 -671Q540 -663 533 -656Q527 -648 520 -648Q507 -648 493 -651Q472 -656 435 -656L327 -656L327 -507L416 -507Q416 -507 476 -509Q487 -509 494 -504Q502 -499 502 -490Q502 -469 475 -469L454 -470Q438 -471 427 -471L327 -471L327 -36L435 -36Q471 -36 486 -39Q504 -42 515 -42Z"],"F":[565,"M492 -443L472 -444Q461 -445 445 -445L335 -445L335 0L86 0L86 -691L474 -691L522 -692L531 -692Q568 -692 568 -671Q568 -663 561 -656Q555 -648 547 -648Q534 -648 522 -651Q500 -656 464 -656L335 -656L335 -480L434 -480Q434 -480 494 -482Q521 -482 521 -463Q521 -443 492 -443Z"],"G":[791,"M666 -36L667 -69L667 -146Q598 -32 464 0Q421 9 365 9Q309 9 248 -14Q188 -38 143 -82Q43 -179 43 -336Q43 -487 148 -592Q258 -700 424 -700Q508 -700 576 -668Q618 -650 635 -634Q652 -618 652 -609Q652 -599 646 -592Q640 -585 630 -585Q619 -585 606 -597Q569 -630 540 -640Q512 -650 495 -655Q478 -659 464 -661Q443 -664 414 -664Q385 -664 361 -659L361 -27Q366 -27 372 -27L381 -27Q526 -27 616 -137Q647 -174 667 -226L667 -272Q667 -272 665 -316Q665 -342 685 -342Q696 -342 702 -335Q708 -328 708 -318L705 -277L705 -96L708 -20Q708 -8 701 -1Q694 5 686 5Q664 5 664 -17Q664 -23 666 -36Z"],"H":[713,"M619 -71L621 -21Q621 -8 613 -1Q606 5 596 5Q587 5 581 -1Q576 -7 576 -17Q576 -27 578 -39Q582 -54 582 -115L582 -471L336 -471L336 0L86 0L86 -691L336 -691L336 -507Q441 -507 504 -507Q567 -507 582 -507L582 -592Q582 -635 580 -647L578 -662Q578 -669 578 -674Q578 -696 598 -696Q605 -696 613 -690Q621 -685 621 -671L619 -608L619 -509L650 -514Q659 -514 665 -509Q670 -503 670 -495Q670 -476 640 -474Q635 -473 630 -472Q625 -472 619 -472L619 -71Z"],"I":[405,"M78 -691L327 -691L327 0L78 0L78 -691Z"],"J":[557,"M103 -36Q121 -30 142 -27Q162 -23 182 -23Q203 -23 221 -28L221 -691L471 -691L471 -261Q471 -132 406 -65Q333 9 179 9Q77 9 24 -37L16 -45Q-1 -64 0 -78Q3 -101 21 -99Q37 -96 47 -80Q56 -63 71 -53Q85 -43 103 -36Z"],"K":[709,"M86 -691L335 -691L335 -489L509 -620Q546 -648 562 -666Q579 -683 583 -687Q587 -690 591 -692Q597 -696 606 -696Q615 -696 620 -691Q625 -686 625 -680Q625 -674 624 -670Q623 -666 618 -660Q608 -648 581 -627L472 -544L655 -97Q660 -84 665 -74L673 -57L682 -40Q685 -33 688 -27Q690 -21 689 -15Q689 -9 686 -4Q679 7 669 7Q656 7 649 -1Q640 -12 636 -25L627 -52Q623 -66 615 -85L438 -519L335 -441L335 0L86 0L86 -691Z"],"L":[538,"M505 -44Q531 -44 531 -22Q531 -14 520 -7Q510 0 483 0L86 0L86 -691L335 -691L335 -32L427 -32Q458 -32 480 -38Q502 -44 505 -44Z"],"M":[939,"M24 7Q15 6 10 -1Q5 -8 6 -17Q8 -32 15 -45Q22 -58 25 -64Q28 -70 32 -78L50 -121L251 -722L467 -305L676 -722L927 0L665 0L543 -373L356 18L159 -334L90 -121Q74 -85 67 -60Q61 -35 56 -21Q46 9 24 7Z"],"N":[750,"M130 -70L132 -21Q132 -8 125 -1Q118 5 109 5Q99 5 93 -1Q86 -7 86 -15Q86 -22 88 -29Q89 -36 90 -44Q92 -58 92 -115L92 -722L623 -301L623 -592Q623 -625 621 -640Q619 -663 619 -672Q619 -696 640 -696Q648 -696 656 -690Q663 -685 663 -673L663 -656L661 -585L661 27L130 -390L130 -70Z"],"O":[817,"M159 -88Q110 -135 82 -202Q53 -270 53 -349Q53 -428 80 -491Q107 -555 155 -601Q258 -700 413 -700Q566 -700 665 -603Q764 -504 764 -347Q764 -190 662 -89Q598 -26 505 -2Q458 9 397 9Q336 9 271 -16Q207 -41 159 -88ZM412 -664Q385 -664 362 -660L362 -30Q384 -26 412 -26Q542 -26 632 -113Q725 -204 725 -347Q725 -483 638 -573Q549 -664 412 -664Z"],"P":[741,"M410 -203L453 -201Q548 -201 609 -263Q672 -326 675 -426Q680 -581 526 -635Q469 -655 376 -655L335 -655L335 0L86 0L86 -691L273 -691Q425 -691 456 -687Q487 -682 521 -675Q555 -668 594 -646Q634 -623 661 -591Q716 -526 714 -439Q711 -329 649 -255Q586 -181 476 -163Q443 -159 425 -159Q381 -159 381 -183Q381 -191 389 -197Q396 -203 410 -203Z"],"Q":[797,"M603 -49Q513 9 397 9Q326 9 261 -16Q197 -41 148 -88Q43 -191 43 -354Q43 -502 145 -601Q248 -700 402 -700Q556 -700 654 -603Q754 -504 754 -347Q754 -258 721 -188Q688 -118 631 -71L677 -35Q710 -10 720 -7Q730 -5 741 -4Q763 -2 763 14Q763 34 737 34Q716 34 698 22Q679 11 657 -6L603 -49ZM402 -664Q375 -664 352 -660L352 -30Q374 -26 411 -26Q495 -26 572 -74Q520 -112 477 -112Q462 -112 455 -118Q448 -124 448 -132Q448 -151 474 -151Q525 -151 601 -95Q653 -137 684 -200Q715 -264 715 -339Q715 -414 692 -472Q669 -530 627 -573Q539 -664 402 -664Z"],"R":[733,"M416 -237L456 -234Q542 -234 602 -294Q662 -354 662 -443Q662 -561 559 -617Q502 -648 438 -653Q410 -656 387 -656L354 -656Q343 -656 335 -655L335 0L86 0L86 -691Q201 -691 271 -691Q342 -691 364 -690Q385 -690 402 -689Q419 -688 434 -688Q455 -686 494 -678Q534 -671 572 -650Q611 -630 639 -600Q699 -535 699 -446Q699 -358 643 -291Q586 -222 491 -202Q536 -62 606 -34Q628 -26 649 -26L688 -35Q706 -35 706 -17Q706 9 646 9Q602 9 565 -15Q508 -49 468 -148L454 -183Q450 -191 448 -193Q445 -195 438 -195Q432 -195 427 -194L415 -193Q396 -193 388 -201Q381 -208 381 -216Q381 -237 416 -237Z"],"S":[581,"M86 -35Q69 -45 57 -56Q44 -66 44 -79Q44 -102 64 -102Q78 -102 94 -87Q110 -73 130 -62Q150 -51 173 -43Q222 -27 263 -27Q304 -27 326 -32Q348 -38 363 -47Q396 -67 396 -98Q396 -127 368 -156Q344 -181 301 -216L218 -281Q92 -378 70 -458Q62 -486 62 -520Q62 -554 77 -587Q93 -621 123 -646Q188 -700 300 -700Q357 -700 402 -683Q448 -666 464 -653Q481 -640 481 -629Q481 -606 462 -606Q452 -606 439 -617Q427 -628 412 -636Q397 -644 378 -650Q337 -664 298 -664Q225 -664 225 -616Q225 -596 238 -579Q262 -549 330 -494Q398 -438 439 -397Q480 -355 502 -322Q536 -270 536 -214Q536 -157 516 -118Q497 -79 461 -50Q386 9 274 9Q163 9 86 -35Z"],"T":[605,"M588 -678Q588 -656 541 -656L427 -656L427 0L177 0L177 -656L104 -656Q66 -656 52 -652Q34 -648 25 -648Q0 -648 0 -668Q0 -691 49 -691L484 -691Q518 -691 534 -694Q554 -697 563 -697Q588 -697 588 -678Z"],"U":[767,"M695 -670L692 -610L692 -318Q692 -173 609 -83Q524 9 384 9Q233 9 149 -85Q71 -171 71 -307L71 -691L321 -691L321 -32Q358 -27 404 -27Q449 -27 495 -45Q542 -63 577 -102Q653 -185 654 -344L654 -609Q654 -624 652 -644Q650 -664 650 -671Q650 -696 674 -696Q695 -696 695 -670Z"],"V":[615,"M579 -696Q599 -696 599 -675Q599 -665 593 -651Q586 -637 582 -628L317 27L-4 -691L262 -691L417 -326L526 -598Q544 -642 549 -662Q555 -681 561 -689Q567 -696 579 -696Z"],"W":[958,"M943 -675Q943 -667 939 -657Q928 -625 918 -602L660 27L476 -384L285 27L-4 -691L263 -691L400 -325L586 -722L760 -326L882 -613Q888 -629 893 -645L901 -674Q906 -696 925 -696Q943 -696 943 -675Z"],"X":[644,"M56 5Q36 5 36 -14Q36 -28 57 -47Q77 -65 89 -82Q89 -82 224 -279L26 -691L285 -691L402 -447L504 -593Q532 -635 546 -672Q557 -696 575 -696Q594 -696 594 -675Q594 -664 568 -625L422 -405L617 0L359 0L245 -237L120 -58Q83 -6 67 2Q62 5 56 5Z"],"Y":[645,"M269 -20Q256 5 235 5Q214 5 214 -16Q214 -29 227 -45Q252 -75 275 -115L300 -159L10 -691L295 -691L435 -396L560 -619Q573 -644 583 -670Q593 -696 609 -696Q629 -696 629 -676Q629 -665 620 -649L286 -54Q281 -44 277 -38L269 -20Z"],"Z":[577,"M527 -42Q553 -42 553 -22Q553 -14 542 -7Q531 0 504 0L25 0L280 -656L155 -656Q118 -656 103 -652Q84 -648 76 -648Q51 -648 51 -668Q51 -691 99 -691L535 -691L286 -36L449 -36Q485 -36 500 -39Q517 -42 527 -42Z"],"0":[658,"M327 9Q260 9 208 -14Q155 -37 119 -83Q43 -177 43 -359Q43 -521 119 -610Q195 -700 335 -700Q470 -700 543 -609Q615 -520 615 -353Q615 -176 538 -82Q463 9 327 9ZM331 -24Q504 -24 558 -202Q577 -264 577 -351Q577 -438 559 -498Q541 -558 509 -596Q447 -668 334 -668L329 -668L329 -24L331 -24Z"],"1":[481,"M137 -592L105 -583Q75 -574 60 -566Q33 -551 20 -552Q-1 -552 0 -570Q1 -588 33 -595Q51 -600 69 -605L386 -701L386 0L136 0L137 -592Z"],"2":[609,"M542 -24Q542 0 493 0L19 0Q31 -98 171 -295Q333 -516 344 -536Q356 -556 360 -565Q367 -580 367 -595Q367 -610 361 -624Q354 -637 341 -646Q312 -667 259 -667Q208 -667 172 -651Q110 -625 92 -595Q79 -575 62 -575Q45 -575 45 -596Q45 -622 92 -652Q166 -700 268 -700Q393 -700 468 -646Q540 -596 540 -517Q540 -471 527 -441Q515 -411 503 -390Q491 -368 475 -342L381 -202Q313 -103 287 -35L430 -35Q457 -35 480 -40Q509 -45 520 -45Q531 -45 537 -38Q542 -32 542 -24Z"],"3":[634,"M275 -402Q287 -402 298 -403L298 -663L287 -664Q282 -665 277 -665Q272 -665 256 -665Q240 -665 217 -661Q193 -658 174 -652Q136 -642 121 -624Q106 -606 93 -605Q66 -604 65 -623Q63 -652 147 -681Q207 -700 279 -700Q351 -700 399 -687Q448 -674 479 -652Q542 -609 542 -535Q542 -462 469 -413Q443 -396 409 -385Q521 -349 557 -260Q568 -231 568 -191Q568 -152 548 -114Q527 -76 489 -48Q409 9 271 9Q152 9 66 -57Q36 -80 25 -106Q22 -114 23 -120Q24 -141 42 -139Q59 -137 69 -117Q79 -98 96 -83Q113 -67 137 -55Q190 -27 253 -27L298 -27L298 -364Q280 -366 266 -366L247 -366L196 -363Q163 -363 163 -382Q163 -406 195 -406L275 -402ZM356 -651Q346 -655 333 -657L356 -651Z"],"4":[721,"M77 -136L57 -136L50 -136Q38 -136 27 -143Q17 -150 17 -163Q17 -175 19 -183Q21 -190 26 -199Q31 -207 38 -218L359 -690L561 -690L561 -173Q621 -173 632 -176Q648 -180 657 -180Q666 -180 671 -174Q677 -169 677 -160Q677 -141 647 -139Q629 -136 595 -136L561 -136L561 0L311 0L311 -136Q194 -136 77 -136ZM311 -173L311 -551L69 -188Q62 -179 66 -176Q69 -173 84 -173L311 -173Z"],"5":[615,"M132 -450Q208 -483 283 -483Q357 -483 409 -463Q461 -443 497 -409Q569 -339 569 -238Q569 -134 491 -64Q410 9 276 9Q183 9 93 -47Q62 -68 48 -95Q44 -102 44 -108Q44 -132 62 -132Q79 -132 91 -112Q103 -92 120 -77Q138 -62 162 -50Q215 -25 281 -25L295 -25Q302 -25 308 -26L308 -446Q292 -448 265 -448Q239 -448 201 -438Q163 -427 143 -417Q117 -402 107 -402Q98 -402 94 -409Q89 -415 90 -422L116 -645Q117 -648 117 -652L117 -661Q117 -686 121 -690Q126 -695 141 -695L212 -690L309 -690Q429 -690 479 -700Q483 -701 491 -701Q498 -701 504 -694Q510 -687 510 -680Q510 -657 455 -656Q441 -656 428 -656L156 -656L132 -450Z"],"6":[682,"M536 -613Q493 -667 397 -667Q356 -667 327 -660L327 -27Q340 -25 355 -25Q469 -25 536 -90Q599 -150 599 -242Q599 -322 556 -368Q513 -415 441 -415Q416 -415 405 -410Q375 -399 361 -404Q355 -407 353 -417Q352 -426 357 -432Q362 -438 372 -440Q396 -449 439 -449Q483 -449 518 -437Q553 -424 580 -398Q637 -342 637 -237Q637 -124 552 -55Q474 9 360 9Q233 9 154 -71Q66 -161 66 -330Q66 -501 162 -604Q252 -700 392 -700Q475 -700 537 -665Q583 -638 583 -610Q583 -594 564 -594Q554 -594 547 -601L536 -613Z"],"7":[598,"M438 -86Q438 -36 439 0L164 0Q161 -26 161 -71Q161 -116 166 -172Q171 -228 180 -284Q189 -340 201 -395Q213 -450 228 -499Q257 -599 289 -656L275 -656L148 -656L114 -656Q98 -656 88 -655Q87 -638 84 -627Q82 -616 81 -609Q78 -583 76 -575Q70 -555 50 -560Q41 -562 35 -570Q30 -578 31 -586Q33 -594 36 -603Q39 -612 42 -624Q50 -653 50 -672Q50 -690 74 -690L568 -690Q520 -600 481 -438Q438 -254 438 -86Z"],"8":[665,"M126 -40Q91 -64 71 -98Q50 -132 50 -167Q50 -202 58 -226Q66 -250 80 -268Q107 -305 146 -311Q155 -312 161 -306Q167 -300 167 -293Q167 -285 160 -278Q154 -271 141 -269Q128 -267 117 -256Q106 -246 100 -232Q88 -208 88 -174Q88 -140 105 -112Q122 -83 152 -64Q215 -24 317 -24Q367 -24 409 -46Q452 -68 452 -98Q452 -124 430 -149Q396 -187 309 -238Q223 -289 179 -322Q135 -354 110 -385Q66 -438 66 -506Q67 -591 147 -646Q226 -700 353 -700Q434 -700 500 -667Q549 -644 570 -604Q581 -583 581 -554Q581 -524 573 -502Q565 -479 552 -465Q529 -438 485 -428Q479 -427 473 -427Q466 -427 461 -432Q456 -438 456 -445Q456 -452 462 -459Q468 -466 481 -467Q495 -467 507 -473Q518 -478 526 -488Q545 -510 545 -541Q545 -572 536 -590Q526 -608 511 -621Q495 -634 475 -644Q456 -653 435 -659Q396 -669 355 -669Q282 -669 250 -640Q238 -628 238 -611Q238 -594 246 -577Q253 -559 271 -540Q311 -498 387 -455Q464 -412 509 -380Q555 -348 581 -320Q628 -270 628 -206Q627 -125 570 -72Q481 9 311 9Q200 9 126 -40Z"],"9":[666,"M355 -662Q341 -664 326 -664Q208 -664 143 -599Q84 -540 84 -446Q84 -364 134 -317Q180 -274 260 -271Q270 -271 279 -273L293 -276Q327 -283 329 -259Q330 -237 281 -237Q275 -237 270 -237Q265 -237 243 -238Q221 -239 182 -250Q144 -261 113 -286Q45 -342 45 -454Q45 -567 130 -636Q209 -700 322 -700Q449 -700 528 -619Q615 -530 615 -361Q615 -188 520 -87Q430 9 291 9Q206 9 145 -26Q99 -53 99 -81Q99 -97 118 -97Q128 -97 135 -90L146 -77Q190 -24 294 -24Q325 -24 355 -31L355 -662Z"],"Á":[662,"M208 -87Q119 -87 86 -88L72 -55Q66 -41 61 -25Q49 5 29 5Q20 5 14 0Q8 -6 8 -13Q8 -23 18 -37Q32 -57 46 -90Q4 -94 4 -115Q4 -135 28 -135Q43 -135 62 -130L306 -722L640 0L386 0L345 -87L208 -87ZM102 -126Q149 -123 186 -123L329 -123L207 -386L102 -126ZM375 -885L511 -885L393 -746L317 -746L375 -885Z"],"É":[584,"M515 -42Q540 -42 540 -22Q540 -14 529 -7Q518 0 492 0L78 0L78 -691Q271 -691 463 -691L503 -692Q540 -692 540 -671Q540 -663 533 -656Q527 -648 520 -648Q507 -648 493 -651Q472 -656 435 -656L327 -656L327 -507L416 -507Q416 -507 476 -509Q487 -509 494 -504Q502 -499 502 -490Q502 -469 475 -469L454 -470Q438 -471 427 -471L327 -471L327 -36L435 -36Q471 -36 486 -39Q504 -42 515 -42ZM378 -885L515 -885L396 -746L321 -746L378 -885Z"],"Í":[405,"M78 -691L327 -691L327 0L78 0L78 -691ZM262 -885L398 -885L280 -746L204 -746L262 -885Z"],"Ó":[817,"M159 -88Q110 -135 82 -202Q53 -270 53 -349Q53 -428 80 -491Q107 -555 155 -601Q258 -700 413 -700Q566 -700 665 -603Q764 -504 764 -347Q764 -190 662 -89Q598 -26 505 -2Q458 9 397 9Q336 9 271 -16Q207 -41 159 -88ZM412 -664Q385 -664 362 -660L362 -30Q384 -26 412 -26Q542 -26 632 -113Q725 -204 725 -347Q725 -483 638 -573Q549 -664 412 -664ZM466 -885L603 -885L484 -746L408 -746L466 -885Z"],"Ú":[767,"M695 -670L692 -610L692 -318Q692 -173 609 -83Q524 9 384 9Q233 9 149 -85Q71 -171 71 -307L71 -691L321 -691L321 -32Q358 -27 404 -27Q449 -27 495 -45Q542 -63 577 -102Q653 -185 654 -344L654 -609Q654 -624 652 -644Q650 -664 650 -671Q650 -696 674 -696Q695 -696 695 -670ZM470 -885L607 -885L488 -746L413 -746L470 -885Z"],"Ü":[767,"M695 -670L692 -610L692 -318Q692 -173 609 -83Q524 9 384 9Q233 9 149 -85Q71 -171 71 -307L71 -691L321 -691L321 -32Q358 -27 404 -27Q449 -27 495 -45Q542 -63 577 -102Q653 -185 654 -344L654 -609Q654 -624 652 -644Q650 -664 650 -671Q650 -696 674 -696Q695 -696 695 -670ZM622 -807Q622 -781 598 -764Q575 -747 545 -747Q516 -747 500 -752Q484 -757 473 -765Q450 -782 450 -809Q450 -852 498 -866Q514 -871 536 -871Q557 -871 573 -865Q589 -860 600 -852Q622 -833 622 -807ZM376 -807Q376 -781 353 -764Q330 -747 300 -747Q271 -747 255 -752Q239 -757 228 -765Q204 -782 204 -809Q204 -852 252 -866Q269 -871 290 -871Q312 -871 328 -865Q343 -860 354 -852Q376 -833 376 -807Z"],"Ñ":[750,"M130 -70L132 -21Q132 -8 125 -1Q118 5 109 5Q99 5 93 -1Q86 -7 86 -15Q86 -22 88 -29Q89 -36 90 -44Q92 -58 92 -115L92 -722L623 -301L623 -592Q623 -625 621 -640Q619 -663 619 -672Q619 -696 640 -696Q648 -696 656 -690Q663 -685 663 -673L663 -656L661 -585L661 27L130 -390L130 -70ZM255 -754Q251 -752 245 -752Q239 -752 234 -759Q228 -765 228 -781Q228 -797 238 -818Q248 -839 265 -856Q303 -895 352 -895Q393 -895 445 -854L470 -834Q498 -813 507 -813Q516 -813 524 -826Q532 -838 535 -857Q538 -877 542 -884Q545 -890 553 -890Q562 -890 567 -883Q573 -875 573 -860Q573 -845 563 -823Q553 -802 536 -785Q498 -747 449 -747Q410 -747 357 -785L322 -812Q307 -824 299 -824Q292 -824 287 -821Q282 -817 277 -812Q266 -799 264 -786L261 -768Q259 -756 255 -754Z"],"Ã":[662,"M208 -87Q119 -87 86 -88L72 -55Q66 -41 61 -25Q49 5 29 5Q20 5 14 0Q8 -6 8 -13Q8 -23 18 -37Q32 -57 46 -90Q4 -94 4 -115Q4 -135 28 -135Q43 -135 62 -130L306 -722L640 0L386 0L345 -87L208 -87ZM102 -126Q149 -123 186 -123L329 -123L207 -386L102 -126ZM178 -754Q174 -752 168 -752Q162 -752 156 -759Q151 -765 151 -781Q151 -797 161 -818Q170 -839 188 -856Q226 -895 275 -895Q316 -895 368 -854L393 -834Q421 -813 430 -813Q438 -813 447 -826Q455 -838 458 -857Q461 -877 464 -884Q468 -890 476 -890Q484 -890 490 -883Q496 -875 496 -860Q496 -845 486 -823Q476 -802 459 -785Q421 -747 372 -747Q333 -747 280 -785L245 -812Q229 -824 222 -824Q215 -824 210 -821Q205 -817 200 -812Q189 -799 187 -786L184 -768Q182 -756 178 -754Z"],"Õ":[817,"M159 -88Q110 -135 82 -202Q53 -270 53 -349Q53 -428 80 -491Q107 -555 155 -601Q258 -700 413 -700Q566 -700 665 -603Q764 -504 764 -347Q764 -190 662 -89Q598 -26 505 -2Q458 9 397 9Q336 9 271 -16Q207 -41 159 -88ZM412 -664Q385 -664 362 -660L362 -30Q384 -26 412 -26Q542 -26 632 -113Q725 -204 725 -347Q725 -483 638 -573Q549 -664 412 -664ZM269 -754Q266 -752 260 -752Q253 -752 248 -759Q242 -765 242 -781Q242 -797 252 -818Q262 -839 279 -856Q317 -895 366 -895Q407 -895 459 -854L484 -834Q512 -813 521 -813Q530 -813 538 -826Q546 -838 549 -857Q552 -877 556 -884Q559 -890 567 -890Q576 -890 581 -883Q587 -875 587 -860Q587 -845 577 -823Q567 -802 550 -785Q512 -747 463 -747Q424 -747 372 -785L336 -812Q321 -824 313 -824Q306 -824 301 -821Q296 -817 291 -812Q280 -799 278 -786L275 -768Q273 -756 269 -754Z"],"Ç":[701,"M443 34Q548 36 548 95Q548 141 484 159Q464 165 442 165Q368 165 334 138Q320 127 320 117Q320 96 340 96Q350 96 360 105Q371 114 379 118Q388 122 397 124Q417 129 447 129Q476 129 494 119Q511 108 511 97Q511 86 493 78Q475 70 447 69Q418 69 412 63Q405 58 405 42L405 9Q241 5 142 -96Q43 -195 43 -352Q43 -428 72 -492Q101 -557 151 -603Q259 -700 421 -700Q513 -700 582 -668Q656 -636 656 -613Q656 -604 650 -597Q644 -590 636 -590Q620 -590 607 -604Q595 -618 573 -629Q551 -640 525 -648Q473 -665 429 -665Q386 -665 358 -659L358 -33Q392 -27 418 -27Q445 -27 472 -30Q500 -34 526 -42Q585 -59 615 -93Q625 -106 632 -111Q638 -116 646 -116Q667 -116 667 -93Q667 -75 638 -56Q585 -21 552 -12Q494 5 443 8L443 34Z"],"Ê":[584,"M515 -42Q540 -42 540 -22Q540 -14 529 -7Q518 0 492 0L78 0L78 -691Q271 -691 463 -691L503 -692Q540 -692 540 -671Q540 -663 533 -656Q527 -648 520 -648Q507 -648 493 -651Q472 -656 435 -656L327 -656L327 -507L416 -507Q416 -507 476 -509Q487 -509 494 -504Q502 -499 502 -490Q502 -469 475 -469L454 -470Q438 -471 427 -471L327 -471L327 -36L435 -36Q471 -36 486 -39Q504 -42 515 -42ZM208 -769L194 -754Q183 -743 175 -743Q167 -743 161 -748Q156 -753 156 -760Q156 -773 176 -790Q183 -796 192 -805Q202 -813 221 -832L274 -886L399 -886L527 -747L377 -747L289 -852Q228 -790 220 -781Q212 -772 208 -769Z"],"Â":[662,"M208 -87Q119 -87 86 -88L72 -55Q66 -41 61 -25Q49 5 29 5Q20 5 14 0Q8 -6 8 -13Q8 -23 18 -37Q32 -57 46 -90Q4 -94 4 -115Q4 -135 28 -135Q43 -135 62 -130L306 -722L640 0L386 0L345 -87L208 -87ZM102 -126Q149 -123 186 -123L329 -123L207 -386L102 -126ZM205 -769L190 -754Q179 -743 171 -743Q163 -743 157 -748Q152 -753 152 -760Q152 -773 172 -790Q179 -796 188 -805Q198 -813 217 -832L271 -886L395 -886L523 -747L373 -747L285 -852Q224 -790 216 -781Q208 -772 205 -769Z"],"Ô":[817,"M159 -88Q110 -135 82 -202Q53 -270 53 -349Q53 -428 80 -491Q107 -555 155 -601Q258 -700 413 -700Q566 -700 665 -603Q764 -504 764 -347Q764 -190 662 -89Q598 -26 505 -2Q458 9 397 9Q336 9 271 -16Q207 -41 159 -88ZM412 -664Q385 -664 362 -660L362 -30Q384 -26 412 -26Q542 -26 632 -113Q725 -204 725 -347Q725 -483 638 -573Q549 -664 412 -664ZM296 -769L281 -754Q271 -743 262 -743Q254 -743 249 -748Q244 -753 244 -760Q244 -773 264 -790Q270 -796 280 -805Q290 -813 308 -832L362 -886L486 -886L615 -747L464 -747L376 -852Q315 -790 308 -781Q300 -772 296 -769Z"],"Ğ":[791,"M666 -36L667 -69L667 -146Q598 -32 464 0Q421 9 365 9Q309 9 248 -14Q188 -38 143 -82Q43 -179 43 -336Q43 -487 148 -592Q258 -700 424 -700Q508 -700 576 -668Q618 -650 635 -634Q652 -618 652 -609Q652 -599 646 -592Q640 -585 630 -585Q619 -585 606 -597Q569 -630 540 -640Q512 -650 495 -655Q478 -659 464 -661Q443 -664 414 -664Q385 -664 361 -659L361 -27Q366 -27 372 -27L381 -27Q526 -27 616 -137Q647 -174 667 -226L667 -272Q667 -272 665 -316Q665 -342 685 -342Q696 -342 702 -335Q708 -328 708 -318L705 -277L705 -96L708 -20Q708 -8 701 -1Q694 5 686 5Q664 5 664 -17Q664 -23 666 -36ZM502 -857Q504 -890 524 -890Q544 -890 544 -866Q544 -841 535 -820Q525 -798 509 -782Q472 -747 415 -747Q358 -747 321 -781Q285 -815 285 -865Q285 -876 291 -883Q296 -890 306 -890Q325 -890 329 -857Q333 -825 358 -804Q382 -783 408 -783Q434 -783 449 -788Q464 -794 476 -804Q500 -825 502 -857Z"],"İ":[405,"M78 -691L327 -691L327 0L78 0L78 -691ZM203 -737Q151 -737 122 -761Q93 -785 93 -824Q93 -856 125 -881Q159 -905 209 -905Q260 -905 292 -877Q321 -852 321 -818Q321 -784 288 -761Q254 -737 203 -737Z"],"Ö":[817,"M159 -88Q110 -135 82 -202Q53 -270 53 -349Q53 -428 80 -491Q107 -555 155 -601Q258 -700 413 -700Q566 -700 665 -603Q764 -504 764 -347Q764 -190 662 -89Q598 -26 505 -2Q458 9 397 9Q336 9 271 -16Q207 -41 159 -88ZM412 -664Q385 -664 362 -660L362 -30Q384 -26 412 -26Q542 -26 632 -113Q725 -204 725 -347Q725 -483 638 -573Q549 -664 412 -664ZM617 -807Q617 -781 594 -764Q571 -747 541 -747Q511 -747 496 -752Q480 -757 469 -765Q445 -782 445 -809Q445 -852 493 -866Q510 -871 531 -871Q553 -871 569 -865Q584 -860 595 -852Q617 -833 617 -807ZM372 -807Q372 -781 349 -764Q326 -747 296 -747Q266 -747 250 -752Q235 -757 224 -765Q200 -782 200 -809Q200 -852 248 -866Q264 -871 286 -871Q308 -871 323 -865Q339 -860 350 -852Q372 -833 372 -807Z"],"Ş":[581,"M275 9L270 9Q163 9 86 -35Q69 -45 57 -56Q44 -66 44 -79Q44 -102 64 -102Q78 -102 94 -87Q110 -73 130 -62Q150 -51 173 -43Q222 -27 263 -27Q304 -27 326 -32Q348 -38 363 -47Q396 -67 396 -98Q396 -127 368 -156Q344 -181 301 -216L218 -281Q92 -378 70 -458Q62 -486 62 -520Q62 -554 77 -587Q93 -621 123 -646Q188 -700 300 -700Q357 -700 402 -683Q448 -666 464 -653Q481 -640 481 -629Q481 -606 462 -606Q452 -606 439 -617Q427 -628 412 -636Q397 -644 378 -650Q337 -664 298 -664Q225 -664 225 -616Q225 -596 238 -579Q262 -549 330 -494Q398 -438 439 -397Q480 -355 502 -322Q536 -270 536 -216Q536 -162 520 -126Q503 -89 474 -62Q413 -4 313 7L313 34Q419 36 419 95Q419 141 355 159Q334 165 312 165Q239 165 205 138Q191 127 191 117Q191 96 210 96Q221 96 231 105Q242 114 250 118Q258 122 269 124Q288 129 317 129Q347 129 364 119Q382 108 382 97Q382 86 364 78Q345 70 317 69Q289 69 282 63Q275 58 275 42L275 9Z"],"!":[406,"M195 -221Q181 -221 174 -248Q167 -274 160 -298Q153 -322 145 -345Q125 -395 104 -432Q83 -470 73 -490Q62 -511 57 -525Q47 -551 47 -577Q47 -603 58 -625Q69 -647 88 -664Q131 -700 197 -700Q267 -700 308 -666Q347 -633 347 -578Q347 -549 340 -531Q333 -513 323 -494L296 -443Q252 -366 234 -303Q228 -279 223 -256Q214 -221 195 -221ZM96 -74Q96 -116 123 -139Q149 -163 196 -163Q243 -163 271 -137Q295 -113 295 -74Q295 -39 268 -16Q239 9 194 9Q124 9 103 -41Q96 -56 96 -74Z"],"¡":[406,"M196 -528Q149 -528 123 -551Q96 -575 96 -616Q96 -653 121 -676Q147 -700 194 -700Q239 -700 268 -675Q295 -651 295 -617Q295 -556 239 -535Q221 -528 196 -528ZM88 -27Q69 -43 58 -66Q47 -88 47 -107Q47 -126 49 -138Q51 -150 57 -165Q67 -192 91 -234Q114 -276 125 -299Q136 -323 145 -346Q158 -380 168 -419Q178 -458 183 -464Q188 -469 195 -469Q202 -469 209 -464Q217 -458 222 -434Q228 -411 235 -387Q241 -364 249 -343Q264 -303 289 -259L323 -197Q342 -160 344 -143Q347 -126 347 -106Q347 -85 337 -63Q327 -41 308 -24Q267 9 197 9Q131 9 88 -27Z"],"?":[452,"M329 -245Q268 -212 191 -234Q126 -253 97 -308Q82 -335 82 -363Q82 -390 85 -407Q89 -425 98 -444Q115 -481 145 -517Q174 -553 186 -570Q199 -588 207 -602Q221 -626 221 -639Q221 -664 192 -664Q150 -664 115 -633Q103 -620 93 -620Q73 -620 73 -638Q73 -651 90 -666Q107 -680 131 -688Q169 -700 213 -700Q256 -700 289 -689Q321 -679 344 -661Q392 -623 392 -566Q392 -510 362 -453Q333 -396 299 -352Q264 -309 259 -299Q253 -290 253 -282Q253 -265 271 -265Q295 -265 311 -277Q335 -296 349 -296Q363 -296 363 -280Q363 -264 329 -245ZM125 -74Q125 -116 153 -139Q181 -163 227 -163Q273 -163 300 -137Q325 -112 325 -74Q325 -39 298 -16Q270 9 224 9Q155 9 132 -41Q125 -56 125 -74Z"],"¿":[452,"M229 -433Q182 -433 155 -457Q127 -480 127 -521Q127 -558 153 -582Q180 -605 226 -605Q271 -605 299 -580Q326 -557 326 -522Q326 -461 271 -440Q253 -433 229 -433ZM255 -315Q255 -300 295 -250Q334 -200 364 -143Q393 -85 393 -45Q393 -5 381 21Q368 47 345 65Q296 104 218 104Q169 104 139 94Q109 84 92 70Q74 56 74 45Q74 24 91 24Q104 24 120 40Q151 68 194 68Q208 68 215 62Q222 56 222 48Q222 40 219 30Q216 20 208 6Q192 -22 164 -56Q137 -90 123 -112Q108 -133 100 -152Q83 -188 83 -224Q83 -260 98 -288Q113 -315 137 -334Q187 -372 256 -370Q297 -369 321 -355Q364 -332 364 -316Q364 -300 349 -300Q337 -300 321 -312Q296 -331 276 -331Q255 -331 255 -315Z"],".":[334,"M55 -53Q47 -73 47 -94Q47 -116 56 -134Q64 -151 80 -165Q113 -195 163 -195Q214 -195 246 -161Q275 -130 275 -89Q275 -47 242 -20Q208 9 160 9Q79 9 55 -53Z"],",":[333,"M218 -7Q192 9 160 9Q129 9 109 1Q89 -8 76 -21Q47 -51 47 -88Q47 -129 77 -157Q108 -186 154 -186Q209 -186 242 -152Q274 -120 274 -68Q274 10 223 71Q196 104 181 109Q167 115 158 115Q135 115 135 94Q135 86 141 83L159 76Q184 64 206 32Q216 17 218 -7Z"],":":[334,"M159 -283Q133 -283 112 -290Q91 -298 77 -312Q47 -340 47 -388Q47 -428 80 -457Q113 -487 163 -487Q214 -487 246 -453Q275 -422 275 -381Q275 -339 242 -312Q208 -283 159 -283ZM55 -53Q47 -73 47 -94Q47 -116 56 -134Q64 -151 80 -165Q113 -195 163 -195Q214 -195 246 -161Q275 -130 275 -89Q275 -47 242 -20Q208 9 160 9Q79 9 55 -53Z"],";":[334,"M159 -283Q133 -283 112 -290Q91 -298 77 -312Q47 -340 47 -388Q47 -428 80 -457Q113 -487 163 -487Q214 -487 246 -453Q275 -422 275 -381Q275 -339 242 -312Q208 -283 159 -283ZM218 -7Q192 9 161 9Q129 9 110 1Q90 -8 76 -21Q48 -51 48 -88Q48 -129 78 -157Q108 -186 155 -186Q210 -186 243 -152Q274 -120 274 -68Q274 10 224 71Q197 104 182 109Q167 115 159 115Q136 115 136 94Q136 86 142 83L159 76Q184 64 207 32Q216 17 218 -7Z"],"-":[360,"M128 -298L74 -295Q62 -295 55 -301Q47 -307 47 -316Q47 -338 74 -338Q74 -338 144 -333L195 -333L273 -338Q301 -338 301 -317Q301 -295 271 -295Q263 -295 255 -296L240 -297Q227 -298 201 -298Q165 -298 128 -298Z"],"+":[495,"M259 -178L263 -102Q263 -93 258 -87Q252 -81 242 -81Q232 -81 226 -88Q219 -95 220 -107L223 -180L223 -257Q173 -257 143 -257Q113 -257 104 -257Q82 -255 71 -254Q61 -253 54 -260Q47 -267 47 -277Q47 -286 53 -292Q59 -297 66 -297Q85 -297 98 -296L115 -294Q126 -293 143 -293L223 -293L223 -371L220 -444Q219 -456 226 -463Q232 -470 242 -470Q252 -470 258 -464Q263 -458 263 -449L259 -374L259 -293L339 -293Q355 -293 363 -294L377 -295Q398 -297 411 -297Q436 -297 436 -276Q436 -267 428 -260Q421 -253 413 -254Q380 -257 364 -257L259 -257L259 -178Z"],"×":[432,"M57 -417Q57 -435 77 -435Q91 -435 109 -410Q111 -408 115 -403L136 -380Q142 -374 147 -369L214 -301Q255 -342 278 -365Q301 -387 304 -391Q308 -395 311 -399Q314 -403 323 -414Q340 -435 352 -435Q374 -435 374 -416Q374 -401 353 -385L334 -369Q324 -360 310 -345L239 -275L313 -202Q324 -190 330 -185L349 -169Q372 -150 374 -143Q376 -136 376 -130Q376 -124 371 -119Q365 -114 357 -114Q345 -114 333 -128Q322 -142 312 -152L214 -250L117 -153Q105 -141 94 -127Q83 -114 69 -114Q52 -114 52 -134Q52 -149 78 -168Q83 -172 87 -176Q91 -179 95 -182Q99 -186 103 -190L189 -275L95 -370Q83 -381 75 -387Q57 -403 57 -417Z"],"/":[332,"M60 9Q40 9 40 -14Q40 -27 53 -45Q63 -67 77 -111L227 -625Q246 -690 262 -697Q267 -700 274 -700Q292 -700 292 -682Q292 -671 287 -661Q282 -651 279 -646Q276 -640 273 -633L269 -619Q266 -611 264 -605L106 -72Q91 -19 84 -8Q74 9 60 9Z"],"%":[777,"M168 9Q149 9 149 -12Q149 -23 158 -34Q167 -45 175 -55Q191 -72 220 -117L542 -621Q559 -648 567 -666Q576 -684 581 -690Q585 -696 596 -696Q606 -696 613 -691Q620 -686 620 -679Q620 -672 617 -667Q615 -662 611 -656L601 -642Q595 -633 587 -621L219 -40Q197 -5 187 2Q176 9 168 9ZM224 -385Q190 -385 160 -396Q130 -407 108 -427Q61 -471 61 -539Q61 -603 109 -645Q156 -687 226 -687Q292 -687 337 -646Q384 -603 384 -536Q384 -471 337 -428Q292 -386 224 -385ZM223 -418Q276 -418 311 -448Q348 -480 348 -535Q348 -587 311 -621Q275 -653 223 -653L220 -653Q218 -653 215 -653L215 -418L223 -418ZM403 -153Q403 -187 416 -214Q428 -241 450 -261Q497 -303 567 -303Q633 -303 678 -262Q725 -219 725 -152Q725 -87 678 -43Q632 0 566 0Q496 0 449 -43Q403 -86 403 -153ZM564 -34Q616 -34 651 -64Q689 -96 689 -151Q689 -203 652 -236Q616 -269 564 -269Q562 -269 561 -269Q559 -269 557 -269L557 -34L564 -34Z"],"·":[334,"M158 -252Q132 -252 111 -260Q90 -268 76 -281Q47 -310 47 -357Q47 -396 80 -426Q113 -456 162 -456Q214 -456 246 -422Q275 -392 275 -350Q275 -309 242 -281Q208 -252 158 -252Z"],"(":[458,"M414 -750Q414 -728 375 -730Q337 -732 292 -710L292 37Q336 58 381 60Q414 62 414 79Q414 97 381 97Q348 97 309 83Q271 69 235 43Q198 17 166 -21Q133 -59 108 -107Q54 -212 54 -341Q54 -515 151 -642Q212 -722 296 -753Q338 -768 368 -768Q414 -768 414 -750Z"],")":[458,"M44 79Q44 62 83 59Q123 57 166 37L166 -710Q120 -732 91 -730Q62 -729 53 -734Q44 -739 44 -748Q44 -768 83 -768Q121 -768 163 -753Q205 -737 241 -709Q277 -681 307 -642Q337 -603 359 -555Q404 -457 404 -341Q404 -212 351 -107Q302 -13 224 43Q149 97 76 97Q44 97 44 79Z"],"\"":[433,"M326 -404Q301 -404 297 -429Q287 -499 271 -547L248 -614Q242 -632 242 -645Q242 -658 247 -669Q252 -680 262 -688Q285 -707 326 -707Q366 -707 388 -690Q410 -673 410 -646Q410 -634 404 -616L389 -572Q363 -496 353 -431Q349 -410 334 -405Q330 -404 326 -404ZM106 -404Q82 -404 77 -429Q67 -499 51 -547L28 -614Q22 -632 22 -645Q22 -658 27 -669Q32 -680 42 -688Q65 -707 106 -707Q146 -707 168 -690Q190 -673 190 -646Q190 -634 185 -616L169 -572Q144 -496 133 -431Q129 -410 114 -405Q110 -404 106 -404Z"],"#":[458,"M311 -307L377 -311Q388 -311 396 -305Q403 -299 403 -290Q403 -281 395 -275Q388 -269 379 -269Q360 -269 350 -270L304 -271L266 -72Q252 -3 234 6Q229 9 220 9Q212 9 207 2Q202 -4 202 -13Q202 -24 208 -39L217 -61Q228 -86 239 -149L262 -271L161 -271L123 -72Q109 -3 91 6Q86 9 78 9Q70 9 65 2Q60 -4 60 -13Q60 -26 65 -39Q71 -52 74 -61Q78 -69 81 -81Q90 -114 97 -149L119 -271L80 -270Q70 -269 54 -269Q38 -269 30 -275Q22 -281 22 -290Q22 -309 44 -309L57 -309L84 -307L126 -307L145 -409L83 -406Q70 -406 62 -413Q55 -419 55 -428Q55 -448 77 -448L125 -445L151 -445L184 -625Q197 -690 212 -697Q217 -700 224 -700Q244 -700 244 -680Q244 -673 240 -662Q236 -651 234 -645Q232 -639 230 -631L227 -616Q225 -608 223 -601L193 -445L293 -445L327 -625Q336 -672 343 -684Q352 -700 367 -700Q387 -700 387 -680Q387 -673 383 -662Q379 -651 377 -645Q375 -639 374 -631L370 -616Q368 -608 366 -601L336 -445Q366 -445 378 -447Q399 -449 409 -449Q435 -449 435 -428Q435 -419 427 -413Q420 -406 412 -406Q393 -406 385 -407Q377 -408 370 -408L343 -409Q335 -410 330 -410L311 -307ZM268 -307L287 -410L187 -410L167 -307L268 -307Z"],"'":[213,"M106 -404Q82 -404 77 -429Q67 -499 51 -547L28 -614Q22 -632 22 -645Q22 -658 27 -669Q32 -680 42 -688Q65 -707 106 -707Q146 -707 168 -690Q190 -673 190 -646Q190 -634 185 -616L169 -572Q144 -496 133 -431Q129 -410 114 -405Q110 -404 106 -404Z"]}}
 ;
 
 /* ==== dorado/js/base.js ==== */
@@ -587,7 +182,8 @@ const DATOS = Object.assign({ rec: {}, diaFecha: 0, diaRecord: 0, partidas: 0, r
 DATOS.rec = Object.assign({ clasico: 0, reloj: 0 }, DATOS.rec);
 const guardarDatos = () => Guardado.escribir('datos', DATOS);
 
-let IDIOMA = Guardado.leer('idioma', null) || ((navigator.language || 'es').toLowerCase().startsWith('pt') ? 'pt' : (navigator.language || '').toLowerCase().startsWith('en') ? 'en' : 'es');
+// el del celular al arrancar; después, el que se elija en el menú (motor2d/idiomas.js)
+let IDIOMA = idiomaInicial(Guardado.leer('idioma', null));
 const TXT = {
   es: {
     idioma: 'ELEGÍ TU IDIOMA', presenta: 'presenta', subtitulo: 'PINBALL DEL GRAN HOTEL',
@@ -651,12 +247,11 @@ const TXT = {
   },
 };
 function tr(k, ...a) {
-  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.es[k] ?? k;
+  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.en[k] ?? TXT.es[k] ?? k;
   if (typeof s === 'string') a.forEach((v, i) => { s = s.replace('{' + i + '}', v); });
   return s;
 }
 function lienzoHD(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w * S)); c.height = Math.max(1, Math.ceil(h * S)); const g = c.getContext('2d'); g.scale(S, S); return [c, g]; }
-function partir(s, n) { const out = []; let l = ''; for (const p of s.split(' ')) { if ((l + ' ' + p).trim().length > n && l) { out.push(l); l = p; } else l = (l + ' ' + p).trim(); } if (l) out.push(l); return out; }
 
 /* los colores: laca negra, verde esmeralda, marfil, oro (con su sombra) y rubí */
 const NEGRO = '#07080a', ESMERALDA = '#1f8a6a', ESM_CLARO = '#5fe0b4', MARFIL = '#f4ead2', ORO = '#e8b850', ORO_CLARO = '#fff1c2', ORO_OSCURO = '#8a5e16', RUBI = '#d23a4a';
@@ -669,11 +264,34 @@ function glifo(ch) {
   return p;
 }
 const avanceGlifo = (ch) => (LETRA.g[ch] ? LETRA.g[ch][0] : 300);
-function anchoDeco(str, tam, esp) { str = String(str).toUpperCase(); let w = 0; for (const ch of str) w += avanceGlifo(ch); return w * tam / 1000 + (esp || 0) * tam * Math.max(0, str.length - 1); }
+/* lo que Limelight no tiene se escribe con la letra del sistema (con serifa), igual de oro */
+const cubreDeco = (str) => { for (const ch of str) if (ch !== ' ' && !LETRA.g[ch]) return false; return true; };
+const medidorDeco = document.createElement('canvas').getContext('2d');
+function fuenteDecoSis(str, tam) { const esc = escrituraDe(str); return { css: '700 ' + tam * escalaEscritura(esc) * 0.95 + 'px ' + (fuenteEscritura(esc, 'serif') || 'Georgia,serif'), rtl: esc === 'arab' }; }
+function textoDecoSis(g, str, x, y, tam, o) {
+  const f = fuenteDecoSis(str, tam), w = anchoDeco(str, tam);
+  g.save(); g.font = f.css; g.direction = f.rtl ? 'rtl' : 'ltr'; g.textBaseline = 'middle';
+  g.textAlign = o.alin === 'left' ? 'left' : o.alin === 'right' ? 'right' : 'center';
+  if (o.sombra) { g.fillStyle = o.sombraCol || 'rgba(0,0,0,0.6)'; g.fillText(str, x + o.sombra[0], y + o.sombra[1]); }
+  if (o.borde) { g.lineJoin = 'round'; g.lineWidth = o.bordeAncho || 3; g.strokeStyle = o.borde; g.strokeText(str, x, y); }
+  if (o.oro) {
+    const gr = g.createLinearGradient(0, y - tam * 0.55, 0, y + tam * 0.5);
+    gr.addColorStop(0, ORO_CLARO); gr.addColorStop(0.42, '#f3cc68'); gr.addColorStop(0.5, '#a8741c'); gr.addColorStop(0.62, '#e2aa3e'); gr.addColorStop(1, '#fbe3a0');
+    g.fillStyle = gr;
+  } else g.fillStyle = o.col || MARFIL;
+  g.fillText(str, x, y);
+  g.restore();
+  return w;
+}
+function anchoDeco(str, tam, esp) {
+  str = String(str).toUpperCase();
+  if (!cubreDeco(str)) { const f = fuenteDecoSis(str, tam); medidorDeco.font = f.css; medidorDeco.direction = f.rtl ? 'rtl' : 'ltr'; return medidorDeco.measureText(str).width; }
+  let w = 0; for (const ch of str) w += avanceGlifo(ch); return w * tam / 1000 + (esp || 0) * tam * Math.max(0, str.length - 1); }
 /* y es el centro de las mayúsculas (alto de 722 en la letra) */
 function textoDeco(g, str, x, y, tam, o) {
   o = o || {};
   str = String(str).toUpperCase();
+  if (!cubreDeco(str)) return textoDecoSis(g, str, x, y, tam, o);
   const esp = o.esp || 0, w = anchoDeco(str, tam, esp), k = tam / 1000;
   let cx = o.alin === 'left' ? x : o.alin === 'right' ? x - w : x - w / 2;
   const base = y + 0.361 * tam;
@@ -699,24 +317,232 @@ function tamDecoQueEntra(str, tam, ancho, esp) { while (tam > 8 && anchoDeco(str
 
 /* la sans espaciada para lo chico (en celus sin Futura cae en la del sistema) */
 const SANS = '"Futura","Century Gothic","Avenir Next","Trebuchet MS","Segoe UI",Roboto,Arial,sans-serif';
+/* el espaciado de letras rompería el árabe y desarma el tailandés y el birmano: solo para lo latino */
+function fuenteSans(g, str, tam, peso, esp) {
+  const esc = escrituraDe(str);
+  g.font = (peso || '600') + ' ' + tam * escalaEscritura(esc) + 'px ' + (fuenteEscritura(esc, 'sans') || SANS);
+  g.direction = esc === 'arab' ? 'rtl' : 'ltr';
+  if ('letterSpacing' in g) g.letterSpacing = esc === 'latn' ? (esp == null ? tam * 0.12 : esp) + 'px' : '0px';
+}
 function texto(g, str, x, y, o) {
-  o = o || {};
-  const tam = o.tam || 12;
-  g.font = (o.peso || '600') + ' ' + tam + 'px ' + SANS;
+  o = o || {}; str = String(str);
+  fuenteSans(g, str, o.tam || 12, o.peso, o.esp);
   g.textAlign = o.alin || 'center'; g.textBaseline = 'middle';
-  if ('letterSpacing' in g) g.letterSpacing = (o.esp == null ? tam * 0.12 : o.esp) + 'px';
   if (o.borde) { g.lineWidth = o.bordeAncho || 3; g.strokeStyle = o.borde; g.lineJoin = 'round'; g.strokeText(str, x, y); }
   g.fillStyle = o.col || MARFIL; g.fillText(str, x, y);
   if ('letterSpacing' in g) g.letterSpacing = '0px';
+  g.direction = 'ltr';
 }
 function medir(g, str, tam, peso, esp) {
-  g.font = (peso || '600') + ' ' + tam + 'px ' + SANS;
-  if ('letterSpacing' in g) g.letterSpacing = (esp == null ? tam * 0.12 : esp) + 'px';
+  str = String(str);
+  fuenteSans(g, str, tam, peso, esp);
   const w = g.measureText(str).width;
   if ('letterSpacing' in g) g.letterSpacing = '0px';
+  g.direction = 'ltr';
   return w;
 }
 function tamQueEntra(g, str, tam, ancho, peso) { while (tam > 7 && medir(g, str, tam, peso) > ancho) tam -= 0.5; return tam; }
+
+/* ==== dorado/js/idiomas.js ==== */
+/* ============================================================================
+   DORADO — los idiomas que se sumaron el 08/10 (la lista está en
+   motor2d/idiomas.js). El de México es el mismo español con tuteo; Egipto,
+   Irak y Arabia Saudita usan el árabe estándar. Las letras de los carriles
+   (J·A·Z·Z) quedan como están en la mesa. Lo que falte cae en inglés.
+   ========================================================================== */
+
+TXT['es-MX'] = Object.assign({}, TXT.es, {
+  idioma: 'ELIGE TU IDIOMA', clasicoD: 'TRES BOLAS · SUBE DE BOTONES A DUEÑO', seguir: 'CONTINUAR', otra: 'OTRA VEZ',
+  tirar: 'JALA EL RESORTE', tocarLanzar: 'TOCA PARA LANZAR', ascenso: 'AHORA ERES {0}',
+  m_hongos: 'GOLPEA {0} HONGOS', m_blancos: 'DERRIBA {0} BLANCOS', m_carriles: 'COMPLETA J·A·Z·Z', m_copa: 'ATINA A LA COPA {0} VECES',
+  m_orbitas: 'HAZ {0} ÓRBITAS', m_molinete: 'GIRA EL MOLINETE {0} VECES',
+  arrastra: 'ARRASTRA CADA BOTÓN A DONDE TE QUEDE CÓMODO', proba: 'PRUEBA AQUÍ',
+  ayuda1: 'TOCA LA MITAD IZQUIERDA O LA DERECHA DE LA PANTALLA PARA MOVER CADA FLIPPER.', ayuda1b: 'TOCA LOS BOTONES DE ABAJO PARA MOVER CADA FLIPPER.',
+  ayuda2: 'PARA LANZAR, JALA EL RESORTE HACIA ABAJO Y SUÉLTALO.', ayuda2b: 'PARA LANZAR, TOCA EL RESORTE.', ayuda3: 'CUMPLE LAS MISIONES PARA SUBIR DE RANGO EN EL HOTEL.', tocar: 'TOCA PARA CONTINUAR',
+});
+
+Object.assign(TXT, {
+  ar: {
+    idioma: 'اختر لغتك', subtitulo: 'بينبول الفندق الكبير',
+    clasico: 'كلاسيكي', clasicoD: 'ثلاث كرات · من حامل الحقائب إلى المالك', reloj: 'ضد الساعة', relojD: 'دقيقتان ونصف · كرات بلا نهاية',
+    diario: 'تحدي اليوم', diarioD: 'مهام اليوم، نفسها للجميع', controles: 'التحكم', idiomaBtn: 'اللغة',
+    record: 'أفضل نتيجة', hoyRec: 'اليوم {0}', bola: 'الكرة {0}/{1}', pausa: 'إيقاف مؤقت', seguir: 'متابعة', reiniciar: 'إعادة', menu: 'القائمة',
+    musica: 'الموسيقى', sonido: 'الصوت', si: 'نعم', no: 'لا', otra: 'مرة أخرى', fin: 'انتهت اللعبة', tiempo: 'انتهى الوقت!', nuevoRecord: 'رقم قياسي جديد!',
+    volver: 'رجوع', listo: 'تم', restablecer: 'الإعدادات الأصلية',
+    tirar: 'اسحب النابض', tocarLanzar: 'المس للإطلاق', teSalvo: 'أنقذتُ الكرة!', jackpot: 'جاكبوت!', multibola: 'كرات متعددة!',
+    multiLista: 'الكرات المتعددة جاهزة', bolaExtra: 'كرة إضافية!', tiroMaestro: 'ضربة محترف!', mult: 'المضاعِف ×{0}', orbita: 'مدار!',
+    cumplida: 'أنجزت المهمة!', ascenso: 'أصبحت الآن {0}', bonus: 'مكافأة', total: 'المجموع', perdida: 'ضاعت الكرة',
+    m_hongos: 'اضرب المصدّات {0} مرة', m_blancos: 'أسقط {0} أهداف', m_carriles: 'أكمل J·A·Z·Z', m_copa: 'أدخل الكرة في الكأس {0} مرات',
+    m_orbitas: 'نفّذ {0} مدارات', m_molinete: 'أدر الدوّارة {0} مرة',
+    rangos: ['حامل الحقائب', 'نادل', 'ساقي', 'موظف الاستقبال', 'مدير', 'المالك'],
+    hongos: 'المصدّات', carriles: 'الممرات', blancos: 'الأهداف', orbitas: 'المدارات', copas: 'الكؤوس', misiones: 'المهام', rango: 'الرتبة', mejorJackpot: 'أفضل جاكبوت',
+    modo: 'المضارب', mitades: 'نصفا الشاشة', botones: 'أزرار', tamano: 'الحجم', chico: 'صغير', medio: 'متوسط', grande: 'كبير',
+    transp: 'الشفافية', baja: 'منخفضة', media: 'متوسطة', alta: 'عالية', resorte: 'النابض', tirarOp: 'سحب', tocarOp: 'لمس', vibrar: 'الاهتزاز',
+    acomodar: 'ترتيب الأزرار', arrastra: 'اسحب كل زر إلى المكان المريح لك', proba: 'جرّب هنا',
+    ayuda1: 'المس النصف الأيسر أو الأيمن من الشاشة لتحريك كل مضرب.', ayuda1b: 'المس الأزرار في الأسفل لتحريك كل مضرب.',
+    ayuda2: 'للإطلاق، اسحب النابض إلى الأسفل ثم اتركه.', ayuda2b: 'للإطلاق، المس النابض.', ayuda3: 'أنجز المهام لترتقي في رتب الفندق.', tocar: 'المس للمتابعة',
+  },
+  id: {
+    idioma: 'PILIH BAHASAMU', subtitulo: 'PINBALL HOTEL MEGAH',
+    clasico: 'KLASIK', clasicoD: 'TIGA BOLA · DARI PORTER JADI PEMILIK', reloj: 'LAWAN WAKTU', relojD: 'DUA SETENGAH MENIT · BOLA TANPA AKHIR',
+    diario: 'TANTANGAN HARIAN', diarioD: 'MISI HARI INI, SAMA UNTUK SEMUA', controles: 'KONTROL', idiomaBtn: 'BAHASA',
+    record: 'REKOR', hoyRec: 'HARI INI {0}', bola: 'BOLA {0}/{1}', pausa: 'JEDA', seguir: 'LANJUT', reiniciar: 'ULANGI', menu: 'MENU',
+    musica: 'MUSIK', sonido: 'SUARA', si: 'YA', no: 'TIDAK', otra: 'LAGI', fin: 'PERMAINAN SELESAI', tiempo: 'WAKTU HABIS!', nuevoRecord: 'REKOR BARU!',
+    volver: 'KEMBALI', listo: 'SELESAI', restablecer: 'ATUR ULANG',
+    tirar: 'TARIK PEGASNYA', tocarLanzar: 'KETUK UNTUK MELUNCUR', teSalvo: 'BOLA SELAMAT!', jackpot: 'JACKPOT!', multibola: 'MULTIBOLA!',
+    multiLista: 'MULTIBOLA SIAP', bolaExtra: 'BOLA EKSTRA!', tiroMaestro: 'TEMBAKAN JITU!', mult: 'PENGGANDA ×{0}', orbita: 'ORBIT!',
+    cumplida: 'MISI SELESAI!', ascenso: 'SEKARANG KAMU {0}', bonus: 'BONUS', total: 'TOTAL', perdida: 'BOLA HILANG',
+    m_hongos: 'PUKUL {0} BUMPER', m_blancos: 'JATUHKAN {0} TARGET', m_carriles: 'LENGKAPI J·A·Z·Z', m_copa: 'MASUKKAN KE GELAS {0} KALI',
+    m_orbitas: 'BUAT {0} ORBIT', m_molinete: 'PUTAR SPINNER {0} KALI',
+    rangos: ['PORTER', 'PELAYAN', 'BARTENDER', 'RESEPSIONIS', 'MANAJER', 'PEMILIK'],
+    hongos: 'BUMPER', carriles: 'JALUR', blancos: 'TARGET', orbitas: 'ORBIT', copas: 'GELAS', misiones: 'MISI', rango: 'PANGKAT', mejorJackpot: 'JACKPOT TERBAIK',
+    modo: 'FLIPPER', mitades: 'SEPARUH LAYAR', botones: 'TOMBOL', tamano: 'UKURAN', chico: 'KECIL', medio: 'SEDANG', grande: 'BESAR',
+    transp: 'TRANSPARANSI', baja: 'RENDAH', media: 'SEDANG', alta: 'TINGGI', resorte: 'PEGAS', tirarOp: 'TARIK', tocarOp: 'KETUK', vibrar: 'GETAR',
+    acomodar: 'ATUR TOMBOL', arrastra: 'SERET SETIAP TOMBOL KE TEMPAT YANG NYAMAN', proba: 'COBA DI SINI',
+    ayuda1: 'KETUK SISI KIRI ATAU KANAN LAYAR UNTUK MENGGERAKKAN TIAP FLIPPER.', ayuda1b: 'KETUK TOMBOL DI BAWAH UNTUK MENGGERAKKAN TIAP FLIPPER.',
+    ayuda2: 'UNTUK MELUNCURKAN, TARIK PEGAS KE BAWAH LALU LEPASKAN.', ayuda2b: 'UNTUK MELUNCURKAN, KETUK PEGASNYA.', ayuda3: 'SELESAIKAN MISI UNTUK NAIK PANGKAT DI HOTEL.', tocar: 'KETUK UNTUK LANJUT',
+  },
+  ms: {
+    idioma: 'PILIH BAHASA ANDA', subtitulo: 'PINBALL HOTEL AGUNG',
+    clasico: 'KLASIK', clasicoD: 'TIGA BOLA · DARI BELLBOY KE PEMILIK', reloj: 'LAWAN MASA', relojD: 'DUA MINIT SETENGAH · BOLA TANPA HAD',
+    diario: 'CABARAN HARIAN', diarioD: 'MISI HARI INI, SAMA UNTUK SEMUA', controles: 'KAWALAN', idiomaBtn: 'BAHASA',
+    record: 'REKOD', hoyRec: 'HARI INI {0}', bola: 'BOLA {0}/{1}', pausa: 'JEDA', seguir: 'SAMBUNG', reiniciar: 'MULA SEMULA', menu: 'MENU',
+    musica: 'MUZIK', sonido: 'BUNYI', si: 'YA', no: 'TIDAK', otra: 'LAGI', fin: 'PERMAINAN TAMAT', tiempo: 'MASA TAMAT!', nuevoRecord: 'REKOD BAHARU!',
+    volver: 'KEMBALI', listo: 'SIAP', restablecer: 'TETAP SEMULA',
+    tirar: 'TARIK SPRING', tocarLanzar: 'KETIK UNTUK LANCAR', teSalvo: 'BOLA DISELAMATKAN!', jackpot: 'JACKPOT!', multibola: 'MULTIBOLA!',
+    multiLista: 'MULTIBOLA SEDIA', bolaExtra: 'BOLA TAMBAHAN!', tiroMaestro: 'TEMBAKAN HEBAT!', mult: 'PENGGANDA ×{0}', orbita: 'ORBIT!',
+    cumplida: 'MISI SELESAI!', ascenso: 'KINI ANDA {0}', bonus: 'BONUS', total: 'JUMLAH', perdida: 'BOLA HILANG',
+    m_hongos: 'PUKUL {0} BUMPER', m_blancos: 'JATUHKAN {0} SASARAN', m_carriles: 'LENGKAPKAN J·A·Z·Z', m_copa: 'MASUKKAN KE PIALA {0} KALI',
+    m_orbitas: 'BUAT {0} ORBIT', m_molinete: 'PUSING SPINNER {0} KALI',
+    rangos: ['BELLBOY', 'PELAYAN', 'BARTENDER', 'PENYAMBUT TETAMU', 'PENGURUS', 'PEMILIK'],
+    hongos: 'BUMPER', carriles: 'LORONG', blancos: 'SASARAN', orbitas: 'ORBIT', copas: 'PIALA', misiones: 'MISI', rango: 'PANGKAT', mejorJackpot: 'JACKPOT TERBAIK',
+    modo: 'FLIPPER', mitades: 'SEPARUH SKRIN', botones: 'BUTANG', tamano: 'SAIZ', chico: 'KECIL', medio: 'SEDERHANA', grande: 'BESAR',
+    transp: 'KELUTSINARAN', baja: 'RENDAH', media: 'SEDERHANA', alta: 'TINGGI', resorte: 'SPRING', tirarOp: 'TARIK', tocarOp: 'KETIK', vibrar: 'GETAR',
+    acomodar: 'SUSUN BUTANG', arrastra: 'SERET SETIAP BUTANG KE TEMPAT YANG SELESA', proba: 'CUBA DI SINI',
+    ayuda1: 'KETIK SEPARUH KIRI ATAU KANAN SKRIN UNTUK MENGGERAKKAN SETIAP FLIPPER.', ayuda1b: 'KETIK BUTANG DI BAWAH UNTUK MENGGERAKKAN SETIAP FLIPPER.',
+    ayuda2: 'UNTUK MELANCAR, TARIK SPRING KE BAWAH DAN LEPASKAN.', ayuda2b: 'UNTUK MELANCAR, KETIK SPRING.', ayuda3: 'SELESAIKAN MISI UNTUK NAIK PANGKAT DI HOTEL.', tocar: 'KETIK UNTUK SAMBUNG',
+  },
+  fil: {
+    idioma: 'PUMILI NG WIKA', subtitulo: 'PINBALL NG GRAND HOTEL',
+    clasico: 'KLASIKO', clasicoD: 'TATLONG BOLA · MULA BELLBOY HANGGANG MAY-ARI', reloj: 'LABAN SA ORAS', relojD: "DALAWA'T KALAHATING MINUTO · WALANG-HANGGANG BOLA",
+    diario: 'HAMON NGAYONG ARAW', diarioD: 'MGA MISYON NGAYON, PAREHO SA LAHAT', controles: 'KONTROL', idiomaBtn: 'WIKA',
+    record: 'REKORD', hoyRec: 'NGAYON {0}', bola: 'BOLA {0}/{1}', pausa: 'HINTO', seguir: 'ITULOY', reiniciar: 'SIMULAN ULIT', menu: 'MENU',
+    musica: 'MUSIKA', sonido: 'TUNOG', si: 'OO', no: 'HINDI', otra: 'ULIT', fin: 'TAPOS ANG LARO', tiempo: 'UBOS NA ANG ORAS!', nuevoRecord: 'BAGONG REKORD!',
+    volver: 'BUMALIK', listo: 'TAPOS', restablecer: 'I-RESET',
+    tirar: 'HILAHIN ANG SPRING', tocarLanzar: 'I-TAP PARA ITIRA', teSalvo: 'NASALBA ANG BOLA!', jackpot: 'JACKPOT!', multibola: 'MULTIBALL!',
+    multiLista: 'HANDA NA ANG MULTIBALL', bolaExtra: 'DAGDAG NA BOLA!', tiroMaestro: 'MAHUSAY NA TIRA!', mult: 'MULTIPLIER ×{0}', orbita: 'ORBIT!',
+    cumplida: 'TAPOS ANG MISYON!', ascenso: 'IKAW NA ANG {0}', bonus: 'BONUS', total: 'KABUUAN', perdida: 'NAWALA ANG BOLA',
+    m_hongos: 'TAMAAN ANG {0} BUMPER', m_blancos: 'PABAGSAKIN ANG {0} TARGET', m_carriles: 'KUMPLETUHIN ANG J·A·Z·Z', m_copa: 'IPASOK SA KOPA NANG {0} BESES',
+    m_orbitas: 'GUMAWA NG {0} ORBIT', m_molinete: 'PAIKUTIN ANG SPINNER NANG {0} BESES',
+    rangos: ['BELLBOY', 'WAITER', 'BARTENDER', 'CONCIERGE', 'MANAGER', 'MAY-ARI'],
+    hongos: 'BUMPER', carriles: 'DAANAN', blancos: 'TARGET', orbitas: 'ORBIT', copas: 'KOPA', misiones: 'MISYON', rango: 'RANGGO', mejorJackpot: 'PINAKAMALAKING JACKPOT',
+    modo: 'FLIPPER', mitades: 'KALAHATI', botones: 'PINDUTAN', tamano: 'LAKI', chico: 'MALIIT', medio: 'KATAMTAMAN', grande: 'MALAKI',
+    transp: 'LINAW', baja: 'MABABA', media: 'KATAMTAMAN', alta: 'MATAAS', resorte: 'SPRING', tirarOp: 'HILAHIN', tocarOp: 'I-TAP', vibrar: 'VIBRATE',
+    acomodar: 'AYUSIN ANG PINDUTAN', arrastra: 'I-DRAG ANG BAWAT PINDUTAN SA KOMPORTABLENG LUGAR', proba: 'SUBUKAN DITO',
+    ayuda1: 'I-TAP ANG KALIWA O KANANG BAHAGI NG SCREEN PARA IGALAW ANG BAWAT FLIPPER.', ayuda1b: 'I-TAP ANG MGA PINDUTAN SA IBABA PARA IGALAW ANG BAWAT FLIPPER.',
+    ayuda2: 'PARA ITIRA, HILAHIN PABABA ANG SPRING AT BITAWAN.', ayuda2b: 'PARA ITIRA, I-TAP ANG SPRING.', ayuda3: 'TAPUSIN ANG MGA MISYON PARA UMANGAT ANG RANGGO SA HOTEL.', tocar: 'I-TAP PARA ITULOY',
+  },
+  tr: {
+    idioma: 'DİLİNİ SEÇ', subtitulo: 'BÜYÜK OTELİN LANGIRTI',
+    clasico: 'KLASİK', clasicoD: 'ÜÇ TOP · KOMİDEN PATRONA', reloj: 'ZAMANA KARŞI', relojD: 'İKİ BUÇUK DAKİKA · SONSUZ TOP',
+    diario: 'GÜNÜN GÖREVİ', diarioD: 'BUGÜNÜN GÖREVLERİ, HERKES İÇİN AYNI', controles: 'KONTROLLER', idiomaBtn: 'DİL',
+    record: 'REKOR', hoyRec: 'BUGÜN {0}', bola: 'TOP {0}/{1}', pausa: 'DURAKLAT', seguir: 'DEVAM', reiniciar: 'YENİDEN BAŞLAT', menu: 'MENÜ',
+    musica: 'MÜZİK', sonido: 'SES', si: 'AÇIK', no: 'KAPALI', otra: 'TEKRAR', fin: 'OYUN BİTTİ', tiempo: 'SÜRE DOLDU!', nuevoRecord: 'YENİ REKOR!',
+    volver: 'GERİ', listo: 'TAMAM', restablecer: 'SIFIRLA',
+    tirar: 'YAYI ÇEK', tocarLanzar: 'FIRLATMAK İÇİN DOKUN', teSalvo: 'TOP KURTARILDI!', jackpot: 'JACKPOT!', multibola: 'ÇOKLU TOP!',
+    multiLista: 'ÇOKLU TOP HAZIR', bolaExtra: 'EKSTRA TOP!', tiroMaestro: 'USTA ATIŞ!', mult: 'ÇARPAN ×{0}', orbita: 'YÖRÜNGE!',
+    cumplida: 'GÖREV TAMAM!', ascenso: 'ARTIK {0}', bonus: 'BONUS', total: 'TOPLAM', perdida: 'TOP KAYBOLDU',
+    m_hongos: '{0} KEZ TAMPONA VUR', m_blancos: '{0} HEDEF DÜŞÜR', m_carriles: 'J·A·Z·Z TAMAMLA', m_copa: 'KUPAYA {0} KEZ SOK',
+    m_orbitas: '{0} YÖRÜNGE YAP', m_molinete: 'ÇARKI {0} KEZ DÖNDÜR',
+    rangos: ['KOMİ', 'GARSON', 'BARMEN', 'RESEPSİYONİST', 'MÜDÜR', 'PATRON'],
+    hongos: 'TAMPONLAR', carriles: 'ŞERİTLER', blancos: 'HEDEFLER', orbitas: 'YÖRÜNGELER', copas: 'KUPALAR', misiones: 'GÖREVLER', rango: 'RÜTBE', mejorJackpot: 'EN İYİ JACKPOT',
+    modo: 'PALETLER', mitades: 'YARIMLAR', botones: 'DÜĞMELER', tamano: 'BOYUT', chico: 'KÜÇÜK', medio: 'ORTA', grande: 'BÜYÜK',
+    transp: 'SAYDAMLIK', baja: 'DÜŞÜK', media: 'ORTA', alta: 'YÜKSEK', resorte: 'YAY', tirarOp: 'ÇEK', tocarOp: 'DOKUN', vibrar: 'TİTREŞİM',
+    acomodar: 'DÜĞMELERİ YERLEŞTİR', arrastra: 'HER DÜĞMEYİ RAHAT EDECEĞİN YERE SÜRÜKLE', proba: 'BURADA DENE',
+    ayuda1: 'HER PALETİ OYNATMAK İÇİN EKRANIN SOL YA DA SAĞ YARISINA DOKUN.', ayuda1b: 'HER PALETİ OYNATMAK İÇİN ALTTAKİ DÜĞMELERE DOKUN.',
+    ayuda2: 'FIRLATMAK İÇİN YAYI AŞAĞI ÇEK VE BIRAK.', ayuda2b: 'FIRLATMAK İÇİN YAYA DOKUN.', ayuda3: 'OTELDE RÜTBE ATLAMAK İÇİN GÖREVLERİ TAMAMLA.', tocar: 'DEVAM İÇİN DOKUN',
+  },
+  ur: {
+    idioma: 'اپنی زبان منتخب کریں', subtitulo: 'گرینڈ ہوٹل کا پن بال',
+    clasico: 'کلاسک', clasicoD: 'تین گیندیں · بیل بوائے سے مالک تک', reloj: 'وقت کے خلاف', relojD: 'ڈھائی منٹ · لامحدود گیندیں',
+    diario: 'آج کا چیلنج', diarioD: 'آج کے مشن، سب کے لیے ایک جیسے', controles: 'کنٹرولز', idiomaBtn: 'زبان',
+    record: 'ریکارڈ', hoyRec: 'آج {0}', bola: 'گیند {0}/{1}', pausa: 'وقفہ', seguir: 'جاری رکھیں', reiniciar: 'دوبارہ شروع', menu: 'مینیو',
+    musica: 'موسیقی', sonido: 'آواز', si: 'ہاں', no: 'نہیں', otra: 'دوبارہ', fin: 'کھیل ختم', tiempo: 'وقت ختم!', nuevoRecord: 'نیا ریکارڈ!',
+    volver: 'واپس', listo: 'ٹھیک ہے', restablecer: 'اصل ترتیب',
+    tirar: 'اسپرنگ کھینچیں', tocarLanzar: 'چلانے کے لیے ٹیپ کریں', teSalvo: 'گیند بچ گئی!', jackpot: 'جیک پاٹ!', multibola: 'ملٹی بال!',
+    multiLista: 'ملٹی بال تیار', bolaExtra: 'اضافی گیند!', tiroMaestro: 'ماہرانہ شاٹ!', mult: 'ضرب ×{0}', orbita: 'مدار!',
+    cumplida: 'مشن مکمل!', ascenso: 'اب آپ {0} ہیں', bonus: 'بونس', total: 'کل', perdida: 'گیند ضائع',
+    m_hongos: 'بمپرز کو {0} بار ماریں', m_blancos: '{0} ہدف گرائیں', m_carriles: 'J·A·Z·Z مکمل کریں', m_copa: 'کپ میں {0} بار گیند ڈالیں',
+    m_orbitas: '{0} مدار بنائیں', m_molinete: 'اسپنر کو {0} بار گھمائیں',
+    rangos: ['بیل بوائے', 'ویٹر', 'بارٹینڈر', 'کنسیئرج', 'مینیجر', 'مالک'],
+    hongos: 'بمپرز', carriles: 'راستے', blancos: 'اہداف', orbitas: 'مدار', copas: 'کپ', misiones: 'مشن', rango: 'عہدہ', mejorJackpot: 'بہترین جیک پاٹ',
+    modo: 'فلپرز', mitades: 'آدھی اسکرین', botones: 'بٹن', tamano: 'سائز', chico: 'چھوٹا', medio: 'درمیانہ', grande: 'بڑا',
+    transp: 'شفافیت', baja: 'کم', media: 'درمیانی', alta: 'زیادہ', resorte: 'اسپرنگ', tirarOp: 'کھینچیں', tocarOp: 'ٹیپ', vibrar: 'تھرتھراہٹ',
+    acomodar: 'بٹن ترتیب دیں', arrastra: 'ہر بٹن کو آرام دہ جگہ پر گھسیٹیں', proba: 'یہاں آزمائیں',
+    ayuda1: 'ہر فلپر چلانے کے لیے اسکرین کا بایاں یا دایاں حصہ ٹیپ کریں۔', ayuda1b: 'ہر فلپر چلانے کے لیے نیچے والے بٹن ٹیپ کریں۔',
+    ayuda2: 'گیند چلانے کے لیے اسپرنگ نیچے کھینچ کر چھوڑ دیں۔', ayuda2b: 'گیند چلانے کے لیے اسپرنگ کو ٹیپ کریں۔', ayuda3: 'ہوٹل میں عہدہ بڑھانے کے لیے مشن مکمل کریں۔', tocar: 'جاری رکھنے کے لیے ٹیپ کریں',
+  },
+  th: {
+    idioma: 'เลือกภาษา', subtitulo: 'พินบอลแห่งแกรนด์โฮเทล',
+    clasico: 'คลาสสิก', clasicoD: 'ลูก 3 ลูก · จากพนักงานยกกระเป๋าสู่เจ้าของ', reloj: 'แข่งกับเวลา', relojD: 'สองนาทีครึ่ง · ลูกไม่จำกัด',
+    diario: 'ภารกิจประจำวัน', diarioD: 'ภารกิจวันนี้ เหมือนกันทุกคน', controles: 'การควบคุม', idiomaBtn: 'ภาษา',
+    record: 'สถิติ', hoyRec: 'วันนี้ {0}', bola: 'ลูก {0}/{1}', pausa: 'หยุดชั่วคราว', seguir: 'เล่นต่อ', reiniciar: 'เริ่มใหม่', menu: 'เมนู',
+    musica: 'เพลง', sonido: 'เสียง', si: 'เปิด', no: 'ปิด', otra: 'อีกครั้ง', fin: 'จบเกม', tiempo: 'หมดเวลา!', nuevoRecord: 'สถิติใหม่!',
+    volver: 'กลับ', listo: 'เสร็จ', restablecer: 'คืนค่าเดิม',
+    tirar: 'ดึงสปริง', tocarLanzar: 'แตะเพื่อปล่อยลูก', teSalvo: 'รอดแล้ว!', jackpot: 'แจ็กพอต!', multibola: 'มัลติบอล!',
+    multiLista: 'มัลติบอลพร้อม', bolaExtra: 'ลูกพิเศษ!', tiroMaestro: 'ช็อตเทพ!', mult: 'ตัวคูณ ×{0}', orbita: 'วงโคจร!',
+    cumplida: 'ภารกิจสำเร็จ!', ascenso: 'ตอนนี้คุณคือ {0}', bonus: 'โบนัส', total: 'รวม', perdida: 'เสียลูก',
+    m_hongos: 'ชนบัมเปอร์ {0} ครั้ง', m_blancos: 'ล้มเป้า {0} อัน', m_carriles: 'เติม J·A·Z·Z ให้ครบ', m_copa: 'ยิงลงถ้วย {0} ครั้ง',
+    m_orbitas: 'วิ่งวงโคจร {0} รอบ', m_molinete: 'หมุนกังหัน {0} รอบ',
+    rangos: ['พนักงานยกกระเป๋า', 'บริกร', 'บาร์เทนเดอร์', 'พนักงานต้อนรับ', 'ผู้จัดการ', 'เจ้าของ'],
+    hongos: 'บัมเปอร์', carriles: 'เลน', blancos: 'เป้า', orbitas: 'วงโคจร', copas: 'ถ้วย', misiones: 'ภารกิจ', rango: 'ตำแหน่ง', mejorJackpot: 'แจ็กพอตสูงสุด',
+    modo: 'ฟลิปเปอร์', mitades: 'ครึ่งจอ', botones: 'ปุ่ม', tamano: 'ขนาด', chico: 'เล็ก', medio: 'กลาง', grande: 'ใหญ่',
+    transp: 'ความโปร่งใส', baja: 'ต่ำ', media: 'กลาง', alta: 'สูง', resorte: 'สปริง', tirarOp: 'ดึง', tocarOp: 'แตะ', vibrar: 'สั่น',
+    acomodar: 'จัดตำแหน่งปุ่ม', arrastra: 'ลากปุ่มแต่ละปุ่มไปยังตำแหน่งที่ถนัด', proba: 'ลองที่นี่',
+    ayuda1: 'แตะครึ่งซ้ายหรือครึ่งขวาของจอเพื่อขยับฟลิปเปอร์แต่ละข้าง', ayuda1b: 'แตะปุ่มด้านล่างเพื่อขยับฟลิปเปอร์แต่ละข้าง',
+    ayuda2: 'ดึงสปริงลงแล้วปล่อยเพื่อยิงลูก', ayuda2b: 'แตะสปริงเพื่อยิงลูก', ayuda3: 'ทำภารกิจให้สำเร็จเพื่อเลื่อนตำแหน่งในโรงแรม', tocar: 'แตะเพื่อเล่นต่อ',
+  },
+  my: {
+    idioma: 'ဘာသာစကား ရွေးပါ', subtitulo: 'ဟိုတယ်ကြီး၏ ပင်ဘော',
+    clasico: 'ဂန္ထဝင်', clasicoD: 'ဘောလုံး 3 လုံး · အိတ်သယ်မှ ပိုင်ရှင်အထိ', reloj: 'အချိန်နှင့်ယှဉ်', relojD: 'နှစ်မိနစ်ခွဲ · ဘောလုံး အကန့်အသတ်မဲ့',
+    diario: 'ယနေ့ စိန်ခေါ်မှု', diarioD: 'ယနေ့ မစ်ရှင်များ၊ လူတိုင်းအတွက် တူညီ', controles: 'ထိန်းချုပ်မှု', idiomaBtn: 'ဘာသာစကား',
+    record: 'စံချိန်', hoyRec: 'ယနေ့ {0}', bola: 'ဘောလုံး {0}/{1}', pausa: 'ခဏရပ်', seguir: 'ဆက်ကစား', reiniciar: 'ပြန်စ', menu: 'မီနူး',
+    musica: 'ဂီတ', sonido: 'အသံ', si: 'ဖွင့်', no: 'ပိတ်', otra: 'ထပ်ကစား', fin: 'ဂိမ်းပြီးပြီ', tiempo: 'အချိန်ကုန်ပြီ!', nuevoRecord: 'စံချိန်သစ်!',
+    volver: 'နောက်သို့', listo: 'ပြီးပြီ', restablecer: 'မူလအတိုင်း',
+    tirar: 'စပရင်ကို ဆွဲပါ', tocarLanzar: 'ပစ်ရန် နှိပ်ပါ', teSalvo: 'ဘောလုံး ကယ်ပြီ!', jackpot: 'ဂျက်ပေါ့!', multibola: 'ဘောလုံးအများ!',
+    multiLista: 'ဘောလုံးအများ အသင့်', bolaExtra: 'ဘောလုံး အပို!', tiroMaestro: 'ကျွမ်းကျင်သည့် ပစ်ချက်!', mult: 'မြှောက်ကိန်း ×{0}', orbita: 'ပတ်လမ်း!',
+    cumplida: 'မစ်ရှင် ပြီးပြီ!', ascenso: 'ယခု သင်သည် {0}', bonus: 'ဘောနပ်စ်', total: 'စုစုပေါင်း', perdida: 'ဘောလုံး ဆုံးပြီ',
+    m_hongos: 'ဘမ်ပါကို {0} ကြိမ် တိုက်ပါ', m_blancos: 'ပစ်မှတ် {0} ခု လှဲပါ', m_carriles: 'J·A·Z·Z ပြည့်အောင် လုပ်ပါ', m_copa: 'ခွက်ထဲ {0} ကြိမ် ထည့်ပါ',
+    m_orbitas: 'ပတ်လမ်း {0} ကြိမ် ပတ်ပါ', m_molinete: 'လည်ခုံကို {0} ကြိမ် လှည့်ပါ',
+    rangos: ['အိတ်သယ်', 'စားပွဲထိုး', 'ဘားတင်ဒါ', 'ဧည့်ကြို', 'မန်နေဂျာ', 'ပိုင်ရှင်'],
+    hongos: 'ဘမ်ပါများ', carriles: 'လမ်းကြောင်းများ', blancos: 'ပစ်မှတ်များ', orbitas: 'ပတ်လမ်းများ', copas: 'ခွက်များ', misiones: 'မစ်ရှင်များ', rango: 'ရာထူး', mejorJackpot: 'အကောင်းဆုံး ဂျက်ပေါ့',
+    modo: 'ဖလစ်ပါ', mitades: 'မျက်နှာပြင်တစ်ဝက်', botones: 'ခလုတ်များ', tamano: 'အရွယ်အစား', chico: 'သေး', medio: 'အလယ်', grande: 'ကြီး',
+    transp: 'ပွင့်လင်းမှု', baja: 'နိမ့်', media: 'အလယ်', alta: 'မြင့်', resorte: 'စပရင်', tirarOp: 'ဆွဲ', tocarOp: 'နှိပ်', vibrar: 'တုန်ခါမှု',
+    acomodar: 'ခလုတ် နေရာချ', arrastra: 'ခလုတ်တစ်ခုစီကို အဆင်ပြေသည့်နေရာသို့ ဆွဲပါ', proba: 'ဒီမှာ စမ်းပါ',
+    ayuda1: 'ဖလစ်ပါတစ်ခုစီ လှုပ်ရန် မျက်နှာပြင်၏ ဘယ် သို့မဟုတ် ညာတစ်ဝက်ကို နှိပ်ပါ။', ayuda1b: 'ဖလစ်ပါတစ်ခုစီ လှုပ်ရန် အောက်ရှိ ခလုတ်များကို နှိပ်ပါ။',
+    ayuda2: 'ပစ်ရန် စပရင်ကို အောက်သို့ ဆွဲပြီး လွှတ်ပါ။', ayuda2b: 'ပစ်ရန် စပရင်ကို နှိပ်ပါ။', ayuda3: 'ဟိုတယ်တွင် ရာထူးတက်ရန် မစ်ရှင်များကို ပြီးမြောက်အောင် လုပ်ပါ။', tocar: 'ဆက်ရန် နှိပ်ပါ',
+  },
+  ja: {
+    idioma: '言語を選択', subtitulo: 'グランドホテルのピンボール',
+    clasico: 'クラシック', clasicoD: 'ボール3個・ベルボーイからオーナーへ', reloj: 'タイムアタック', relojD: '2分30秒・ボール無制限',
+    diario: 'デイリーチャレンジ', diarioD: '今日のミッション、全員共通', controles: '操作設定', idiomaBtn: '言語',
+    record: 'ベスト', hoyRec: '今日 {0}', bola: 'ボール {0}/{1}', pausa: 'ポーズ', seguir: '再開', reiniciar: 'やり直す', menu: 'メニュー',
+    musica: '音楽', sonido: '効果音', si: 'オン', no: 'オフ', otra: 'もう一度', fin: 'ゲームオーバー', tiempo: 'タイムアップ！', nuevoRecord: '新記録！',
+    volver: '戻る', listo: '完了', restablecer: '初期設定に戻す',
+    tirar: 'バネを引こう', tocarLanzar: 'タップで発射', teSalvo: 'ボールセーブ！', jackpot: 'ジャックポット！', multibola: 'マルチボール！',
+    multiLista: 'マルチボール準備OK', bolaExtra: 'エクストラボール！', tiroMaestro: 'スキルショット！', mult: '倍率 ×{0}', orbita: 'オービット！',
+    cumplida: 'ミッション達成！', ascenso: '{0}に昇格！', bonus: 'ボーナス', total: '合計', perdida: 'ボールロスト',
+    m_hongos: 'バンパーに{0}回当てる', m_blancos: 'ターゲットを{0}個倒す', m_carriles: 'J·A·Z·Zを完成させる', m_copa: 'カップに{0}回入れる',
+    m_orbitas: 'オービットを{0}回決める', m_molinete: 'スピナーを{0}回転させる',
+    rangos: ['ベルボーイ', 'ウェイター', 'バーテンダー', 'コンシェルジュ', '支配人', 'オーナー'],
+    hongos: 'バンパー', carriles: 'レーン', blancos: 'ターゲット', orbitas: 'オービット', copas: 'カップ', misiones: 'ミッション', rango: 'ランク', mejorJackpot: '最高ジャックポット',
+    modo: 'フリッパー', mitades: '画面の左右', botones: 'ボタン', tamano: 'サイズ', chico: '小', medio: '中', grande: '大',
+    transp: '透明度', baja: '低', media: '中', alta: '高', resorte: 'バネ', tirarOp: '引く', tocarOp: 'タップ', vibrar: '振動',
+    acomodar: 'ボタン配置', arrastra: '各ボタンを押しやすい位置にドラッグしてね', proba: 'ここで試す',
+    ayuda1: '画面の左半分か右半分をタップして、それぞれのフリッパーを動かそう。', ayuda1b: '下のボタンをタップして、それぞれのフリッパーを動かそう。',
+    ayuda2: '発射するには、バネを下に引いて離そう。', ayuda2b: '発射するには、バネをタップしよう。', ayuda3: 'ミッションを達成して、ホテルでランクを上げよう。', tocar: 'タップして続ける',
+  },
+});
 
 /* ==== dorado/js/fisica.js ==== */
 /* ============================================================================
@@ -1223,98 +1049,9 @@ const Sonido = {
   },
 };
 
-/* ==== dorado/js/intro.js ==== */
-/* ============================================================================
-   La intro de JXSTUDIOS en Art Déco: misma coreografía que la de La Cripta,
-   otro material. La raya de luz abre una pared de laca negra con un abanico de
-   rayos de oro; el monograma se escribe en oro pulido (biselado: sombra, cuerpo
-   con degradé de oro y filo de luz), en el golpe se prende un marco escalonado
-   y los rayos giran. JXSTUDIOS en la letra déco, espaciada. La música: un
-   glissando de piano, el platillo que sube y un acorde de big band en el golpe.
-   ========================================================================== */
-
-function fondoDeco(Wl, Hl, cx, cy) {
-  const [c, f] = lienzoHD(Wl, Hl);
-  const gr = f.createRadialGradient(cx, cy, 10, cx, cy, Hl * 0.8); gr.addColorStop(0, '#14261f'); gr.addColorStop(0.6, '#070b0a'); gr.addColorStop(1, '#020303');
-  f.fillStyle = gr; f.fillRect(0, 0, Wl, Hl);
-  abanico(f, cx, cy, 30, Hl, 0, Math.PI * 2, 72, 0.1);
-  for (const r of [110, 116, 190]) { f.strokeStyle = 'rgba(232,184,80,0.18)'; f.lineWidth = 1; f.beginPath(); f.arc(cx, cy, r, 0, Math.PI * 2); f.stroke(); }
-  // el marco con las esquinas escalonadas
-  f.strokeStyle = 'rgba(232,184,80,0.45)'; f.lineWidth = 1.2;
-  for (const m of [14, 20]) {
-    f.beginPath(); f.moveTo(m + 14, m); f.lineTo(Wl - m - 14, m); f.lineTo(Wl - m - 14, m + 7); f.lineTo(Wl - m - 7, m + 7); f.lineTo(Wl - m - 7, m + 14); f.lineTo(Wl - m, m + 14);
-    f.lineTo(Wl - m, Hl - m - 14); f.lineTo(Wl - m - 7, Hl - m - 14); f.lineTo(Wl - m - 7, Hl - m - 7); f.lineTo(Wl - m - 14, Hl - m - 7); f.lineTo(Wl - m - 14, Hl - m);
-    f.lineTo(m + 14, Hl - m); f.lineTo(m + 14, Hl - m - 7); f.lineTo(m + 7, Hl - m - 7); f.lineTo(m + 7, Hl - m - 14); f.lineTo(m, Hl - m - 14);
-    f.lineTo(m, m + 14); f.lineTo(m + 7, m + 14); f.lineTo(m + 7, m + 7); f.lineTo(m + 14, m + 7); f.closePath(); f.stroke();
-  }
-  return c;
-}
-
-const ESTILO_DECO = {
-  negro: '#020303',
-  chispa: 2,
-  anchoLogo: (Wl) => Math.round(Wl * 0.64),
-  puntas: [ORO_CLARO, '#ffd66a', '#ffffff'],
-  golpe: [ORO_CLARO, ORO, '#ffffff', ESM_CLARO],
-  destello: 'rgba(255,230,160,0.5)',
-  fondo: (Wl, Hl, cx, cy) => fondoDeco(Wl, Hl, cx, cy),
-  antes(g, t, I) {
-    // después del golpe, los rayos giran despacio y se prende un halo
-    if (t < 0.88) return;
-    const k = clamp((t - 0.88) / 0.5, 0, 1);
-    g.save(); g.translate(I.cx, I.cy); g.rotate((t - 0.88) * 0.25); g.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; g.fillStyle = 'rgba(255,214,120,' + 0.05 * k + ')'; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a - 0.04) * 400, Math.sin(a - 0.04) * 400); g.lineTo(Math.cos(a + 0.04) * 400, Math.sin(a + 0.04) * 400); g.fill(); }
-    g.restore();
-  },
-  logo(g, i) {
-    const G = 14.5 * i.esc;
-    for (const capa of [0, 1]) for (const tz of i.TRAZOS) {
-      if (tz.capa !== capa) continue;
-      const p = i.camino2d(tz, i.esc, i.x0, i.y0), l = i.largo(tz) * i.esc;
-      g.save();
-      if (i.avance < 1) g.setLineDash([Math.max(0.01, l * i.avance), l + 20]);
-      g.lineCap = 'butt'; g.lineJoin = 'miter';
-      g.strokeStyle = '#1a1204'; g.lineWidth = G + 4; g.stroke(p);
-      const gr = g.createLinearGradient(0, i.y0, 0, i.y0 + 172 * i.esc);
-      gr.addColorStop(0, ORO_CLARO); gr.addColorStop(0.45, '#f0c45c'); gr.addColorStop(0.5, '#9a6a18'); gr.addColorStop(0.62, '#e0a83c'); gr.addColorStop(1, '#f8dc94');
-      g.strokeStyle = gr; g.lineWidth = G; g.stroke(p);
-      g.save(); g.translate(-G * 0.18, -G * 0.2); g.strokeStyle = 'rgba(255,250,230,0.75)'; g.lineWidth = G * 0.14; g.stroke(p); g.restore();
-      g.restore();
-    }
-    if (i.golpe) {
-      // el marco escalonado que se prende alrededor del monograma
-      const k = clamp(i.tGolpe / 0.25, 0, 1), m = 14 + (1 - salida(k)) * 30, x0 = i.x0 - m, y0 = i.y0 - m, w = i.ancho + m * 2, h = 172 * i.esc + m * 2;
-      g.save(); g.globalAlpha = k; g.strokeStyle = ORO; g.lineWidth = 1.5;
-      g.beginPath(); g.moveTo(x0 + 10, y0); g.lineTo(x0 + w - 10, y0); g.lineTo(x0 + w - 10, y0 + 5); g.lineTo(x0 + w - 5, y0 + 5); g.lineTo(x0 + w - 5, y0 + 10); g.lineTo(x0 + w, y0 + 10);
-      g.lineTo(x0 + w, y0 + h - 10); g.lineTo(x0 + w - 5, y0 + h - 10); g.lineTo(x0 + w - 5, y0 + h - 5); g.lineTo(x0 + w - 10, y0 + h - 5); g.lineTo(x0 + w - 10, y0 + h);
-      g.lineTo(x0 + 10, y0 + h); g.lineTo(x0 + 10, y0 + h - 5); g.lineTo(x0 + 5, y0 + h - 5); g.lineTo(x0 + 5, y0 + h - 10); g.lineTo(x0, y0 + h - 10);
-      g.lineTo(x0, y0 + 10); g.lineTo(x0 + 5, y0 + 10); g.lineTo(x0 + 5, y0 + 5); g.lineTo(x0 + 10, y0 + 5); g.closePath(); g.stroke();
-      g.restore();
-    }
-  },
-  letras(g, parte, I, t, y) {
-    const tam = 22, esp = 0.12, total = anchoDeco('JXSTUDIOS', tam, esp), x = I.cx - total / 2;
-    textoDeco(g, parte, x, y + 22, tam, { alin: 'left', oro: true, esp, sombra: [1.5, 2] });
-  },
-  presentaTxt(g, txt, I, t, y) { texto(g, txt.toUpperCase(), I.cx, y + 50, { tam: 10, col: ESM_CLARO, esp: 4 }); },
-  jingle(ctx, bus, t0, tg, h) {
-    const { tono, soplo, f, T } = h;
-    // el platillo que sube hasta el golpe
-    soplo(tg - t0, 0.08, 'highpass', 4000, 9000, t0);
-    // el glissando de piano en fa
-    ['F4', 'A4', 'C5', 'E5', 'F5', 'A5', 'C6', 'E6'].forEach((n, k) => tono('triangle', f(n), 0, 0.5, 0.06, t0 + 0.32 + k * 0.065, 0.003));
-    // el golpe: bombo, acorde de big band (fa sexta con novena) y el platillo
-    tono('sine', 110, 45, 0.5, 0.6, tg, 0.003);
-    for (const n of ['F3', 'A3', 'D4', 'G4', 'C5']) tono('sawtooth', f(n), 0, 1.4, 0.035, tg + 0.01, 0.02);
-    soplo(1.2, 0.18, 'highpass', 6000, 3000, tg);
-    tono('sine', f('F2'), 0, 1.6, 0.18, tg);
-    for (let k = 0; k < 9; k++) tono('sine', 2093 + (k % 3) * 140, 0, 0.03, 0.025, t0 + T.T_LETRAS + k * 0.04);
-  },
-};
-
 /* ==== dorado/js/juego.js ==== */
 /* ============================================================================
-   DORADO: escenas (intro, idioma, menú con la mesa jugando sola, partida,
+   DORADO: escenas (menú con la mesa jugando sola, idioma, partida,
    pausa, fin, controles y el editor de botones), las reglas del pinball
    (misiones y rangos del hotel, multibola con jackpots, tiro maestro, bola
    salvada, bonus por bola), los tres modos y el bucle.
@@ -1322,7 +1059,7 @@ const ESTILO_DECO = {
 
 const lienzoP = document.getElementById('lienzo');
 const g = lienzoP.getContext('2d');
-let escena = 'intro', tEsc = 0, trans = null, mesaFondo = null, puertaImg = null, G = null, ahora = 0, dtCuadro = 1 / 60;
+let escena = 'menu', tEsc = 0, trans = null, mesaFondo = null, puertaImg = null, G = null, ahora = 0, dtCuadro = 1 / 60;
 
 const CTRL_BASE = { modo: 0, tam: 1, transp: 1, resorte: 0, vibrar: true, bIzq: [0.15, 0.9], bDer: [0.85, 0.9], bRes: [0.9, 0.72] };
 const CTRL = Object.assign({}, JSON.parse(JSON.stringify(CTRL_BASE)), Guardado.leer('controles', {}));
@@ -1416,8 +1153,9 @@ function placa(x, y, w, h, txt, o) {
   if (apr) { gr.addColorStop(0, '#2a9c78'); gr.addColorStop(1, '#0c4a38'); } else { gr.addColorStop(0, o.col || '#16191b'); gr.addColorStop(1, '#040505'); }
   g.fillStyle = gr; g.fill(); g.strokeStyle = o.apagado ? '#5a4a2a' : ORO; g.lineWidth = 1.5; g.stroke();
   marcoDeco(x + 4, y + 4, w - 8, h - 8, 6); g.strokeStyle = 'rgba(232,184,80,0.35)'; g.lineWidth = 0.7; g.stroke();
-  const tam = tamDecoQueEntra(txt, o.tam || 17, w - 26, 0.06);
-  textoDeco(g, txt, x + w / 2, y + (o.sub ? h * 0.37 : h / 2), tam, { oro: !apr && !o.apagado, col: o.apagado ? '#7a6a4a' : MARFIL, esp: 0.06 });
+  const gl = o.globo ? 20 : 0, tam = tamDecoQueEntra(txt, o.tam || 17, w - 26 - gl, 0.06);
+  if (o.globo) dibujarGlobo(g, x + 17, y + h / 2, 7, apr ? MARFIL : ORO, 1.3);
+  textoDeco(g, txt, x + w / 2 + gl / 2, y + (o.sub ? h * 0.37 : h / 2), tam, { oro: !apr && !o.apagado, col: o.apagado ? '#7a6a4a' : MARFIL, esp: 0.06 });
   if (o.sub) texto(g, o.sub, x + w / 2, y + h * 0.73, { tam: tamQueEntra(g, o.sub, 8.5, w - 24), col: ESM_CLARO });
   const si = !o.apagado && clicEn(x, y, w, h);
   if (si) { Sonido.sfx('boton'); vibrar(8); }
@@ -1460,24 +1198,21 @@ function chispazo(L, x, y, n, v, cols) { for (let i = 0; i < n && L.length < 400
 function pasoChispas(L, dt) { for (let i = L.length - 1; i >= 0; i--) { const c = L[i]; c.t += dt; c.x += c.vx * dt; c.y += c.vy * dt; c.vy += 300 * dt; c.vx *= 0.97; if (c.t > c.vida) L.splice(i, 1); } }
 function dibujarChispas(L) { g.globalCompositeOperation = 'lighter'; for (const c of L) { g.globalAlpha = 1 - c.t / c.vida; g.fillStyle = c.col; g.fillRect(c.x - c.tam / 2, c.y - c.tam / 2, c.tam, c.tam); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
 
-/* ------------------------------------------------------------------ intro */
-let intro = null, musicaIntro = null;
-function escenaIntro(dt) {
-  if (E.toque || apretada('Enter', 'Space', 'Escape')) { intro.saltar(); if (intro.listo && musicaIntro) musicaIntro.cortar(); }
-  intro.pasar(dt); intro.dibujar(g);
-  if (intro.listo && !trans) irA('idioma');
-}
 function fondoSala(t) {
   g.save(); g.translate(0, Y0); g.drawImage(mesaFondo, 0, 0, W, MESA_H); g.restore();
   g.fillStyle = 'rgba(2,3,3,0.72)'; g.fillRect(0, 0, W, H);
 }
+/* la lista de los 13 idiomas, cada uno escrito en su idioma; el elegido, en esmeralda */
 function escenaIdioma(t) {
   fondoSala(t);
-  tituloDorado(H * 0.17, t);
-  const y0 = Math.round(H * 0.4);
-  ['es', 'en', 'pt'].forEach((l, i) => texto(g, TXT[l].idioma, W / 2, y0 + i * 18, { tam: 10, col: i === 1 ? ESM_CLARO : MARFIL }));
-  const nombres = { es: 'ESPAÑOL', en: 'ENGLISH', pt: 'PORTUGUÊS' };
-  ['es', 'en', 'pt'].forEach((l, i) => { if (placa(70, y0 + 74 + i * 66, W - 140, 50, nombres[l], { tam: 18, col: l === IDIOMA ? '#123a2e' : null })) { IDIOMA = l; Guardado.escribir('idioma', l); irA('menu'); } });
+  dibujarGlobo(g, W / 2, 30, 11, ORO, 1.6);
+  const tit = tr('idioma');
+  textoDeco(g, tit, W / 2, 62, tamDecoQueEntra(tit, 20, W - 40, 0.06), { oro: true, esp: 0.06 });
+  const top = 86, bajo = H - 72, paso = Math.min(46, (bajo - top) / IDIOMAS.length), h = Math.min(34, paso - 5);
+  IDIOMAS.forEach((l, i) => {
+    if (placa(56, top + i * paso, W - 112, h, l.nombre, { tam: 14, col: l.id === IDIOMA ? '#1d6b52' : null })) { IDIOMA = l.id; Guardado.escribir('idioma', l.id); irA('menu'); }
+  });
+  if (placa(W / 2 - 90, H - 60, 180, 42, tr('volver'), { tam: 15 }) || apretada('Escape')) irA('menu');
 }
 
 /* ----------------------------------- el bot (prueba y la mesa del menú) */
@@ -1524,7 +1259,7 @@ function escenaMenu(t) {
   if (placa(x, y0 + 140, bw, 58, tr('diario'), { sub: tr('hoyRec', miles(hoyR)) + ' · ' + tr('diarioD'), tam: 22 })) irA('juego', () => empezar('diario'));
   const yb = y0 + 222, mw = (bw - 12) / 2;
   if (placa(x, yb, mw, 40, tr('controles'), { tam: 13 })) irA('controles');
-  if (placa(x + mw + 12, yb, mw, 40, tr('idiomaBtn'), { tam: 13 })) irA('idioma');
+  if (placa(x + mw + 12, yb, mw, 40, tr('idiomaBtn'), { tam: 13, globo: true })) irA('idioma');
   if (DATOS.rangoMax > 0) texto(g, tr('rango') + ': ' + tr('rangos')[DATOS.rangoMax], W / 2, yb + 60, { tam: 9.5, col: ESM_CLARO });
 }
 
@@ -1848,7 +1583,7 @@ function dibujarAyuda(t) {
   const w = W - 40, h = 230, x = 20, y = Y0 + 120;
   panel(x, y, w, h, 0.95);
   let yy = y + 30;
-  for (const k of [CTRL.modo === 0 ? 'ayuda1' : 'ayuda1b', CTRL.resorte === 0 ? 'ayuda2' : 'ayuda2b', 'ayuda3']) { for (const l of partir(tr(k), 34)) { texto(g, l, W / 2, yy, { tam: 11, col: MARFIL }); yy += 17; } yy += 12; }
+  for (const k of [CTRL.modo === 0 ? 'ayuda1' : 'ayuda1b', CTRL.resorte === 0 ? 'ayuda2' : 'ayuda2b', 'ayuda3']) { for (const l of partirMedido(tr(k), w - 36, (s) => medir(g, s, 11))) { texto(g, l, W / 2, yy, { tam: 11, col: MARFIL }); yy += 17; } yy += 12; }
   g.globalAlpha = 0.5 + 0.5 * Math.sin(t * 4); textoDeco(g, tr('tocar'), W / 2, y + h - 24, 13, { oro: true, esp: 0.06 }); g.globalAlpha = 1;
 }
 function dibujarPartida(t) {
@@ -1951,7 +1686,7 @@ function escenaEditor(t) {
   g.fillStyle = '#020303'; g.fillRect(0, 0, W, Y0);
   const msg = CTRL.modo === 1 ? tr('arrastra') : tr('ayuda1');
   let yy = Math.max(14, Y0 * 0.25);
-  for (const l of partir(msg, 40)) { texto(g, l, W / 2, yy, { tam: 9.5, col: MARFIL }); yy += 13; }
+  for (const l of partirMedido(msg, W - 30, (s) => medir(g, s, 9.5))) { texto(g, l, W / 2, yy, { tam: 9.5, col: MARFIL }); yy += 13; }
   const by = Y0 > 90 ? Y0 - 44 : Y0 + 8;
   if (placa(W / 2 + 6, by, 120, 36, tr('listo'), { tam: 14 }) || apretada('Escape')) { guardarCtrl(); irA('controles'); }
   if (CTRL.modo === 1 && placa(W / 2 - 126, by, 120, 36, tr('restablecer'), { tam: 11, col: '#3a1016' })) { for (const b of ['bIzq', 'bDer', 'bRes']) CTRL[b] = CTRL_BASE[b].slice(); guardarCtrl(); }
@@ -1969,9 +1704,8 @@ function cuadro(ts) {
   if (trans) { trans.t += dt; if (!trans.hecho && trans.t >= trans.dur) { trans.hecho = true; trans.alMedio(); } if (trans.t >= trans.dur * 2) trans = null; }
   g.setTransform(S, 0, 0, S, 0, 0);
   try {
-    if (escena !== 'intro' && escena !== 'juego' && escena !== 'pausa') Sonido.musica(TEMAS.menu);
+    if (escena !== 'juego' && escena !== 'pausa') Sonido.musica(TEMAS.menu);
     switch (escena) {
-      case 'intro': escenaIntro(dt); break;
       case 'idioma': escenaIdioma(t); break;
       case 'menu': escenaMenu(t); break;
       case 'juego': if (!trans) for (let i = 0; i < (window.__dorado.turbo || 1) && escena === 'juego'; i++) actualizarPartida(dt); if (escena === 'juego') dibujarPartida(t); else escenaPausa(t); break;
@@ -1988,9 +1722,7 @@ function cuadro(ts) {
 function arrancar() {
   armarMesa();
   ajustar();
-  intro = crearIntroJXS({ W, H, presenta: TXT[IDIOMA].presenta, vibrar, estilo: ESTILO_DECO });
   Sonido.iniciar();
-  if (Sonido.ctx && Sonido.ctx.state === 'running') musicaIntro = jingleJXS(Sonido.ctx, Sonido.total, ESTILO_DECO);
   prepararMenu();
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (escena === 'juego' && G && G.fase === 'juego') irPausa(); Sonido.pausar(true); } else Sonido.pausar(false); });
   window.__pasoMesa = pasoMesa;

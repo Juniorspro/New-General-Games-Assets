@@ -35,12 +35,15 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 - **Lo simple, rápido** (01/10): "te pedí en vertical simple y después en zip nomás, ¿pa' qué tardás tanto?". Arreglar lo que hace falta, mandar enseguida y probar en segundo plano; nada de rondas largas de pruebas antes de entregar.
 - **Sin ayudantes (subagentes):** "hacelo vos, gastás muchos tokens" (30/09). Todo en la misma sesión, de a una cosa.
 - Quiere calidad visual alta ("goty", "AAA"), con números detrás.
-- **En todo juego, antes del menú, se elige idioma: español, inglés o
-  portugués**, siempre, y con todo traducido (menús, historia, diálogos).
+- **Idiomas.** Los 5 de los zip (SALAMANCA, FILETE, NEBULOSA, TAJO, DORADO) van en **13 idiomas y sin cartel**:
+  arrancan en el del celu y se cambia con el botón del globito del menú ([idiomas](idiomas.md), 08/10); es lo último
+  que pidió, así que los juegos nuevos van igual. Los demás: antes del menú se elige español, inglés o portugués,
+  siempre, y con todo traducido (menús, historia, diálogos).
   (Excepciones: Slendytubbies pide el idioma sobre el menú difuminado, después de la intro; FNaF 2 queda en inglés.)
   **La intro de JXStudios es siempre la de La Cripta** ("así las quiero a las intro", 07/10): monograma JXS de metal
   en píxeles sobre fibra de carbono, JXSTUDIOS tipeado, música y el iris; lista para usar en `motor2d/intro-jxs.js`.
   **Cada juego la viste a su estilo** (misma coreografía, otro material y música: `estilo`, ver [filete](filete.md)).
+  **A los 5 de los zip se les sacó la intro** ("sacarles mi intro", 08/10); sus intros quedan en git (`1f2f036`).
   **Ports: arrancan directo como el original, con esa intro y los
   créditos; los controles de celu, como la versión de celular del juego si existe** (07/10).
   **No se portean juegos que hoy se venden**, aunque sean versiones viejas o recortadas (Poppy Playtime y GTA SA Lite,
@@ -89,11 +92,12 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [brillo-trailer](brillo-trailer.md) | el tráiler de TikTok de BRILLO: tomas con reloj propio, Remotion, la música y sus trampas |
 | [baldi](baldi.md) | Baldi's Basics Classic (Unity 2018) a HTML: el Unity chiquito en JS, clips de sprites, TextMeshPro, navmesh, controles de celu |
 | [justshoot](justshoot.md) | Just Shoot: la demo web (BananaBread/Emscripten) a un solo HTML, texturas DXT, paquetes de Emscripten, controles de dedo |
-| [salamanca](salamanca.md) | SALAMANCA: el roguelite vertical en pixel art (tipo Archero, 182 KB): arte en texto, chacarera sintetizada, el bot de prueba y sus trampas |
-| [filete](filete.md) | FILETE: el rompecabezas de bloques en filete porteño (108 KB), la intro de JXSTUDIOS con estilo propio, la tanda justa de piezas |
-| [dorado](dorado.md) | DORADO: pinball vertical Art Déco (158 KB): física de flippers, la letra de un TTF en trazos (28 KB), medir dónde cae la bola, el bot acelerado |
-| [tajo](tajo.md) | TAJO: cortar fruta con el dedo en tinta sumi-e (127 KB): mitades con la pulpa, el filo por velocidad, el bot de prueba; la primera entrega salió incompleta |
-| [nebulosa](nebulosa.md) | NEBULOSA: fusionar cuerpos celestes con física (tipo Suika) en neón, 104 KB; la intro en un lienzo liso (no de píxeles) |
+| [idiomas](idiomas.md) | los 13 idiomas (países → idiomas), `motor2d/idiomas.js`, sin cartel con el globito, letras del sistema nítidas en los juegos de píxeles, la prueba por idioma |
+| [salamanca](salamanca.md) | SALAMANCA: el roguelite vertical en pixel art (tipo Archero, 214 KB): arte en texto, chacarera sintetizada, el bot de prueba y sus trampas |
+| [filete](filete.md) | FILETE: el rompecabezas de bloques en filete porteño (113 KB), la intro con estilo propio (sacada el 08/10), la tanda justa de piezas |
+| [dorado](dorado.md) | DORADO: pinball vertical Art Déco (160 KB): física de flippers, la letra de un TTF en trazos (28 KB), medir dónde cae la bola, el bot acelerado |
+| [tajo](tajo.md) | TAJO: cortar fruta con el dedo en tinta sumi-e (117 KB): mitades con la pulpa, el filo por velocidad, el bot de prueba; la primera entrega salió incompleta |
+| [nebulosa](nebulosa.md) | NEBULOSA: fusionar cuerpos celestes con física (tipo Suika) en neón, 92 KB; la intro en un lienzo liso (sacada el 08/10) |
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR y los dúos de los seis de un archivo): tomas con bots, voz, subtítulos, montaje en Remotion, portadas |
 | [barro](barro.md) | BARRO: motocross tipo Mad Skills (de cero): física de la moto, rivales, pistas, la tierra en tiras, el arte de Rezona |
 | [bus-stop](bus-stop.md) | port de un juego de Unity 4.5 ajeno (Bus Stop Simulator) a APK sin el editor: UnityPy, el IL de los scripts, la luz de Unity 4 en three, lo que no entra al repo |
@@ -122,11 +126,11 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | `kuntur/` | KUNTUR: 2.5D de papel tipo Paper Mario, 7 capítulos con historia, 3 idiomas | [kuntur](kuntur.md) |
 | `brillo/` | BRILLO: plataformas 2D Frutiger Aero, 6 mundos con historia, pixel art de 288 de alto | [brillo](brillo.md) · `brillo/README.md` |
 | `barro/` | BARRO: motocross de costado tipo Mad Skills, 20 pistas en 4 sedes, Jam del día, contrarreloj, un archivo | [barro](barro.md) · `barro/README.md` |
-| `salamanca/` | SALAMANCA: roguelite vertical en pixel art tipo Archero, 4 pisos con jefe, cartas, altar, desafío del día, un archivo de 182 KB | [salamanca](salamanca.md) · `salamanca/README.md` |
-| `filete/` | FILETE: rompecabezas de bloques tipo Block Blast en filete porteño, tango sintetizado, 30 niveles por barrios, un archivo de 108 KB | [filete](filete.md) · `filete/README.md` |
-| `dorado/` | DORADO: pinball vertical en Art Déco, misiones de hotel, multibola, jazz sintetizado, un archivo de 158 KB | [dorado](dorado.md) · `dorado/README.md` |
-| `tajo/` | TAJO: cortar fruta tipo Fruit Ninja en tinta sumi-e, 4 modos, dojo de filos, koto sintetizado, un archivo de 127 KB | [tajo](tajo.md) · `tajo/README.md` |
-| `nebulosa/` | NEBULOSA: fusionar cuerpos celestes (polvo estelar → agujero negro) con física, neón synthwave, 3 modos, catálogo, un archivo de 104 KB | [nebulosa](nebulosa.md) · `nebulosa/README.md` |
+| `salamanca/` | SALAMANCA: roguelite vertical en pixel art tipo Archero, 4 pisos con jefe, cartas, altar, desafío del día, 13 idiomas, un archivo de 214 KB | [salamanca](salamanca.md) · `salamanca/README.md` |
+| `filete/` | FILETE: rompecabezas de bloques tipo Block Blast en filete porteño, tango sintetizado, 30 niveles por barrios, 13 idiomas, un archivo de 113 KB | [filete](filete.md) · `filete/README.md` |
+| `dorado/` | DORADO: pinball vertical en Art Déco, misiones de hotel, multibola, jazz sintetizado, 13 idiomas, un archivo de 160 KB | [dorado](dorado.md) · `dorado/README.md` |
+| `tajo/` | TAJO: cortar fruta tipo Fruit Ninja en tinta sumi-e, 4 modos, dojo de filos, koto sintetizado, 13 idiomas, un archivo de 117 KB | [tajo](tajo.md) · `tajo/README.md` |
+| `nebulosa/` | NEBULOSA: fusionar cuerpos celestes (polvo estelar → agujero negro) con física, neón synthwave, 3 modos, catálogo, 13 idiomas, un archivo de 92 KB | [nebulosa](nebulosa.md) · `nebulosa/README.md` |
 | `ports/bus-stop/` | port de *Bus Stop Simulator* (Unity 4.5, de otros) a three.js y APK: solo el código y las herramientas; lo del juego sale de su zip | [bus-stop](bus-stop.md) · `ports/bus-stop/README.md` |
 | `ports/slendytubbies/` | port de *Slendytubbies V2 Beta* (Unity 4.0, de otros) a un solo HTML con multijugador: solo el código y las herramientas | [slendytubbies](slendytubbies.md) · `ports/slendytubbies/README.md` |
 | `ports/tjoc-sm/` | port de *The Joy of Creation: Story Mode* (UE 4.16, de otros) a three.js y APK, por capítulos: solo el código y las herramientas | [tjoc](tjoc.md) · `ports/tjoc-sm/README.md` |

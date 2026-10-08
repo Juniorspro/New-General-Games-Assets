@@ -5,6 +5,8 @@ Hotel de los años 20: `dorado/dorado.html`, **158 KB**. Qué archivo tiene qué
 
 ## Lo que hay que saber
 
+- **08/10: sin intro y en 13 idiomas** ([idiomas](idiomas.md)); la intro quedó en git: `git show 1f2f036:dorado/js/intro.js`. La letra Limelight trae ahora Ğ İ Ö Ş.
+
 - Armar: `node motor2d/armar.mjs dorado`. La mesa es fija (360 × 600) y va abajo; `Y0 = H − 600` es la marquesina
   (con H 640 queda de 40 y la misión se muestra chica arriba de la mesa).
 - **La letra déco sin pesar**: el TTF de Limelight pesaba 132 KB; `herramientas/glifos.py` saca solo los

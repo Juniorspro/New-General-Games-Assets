@@ -6,7 +6,7 @@
 
 const RAREZA = { comun: { peso: 60, col: '#d8d0c0', nombre: 0 }, rara: { peso: 30, col: '#5ac8ff' }, epica: { peso: 10, col: '#ffcf4a' } };
 
-/* nombre y descripción en [es, en, pt] */
+/* nombre y descripción en [es, en, pt]; los otros idiomas están en salamanca/js/idiomas.js */
 const CARTAS = {
   frontal:   { palo: 'bastos', rar: 'rara', max: 3, n: ['TIRO DOBLE', 'DOUBLE SHOT', 'TIRO DUPLO'], d: ['+1 DISPARO HACIA ADELANTE.', '+1 FORWARD SHOT.', '+1 DISPARO PARA A FRENTE.'] },
   seguido:   { palo: 'bastos', rar: 'rara', max: 2, n: ['RÁFAGA', 'BURST', 'RAJADA'], d: ['DISPARÁS OTRA VEZ AL INSTANTE.', 'FIRE AGAIN RIGHT AWAY.', 'ATIRA DE NOVO NA HORA.'] },
@@ -34,9 +34,13 @@ const CARTAS = {
   esquive:   { palo: 'oros', rar: 'rara', max: 3, n: ['SOMBRA', 'SHADOW', 'SOMBRA'], d: ['+10% DE ESQUIVAR GOLPES.', '+10% CHANCE TO DODGE HITS.', '+10% DE CHANCE DE ESQUIVAR.'] },
   copla:     { palo: 'oros', rar: 'comun', max: 2, n: ['GUITARRA', 'GUITAR', 'VIOLÃO'], d: ['LA COPLA SE CARGA MÁS RÁPIDO.', 'COPLA CHARGES FASTER.', 'A COPLA CARREGA MAIS RÁPIDO.'] },
 };
-const iIdioma = () => (IDIOMA === 'en' ? 1 : IDIOMA === 'pt' ? 2 : 0);
-const nombreCarta = (id) => CARTAS[id].n[iIdioma()];
-const descCarta = (id) => CARTAS[id].d[iIdioma()];
+const iIdioma = () => (IDIOMA === 'es' || IDIOMA === 'es-MX' ? 0 : IDIOMA === 'pt' ? 2 : 1);
+/* [nombre, descripción] del idioma puesto, si su tabla lo trae; si no, el de las listas de arriba */
+const deTabla = (tabla, id, k) => { const t = tabla[IDIOMA] && tabla[IDIOMA][id]; return t && t[k]; };
+const nombreCarta = (id) => deTabla(CARTAS_IDIOMA, id, 0) || CARTAS[id].n[iIdioma()];
+const descCarta = (id) => deTabla(CARTAS_IDIOMA, id, 1) || CARTAS[id].d[iIdioma()];
+const nombreAltar = (a) => deTabla(ALTAR_IDIOMA, a.id, 0) || a.n[iIdioma()];
+const descAltar = (a) => deTabla(ALTAR_IDIOMA, a.id, 1) || a.d[iIdioma()];
 
 /* tres cartas distintas para elegir. "solo" fuerza una rareza (el trato del Pombero da épicas) */
 function ofrecerCartas(j, rnd, solo) {

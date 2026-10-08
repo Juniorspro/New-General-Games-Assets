@@ -7,11 +7,11 @@ la 4.ª es el fogón del Pombero (descansar o hacer un trato) y la 8.ª, el jefe
 Lobizón y el Mandinga). Después se puede seguir bajando sin fin. Las almas que juntás quedan para el
 altar (mejoras para siempre). El desafío del día usa la misma semilla para todos ese día.
 
-- Un solo archivo: `salamanca.html` (unos 180 KB, abre con doble clic, sin internet).
+- Un solo archivo: `salamanca.html` (unos 215 KB, abre con doble clic, sin internet).
 - Armar: `node motor2d/armar.mjs salamanca` (lee `juego.json`).
 - Todo el arte está escrito como texto en `js/arte.js`; el sonido y la música (una chacarera con
   guitarra Karplus-Strong, bombo y quena) se sintetizan en `js/sonido.js`.
-- Español, inglés y portugués (`js/base.js`, `js/cartas.js`).
+- 13 idiomas: arranca en el del celu y se cambia en el menú (el botón del globito); sin intro (`js/base.js`, `js/cartas.js`, `js/idiomas.js`).
 - Controles de dedo a gusto (`js/entrada.js`): palanca flotante o fija, tamaños, transparencia, zurdo
   y vibración; se arrastran en la pantalla de Controles y se guardan.
 
@@ -19,6 +19,7 @@ altar (mejoras para siempre). El desafío del día usa la misma semilla para tod
 |---|---|
 | `js/base.js` | tamaños, azar con semilla, guardado, textos |
 | `js/cartas.js` | las cartas y el altar |
+| `js/idiomas.js` | los 10 idiomas que se sumaron: textos, cartas y altar |
 | `js/arte.js` | sprites, íconos, luces, los cuatro pisos |
 | `js/sonido.js` | efectos y música |
 | `js/entrada.js` | dedos, mouse y teclado |

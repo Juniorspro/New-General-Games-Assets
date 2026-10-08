@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Quedan las ~8 más nuevas; las viejas pasan a
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
+- **08/10/2026 · `claude/fijate-iszyer`:**
+  - Pidió 13 idiomas (por países) con opción en el menú en vez del cartel, y sacarles la intro, en los zip.
+    Hecho en los 5 ([idiomas](idiomas.md)): `motor2d/idiomas.js` + `<juego>/js/idiomas.js`; los de píxeles con el
+    lienzo a resolución real. Probados con `herramientas/idiomas/probar.mjs`: 13 idiomas × 5 juegos, 0 errores.
+    Zips nuevos mandados. Las traducciones las hizo Claude: si alguien nativo marca algo, se corrige en `js/idiomas.js`.
 - **07/10/2026 · `claude/fijate-iszyer` (continuación):**
   - TAJO: la primera entrega estaba incompleta y se quejó ("ni te hiciste el juego"). Rehecho entero ([tajo](tajo.md)):
     127 KB, 4 modos, combos, bombas, poderes, dojo, controles, intro a pincel. Mandados el HTML y una portada nueva

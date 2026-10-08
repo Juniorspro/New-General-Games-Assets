@@ -6,6 +6,7 @@ estética de filete porteño: `filete/filete.html`, **108 KB**. Cómo es y qué 
 ## Lo que hay que saber
 
 - Armar: `node motor2d/armar.mjs filete`. Pantalla de 216 de ancho (1080 = escala 5), alto 384 a 520.
+- **08/10: sin intro y en 13 idiomas** ([idiomas](idiomas.md)); la intro de abajo quedó en git: `git show 1f2f036:filete/js/intro.js`.
 - **La intro con estilo**: `crearIntroJXS({ ..., estilo })` y `jingleJXS(ctx, destino, estilo)`; el estilo
   cambia el material (colores del metal, filo, bisel, sombra corrida), el fondo y agrega dibujos (`antes`,
   `despues`, `palabraFondo`) y otra música (`jingle`). Ejemplo completo: `filete/js/intro.js`.

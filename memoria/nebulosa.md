@@ -8,6 +8,7 @@ Tercer juego del pedido "ahora otro": fusionar cuerpos celestes con física (tip
 - **Lienzo liso, no de píxeles**: `canvas` al tamaño real × dpr, unidades lógicas de 360 de ancho y
   `g.setTransform(S, …)` al empezar cada cuadro. Los lienzos en caché (`lienzoHD`) se pintan a `S` y se
   estampan con tamaño lógico; al cambiar `S` se rehacen (la clave lleva `S`).
+- **08/10: sin intro y en 13 idiomas** ([idiomas](idiomas.md)); la intro de abajo quedó en git: `git show 1f2f036:nebulosa/js/intro.js`.
 - **La intro de JXSTUDIOS en un juego liso**: la intro compartida ahora acepta `logo(g, i)` (dibujar el
   monograma a mano con `i.TRAZOS`/`i.camino2d`), `letras`/`presentaTxt` (otra letra), `anchoLogo`, `chispa`, y
   dibuja el fondo con tamaño lógico. Ejemplo: `nebulosa/js/intro.js` (tubos que se prenden y su reflejo).

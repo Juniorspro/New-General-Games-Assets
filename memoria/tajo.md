@@ -7,6 +7,8 @@ correr el bot que juega cada modo** (abajo) y mirar una hoja de capturas: si alg
 
 ## Lo que hay que saber
 
+- **08/10: sin intro y en 13 idiomas** ([idiomas](idiomas.md)); la intro quedó en git: `git show 1f2f036:tajo/js/intro.js`. El papel, el sello y el salpicón siguen en `tajo/js/papel.js`.
+
 - Armar: `node motor2d/armar.mjs tajo`. Lienzo liso como NEBULOSA (360 de ancho, alto 600 a 800, `S` = píxeles por
   unidad); la intro de JXSTUDIOS con `ESTILO_SUMI` (`js/intro.js`): pantalla negra que abre un tajo de luz, monograma
   a pincel con `i.TRAZOS`, sello rojo que cae en el golpe. Lleva `motor2d/fuente.js` (la intro lo usa igual).

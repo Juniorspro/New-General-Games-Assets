@@ -5,9 +5,10 @@
   ],
   "js": [
     "motor2d/fuente.js",
-    "motor2d/intro-jxs.js",
+    "motor2d/idiomas.js",
     "salamanca/js/base.js",
     "salamanca/js/cartas.js",
+    "salamanca/js/idiomas.js",
     "salamanca/js/arte.js",
     "salamanca/js/sonido.js",
     "salamanca/js/entrada.js",

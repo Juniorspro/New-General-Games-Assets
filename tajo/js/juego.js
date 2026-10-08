@@ -1,12 +1,12 @@
 /* ============================================================================
-   TAJO: escenas (intro, idioma, menú, partida, pausa, fin, dojo, controles),
+   TAJO: escenas (menú, idioma, partida, pausa, fin, dojo, controles),
    el filo y los cortes, las olas de fruta, los cuatro modos, los poderes y el
    bucle. Todo en unidades de 360 de ancho; S lo pasa a píxeles.
    ========================================================================== */
 
 const lienzoP = document.getElementById('lienzo');
 const g = lienzoP.getContext('2d');
-let escena = 'intro', tEsc = 0, trans = null, fondo = null, G = null, ahora = 0, dtCuadro = 1 / 60;
+let escena = 'menu', tEsc = 0, trans = null, fondo = null, G = null, ahora = 0, dtCuadro = 1 / 60;
 
 const CTRL_BASE = { grosor: 1, sensib: 1, alcance: 1, tamPausa: 1, zurdo: false, vibrar: true };
 const CTRL = Object.assign({}, CTRL_BASE, Guardado.leer('controles', {}));
@@ -145,9 +145,10 @@ function pincelada(w, h, col, sem) {
 }
 function boton(x, y, w, h, txt, o) {
   o = o || {};
-  const apr = !o.apagado && apretando(x, y, w, h), col = o.apagado ? '#8c8072' : apr ? BERMELLON : (o.col || TINTA), dy = apr ? 1.5 : 0;
+  const apr = !o.apagado && apretando(x, y, w, h), col = o.apagado ? '#8c8072' : apr ? BERMELLON : (o.col || TINTA), dy = apr ? 1.5 : 0, gl = o.globo ? 18 : 0;
   g.drawImage(pincelada(Math.round(w), Math.round(h), col, o.sem || (Math.round(x * 7 + y * 3) % 97)), x - 8, y - 6 + dy, w + 16, h + 12);
-  texto(g, txt, x + w / 2, y + h / 2 + 1 + dy, { tam: tamQueEntra(g, txt, o.tam || 16, w - 18), col: '#f5ecd8', tinta: false });
+  if (o.globo) dibujarGlobo(g, x + 13, y + h / 2 + 1 + dy, 6.5, '#f5ecd8', 1.3);
+  texto(g, txt, x + w / 2 + gl / 2, y + h / 2 + 1 + dy, { tam: tamQueEntra(g, txt, o.tam || 16, w - 18 - gl), col: '#f5ecd8', tinta: false });
   const si = !o.apagado && clicEn(x, y, w, h);
   if (si) { Sonido.sfx('boton'); vibrar(8); }
   return si;
@@ -254,22 +255,18 @@ function dibujarMundo(M) {
 }
 const nuevoMundo = () => ({ mitades: [], manchas: [], gotas: [] });
 
-/* ------------------------------------------------------------------ intro */
-let intro = null, musicaIntro = null;
-function escenaIntro(dt) {
-  filoPaso(null);
-  if (E.toque || apretada('Enter', 'Space', 'Escape')) { intro.saltar(); if (intro.listo && musicaIntro) musicaIntro.cortar(); }
-  intro.pasar(dt); intro.dibujar(g);
-  if (intro.listo && !trans) irA('idioma');
-}
+/* ---------------------------------------------------------------- idioma */
+/* la lista de los 13 idiomas, cada uno escrito en su idioma; el elegido, en bermellón */
 function escenaIdioma(t) {
   filoPaso(null);
   g.drawImage(fondo, 0, 0, W, H);
-  tituloTajo(H * 0.16, t);
-  const y0 = Math.round(H * 0.38);
-  ['es', 'en', 'pt'].forEach((l, i) => texto(g, TXT[l].idioma, W / 2, y0 + i * 20, { tam: 13, col: i === 1 ? BERMELLON : TINTA, tinta: false }));
-  const nombres = { es: 'ESPAÑOL', en: 'ENGLISH', pt: 'PORTUGUÊS' };
-  ['es', 'en', 'pt'].forEach((l, i) => { if (boton(80, y0 + 84 + i * 60, W - 160, 42, nombres[l], { tam: 18, col: l === IDIOMA ? BERMELLON : TINTA })) { IDIOMA = l; Guardado.escribir('idioma', l); irA('menu'); } });
+  dibujarGlobo(g, W / 2, 34, 11, TINTA, 2);
+  texto(g, tr('idioma'), W / 2, 66, { tam: tamQueEntra(g, tr('idioma'), 24, W - 40) });
+  const top = 92, bajo = H - 74, paso = Math.min(44, (bajo - top) / IDIOMAS.length), h = Math.min(32, paso - 6);
+  IDIOMAS.forEach((l, i) => {
+    if (boton(64, top + i * paso, W - 128, h, l.nombre, { tam: 15, col: l.id === IDIOMA ? BERMELLON : TINTA, sem: i * 7 + 3 })) { IDIOMA = l.id; Guardado.escribir('idioma', l.id); irA('menu'); }
+  });
+  if (boton(W / 2 - 80, H - 58, 160, 38, tr('volver'), { tam: 15 }) || apretada('Escape')) irA('menu');
 }
 
 /* ------------------------------------------------------------------- menú */
@@ -308,7 +305,7 @@ function escenaMenu(t) {
   const bw = (W - 48) / 3;
   if (boton(16, H - 58, bw, 34, tr('dojo'), { tam: 14 })) irA('dojo');
   if (boton(24 + bw, H - 58, bw, 34, tr('controles'), { tam: 14 })) irA('controles');
-  if (boton(32 + bw * 2, H - 58, bw, 34, tr('idiomaBtn'), { tam: 14 })) irA('idioma');
+  if (boton(32 + bw * 2, H - 58, bw, 34, tr('idiomaBtn'), { tam: 14, globo: true })) irA('idioma');
   dibujarFilo();
 }
 
@@ -553,8 +550,8 @@ function dibujarAyuda(P, t) {
     dibujarRastro(g, { pts }, filoActual(), 18, 0, 1);
   }
   let y = H * 0.56;
-  for (const l of partir(tr('ayuda'), 24)) { texto(g, l, W / 2, y, { tam: 16 }); y += 24; }
-  if (P.modo === 'clasico') { y += 8; for (const l of partir(tr('ayudaFalla'), 30)) { texto(g, l, W / 2, y, { tam: 13, col: BERMELLON, tinta: false }); y += 19; } }
+  for (const l of partirMedido(tr('ayuda'), W - 56, (s) => medir(g, s, 16))) { texto(g, l, W / 2, y, { tam: 16 }); y += 24; }
+  if (P.modo === 'clasico') { y += 8; for (const l of partirMedido(tr('ayudaFalla'), W - 56, (s) => medir(g, s, 13))) { texto(g, l, W / 2, y, { tam: 13, col: BERMELLON, tinta: false }); y += 19; } }
   g.globalAlpha = 0.5 + 0.5 * Math.sin(t * 4); texto(g, tr('tocar'), W / 2, H * 0.86, { tam: 13, col: GRIS, tinta: false }); g.globalAlpha = 1;
 }
 function dibujarPartida(t, quieto) {
@@ -726,9 +723,8 @@ function cuadro(ts) {
   if (trans) { trans.t += dt; if (!trans.hecho && trans.t >= trans.dur) { trans.hecho = true; trans.alMedio(); } if (trans.t >= trans.dur * 2) trans = null; }
   g.setTransform(S, 0, 0, S, 0, 0);
   try {
-    if (escena !== 'intro') Sonido.musica(temaDe());
+    Sonido.musica(temaDe());
     switch (escena) {
-      case 'intro': escenaIntro(dt); break;
       case 'idioma': escenaIdioma(t); break;
       case 'menu': escenaMenu(t); break;
       case 'juego': if (!trans) actualizarPartida(dt); else filoPaso(null); if (escena === 'juego') dibujarPartida(t); else escenaPausa(t); break;
@@ -744,9 +740,7 @@ function cuadro(ts) {
 }
 function arrancar() {
   ajustar();
-  intro = crearIntroJXS({ W, H, presenta: TXT[IDIOMA].presenta, vibrar, estilo: ESTILO_SUMI });
   Sonido.iniciar();
-  if (Sonido.ctx && Sonido.ctx.state === 'running') musicaIntro = jingleJXS(Sonido.ctx, Sonido.total, ESTILO_SUMI);
   prepararMenu(); prepararPractica();
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (escena === 'juego' && G && !G.fin) irPausa(); Sonido.pausar(true); } else Sonido.pausar(false); });
   requestAnimationFrame(cuadro);

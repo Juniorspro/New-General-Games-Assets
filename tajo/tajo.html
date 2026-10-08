@@ -17,529 +17,123 @@ body { background: #120e0b radial-gradient(ellipse at 50% 40%, #2a2018 0%, #120e
 <canvas id="lienzo"></canvas>
 <script>
 (()=>{'use strict';
-/* ==== motor2d/fuente.js ==== */
+/* ==== motor2d/idiomas.js ==== */
 /* ============================================================================
-   motor2d/fuente.js — la fuente de píxeles 5x7 de EL TIPO, con tildes, Ñ, Ü,
-   ¡¿ y las letras del portugués, más los signos que piden los diálogos. Las minúsculas se dibujan como
-   mayúsculas: en un juego alcanza y se lee mejor a este tamaño.
+   motor2d/idiomas.js — los 13 idiomas de los juegos (pedido del 08/10 para
+   Brasil, Egipto, Indonesia, Irak, Japón, Myanmar, México, Malasia,
+   Filipinas, Pakistán, Arabia Saudita, Tailandia y Turquía, más los tres que
+   ya estaban). Egipto, Irak y Arabia Saudita comparten el árabe estándar.
+
+   Lo común a todos: la lista con el nombre de cada idioma en su idioma, el
+   idioma del celular al arrancar (sin cartel: se cambia desde el menú), qué
+   letra del sistema usar para cada escritura, el árabe y el urdu de derecha a
+   izquierda, y el corte de renglones midiendo (el japonés, el tailandés y el
+   birmano no separan las palabras con espacios: se corta con Intl.Segmenter).
    ========================================================================== */
 
-const FUENTE_PX = {
-  A: [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"], B: ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."],
-  C: [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."], D: ["####.", "#...#", "#...#", "#...#", "#...#", "#...#", "####."],
-  E: ["#####", "#....", "#....", "####.", "#....", "#....", "#####"], F: ["#####", "#....", "#....", "####.", "#....", "#....", "#...."],
-  G: [".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".####"], H: ["#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
-  I: [".###.", "..#..", "..#..", "..#..", "..#..", "..#..", ".###."], J: ["..###", "...#.", "...#.", "...#.", "#..#.", "#..#.", ".##.."],
-  K: ["#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#"], L: ["#....", "#....", "#....", "#....", "#....", "#....", "#####"],
-  M: ["#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#"], N: ["#...#", "#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#"],
-  O: [".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."], P: ["####.", "#...#", "#...#", "####.", "#....", "#....", "#...."],
-  Q: [".###.", "#...#", "#...#", "#...#", "#.#.#", "#..#.", ".##.#"], R: ["####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"],
-  S: [".####", "#....", "#....", ".###.", "....#", "....#", "####."], T: ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."],
-  U: ["#...#", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."], V: ["#...#", "#...#", "#...#", "#...#", "#...#", ".#.#.", "..#.."],
-  W: ["#...#", "#...#", "#...#", "#.#.#", "#.#.#", "#.#.#", ".#.#."], X: ["#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#"],
-  Y: ["#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", "..#.."], Z: ["#####", "....#", "...#.", "..#..", ".#...", "#....", "#####"],
-  0: [".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."], 1: ["..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."],
-  2: [".###.", "#...#", "....#", "...#.", "..#..", ".#...", "#####"], 3: ["####.", "....#", "....#", ".###.", "....#", "....#", "####."],
-  4: ["...#.", "..##.", ".#.#.", "#..#.", "#####", "...#.", "...#."], 5: ["#####", "#....", "####.", "....#", "....#", "#...#", ".###."],
-  6: [".###.", "#....", "#....", "####.", "#...#", "#...#", ".###."], 7: ["#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..."],
-  8: [".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."], 9: [".###.", "#...#", "#...#", ".####", "....#", "....#", ".###."],
-  ' ': ["...", "...", "...", "...", "...", "...", "..."], '!': ["#", "#", "#", "#", "#", ".", "#"], '¡': ["#", ".", "#", "#", "#", "#", "#"],
-  '?': [".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."], '¿': ["..#..", ".....", "..#..", ".#...", "#....", "#...#", ".###."],
-  '.': [".", ".", ".", ".", ".", ".", "#"], ',': ["..", "..", "..", "..", "..", ".#", "#."], ':': [".", "#", ".", ".", ".", "#", "."],
-  ';': ["..", ".#", "..", "..", "..", ".#", "#."], '-': ["....", "....", "....", "####", "....", "....", "...."],
-  "'": ["#", "#", ".", ".", ".", ".", "."], '"': ["#.#", "#.#", "...", "...", "...", "...", "..."],
-  '/': ["....#", "...#.", "...#.", "..#..", ".#...", ".#...", "#...."], '+': [".....", "..#..", "..#..", "#####", "..#..", "..#..", "....."],
-  '×': [".....", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "....."], '·': [".", ".", ".", "#", ".", ".", "."],
-  '%': ["##..#", "##.#.", "...#.", "..#..", ".#...", ".#.##", "#..##"], '>': ["#....", ".#...", "..#..", "...#.", "..#..", ".#...", "#...."],
-  '<': ["....#", "...#.", "..#..", ".#...", "..#..", "...#.", "....#"], '=': ["....", "....", "####", "....", "####", "....", "...."],
-  '(': ["..#", ".#.", "#..", "#..", "#..", ".#.", "..#"], ')': ["#..", ".#.", "..#", "..#", "..#", ".#.", "#.."],
-  '…': [".....", ".....", ".....", ".....", ".....", ".....", "#.#.#"], '*': [".....", "#.#.#", ".###.", "#####", ".###.", "#.#.#", "....."],
-  '—': [".....", ".....", ".....", "#####", ".....", ".....", "....."], '_': ["....", "....", "....", "....", "....", "....", "####"],
-};
-/* las letras con marca: la base más la marca. Con las del portugués (Â Ã À Ç Ê Ô Õ)
-   alcanza para los tres idiomas de los juegos */
-const ACENTOS_PX = {
-  'Á': ['A', 'a'], 'É': ['E', 'a'], 'Í': ['I', 'a'], 'Ó': ['O', 'a'], 'Ú': ['U', 'a'], 'Ñ': ['N', 't'], 'Ü': ['U', 'd'],
-  'Â': ['A', 'c'], 'Ã': ['A', 't'], 'À': ['A', 'g'], 'Ê': ['E', 'c'], 'Ô': ['O', 'c'], 'Õ': ['O', 't'], 'Ç': ['C', 'z'],
-};
-const MARCAS_PX = {
-  a: [[3, -3], [2, -2]], t: [[0, -2], [1, -3], [2, -3], [3, -2], [4, -3]], d: [[1, -2], [3, -2]],
-  c: [[1, -2], [2, -3], [3, -2]], g: [[1, -3], [2, -2]], z: [[2, 7], [3, 8], [2, 8]],
-};
+const IDIOMAS = [
+  { id: 'es', nombre: 'Español (Argentina)' },
+  { id: 'es-MX', nombre: 'Español (México)' },
+  { id: 'en', nombre: 'English' },
+  { id: 'pt', nombre: 'Português (Brasil)' },
+  { id: 'ar', nombre: 'العربية', rtl: true },
+  { id: 'id', nombre: 'Bahasa Indonesia' },
+  { id: 'ms', nombre: 'Bahasa Melayu' },
+  { id: 'fil', nombre: 'Filipino' },
+  { id: 'tr', nombre: 'Türkçe' },
+  { id: 'ur', nombre: 'اردو', rtl: true },
+  { id: 'th', nombre: 'ไทย' },
+  { id: 'my', nombre: 'မြန်မာ' },
+  { id: 'ja', nombre: '日本語' },
+];
+const nombreIdioma = (id) => (IDIOMAS.find((i) => i.id === id) || IDIOMAS[2]).nombre;
 
-function glifoPx(ch) {
-  const c = ch.toUpperCase();
-  if (FUENTE_PX[c]) return { f: FUENTE_PX[c], m: null };
-  const a = ACENTOS_PX[c];
-  if (a) return { f: FUENTE_PX[a[0]], m: MARCAS_PX[a[1]] };
-  return { f: FUENTE_PX['?'], m: null };
-}
-/* puntos encendidos de un texto: [x, y, fila], con y = 0 en la línea de las mayúsculas */
-function puntosTexto(str) {
-  const pts = [];
-  let x = 0;
-  for (const ch of str) {
-    const g = glifoPx(ch), w = g.f[0].length;
-    for (let r = 0; r < 7; r++) for (let k = 0; k < w; k++) if (g.f[r][k] === '#') pts.push([x + k, r, r]);
-    if (g.m) for (const [mx, my] of g.m) pts.push([x + mx, my, my > 6 ? 6 : 0]);
-    x += w + 1;
+/* el idioma del equipo: el rioplatense queda para Argentina, Uruguay y Paraguay;
+   el resto del español va con el de México (tuteo) */
+function idiomaDelEquipo() {
+  const lista = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en']).map((l) => String(l).toLowerCase());
+  for (const l of lista) {
+    const [base, region] = l.split(/[-_]/);
+    if (base === 'es') return ['ar', 'uy', 'py'].includes(region) ? 'es' : 'es-MX';
+    if (base === 'pt') return 'pt';
+    if (base === 'tl' || base === 'fil') return 'fil';
+    if (base === 'in') return 'id';
+    if (IDIOMAS.some((i) => i.id === base)) return base;
   }
-  return { pts, w: Math.max(1, x - 1) };
+  return 'en';
 }
-function anchoTexto(str) {
-  let x = 0;
-  for (const ch of str) x += glifoPx(ch).f[0].length + 1;
-  return Math.max(0, x - 1);
-}
+function idiomaInicial(guardado) { return guardado && IDIOMAS.some((i) => i.id === guardado) ? guardado : idiomaDelEquipo(); }
 
-const GRAD = {
-  blanco: ['#ffffff', '#ffffff', '#f1f3fa', '#e2e6f2', '#cfd4e6', '#b8bed6', '#a3a9c4'],
-  oro: ['#fff6b0', '#ffe066', '#ffd24a', '#ffb43a', '#f5a02a', '#e0862a', '#c46a22'],
-  rojo: ['#ffc2b8', '#ff8a7a', '#ff6a5a', '#ff5a50', '#e8404a', '#c42a3c', '#9a1f34'],
-  verde: ['#d6ffd8', '#9cffae', '#7ef09a', '#63d98a', '#4cc076', '#3aa062', '#2c8050'],
-  azul: ['#d0f0ff', '#9fe0ff', '#7ad2ff', '#5ac8ff', '#3aa8e8', '#2a88c8', '#1e6aa8'],
-  gris: ['#e8ebf5', '#cdd3e8', '#b8bed6', '#a3a9c4', '#8d96b5', '#78809e', '#636b88'],
-  fuego: ['#fff6b0', '#ffe066', '#ffb43a', '#ff7a2a', '#f04a2a', '#c42a3c', '#7a1f4a'],
-  ocre: ['#fff0d0', '#ffd9a0', '#f3b877', '#e39b55', '#cc7c3c', '#a85f2e', '#7d4424'],
-  celeste: ['#f0fbff', '#d4f3ff', '#b5e8fb', '#93d6f2', '#76c0e6', '#5aa4d4', '#4486bb'],
-  ambar: ['#fff4c2', '#ffe08a', '#ffc85a', '#f6a93a', '#e08a24', '#bf6c1c', '#8f4f18'],
-  violeta: ['#f3e6ff', '#dcc2ff', '#c29dff', '#a87cf5', '#8e5fe0', '#7446c4', '#5a33a0'],
+/* la escritura de un texto, por su primera letra que no sea latina */
+function escrituraDe(str) {
+  for (const ch of String(str)) {
+    const c = ch.codePointAt(0);
+    if (c < 0x0370) continue;
+    if ((c >= 0x0600 && c <= 0x06ff) || (c >= 0x0750 && c <= 0x077f) || (c >= 0xfb50 && c <= 0xfdff) || (c >= 0xfe70 && c <= 0xfeff)) return 'arab';
+    if (c >= 0x0e00 && c <= 0x0e7f) return 'thai';
+    if ((c >= 0x1000 && c <= 0x109f) || (c >= 0xa9e0 && c <= 0xa9ff) || (c >= 0xaa60 && c <= 0xaa7f)) return 'mymr';
+    if ((c >= 0x3000 && c <= 0x30ff) || (c >= 0x3400 && c <= 0x9fff) || (c >= 0xff00 && c <= 0xffef)) return 'jpan';
+  }
+  return 'latn';
+}
+const esRTL = (str) => escrituraDe(str) === 'arab';
+
+/* las letras del sistema por escritura (las trae cada celular para su idioma).
+   Dos estilos: 'sans' (palo seco) y 'serif' (para los juegos de letra con serifa) */
+const FUENTES_ESCRITURA = {
+  arab: { sans: '"Noto Naskh Arabic","Noto Sans Arabic","Geeza Pro","Segoe UI","Tahoma",sans-serif', serif: '"Noto Naskh Arabic","Amiri","Geeza Pro","Times New Roman",serif' },
+  urdu: { sans: '"Noto Naskh Arabic","Noto Nastaliq Urdu","Geeza Pro","Segoe UI","Tahoma",sans-serif', serif: '"Noto Naskh Arabic","Noto Nastaliq Urdu","Geeza Pro","Times New Roman",serif' },
+  thai: { sans: '"Noto Sans Thai","Noto Sans Thai UI","Leelawadee UI","Leelawadee","Thonburi","Tahoma",sans-serif', serif: '"Noto Serif Thai","Noto Sans Thai","Leelawadee UI","Thonburi",serif' },
+  mymr: { sans: '"Noto Sans Myanmar","Noto Sans Myanmar UI","Myanmar Text","Myanmar Sangam MN","Padauk",sans-serif', serif: '"Noto Serif Myanmar","Noto Sans Myanmar","Myanmar Text","Myanmar Sangam MN","Padauk",serif' },
+  jpan: { sans: '"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Noto Sans CJK JP","Yu Gothic","Meiryo",sans-serif', serif: '"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP","Noto Serif CJK JP","MS Mincho",serif' },
 };
+function fuenteEscritura(esc, estilo) {
+  if (esc === 'latn') return null;
+  const f = FUENTES_ESCRITURA[esc === 'arab' && IDIOMA === 'ur' ? 'urdu' : esc];
+  return f[estilo === 'serif' ? 'serif' : 'sans'];
+}
+/* a igual tamaño en píxeles, las mayúsculas latinas se ven más grandes que el
+   árabe o el tailandés y más chicas que el japonés: se compensa */
+const escalaEscritura = (esc) => ({ latn: 1, arab: 1.18, thai: 1.12, mymr: 1.02, jpan: 0.92 })[esc] || 1;
 
-/* texto a un lienzo de 1 px por píxel de fuente: sombra, contorno y degradé
-   por fila. Arriba deja 3 filas de aire para las tildes */
-const cacheTxt = new Map();
-function lienzoTexto(str, o) {
-  o = o || {};
-  const clave = str + '|' + (o.grad ? o.grad[0] + o.grad[6] : o.col) + '|' + (o.borde || '') + '|' + (o.sinSombra ? 1 : 0);
-  let c = cacheTxt.get(clave);
-  if (c) return c;
-  const { pts, w } = puntosTexto(str);
-  const arriba = 3;
-  c = document.createElement('canvas');
-  c.width = w + 3; c.height = arriba + 7 + 3;
-  const g = c.getContext('2d'), ox = 1, oy = arriba + 1, borde = o.borde || '#141018';
-  if (!o.sinSombra) {
-    g.fillStyle = 'rgba(10,6,16,0.75)';
-    for (const [x, y] of pts) g.fillRect(ox + x - 1, oy + y, 3, 3);
-  }
-  if (o.borde !== 'no') {
-    g.fillStyle = borde;
-    for (const [x, y] of pts) g.fillRect(ox + x - 1, oy + y - 1, 3, 3);
-  }
-  for (const [x, y, r] of pts) { g.fillStyle = o.grad ? o.grad[r] : (o.col || '#fff'); g.fillRect(ox + x, oy + y, 1, 1); }
-  if (cacheTxt.size > 500) cacheTxt.clear();
-  cacheTxt.set(clave, c);
-  return c;
-}
-
-/* dibuja texto en el lienzo del mundo. y = la línea de arriba de las mayúsculas.
-   o.alin: 'izq' | 'centro' | 'der'; o.escala: entero, para títulos */
-function textoPx(g, str, x, y, o) {
-  o = o || {};
-  const c = lienzoTexto(str, o), e = o.escala || 1;
-  let dx = x - e;
-  if (o.alin === 'centro') dx = x - Math.floor((c.width - 3) * e / 2) - e;
-  else if (o.alin === 'der') dx = x - (c.width - 3) * e - e;
-  g.drawImage(c, Math.round(dx), Math.round(y - 4 * e), c.width * e, c.height * e);
-}
-/* letra por letra: para escribir de a poco y para las palabras que tiemblan */
-function textoLetras(g, str, x, y, o, cuantas, desplazar) {
-  o = o || {};
-  let cx = x, i = 0;
-  for (const ch of str) {
-    if (cuantas != null && i >= cuantas) break;
-    const w = glifoPx(ch).f[0].length;
-    if (ch !== ' ') {
-      const c = lienzoTexto(ch, o), d = desplazar ? desplazar(i) : null;
-      g.drawImage(c, Math.round(cx - 1 + (d ? d[0] : 0)), Math.round(y - 4 + (d ? d[1] : 0)));
-    }
-    cx += w + 1; i++;
-  }
-}
-/* partir un texto en renglones que entren en "ancho" píxeles */
-function envolver(str, ancho) {
-  const renglones = [];
-  for (const parrafo of str.split('\n')) {
+/* partir en renglones que entren en `ancho`, con `medir(texto)` → ancho. Corta en
+   espacios; si la escritura no los usa entre palabras, corta por palabras (Segmenter) */
+function partirMedido(str, ancho, medir) {
+  const out = [];
+  for (const parrafo of String(str).split('\n')) {
+    const esc = escrituraDe(parrafo);
+    let piezas;
+    if ((esc === 'jpan' || esc === 'thai' || esc === 'mymr') && typeof Intl !== 'undefined' && Intl.Segmenter) {
+      piezas = Array.from(new Intl.Segmenter(IDIOMA, { granularity: 'word' }).segment(parrafo), (s) => s.segment);
+    } else if (esc === 'jpan') piezas = Array.from(parrafo);
+    else piezas = parrafo.split(/(\s+)/);
     let linea = '';
-    for (const pal of parrafo.split(' ')) {
-      const prueba = linea ? linea + ' ' + pal : pal;
-      if (anchoTexto(prueba) > ancho && linea) { renglones.push(linea); linea = pal; }
+    for (const p of piezas) {
+      if (!p) continue;
+      const prueba = linea + p;
+      if (linea.trim() && medir(prueba.trim()) > ancho) { out.push(linea.trim()); linea = /^\s+$/.test(p) ? '' : p; }
       else linea = prueba;
     }
-    renglones.push(linea);
+    out.push(linea.trim());
   }
-  return renglones;
+  return out;
 }
 
-/* pone un texto del DOM en pixel art sin perder el texto original */
-function pixelar(el, S, o) {
-  if (!el) return;
-  const txt = el.textContent.trim() !== '' ? el.textContent.trim() : (el.dataset.px || '');
-  if (!txt) return;
-  const clave = txt + '|' + S + '|' + (o && o.grad ? o.grad[0] : '');
-  if (el.dataset.pxk === clave && el.querySelector('canvas.px')) return;
-  el.dataset.px = txt; el.dataset.pxk = clave; el.textContent = '';
-  const src = lienzoTexto(txt, o), c = document.createElement('canvas');
-  c.width = src.width; c.height = src.height;
-  c.getContext('2d').drawImage(src, 0, 0);
-  c.className = 'px';
-  c.style.width = (c.width * S) + 'px'; c.style.height = (c.height * S) + 'px';
-  c.setAttribute('aria-label', txt);
-  el.appendChild(c);
+/* el globito del botón de idioma: se reconoce aunque no se lea el idioma de ahora */
+function dibujarGlobo(g, x, y, r, col, ancho) {
+  g.save(); g.strokeStyle = col; g.lineWidth = ancho || Math.max(1, r * 0.16);
+  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+  g.beginPath(); g.ellipse(x, y, r * 0.42, r, 0, 0, Math.PI * 2); g.stroke();
+  g.beginPath(); g.moveTo(x - r, y); g.lineTo(x + r, y);
+  g.moveTo(x - r * 0.86, y - r * 0.5); g.lineTo(x + r * 0.86, y - r * 0.5); g.moveTo(x - r * 0.86, y + r * 0.5); g.lineTo(x + r * 0.86, y + r * 0.5); g.stroke();
+  g.restore();
 }
-
-const ICONOS_PX = {
-  corazon: [".##.##.", "#######", "#######", "#######", ".#####.", "..###..", "...#..."],
-  carta: ["#######", "##...##", "#.#.#.#", "#..#..#", "#.....#", "#.....#", "#######"],
-  calavera: [".#####.", "#######", "#..#..#", "#######", ".##.##.", ".#####.", "..#.#.."],
-  reloj: ["..###..", ".#...#.", "#..#..#", "#..##.#", "#.....#", ".#...#.", "..###.."],
-  ambar: ["..###..", ".#####.", "#######", "#######", ".#####.", "..###..", "...#..."],
-  chispa: ["...#...", "...#...", "..###..", "#######", "..###..", "...#...", "...#..."],
-  piedra: ["..###..", ".#####.", "#######", "#######", "#######", ".#####.", "......."],
-  viento: ["####...", "....#..", "######.", "......#", "#####..", ".....#.", "####..."],
-  pausa: [".##.##.", ".##.##.", ".##.##.", ".##.##.", ".##.##.", ".##.##.", ".##.##."],
-  mapa: ["#.#.#.#", "#######", "#.#.#.#", "#######", "#.#.#.#", "#######", "#.#.#.#"],
-  flecha: ["...#...", "..###..", ".#####.", "#######", "..###..", "..###..", "..###.."],
-  candado: ["..###..", ".#...#.", ".#...#.", "#######", "###.###", "###.###", "#######"],
-  estrella: ["...#...", "..###..", "#######", ".#####.", "..###..", ".##.##.", "#.....#"],
-  mano: [".#.#.#.", ".#.#.#.", ".#####.", "#######", "#######", ".#####.", "..###.."],
-  espina: ["......#", ".....#.", "....#..", "...#...", "..#....", ".#.....", "#......"],
-  luz: ["...#...", ".#.#.#.", "..###..", "###.###", "..###..", ".#.#.#.", "...#..."],
-};
-function iconoPx(nombre, col, S) {
-  const f = ICONOS_PX[nombre], c = document.createElement('canvas');
-  c.width = 10; c.height = 10;
-  const g = c.getContext('2d');
-  g.fillStyle = 'rgba(10,6,16,0.75)';
-  for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) if (f[y][x] === '#') g.fillRect(x + 1, y + 2, 3, 3);
-  g.fillStyle = '#141018';
-  for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) if (f[y][x] === '#') g.fillRect(x, y, 3, 3);
-  for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) if (f[y][x] === '#') { g.fillStyle = y < 2 ? '#ffffff' : col; g.fillRect(x + 1, y + 1, 1, 1); }
-  if (S) { c.className = 'px'; c.style.width = (10 * S) + 'px'; c.style.height = (10 * S) + 'px'; }
-  return c;
+/* el mismo globito en píxeles (9 × 9), para los juegos de píxeles */
+const GLOBO_PX = ['..###..', '.#.#.#.', '#######', '#..#..#', '#######', '.#.#.#.', '..###..'];
+function globoPx(g, x, y, col) {
+  g.fillStyle = col;
+  GLOBO_PX.forEach((fila, j) => { for (let i = 0; i < fila.length; i++) if (fila[i] === '#') g.fillRect(x + i, y + j, 1, 1); });
 }
-
-/* ==== motor2d/intro-jxs.js ==== */
-/* ============================================================================
-   motor2d/intro-jxs.js — LA intro de JXSTUDIOS para todos los juegos ("así las
-   quiero a las intro", 07/10, mostrando la de La Cripta). Sacada tal cual de
-   cripta/cripta.html (M_logojxs + M_intro + sonido › jingleJXS), sin depender
-   de nada de ese juego salvo la fuente de píxeles (motor2d/fuente.js).
-
-   En pixel art y rápida (2,1 s): una raya de luz abre la fibra de carbono, el
-   monograma JXS se escribe en metal con chispas en las puntas, golpe (destello,
-   sacudida, chispazo), una franja de brillo lo cruza, "JXSTUDIOS" se tipea y
-   abajo "presenta". Después, el iris (círculo que se cierra y se abre).
-
-   Uso:
-     const intro = crearIntroJXS({ W, H, presenta: 'PRESENTA', vibrar });
-     cada cuadro: intro.pasar(dt); intro.dibujar(g);   // g en píxeles del juego
-     un toque: intro.saltar();  ¿terminó?: intro.listo
-     con el audio andando (después de un toque no se puede antes): jingleJXS(ctx, destino)
-     transiciones: irisJXS(g, W, H, cx, cy, r)
-
-   Cada juego la viste a su estilo ("con su intro respectiva a su estilo", 07/10) con `estilo`:
-   la misma coreografía, otro material. Todo es opcional (sin estilo = La Cripta):
-     metal: [8 colores de arriba a abajo], filo, bisel, borde: '#rrggbb'
-     sombra: { dx, dy, col }                  el monograma proyecta una sombra plana (filete)
-     fondo(W, H, cx, cy) → lienzo             el fondo (por defecto la fibra de carbono)
-     puntas: [colores], golpe: [colores], destello: 'rgba(...)'
-     palabra: { col, borde }, presenta: color, negro: color del fondo
-     antes(g, t, I) / despues(g, t, I)        dibujar algo más (I.cx, I.cy, I.ancho, I.yPalabra)
-     jingle(ctx, bus, t0, tg, h)              otra música; h = { tono, soplo, f, T }
-   Para juegos que no son de píxeles (lienzo liso, con escala propia):
-     anchoLogo(W, H) → ancho del monograma; logo(g, i) lo dibuja a mano (i = { avance, t, x0, y0, esc,
-     ancho, golpe, tGolpe, TRAZOS, camino2d, largo, muestrear }); letras(g, parte, I, t, y) y presentaTxt(g, txt, I, t, y)
-     escriben con otra letra; chispa: px de las chispas (por defecto 1)
-   ========================================================================== */
-
-const IntroJXS_ = (() => {
-  const CAJA = { w: 350, h: 172 };
-  const GROSOR = 14.5;
-  // el monograma: cuatro trazos de metal (A va abajo en el cruce: se dibuja primero)
-  const TRAZOS = [
-    { id: 'A', capa: 0, d: [['M', 40, 19], ['L', 114, 19], ['L', 176, 101], ['C', 194, 128, 222, 168, 268, 169], ['C', 310, 170, 342, 152, 342, 122]] },
-    { id: 'J', capa: 0, d: [['M', 40, 43], ['L', 98, 43], ['L', 98, 116], ['C', 98, 148, 44, 158, 36, 124]] },
-    { id: 'S', capa: 0, d: [['M', 312, 66], ['C', 306, 46, 288, 36, 266, 36], ['C', 242, 36, 226, 48, 226, 63], ['C', 226, 80, 248, 86, 272, 92], ['C', 302, 99, 320, 108, 320, 126], ['C', 320, 142, 300, 148, 272, 148], ['C', 246, 148, 226, 138, 216, 118]] },
-    { id: 'B', capa: 1, d: [['M', 10, 130], ['C', 18, 158, 50, 168, 86, 166], ['C', 108, 165, 122, 158, 134, 142], ['L', 200, 46], ['C', 216, 24, 244, 12, 272, 12], ['C', 310, 12, 340, 30, 340, 62]] },
-  ];
-  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-  const salida = (t) => 1 - Math.pow(1 - t, 3);
-  const salidaAtras = (t) => 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2);
-
-  function camino2d(t, esc, ox, oy) {
-    const p = new Path2D();
-    for (const [op, ...n] of t.d) {
-      const q = n.map((v, i) => (i % 2 ? oy + v * esc : ox + v * esc));
-      if (op === 'M') p.moveTo(q[0], q[1]);
-      else if (op === 'L') p.lineTo(q[0], q[1]);
-      else p.bezierCurveTo(q[0], q[1], q[2], q[3], q[4], q[5]);
-    }
-    return p;
-  }
-  function muestrear(t, cada) {
-    const pts = [];
-    let x = 0, y = 0;
-    for (const [op, ...n] of t.d) {
-      if (op === 'M') { x = n[0]; y = n[1]; pts.push([x, y]); continue; }
-      if (op === 'L') {
-        const [x1, y1] = n, largo = Math.hypot(x1 - x, y1 - y), k = Math.max(1, Math.ceil(largo / cada));
-        for (let i = 1; i <= k; i++) pts.push([x + ((x1 - x) * i) / k, y + ((y1 - y) * i) / k]);
-        x = x1; y = y1; continue;
-      }
-      const [c1x, c1y, c2x, c2y, x1, y1] = n;
-      const aprox = Math.hypot(c1x - x, c1y - y) + Math.hypot(c2x - c1x, c2y - c1y) + Math.hypot(x1 - c2x, y1 - c2y);
-      const k = Math.max(2, Math.ceil(aprox / cada));
-      for (let i = 1; i <= k; i++) {
-        const s = i / k, r = 1 - s;
-        pts.push([r * r * r * x + 3 * r * r * s * c1x + 3 * r * s * s * c2x + s * s * s * x1, r * r * r * y + 3 * r * r * s * c1y + 3 * r * s * s * c2y + s * s * s * y1]);
-      }
-      x = x1; y = y1;
-    }
-    return pts;
-  }
-  const largos = new Map();
-  function largo(t) {
-    if (largos.has(t.id)) return largos.get(t.id);
-    const p = muestrear(t, 2);
-    let l = 0;
-    for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
-    largos.set(t.id, l);
-    return l;
-  }
-  // el monograma en píxeles: se traza chico, se separa metal de borde por color y se
-  // repinta en escalones de cromo con filo de luz y bisel en sombra
-  function monogramaPixel(anchoPx, avance, E) {
-    E = E || {};
-    const esc = anchoPx / CAJA.w, alto = Math.ceil(CAJA.h * esc) + 4, ancho = Math.ceil(anchoPx) + 4;
-    const c = document.createElement('canvas');
-    c.width = ancho; c.height = alto;
-    const g = c.getContext('2d');
-    for (const capa of [0, 1]) for (const t of TRAZOS) {
-      if (t.capa !== capa) continue;
-      const p = camino2d(t, esc, 2, 2), l = largo(t) * esc;
-      g.save();
-      if (avance < 1) g.setLineDash([Math.max(0.01, l * avance), l + 10]);
-      g.lineCap = 'butt';
-      g.lineWidth = GROSOR * esc + 2.2; g.strokeStyle = '#ff0000'; g.stroke(p);
-      g.lineWidth = GROSOR * esc; g.strokeStyle = '#00ff00'; g.stroke(p);
-      g.restore();
-    }
-    const img = g.getImageData(0, 0, ancho, alto), d = img.data;
-    const metal = new Uint8Array(ancho * alto), borde = new Uint8Array(ancho * alto);
-    for (let i = 0; i < ancho * alto; i++) {
-      if (d[i * 4 + 3] < 90) continue;
-      if (d[i * 4 + 1] > 110) metal[i] = 1; else if (d[i * 4] > 110) borde[i] = 1;
-    }
-    const ESCALON = E.metal || ['#f4f5f8', '#d9dbe1', '#b7bbc4', '#8d929c', '#a9adb6', '#d3d6dc', '#9ea3ad', '#767b85'];
-    const FILO = E.filo || '#ffffff', BISEL = E.bisel || '#5b5f68', BO = parseInt((E.borde || '#050608').slice(1), 16);
-    for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
-      const i = y * ancho + x, k = i * 4;
-      if (metal[i]) {
-        const arriba = y > 0 && metal[i - ancho], abajo = y < alto - 1 && metal[i + ancho];
-        const izq = x > 0 && metal[i - 1], der = x < ancho - 1 && metal[i + 1];
-        let col = ESCALON[Math.min(ESCALON.length - 1, Math.floor(((y - 2) / (alto - 4)) * ESCALON.length))];
-        if (!arriba || !izq) col = FILO;
-        else if (!abajo || !der) col = BISEL;
-        const n = parseInt(col.slice(1), 16);
-        d[k] = n >> 16; d[k + 1] = (n >> 8) & 255; d[k + 2] = n & 255; d[k + 3] = 255;
-      } else if (borde[i]) { d[k] = BO >> 16; d[k + 1] = (BO >> 8) & 255; d[k + 2] = BO & 255; d[k + 3] = 255; }
-      else d[k + 3] = 0;
-    }
-    g.putImageData(img, 0, 0);
-    if (E.sombra) {   // una sombra plana corrida, debajo del dibujo
-      const s = document.createElement('canvas'); s.width = ancho + Math.abs(E.sombra.dx); s.height = alto + Math.abs(E.sombra.dy);
-      const sg = s.getContext('2d');
-      sg.drawImage(c, E.sombra.dx, E.sombra.dy); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = E.sombra.col; sg.fillRect(0, 0, s.width, s.height);
-      sg.globalCompositeOperation = 'source-over'; sg.drawImage(c, 0, 0);
-      g.clearRect(0, 0, ancho, alto); c.width = s.width; c.height = s.height; c.getContext('2d').drawImage(s, 0, 0);
-      const m2 = new Uint8Array(c.width * c.height);
-      for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) m2[y * c.width + x] = metal[y * ancho + x];
-      c.mascara = m2; c.esc = esc;
-      return c;
-    }
-    c.mascara = metal; c.esc = esc;
-    return c;
-  }
-  const muestras = new Map();
-  function puntas(avance) {
-    const out = [];
-    for (const t of TRAZOS) {
-      if (!muestras.has(t.id)) {
-        const p = muestrear(t, 2), acum = [0];
-        for (let i = 1; i < p.length; i++) acum.push(acum[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
-        muestras.set(t.id, { p, acum });
-      }
-      const { p, acum } = muestras.get(t.id), meta = acum[acum.length - 1] * avance;
-      let i = 1;
-      while (i < acum.length - 1 && acum[i] < meta) i++;
-      out.push(p[i]);
-    }
-    return out;
-  }
-  // la fibra de carbono de a píxel, con la reja de metal a 45° afuera del rombo
-  function fondoCarbono(W, H, cx, cy, rombo) {
-    const c = document.createElement('canvas');
-    c.width = W; c.height = H;
-    const g = c.getContext('2d'), img = g.createImageData(W, H), d = img.data;
-    const pon = (x, y, r, gg, b) => { const k = (y * W + x) * 4; d[k] = r; d[k + 1] = gg; d[k + 2] = b; d[k + 3] = 255; };
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const sarga = ((x >> 1) + (y >> 1)) % 4 < 2;
-      const luz = 1 - Math.min(1, Math.hypot(x - cx, y - cy) / Math.max(W, H));
-      const v = (sarga ? 24 : 16) + Math.round(luz * 10);
-      pon(x, y, v, v + 1, v + 3);
-      const dr = Math.abs(x - cx) + Math.abs(y - cy) - rombo;
-      if (dr >= 0 && dr < 3) { if (dr < 1) pon(x, y, 0x9a, 0xa0, 0xaa); else pon(x, y, 0x4d, 0x50, 0x58); continue; }
-      if (dr < 2) continue;
-      const u = x - cx + (y - cy), w = x - cx - (y - cy);
-      const eu = ((u % 22) + 22) % 22, ev = ((w % 22) + 22) % 22;
-      if (eu < 2 || ev < 2) { if (eu === 0 || ev === 0) pon(x, y, 0x7a, 0x7e, 0x88); else pon(x, y, 0x44, 0x47, 0x4f); }
-    }
-    g.putImageData(img, 0, 0);
-    return c;
-  }
-
-  const T_CORTE = 0.12, T_ABRE = 0.42, T_TRAZA0 = 0.3, T_TRAZA1 = 0.86, T_GOLPE = 0.88;
-  const T_BRILLO = [0.95, 1.35], T_LETRAS = 1.02, T_FIN = 2.1;
-
-  function crear(o) {
-    const W = o.W, H = o.H, cx = W >> 1, cy = Math.round(H * 0.42), E = o.estilo || {};
-    const ancho = E.anchoLogo ? E.anchoLogo(W, H) : Math.round(Math.min(W * 0.66, H * 0.9, 120));
-    const fondo = E.fondo ? E.fondo(W, H, cx, cy) : fondoCarbono(W, H, cx, cy, Math.min(W, H) * 0.44);
-    const PUNTAS = E.puntas || ['#ffffff', '#ffd27a'], GOLPE = E.golpe || ['#ffffff', '#ffd27a', '#c9ccd4', '#7ad7ff'];
-    let chispas = [], sacudida = 0, golpeado = false, letras = 0, pts = null, cache = { avance: -1, c: null };
-    const I = {
-      t: 0, listo: false, cx, cy, ancho, yPalabra: Math.round(cy + ancho * 0.29 + 4), W, H,
-      saltar() { if (I.t > 0.35) I.listo = true; },
-      pasar(dt) {
-        I.t += dt;
-        if (I.t > T_TRAZA0 && I.t < T_TRAZA1 && pts) {
-          for (const [x, y] of pts) for (let k = 0; k < 2; k++) {
-            const a = Math.random() * Math.PI * 2, v = 20 + Math.random() * 50;
-            chispas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, t: 0, vida: 0.25 + Math.random() * 0.2, col: PUNTAS[(Math.random() * PUNTAS.length) | 0] });
-          }
-        }
-        if (!golpeado && I.t >= T_GOLPE) {
-          golpeado = true; sacudida = 4;
-          if (o.vibrar) o.vibrar([30, 20, 40]);
-          for (let k = 0; k < 70; k++) {
-            const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 120;
-            chispas.push({ x: cx + (Math.random() - 0.5) * ancho, y: cy + (Math.random() - 0.5) * ancho * 0.4, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 20, t: 0, vida: 0.5 + Math.random() * 0.5, col: GOLPE[k % GOLPE.length] });
-          }
-        }
-        letras = clamp(Math.floor((I.t - T_LETRAS) / 0.04) + 1, 0, 9);
-        for (const c of chispas) { c.t += dt; c.x += c.vx * dt; c.y += c.vy * dt; c.vy += 120 * dt; c.vx *= 0.96; }
-        chispas = chispas.filter((c) => c.t < c.vida);
-        sacudida *= Math.pow(0.84, dt * 60);
-        if (I.t >= T_FIN) I.listo = true;
-      },
-      dibujar(g) {
-        const t = I.t;
-        g.fillStyle = E.negro || '#05040b'; g.fillRect(0, 0, W, H);
-        const s = Math.round(sacudida), sx = s ? Math.round((Math.random() * 2 - 1) * s) : 0, sy = s ? Math.round((Math.random() * 2 - 1) * s) : 0;
-        if (t < T_CORTE) {
-          const w = Math.round(W * t / T_CORTE);
-          g.fillStyle = '#f6f3ff'; g.fillRect(Math.round(cx - w / 2), cy, w, 1);
-          return;
-        }
-        const abre = clamp((t - T_CORTE) / (T_ABRE - T_CORTE), 0, 1), alto = Math.round((Math.max(cy, H - cy) + 4) * salidaAtras(abre));
-        g.save(); g.beginPath(); g.rect(0, cy - alto, W, alto * 2); g.clip(); g.drawImage(fondo, sx, sy, W, H); if (E.antes) E.antes(g, t, I); g.restore();
-        if (abre < 1) { g.fillStyle = '#d9dce3'; g.fillRect(0, cy - alto, W, 1); g.fillRect(0, cy + alto - 1, W, 1); }
-        const avance = clamp((t - T_TRAZA0) / (T_TRAZA1 - T_TRAZA0), 0, 1);
-        if (avance > 0 && E.logo) {
-          const esc = ancho / CAJA.w, x0 = cx - ancho / 2 + sx, y0 = cy - CAJA.h * esc / 2 + sy;
-          pts = avance < 1 ? puntas(avance).map(([px, py]) => [x0 + px * esc, y0 + py * esc]) : null;
-          E.logo(g, { avance, t, x0, y0, esc, ancho, golpe: t >= T_GOLPE, tGolpe: t - T_GOLPE, TRAZOS, camino2d, largo, muestrear });
-          if (t >= T_GOLPE && t < T_GOLPE + 0.06) { g.fillStyle = E.destello || 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, W, H); }
-        } else if (avance > 0) {
-          const a = Math.round(avance * 40) / 40;
-          if (cache.avance !== a) cache = { avance: a, c: monogramaPixel(ancho, a, E) };
-          const m = cache.c, x0 = Math.round(cx - m.width / 2) + sx, y0 = Math.round(cy - m.height / 2) + sy;
-          pts = avance < 1 ? puntas(avance).map(([px, py]) => [x0 + 2 + px * m.esc, y0 + 2 + py * m.esc]) : null;
-          g.drawImage(m, x0, y0);
-          if (t >= T_GOLPE && t < T_GOLPE + 0.06) { g.fillStyle = E.destello || 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, W, H); }
-          if (t > T_BRILLO[0] && t < T_BRILLO[1]) {
-            const k = (t - T_BRILLO[0]) / (T_BRILLO[1] - T_BRILLO[0]), bx = Math.round(-10 + k * (m.width + 20));
-            g.fillStyle = 'rgba(255,255,255,0.6)';
-            for (let y = 0; y < m.height; y++) for (let dx = -2; dx <= 2; dx++) {
-              const px = bx + dx - Math.round(y * 0.5);
-              if (px >= 0 && px < m.width && m.mascara[y * m.width + px]) g.fillRect(x0 + px, y0 + y, 1, 1);
-            }
-          }
-        }
-        if (letras > 0) {
-          const esc = W >= 200 ? 2 : 1, palabra = 'JXSTUDIOS', an = anchoTexto(palabra) * esc;
-          const x = Math.round(cx - an / 2), y = Math.round(cy + ancho * 0.29 + 4);
-          const parte = palabra.slice(0, letras);
-          if (E.palabraFondo) E.palabraFondo(g, t, I, letras);
-          if (E.letras) { E.letras(g, parte, I, t, y + sy); if (t > T_LETRAS + 0.5 && E.presentaTxt) E.presentaTxt(g, o.presenta || 'PRESENTA', I, t, y + sy); }
-          else {
-          textoPx(g, parte, x + sx, y + sy, { col: (E.palabra && E.palabra.col) || '#e4e6ec', borde: (E.palabra && E.palabra.borde) || '#3d4048', escala: esc });
-          if (letras < 9 && ((t * 20) | 0) % 2) { g.fillStyle = '#f6f3ff'; g.fillRect(x + anchoTexto(parte) * esc + esc, y, esc, 7 * esc); }
-          if (t > T_LETRAS + 0.5) textoPx(g, o.presenta || 'PRESENTA', cx, y + 12 * esc, { alin: 'centro', col: E.presenta || '#8d88ad', borde: 'no' });
-          }
-        }
-        if (E.despues) E.despues(g, t, I);
-        for (const c of chispas) {
-          if (c.t > c.vida * 0.7 && ((c.t * 30) | 0) % 2) continue;
-          g.fillStyle = c.col; g.fillRect(Math.round(c.x), Math.round(c.y), E.chispa || 1, E.chispa || 1);
-        }
-      },
-    };
-    return I;
-  }
-
-  // la música de la intro, agendada con el reloj del audio para que cada golpe caiga con su
-  // cuadro: el corte (soplido), el metal que se escribe (cuatro zumbidos), el golpe (bombo grave +
-  // campana de metal), el brillo (arpegio), las letras (tics) y un acorde que queda sonando
-  function jingle(ctx, destino, E) {
-    if (!ctx || ctx.state !== 'running') return null;
-    const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(destino || ctx.destination);
-    const f = (n) => 440 * Math.pow(2, ({ C: -9, D: -7, E: -5, F: -4, G: -2, A: 0, B: 2 }[n[0]] + (+n.slice(1) - 4) * 12) / 12);
-    const tono = (onda, f0, f1, dur, vol, t, ataque) => {
-      const o = ctx.createOscillator(), gn = ctx.createGain();
-      o.type = onda; o.frequency.setValueAtTime(f0, t);
-      if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-      gn.gain.setValueAtTime(0.0001, t); gn.gain.linearRampToValueAtTime(vol, t + (ataque || 0.005)); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      o.connect(gn); gn.connect(bus); o.start(t); o.stop(t + dur + 0.05);
-    };
-    const n = ctx.sampleRate, buf = ctx.createBuffer(1, n, n), dd = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) dd[i] = Math.random() * 2 - 1;
-    const soplo = (dur, vol, tipo, f0, f1, t) => {
-      const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), gn = ctx.createGain();
-      s.buffer = buf; fl.type = tipo; fl.Q.value = 1.2; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(f1, t + dur);
-      gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      s.connect(fl); fl.connect(gn); gn.connect(bus); s.start(t); s.stop(t + dur + 0.05);
-    };
-    const t0 = ctx.currentTime + 0.03, tg = t0 + T_GOLPE;
-    if (E && E.jingle) { E.jingle(ctx, bus, t0, tg, { tono, soplo, f, T: { T_LETRAS, T_GOLPE, T_FIN } }); return { cortar: () => bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05) }; }
-    soplo(0.2, 0.12, 'bandpass', 700, 5200, t0);
-    [0.3, 0.38, 0.46, 0.54].forEach((d, k) => tono('square', 240 + k * 70, 1300 + k * 240, 0.16, 0.035, t0 + d));
-    tono('sine', 115, 30, 0.95, 0.55, tg);
-    for (const [fr, v, d] of [[523, 0.08, 1.3], [1247, 0.05, 1], [2011, 0.035, 0.75], [3150, 0.025, 0.5], [4430, 0.015, 0.35]]) tono('sine', fr, 0, d, v, tg);
-    soplo(0.4, 0.25, 'lowpass', 4200, 260, tg);
-    ['C6', 'E6', 'G6', 'B6', 'D7', 'G7'].forEach((nn, k) => tono('triangle', f(nn), 0, 0.28, 0.05, tg + 0.07 + k * 0.035));
-    for (let k = 0; k < 9; k++) tono('square', 1320 + (k % 3) * 110, 0, 0.022, 0.03, t0 + T_LETRAS + k * 0.04);
-    for (const nn of ['C3', 'G3', 'E4', 'B4', 'D5']) tono('triangle', f(nn), 0, 1.35, 0.05, t0 + 1.1, 0.25);
-    return { cortar: () => bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05) };
-  }
-
-  // el iris: negro afuera de un círculo de radio r, de a filas (borde de píxel)
-  function iris(g, W, H, cx, cy, r) {
-    g.fillStyle = '#05040b';
-    if (r <= 0) { g.fillRect(0, 0, W, H); return; }
-    for (let y = 0; y < H; y++) {
-      const dy = y + 0.5 - cy;
-      if (Math.abs(dy) >= r) { g.fillRect(0, y, W, 1); continue; }
-      const m = Math.sqrt(r * r - dy * dy), a = Math.round(cx - m), b = Math.round(cx + m);
-      if (a > 0) g.fillRect(0, y, a, 1);
-      if (b < W) g.fillRect(b, y, W - b, 1);
-    }
-  }
-  return { crear, jingle, iris, salida, salidaAtras, DURA: T_FIN };
-})();
-const crearIntroJXS = IntroJXS_.crear, jingleJXS = IntroJXS_.jingle, irisJXS = IntroJXS_.iris;
 
 /* ==== tajo/js/base.js ==== */
 /* ============================================================================
@@ -574,7 +168,8 @@ const DATOS = Object.assign({ rec: {}, diaFecha: 0, diaRecord: 0, cortadas: 0, c
 DATOS.rec = Object.assign({ clasico: 0, zen: 0, tormenta: 0 }, DATOS.rec);
 const guardarDatos = () => Guardado.escribir('datos', DATOS);
 
-let IDIOMA = Guardado.leer('idioma', null) || ((navigator.language || 'es').toLowerCase().startsWith('pt') ? 'pt' : (navigator.language || '').toLowerCase().startsWith('en') ? 'en' : 'es');
+// el del celular al arrancar; después, el que se elija en el menú (motor2d/idiomas.js)
+let IDIOMA = idiomaInicial(Guardado.leer('idioma', null));
 const TXT = {
   es: {
     idioma: 'ELEGÍ TU IDIOMA', presenta: 'presenta', subtitulo: 'EL CAMINO DEL FILO', elegir: 'CORTÁ UNA FRUTA PARA EMPEZAR',
@@ -617,7 +212,7 @@ const TXT = {
   },
 };
 function tr(k, ...a) {
-  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.es[k] ?? k;
+  let s = (TXT[IDIOMA] && TXT[IDIOMA][k]) ?? TXT.en[k] ?? TXT.es[k] ?? k;
   if (typeof s === 'string') a.forEach((v, i) => { s = s.replace('{' + i + '}', v); });
   return s;
 }
@@ -629,20 +224,158 @@ function lienzoHD(w, h) { const c = document.createElement('canvas'); c.width = 
    pincel que se corre en el papel) */
 const SERIF = 'Georgia, "Times New Roman", "Noto Serif", serif';
 const TINTA = '#16110d', PAPEL = '#efe5cf', BERMELLON = '#c8321e';
+/* el árabe y el urdu van de derecha a izquierda; cada escritura usa su letra del sistema (con serifa) */
+function fuenteTexto(str, tam, peso, cursiva) {
+  const esc = escrituraDe(str);
+  return { css: (peso || 'bold') + ' ' + (cursiva && esc === 'latn' ? 'italic ' : '') + tam * escalaEscritura(esc) + 'px ' + (fuenteEscritura(esc, 'serif') || SERIF), rtl: esc === 'arab' };
+}
 function texto(g, str, x, y, o) {
-  o = o || {};
-  const tam = o.tam || 14;
-  g.font = (o.peso || 'bold') + ' ' + (o.cursiva ? 'italic ' : '') + tam + 'px ' + SERIF;
+  o = o || {}; str = String(str);
+  const tam = o.tam || 14, f = fuenteTexto(str, tam, o.peso, o.cursiva);
+  g.font = f.css; g.direction = f.rtl ? 'rtl' : 'ltr';
   g.textAlign = o.alin || 'center'; g.textBaseline = 'middle';
   if (o.borde) { g.lineWidth = o.bordeAncho || 4; g.strokeStyle = o.borde; g.lineJoin = 'round'; g.strokeText(str, x, y); }
   g.fillStyle = o.col || TINTA;
   if (o.tinta !== false) { const a = g.globalAlpha; g.globalAlpha = a * 0.28; g.fillText(str, x + tam * 0.05, y + tam * 0.04); g.globalAlpha = a; }
   g.fillText(str, x, y);
+  g.direction = 'ltr';
 }
-function medir(g, str, tam, peso) { g.font = (peso || 'bold') + ' ' + tam + 'px ' + SERIF; return g.measureText(str).width; }
+function medir(g, str, tam, peso) { str = String(str); const f = fuenteTexto(str, tam, peso); g.font = f.css; g.direction = f.rtl ? 'rtl' : 'ltr'; const w = g.measureText(str).width; g.direction = 'ltr'; return w; }
 // achica la letra hasta que el renglón entre en el ancho
 function tamQueEntra(g, str, tam, ancho, peso) { while (tam > 8 && medir(g, str, tam, peso) > ancho) tam -= 1; return tam; }
-function partir(s, n) { const out = []; let l = ''; for (const p of s.split(' ')) { if ((l + ' ' + p).trim().length > n && l) { out.push(l); l = p; } else l = (l + ' ' + p).trim(); } if (l) out.push(l); return out; }
+
+/* ==== tajo/js/idiomas.js ==== */
+/* ============================================================================
+   TAJO — los idiomas que se sumaron el 08/10 (la lista está en
+   motor2d/idiomas.js). El de México es el mismo español con tuteo; Egipto,
+   Irak y Arabia Saudita usan el árabe estándar. Lo que falte cae en inglés.
+   ========================================================================== */
+
+TXT['es-MX'] = Object.assign({}, TXT.es, {
+  idioma: 'ELIGE TU IDIOMA', elegir: 'CORTA UNA FRUTA PARA EMPEZAR', clasicoD: 'TRES FALLAS · CUIDADO CON LAS BOMBAS', otra: 'OTRA VEZ', seguir: 'CONTINUAR',
+  ayuda: 'DESLIZA EL DEDO PARA CORTAR LA FRUTA. NO TOQUES LAS BOMBAS.', ayudaFalla: 'SI UNA FRUTA CAE SIN CORTAR, ES UNA FALLA.',
+  faltan: 'CORTA {0} MÁS', proba: 'PRUEBA AQUÍ', tocar: 'TOCA PARA CONTINUAR',
+});
+
+Object.assign(TXT, {
+  ar: {
+    idioma: 'اختر لغتك', subtitulo: 'طريق النصل', elegir: 'اقطع فاكهة لتبدأ',
+    clasico: 'كلاسيكي', clasicoD: 'ثلاثة أخطاء · احذر القنابل', zen: 'زِن', zenD: '90 ثانية بلا قنابل', tormenta: 'عاصفة', tormentaD: '60 ثانية مع قوى خاصة',
+    diario: 'تحدي اليوم', diarioD: 'نفس الفاكهة للجميع', dojo: 'دوجو', controles: 'التحكم', idiomaBtn: 'اللغة', record: 'أفضل نتيجة', hoyRec: 'اليوم {0}',
+    combo: 'كومبو ×{0}', fin: 'نهاية الطريق', bomba: 'قنبلة!', tiempo: 'انتهى الوقت!', otra: 'مرة أخرى', menu: 'القائمة', pausa: 'إيقاف مؤقت', seguir: 'متابعة',
+    reiniciar: 'إعادة', musica: 'الموسيقى', sonido: 'الصوت', si: 'نعم', no: 'لا', nuevoRecord: 'رقم قياسي جديد!', volver: 'رجوع',
+    ayuda: 'اسحب إصبعك لتقطع الفاكهة. لا تلمس القنابل.', ayudaFalla: 'إذا سقطت فاكهة دون أن تقطعها فهذا خطأ.', cortadas: 'المقطوعة', mejorCombo: 'أفضل كومبو',
+    hielo: 'تجميد', frenesi: 'جنون', doble: 'مضاعف', filos: 'النصال', usar: 'استخدام', enUso: 'مستخدم', faltan: 'اقطع {0} أخرى', nuevoFilo: 'نصل جديد: {0}!',
+    grosor: 'سُمك الأثر', sensib: 'الحساسية', alcance: 'مدى القطع', tamPausa: 'زر الإيقاف', zurdo: 'أعسر', vibrar: 'الاهتزاز', proba: 'جرّب هنا',
+    restablecer: 'الإعدادات الأصلية', listo: 'تم', baja: 'منخفضة', media: 'متوسطة', alta: 'عالية', fino: 'رفيع', medio: 'متوسط', grueso: 'سميك', chico: 'صغير', grande: 'كبير',
+    tocar: 'المس للمتابعة', menos10: '−10', puntos: 'نقاط', todas: 'كل النصال',
+    nombresFilo: ['فرشاة', 'قرمزي', 'يَشْم', 'نيلي', 'ورق الذهب'],
+  },
+  id: {
+    idioma: 'PILIH BAHASAMU', subtitulo: 'JALAN SANG PEDANG', elegir: 'POTONG BUAH UNTUK MULAI',
+    clasico: 'KLASIK', clasicoD: 'TIGA KESALAHAN · AWAS BOM', zen: 'ZEN', zenD: '90 DETIK TANPA BOM', tormenta: 'BADAI', tormentaD: '60 DETIK DENGAN KEKUATAN',
+    diario: 'HARIAN', diarioD: 'BUAH YANG SAMA UNTUK SEMUA', dojo: 'DOJO', controles: 'KONTROL', idiomaBtn: 'BAHASA', record: 'REKOR', hoyRec: 'HARI INI {0}',
+    combo: 'KOMBO ×{0}', fin: 'AKHIR PERJALANAN', bomba: 'BOM!', tiempo: 'WAKTU HABIS!', otra: 'LAGI', menu: 'MENU', pausa: 'JEDA', seguir: 'LANJUT',
+    reiniciar: 'ULANGI', musica: 'MUSIK', sonido: 'SUARA', si: 'YA', no: 'TIDAK', nuevoRecord: 'REKOR BARU!', volver: 'KEMBALI',
+    ayuda: 'GESER JARIMU UNTUK MEMOTONG BUAH. JANGAN SENTUH BOM.', ayudaFalla: 'JIKA BUAH JATUH TANPA DIPOTONG, ITU KESALAHAN.', cortadas: 'TERPOTONG', mejorCombo: 'KOMBO TERBAIK',
+    hielo: 'BEKU', frenesi: 'AMUK', doble: 'GANDA', filos: 'PEDANG', usar: 'PAKAI', enUso: 'DIPAKAI', faltan: 'POTONG {0} LAGI', nuevoFilo: 'PEDANG BARU: {0}!',
+    grosor: 'TEBAL JEJAK', sensib: 'SENSITIVITAS', alcance: 'JANGKAUAN POTONG', tamPausa: 'TOMBOL JEDA', zurdo: 'KIDAL', vibrar: 'GETAR', proba: 'COBA DI SINI',
+    restablecer: 'ATUR ULANG', listo: 'SELESAI', baja: 'RENDAH', media: 'SEDANG', alta: 'TINGGI', fino: 'TIPIS', medio: 'SEDANG', grueso: 'TEBAL', chico: 'KECIL', grande: 'BESAR',
+    tocar: 'KETUK UNTUK LANJUT', menos10: '−10', puntos: 'POIN', todas: 'SEMUA PEDANG',
+    nombresFilo: ['KUAS', 'MERAH KESUMBA', 'GIOK', 'NILA', 'DAUN EMAS'],
+  },
+  ms: {
+    idioma: 'PILIH BAHASA ANDA', subtitulo: 'JALAN PEDANG', elegir: 'POTONG BUAH UNTUK MULA',
+    clasico: 'KLASIK', clasicoD: 'TIGA KESILAPAN · AWAS BOM', zen: 'ZEN', zenD: '90 SAAT TANPA BOM', tormenta: 'RIBUT', tormentaD: '60 SAAT DENGAN KUASA',
+    diario: 'HARIAN', diarioD: 'BUAH YANG SAMA UNTUK SEMUA', dojo: 'DOJO', controles: 'KAWALAN', idiomaBtn: 'BAHASA', record: 'REKOD', hoyRec: 'HARI INI {0}',
+    combo: 'KOMBO ×{0}', fin: 'PENGHUJUNG JALAN', bomba: 'BOM!', tiempo: 'MASA TAMAT!', otra: 'LAGI', menu: 'MENU', pausa: 'JEDA', seguir: 'SAMBUNG',
+    reiniciar: 'MULA SEMULA', musica: 'MUZIK', sonido: 'BUNYI', si: 'YA', no: 'TIDAK', nuevoRecord: 'REKOD BAHARU!', volver: 'KEMBALI',
+    ayuda: 'LERETKAN JARI UNTUK MEMOTONG BUAH. JANGAN SENTUH BOM.', ayudaFalla: 'JIKA BUAH JATUH TANPA DIPOTONG, ITU SATU KESILAPAN.', cortadas: 'DIPOTONG', mejorCombo: 'KOMBO TERBAIK',
+    hielo: 'BEKU', frenesi: 'AMUKAN', doble: 'GANDA', filos: 'PEDANG', usar: 'GUNA', enUso: 'DIGUNAKAN', faltan: 'POTONG {0} LAGI', nuevoFilo: 'PEDANG BAHARU: {0}!',
+    grosor: 'KETEBALAN JEJAK', sensib: 'KEPEKAAN', alcance: 'JANGKAUAN POTONG', tamPausa: 'BUTANG JEDA', zurdo: 'KIDAL', vibrar: 'GETAR', proba: 'CUBA DI SINI',
+    restablecer: 'TETAP SEMULA', listo: 'SIAP', baja: 'RENDAH', media: 'SEDERHANA', alta: 'TINGGI', fino: 'NIPIS', medio: 'SEDERHANA', grueso: 'TEBAL', chico: 'KECIL', grande: 'BESAR',
+    tocar: 'KETIK UNTUK SAMBUNG', menos10: '−10', puntos: 'MATA', todas: 'SEMUA PEDANG',
+    nombresFilo: ['BERUS', 'MERAH SAGA', 'JED', 'NILA', 'DAUN EMAS'],
+  },
+  fil: {
+    idioma: 'PUMILI NG WIKA', subtitulo: 'ANG DAAN NG TALIM', elegir: 'HUMIWA NG PRUTAS PARA MAGSIMULA',
+    clasico: 'KLASIKO', clasicoD: 'TATLONG MINTIS · INGAT SA BOMBA', zen: 'ZEN', zenD: '90 SEGUNDONG WALANG BOMBA', tormenta: 'BAGYO', tormentaD: '60 SEGUNDONG MAY KAPANGYARIHAN',
+    diario: 'ARAW-ARAW', diarioD: 'PAREHONG PRUTAS PARA SA LAHAT', dojo: 'DOJO', controles: 'KONTROL', idiomaBtn: 'WIKA', record: 'REKORD', hoyRec: 'NGAYON {0}',
+    combo: 'COMBO ×{0}', fin: 'DULO NG DAAN', bomba: 'BOMBA!', tiempo: 'UBOS NA ANG ORAS!', otra: 'ULIT', menu: 'MENU', pausa: 'HINTO', seguir: 'ITULOY',
+    reiniciar: 'SIMULAN ULIT', musica: 'MUSIKA', sonido: 'TUNOG', si: 'OO', no: 'HINDI', nuevoRecord: 'BAGONG REKORD!', volver: 'BUMALIK',
+    ayuda: 'I-SWIPE ANG DALIRI PARA HIWAIN ANG PRUTAS. HUWAG HAWAKAN ANG BOMBA.', ayudaFalla: 'KAPAG NAHULOG ANG PRUTAS NANG HINDI NAHIWA, MINTIS IYON.', cortadas: 'NAHIWA', mejorCombo: 'PINAKAMAHUSAY NA COMBO',
+    hielo: 'YELO', frenesi: 'SIKLAB', doble: 'DOBLE', filos: 'MGA TALIM', usar: 'GAMITIN', enUso: 'GINAGAMIT', faltan: 'HUMIWA PA NG {0}', nuevoFilo: 'BAGONG TALIM: {0}!',
+    grosor: 'KAPAL NG GUHIT', sensib: 'SENSITIBIDAD', alcance: 'ABOT NG HIWA', tamPausa: 'PINDUTANG HINTO', zurdo: 'KALIWETE', vibrar: 'VIBRATE', proba: 'SUBUKAN DITO',
+    restablecer: 'I-RESET', listo: 'TAPOS', baja: 'MABABA', media: 'KATAMTAMAN', alta: 'MATAAS', fino: 'MANIPIS', medio: 'KATAMTAMAN', grueso: 'MAKAPAL', chico: 'MALIIT', grande: 'MALAKI',
+    tocar: 'I-TAP PARA ITULOY', menos10: '−10', puntos: 'PUNTOS', todas: 'LAHAT NG TALIM',
+    nombresFilo: ['PINSEL', 'BERMILYON', 'JADE', 'INDIGO', 'DAHONG GINTO'],
+  },
+  tr: {
+    idioma: 'DİLİNİ SEÇ', subtitulo: 'KILICIN YOLU', elegir: 'BAŞLAMAK İÇİN BİR MEYVE KES',
+    clasico: 'KLASİK', clasicoD: 'ÜÇ HATA · BOMBALARA DİKKAT', zen: 'ZEN', zenD: 'BOMBASIZ 90 SANİYE', tormenta: 'FIRTINA', tormentaD: 'GÜÇLERLE 60 SANİYE',
+    diario: 'GÜNLÜK', diarioD: 'HERKES İÇİN AYNI MEYVELER', dojo: 'DOJO', controles: 'KONTROLLER', idiomaBtn: 'DİL', record: 'REKOR', hoyRec: 'BUGÜN {0}',
+    combo: 'KOMBO ×{0}', fin: 'YOLUN SONU', bomba: 'BOMBA!', tiempo: 'SÜRE DOLDU!', otra: 'TEKRAR', menu: 'MENÜ', pausa: 'DURAKLAT', seguir: 'DEVAM',
+    reiniciar: 'YENİDEN BAŞLAT', musica: 'MÜZİK', sonido: 'SES', si: 'AÇIK', no: 'KAPALI', nuevoRecord: 'YENİ REKOR!', volver: 'GERİ',
+    ayuda: 'MEYVEYİ KESMEK İÇİN PARMAĞINI KAYDIR. BOMBALARA DOKUNMA.', ayudaFalla: 'BİR MEYVE KESİLMEDEN DÜŞERSE HATA SAYILIR.', cortadas: 'KESİLEN', mejorCombo: 'EN İYİ KOMBO',
+    hielo: 'BUZ', frenesi: 'ÇILGINLIK', doble: 'ÇİFT', filos: 'BIÇAKLAR', usar: 'KULLAN', enUso: 'KULLANIMDA', faltan: '{0} TANE DAHA KES', nuevoFilo: 'YENİ BIÇAK: {0}!',
+    grosor: 'İZ KALINLIĞI', sensib: 'HASSASİYET', alcance: 'KESİM MENZİLİ', tamPausa: 'DURAKLATMA DÜĞMESİ', zurdo: 'SOLAK', vibrar: 'TİTREŞİM', proba: 'BURADA DENE',
+    restablecer: 'SIFIRLA', listo: 'TAMAM', baja: 'DÜŞÜK', media: 'ORTA', alta: 'YÜKSEK', fino: 'İNCE', medio: 'ORTA', grueso: 'KALIN', chico: 'KÜÇÜK', grande: 'BÜYÜK',
+    tocar: 'DEVAM İÇİN DOKUN', menos10: '−10', puntos: 'PUAN', todas: 'TÜM BIÇAKLAR',
+    nombresFilo: ['FIRÇA', 'ZİNCİFRE', 'YEŞİM', 'ÇİVİT', 'ALTIN VARAK'],
+  },
+  ur: {
+    idioma: 'اپنی زبان منتخب کریں', subtitulo: 'دھار کا راستہ', elegir: 'شروع کرنے کے لیے کوئی پھل کاٹیں',
+    clasico: 'کلاسک', clasicoD: 'تین غلطیاں · بموں سے بچیں', zen: 'زین', zenD: 'بموں کے بغیر 90 سیکنڈ', tormenta: 'طوفان', tormentaD: 'طاقتوں کے ساتھ 60 سیکنڈ',
+    diario: 'آج کا چیلنج', diarioD: 'سب کے لیے ایک جیسے پھل', dojo: 'ڈوجو', controles: 'کنٹرولز', idiomaBtn: 'زبان', record: 'ریکارڈ', hoyRec: 'آج {0}',
+    combo: 'کومبو ×{0}', fin: 'راستے کا اختتام', bomba: 'بم!', tiempo: 'وقت ختم!', otra: 'دوبارہ', menu: 'مینیو', pausa: 'وقفہ', seguir: 'جاری رکھیں',
+    reiniciar: 'دوبارہ شروع', musica: 'موسیقی', sonido: 'آواز', si: 'ہاں', no: 'نہیں', nuevoRecord: 'نیا ریکارڈ!', volver: 'واپس',
+    ayuda: 'پھل کاٹنے کے لیے انگلی پھیریں۔ بموں کو مت چھوئیں۔', ayudaFalla: 'اگر کوئی پھل کٹے بغیر گر جائے تو یہ غلطی ہے۔', cortadas: 'کٹے ہوئے', mejorCombo: 'بہترین کومبو',
+    hielo: 'برف', frenesi: 'جنون', doble: 'دگنا', filos: 'دھاریں', usar: 'استعمال کریں', enUso: 'استعمال میں', faltan: 'مزید {0} کاٹیں', nuevoFilo: 'نئی دھار: {0}!',
+    grosor: 'لکیر کی موٹائی', sensib: 'حساسیت', alcance: 'کاٹ کی پہنچ', tamPausa: 'وقفے کا بٹن', zurdo: 'بائیں ہاتھ والا', vibrar: 'تھرتھراہٹ', proba: 'یہاں آزمائیں',
+    restablecer: 'اصل ترتیب', listo: 'ٹھیک ہے', baja: 'کم', media: 'درمیانی', alta: 'زیادہ', fino: 'باریک', medio: 'درمیانہ', grueso: 'موٹا', chico: 'چھوٹا', grande: 'بڑا',
+    tocar: 'جاری رکھنے کے لیے ٹیپ کریں', menos10: '−10', puntos: 'پوائنٹس', todas: 'تمام دھاریں',
+    nombresFilo: ['برش', 'شنگرفی', 'یشب', 'نیلا', 'سونے کا ورق'],
+  },
+  th: {
+    idioma: 'เลือกภาษา', subtitulo: 'วิถีแห่งคมดาบ', elegir: 'ฟันผลไม้เพื่อเริ่ม',
+    clasico: 'คลาสสิก', clasicoD: 'พลาดได้ 3 ครั้ง · ระวังระเบิด', zen: 'เซน', zenD: '90 วินาที ไม่มีระเบิด', tormenta: 'พายุ', tormentaD: '60 วินาที พร้อมพลังพิเศษ',
+    diario: 'รายวัน', diarioD: 'ผลไม้ชุดเดียวกันสำหรับทุกคน', dojo: 'โดโจ', controles: 'การควบคุม', idiomaBtn: 'ภาษา', record: 'สถิติ', hoyRec: 'วันนี้ {0}',
+    combo: 'คอมโบ ×{0}', fin: 'สุดทาง', bomba: 'ระเบิด!', tiempo: 'หมดเวลา!', otra: 'อีกครั้ง', menu: 'เมนู', pausa: 'หยุดชั่วคราว', seguir: 'เล่นต่อ',
+    reiniciar: 'เริ่มใหม่', musica: 'เพลง', sonido: 'เสียง', si: 'เปิด', no: 'ปิด', nuevoRecord: 'สถิติใหม่!', volver: 'กลับ',
+    ayuda: 'ลากนิ้วเพื่อฟันผลไม้ อย่าแตะระเบิด', ayudaFalla: 'ถ้าผลไม้ตกลงไปโดยไม่ถูกฟัน จะนับเป็นการพลาด', cortadas: 'ฟันได้', mejorCombo: 'คอมโบสูงสุด',
+    hielo: 'แช่แข็ง', frenesi: 'บ้าคลั่ง', doble: 'สองเท่า', filos: 'ใบมีด', usar: 'ใช้', enUso: 'กำลังใช้', faltan: 'ฟันอีก {0} ลูก', nuevoFilo: 'ใบมีดใหม่: {0}!',
+    grosor: 'ความหนาของรอย', sensib: 'ความไว', alcance: 'ระยะฟัน', tamPausa: 'ปุ่มหยุด', zurdo: 'ถนัดซ้าย', vibrar: 'สั่น', proba: 'ลองที่นี่',
+    restablecer: 'คืนค่าเดิม', listo: 'เสร็จ', baja: 'ต่ำ', media: 'กลาง', alta: 'สูง', fino: 'บาง', medio: 'กลาง', grueso: 'หนา', chico: 'เล็ก', grande: 'ใหญ่',
+    tocar: 'แตะเพื่อเล่นต่อ', menos10: '−10', puntos: 'คะแนน', todas: 'ใบมีดทั้งหมด',
+    nombresFilo: ['พู่กัน', 'ชาด', 'หยก', 'คราม', 'ทองคำเปลว'],
+  },
+  my: {
+    idioma: 'ဘာသာစကား ရွေးပါ', subtitulo: 'ဓားသွား၏ လမ်း', elegir: 'စတင်ရန် အသီးတစ်လုံး ခုတ်ပါ',
+    clasico: 'ဂန္ထဝင်', clasicoD: 'အမှား 3 ကြိမ် · ဗုံးကို သတိထားပါ', zen: 'ဇင်', zenD: 'ဗုံးမပါ 90 စက္ကန့်', tormenta: 'မုန်တိုင်း', tormentaD: 'စွမ်းအားများနှင့် 60 စက္ကန့်',
+    diario: 'နေ့စဉ်', diarioD: 'လူတိုင်းအတွက် အသီးတူတူ', dojo: 'ဒိုဂျို', controles: 'ထိန်းချုပ်မှု', idiomaBtn: 'ဘာသာစကား', record: 'စံချိန်', hoyRec: 'ယနေ့ {0}',
+    combo: 'ကွန်ဘို ×{0}', fin: 'လမ်းဆုံး', bomba: 'ဗုံး!', tiempo: 'အချိန်ကုန်ပြီ!', otra: 'ထပ်ကစား', menu: 'မီနူး', pausa: 'ခဏရပ်', seguir: 'ဆက်ကစား',
+    reiniciar: 'ပြန်စ', musica: 'ဂီတ', sonido: 'အသံ', si: 'ဖွင့်', no: 'ပိတ်', nuevoRecord: 'စံချိန်သစ်!', volver: 'နောက်သို့',
+    ayuda: 'အသီးကို ခုတ်ရန် လက်ချောင်းကို ပွတ်ဆွဲပါ။ ဗုံးကို မထိပါနှင့်။', ayudaFalla: 'အသီးကို မခုတ်ဘဲ ကျသွားလျှင် အမှားတစ်ခု ဖြစ်သည်။', cortadas: 'ခုတ်ပြီး', mejorCombo: 'အကောင်းဆုံး ကွန်ဘို',
+    hielo: 'အေးခဲ', frenesi: 'ရူးသွပ်', doble: 'နှစ်ဆ', filos: 'ဓားသွားများ', usar: 'သုံးမည်', enUso: 'သုံးနေသည်', faltan: 'နောက်ထပ် {0} လုံး ခုတ်ပါ', nuevoFilo: 'ဓားသွားသစ်: {0}!',
+    grosor: 'အစင်းအထူ', sensib: 'အာရုံခံနိုင်မှု', alcance: 'ခုတ်နိုင်သည့်အကွာ', tamPausa: 'ရပ်ခလုတ်', zurdo: 'ဘယ်သန်', vibrar: 'တုန်ခါမှု', proba: 'ဒီမှာ စမ်းပါ',
+    restablecer: 'မူလအတိုင်း', listo: 'ပြီးပြီ', baja: 'နိမ့်', media: 'အလယ်', alta: 'မြင့်', fino: 'ပါး', medio: 'အလယ်', grueso: 'ထူ', chico: 'သေး', grande: 'ကြီး',
+    tocar: 'ဆက်ရန် နှိပ်ပါ', menos10: '−10', puntos: 'ရမှတ်', todas: 'ဓားသွားအားလုံး',
+    nombresFilo: ['စုတ်တံ', 'ဟင်္သပဒါး', 'ကျောက်စိမ်း', 'မဲနယ်', 'ရွှေဆိုင်း'],
+  },
+  ja: {
+    idioma: '言語を選択', subtitulo: '刃の道', elegir: 'フルーツを斬ってスタート',
+    clasico: 'クラシック', clasicoD: 'ミス3回まで・爆弾に注意', zen: '禅', zenD: '爆弾なしの90秒', tormenta: '嵐', tormentaD: 'パワーありの60秒',
+    diario: 'デイリー', diarioD: 'みんな同じフルーツ', dojo: '道場', controles: '操作設定', idiomaBtn: '言語', record: 'ベスト', hoyRec: '今日 {0}',
+    combo: 'コンボ ×{0}', fin: '道の終わり', bomba: '爆弾！', tiempo: 'タイムアップ！', otra: 'もう一度', menu: 'メニュー', pausa: 'ポーズ', seguir: '再開',
+    reiniciar: 'やり直す', musica: '音楽', sonido: '効果音', si: 'オン', no: 'オフ', nuevoRecord: '新記録！', volver: '戻る',
+    ayuda: '指をスワイプしてフルーツを斬ろう。爆弾には触れないで。', ayudaFalla: '斬らずにフルーツを落とすとミスになる。', cortadas: '斬った数', mejorCombo: '最高コンボ',
+    hielo: '氷結', frenesi: '乱舞', doble: '2倍', filos: '刃', usar: '使う', enUso: '使用中', faltan: 'あと{0}個斬ろう', nuevoFilo: '新しい刃：{0}！',
+    grosor: '軌跡の太さ', sensib: '感度', alcance: '斬る範囲', tamPausa: 'ポーズボタン', zurdo: '左利き', vibrar: '振動', proba: 'ここで試す',
+    restablecer: '初期設定に戻す', listo: '完了', baja: '低', media: '中', alta: '高', fino: '細い', medio: '普通', grueso: '太い', chico: '小', grande: '大',
+    tocar: 'タップして続ける', menos10: '−10', puntos: 'ポイント', todas: 'すべての刃',
+    nombresFilo: ['筆', '朱', '翡翠', '藍', '金箔'],
+  },
+});
 
 /* ==== tajo/js/frutas.js ==== */
 /* ============================================================================
@@ -1149,14 +882,10 @@ const Sonido = {
   },
 };
 
-/* ==== tajo/js/intro.js ==== */
+/* ==== tajo/js/papel.js ==== */
 /* ============================================================================
-   La intro de JXSTUDIOS a pincel: misma coreografía que la de La Cripta, otro
-   material. La pantalla negra se abre con un tajo de luz y aparece el papel de
-   arroz; el monograma JXS se pinta con tinta (aguada corrida + trazo seco),
-   en el golpe cae el sello rojo con salpicón de tinta, y JXSTUDIOS se escribe
-   en serif entintada. La música: un glissando de koto, el taiko en el golpe y
-   una nota larga de shakuhachi.
+   El papel de arroz, el sello rojo (hanko) y el salpicón de tinta: lo que usan
+   el fondo, el título y los cortes.
    ========================================================================== */
 
 /* el papel de arroz: tono cálido, fibras, motas y una aguada de montañas en la niebla */
@@ -1221,67 +950,16 @@ function salpicon(g, x, y, tam, col, rnd, ang, alfa) {
   g.globalAlpha = 1;
 }
 
-const ESTILO_SUMI = {
-  negro: '#120e0b',
-  chispa: 2,
-  anchoLogo: (Wl) => Math.round(Wl * 0.62),
-  puntas: ['#16110d', '#2a221c', '#4a4038'],
-  golpe: ['#16110d', '#16110d', '#2a221c', BERMELLON],
-  destello: 'rgba(200,50,30,0.28)',
-  fondo: (Wl, Hl) => papelWashi(Wl, Hl, 3, true),
-  logo(g, i) {
-    const G = 14.5 * i.esc;
-    for (const capa of [0, 1]) for (const tz of i.TRAZOS) {
-      if (tz.capa !== capa) continue;
-      const p = i.camino2d(tz, i.esc, i.x0, i.y0), l = i.largo(tz) * i.esc;
-      g.save();
-      if (i.avance < 1) g.setLineDash([Math.max(0.01, l * i.avance), l + 20]);
-      g.lineCap = 'round'; g.lineJoin = 'round';
-      // la tinta que se corre en el papel, el trazo y el pincel seco por encima
-      g.strokeStyle = 'rgba(22,17,13,0.13)'; g.lineWidth = G * 1.55; g.stroke(p);
-      g.strokeStyle = 'rgba(22,17,13,0.92)'; g.lineWidth = G; g.stroke(p);
-      g.strokeStyle = 'rgba(239,229,207,0.3)'; g.lineWidth = G * 0.12;
-      g.save(); g.translate(G * 0.2, -G * 0.12); g.stroke(p); g.restore();
-      g.save(); g.translate(-G * 0.18, G * 0.22); g.lineWidth = G * 0.07; g.stroke(p); g.restore();
-      g.restore();
-    }
-    if (i.golpe) {
-      // el sello cae grande y se asienta con un rebote
-      const k = clamp(i.tGolpe / 0.18, 0, 1), esc = 1 + (1 - salida(k)) * 0.9, tam = 34 * esc;
-      const x = i.x0 + i.ancho * 0.96, y = i.y0 + i.ancho * 0.44;
-      if (i.tGolpe < 0.5) { const r = rngSemilla(5); salpicon(g, x - 6, y + 4, 9, TINTA, r, Math.PI * 0.9, 0.85 * clamp(i.tGolpe * 8, 0, 1)); }
-      hanko(g, x, y, tam, 'JX', -0.08, clamp(k * 1.4, 0, 1));
-    }
-  },
-  letras(g, parte, I, t, y) {
-    const tam = 25, total = medir(g, 'JXSTUDIOS', tam), x = I.cx - total / 2;
-    texto(g, parte, x, y + 14, { tam, alin: 'left', col: TINTA });
-  },
-  presentaTxt(g, txt, I, t, y) { texto(g, txt.toUpperCase(), I.cx, y + 42, { tam: 12, col: BERMELLON, peso: '700' }); },
-  jingle(ctx, bus, t0, tg, h) {
-    const { tono, soplo, f, T } = h;
-    soplo(0.18, 0.18, 'bandpass', 900, 6000, t0);                                   // el tajo de luz
-    // el glissando de koto en la escala "in" (mi y si bemoles)
-    [['D4', 1], ['E4', 0.944], ['G4', 1], ['A4', 1], ['B4', 0.944], ['D5', 1], ['E5', 0.944], ['G5', 1]]
-      .forEach(([n, b], k) => tono('triangle', f(n) * b, 0, 0.55, 0.07, t0 + 0.32 + k * 0.06, 0.003));
-    tono('sine', 150, 40, 0.8, 0.7, tg, 0.003); soplo(0.3, 0.3, 'lowpass', 600, 120, tg);  // el taiko con el sello
-    tono('sine', f('D3'), 0, 1.6, 0.12, tg + 0.02);
-    tono('sine', f('A4'), 0, 1.3, 0.07, t0 + T.T_LETRAS + 0.1, 0.15);              // el shakuhachi
-    soplo(1.0, 0.04, 'bandpass', 880, 1000, t0 + T.T_LETRAS + 0.1);
-    for (let k = 0; k < 9; k++) tono('sine', 1800 + (k % 3) * 120, 0, 0.03, 0.025, t0 + T.T_LETRAS + k * 0.04);
-  },
-};
-
 /* ==== tajo/js/juego.js ==== */
 /* ============================================================================
-   TAJO: escenas (intro, idioma, menú, partida, pausa, fin, dojo, controles),
+   TAJO: escenas (menú, idioma, partida, pausa, fin, dojo, controles),
    el filo y los cortes, las olas de fruta, los cuatro modos, los poderes y el
    bucle. Todo en unidades de 360 de ancho; S lo pasa a píxeles.
    ========================================================================== */
 
 const lienzoP = document.getElementById('lienzo');
 const g = lienzoP.getContext('2d');
-let escena = 'intro', tEsc = 0, trans = null, fondo = null, G = null, ahora = 0, dtCuadro = 1 / 60;
+let escena = 'menu', tEsc = 0, trans = null, fondo = null, G = null, ahora = 0, dtCuadro = 1 / 60;
 
 const CTRL_BASE = { grosor: 1, sensib: 1, alcance: 1, tamPausa: 1, zurdo: false, vibrar: true };
 const CTRL = Object.assign({}, CTRL_BASE, Guardado.leer('controles', {}));
@@ -1420,9 +1098,10 @@ function pincelada(w, h, col, sem) {
 }
 function boton(x, y, w, h, txt, o) {
   o = o || {};
-  const apr = !o.apagado && apretando(x, y, w, h), col = o.apagado ? '#8c8072' : apr ? BERMELLON : (o.col || TINTA), dy = apr ? 1.5 : 0;
+  const apr = !o.apagado && apretando(x, y, w, h), col = o.apagado ? '#8c8072' : apr ? BERMELLON : (o.col || TINTA), dy = apr ? 1.5 : 0, gl = o.globo ? 18 : 0;
   g.drawImage(pincelada(Math.round(w), Math.round(h), col, o.sem || (Math.round(x * 7 + y * 3) % 97)), x - 8, y - 6 + dy, w + 16, h + 12);
-  texto(g, txt, x + w / 2, y + h / 2 + 1 + dy, { tam: tamQueEntra(g, txt, o.tam || 16, w - 18), col: '#f5ecd8', tinta: false });
+  if (o.globo) dibujarGlobo(g, x + 13, y + h / 2 + 1 + dy, 6.5, '#f5ecd8', 1.3);
+  texto(g, txt, x + w / 2 + gl / 2, y + h / 2 + 1 + dy, { tam: tamQueEntra(g, txt, o.tam || 16, w - 18 - gl), col: '#f5ecd8', tinta: false });
   const si = !o.apagado && clicEn(x, y, w, h);
   if (si) { Sonido.sfx('boton'); vibrar(8); }
   return si;
@@ -1529,22 +1208,18 @@ function dibujarMundo(M) {
 }
 const nuevoMundo = () => ({ mitades: [], manchas: [], gotas: [] });
 
-/* ------------------------------------------------------------------ intro */
-let intro = null, musicaIntro = null;
-function escenaIntro(dt) {
-  filoPaso(null);
-  if (E.toque || apretada('Enter', 'Space', 'Escape')) { intro.saltar(); if (intro.listo && musicaIntro) musicaIntro.cortar(); }
-  intro.pasar(dt); intro.dibujar(g);
-  if (intro.listo && !trans) irA('idioma');
-}
+/* ---------------------------------------------------------------- idioma */
+/* la lista de los 13 idiomas, cada uno escrito en su idioma; el elegido, en bermellón */
 function escenaIdioma(t) {
   filoPaso(null);
   g.drawImage(fondo, 0, 0, W, H);
-  tituloTajo(H * 0.16, t);
-  const y0 = Math.round(H * 0.38);
-  ['es', 'en', 'pt'].forEach((l, i) => texto(g, TXT[l].idioma, W / 2, y0 + i * 20, { tam: 13, col: i === 1 ? BERMELLON : TINTA, tinta: false }));
-  const nombres = { es: 'ESPAÑOL', en: 'ENGLISH', pt: 'PORTUGUÊS' };
-  ['es', 'en', 'pt'].forEach((l, i) => { if (boton(80, y0 + 84 + i * 60, W - 160, 42, nombres[l], { tam: 18, col: l === IDIOMA ? BERMELLON : TINTA })) { IDIOMA = l; Guardado.escribir('idioma', l); irA('menu'); } });
+  dibujarGlobo(g, W / 2, 34, 11, TINTA, 2);
+  texto(g, tr('idioma'), W / 2, 66, { tam: tamQueEntra(g, tr('idioma'), 24, W - 40) });
+  const top = 92, bajo = H - 74, paso = Math.min(44, (bajo - top) / IDIOMAS.length), h = Math.min(32, paso - 6);
+  IDIOMAS.forEach((l, i) => {
+    if (boton(64, top + i * paso, W - 128, h, l.nombre, { tam: 15, col: l.id === IDIOMA ? BERMELLON : TINTA, sem: i * 7 + 3 })) { IDIOMA = l.id; Guardado.escribir('idioma', l.id); irA('menu'); }
+  });
+  if (boton(W / 2 - 80, H - 58, 160, 38, tr('volver'), { tam: 15 }) || apretada('Escape')) irA('menu');
 }
 
 /* ------------------------------------------------------------------- menú */
@@ -1583,7 +1258,7 @@ function escenaMenu(t) {
   const bw = (W - 48) / 3;
   if (boton(16, H - 58, bw, 34, tr('dojo'), { tam: 14 })) irA('dojo');
   if (boton(24 + bw, H - 58, bw, 34, tr('controles'), { tam: 14 })) irA('controles');
-  if (boton(32 + bw * 2, H - 58, bw, 34, tr('idiomaBtn'), { tam: 14 })) irA('idioma');
+  if (boton(32 + bw * 2, H - 58, bw, 34, tr('idiomaBtn'), { tam: 14, globo: true })) irA('idioma');
   dibujarFilo();
 }
 
@@ -1828,8 +1503,8 @@ function dibujarAyuda(P, t) {
     dibujarRastro(g, { pts }, filoActual(), 18, 0, 1);
   }
   let y = H * 0.56;
-  for (const l of partir(tr('ayuda'), 24)) { texto(g, l, W / 2, y, { tam: 16 }); y += 24; }
-  if (P.modo === 'clasico') { y += 8; for (const l of partir(tr('ayudaFalla'), 30)) { texto(g, l, W / 2, y, { tam: 13, col: BERMELLON, tinta: false }); y += 19; } }
+  for (const l of partirMedido(tr('ayuda'), W - 56, (s) => medir(g, s, 16))) { texto(g, l, W / 2, y, { tam: 16 }); y += 24; }
+  if (P.modo === 'clasico') { y += 8; for (const l of partirMedido(tr('ayudaFalla'), W - 56, (s) => medir(g, s, 13))) { texto(g, l, W / 2, y, { tam: 13, col: BERMELLON, tinta: false }); y += 19; } }
   g.globalAlpha = 0.5 + 0.5 * Math.sin(t * 4); texto(g, tr('tocar'), W / 2, H * 0.86, { tam: 13, col: GRIS, tinta: false }); g.globalAlpha = 1;
 }
 function dibujarPartida(t, quieto) {
@@ -2001,9 +1676,8 @@ function cuadro(ts) {
   if (trans) { trans.t += dt; if (!trans.hecho && trans.t >= trans.dur) { trans.hecho = true; trans.alMedio(); } if (trans.t >= trans.dur * 2) trans = null; }
   g.setTransform(S, 0, 0, S, 0, 0);
   try {
-    if (escena !== 'intro') Sonido.musica(temaDe());
+    Sonido.musica(temaDe());
     switch (escena) {
-      case 'intro': escenaIntro(dt); break;
       case 'idioma': escenaIdioma(t); break;
       case 'menu': escenaMenu(t); break;
       case 'juego': if (!trans) actualizarPartida(dt); else filoPaso(null); if (escena === 'juego') dibujarPartida(t); else escenaPausa(t); break;
@@ -2019,9 +1693,7 @@ function cuadro(ts) {
 }
 function arrancar() {
   ajustar();
-  intro = crearIntroJXS({ W, H, presenta: TXT[IDIOMA].presenta, vibrar, estilo: ESTILO_SUMI });
   Sonido.iniciar();
-  if (Sonido.ctx && Sonido.ctx.state === 'running') musicaIntro = jingleJXS(Sonido.ctx, Sonido.total, ESTILO_SUMI);
   prepararMenu(); prepararPractica();
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (escena === 'juego' && G && !G.fin) irPausa(); Sonido.pausar(true); } else Sonido.pausar(false); });
   requestAnimationFrame(cuadro);
