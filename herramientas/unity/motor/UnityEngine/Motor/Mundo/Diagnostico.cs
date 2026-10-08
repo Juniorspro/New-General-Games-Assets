@@ -36,6 +36,8 @@ namespace Porteo
                     case "directores": return Directores(arg);
                     case "animadores": return Animadores(arg);
                     case "textos": return Textos();
+                    case "desplegables": return Desplegables();
+                    case "materiales": return Materiales(arg);
                     default: return "diagnóstico: no sé " + partes[0];
                 }
             }
@@ -442,6 +444,53 @@ namespace Porteo
                 foreach (var ch in s) { if (ch == '<') enEtiqueta = true; else if (ch == '>') enEtiqueta = false; else if (!enEtiqueta) limpio.Append(ch == '\n' ? ' ' : ch); }
                 s = limpio.ToString();
                 sb.Append($"\n   {Ruta(c.transform)}: \"{(s.Length > 70 ? s.Substring(0, 70) + "…" : s)}\"");
+            }
+            return sb.ToString();
+        }
+
+        // los materiales de los renderers cuya ruta contiene arg: shader, palabras clave, lightmap y
+        // texturas (con su formato): para ver por qué algo sale oscuro o de otro color
+        public static string Materiales(string arg)
+        {
+            var sb = new StringBuilder("materiales:");
+            int n = 0;
+            foreach (var r in UnityEngine.Object.FindObjectsOfType<Renderer>())
+            {
+                var ruta = Ruta(r.transform);
+                if (arg.Length > 0 && !ruta.Contains(arg)) continue;
+                if (++n > 30) break;
+                sb.Append($"\n   {ruta} lm={r.lightmapIndex} {r.GetType().Name}");
+                foreach (var m in r.sharedMaterials)
+                {
+                    if (m == null) continue;
+                    sb.Append($"\n      {m.name} shader={m.shader?.name} claves=[{string.Join(" ", m.shaderKeywords)}]");
+                    if (m.shader == null) continue;
+                    foreach (var p in m.shader.propiedades)
+                    {
+                        if (p.Tipo == 4 && m.GetTexture(p.Nombre) is Texture t)
+                            sb.Append($" {p.Nombre}={t.name}({(t as Texture2D)?.format} {t.width}x{t.height})");
+                        else if (p.Tipo == 0 || p.Tipo == 1) sb.Append($" {p.Nombre}={m.GetVector(p.Nombre)}");
+                        else if (p.Tipo == 2 || p.Tipo == 3) sb.Append($" {p.Nombre}={m.GetFloat(p.Nombre)}");
+                    }
+                }
+            }
+            return sb.ToString();
+        }
+
+        // las listas desplegables (Dropdown y TMP_Dropdown, por reflexión): sus opciones en orden
+        public static string Desplegables()
+        {
+            var sb = new StringBuilder("desplegables:");
+            foreach (var c in Resources.FindObjectsOfTypeAll<MonoBehaviour>())
+            {
+                var t = c.GetType();
+                if (t.Name != "TMP_Dropdown" && t.Name != "Dropdown") continue;
+                sb.Append($"\n   {Ruta(c.transform)} valor={t.GetProperty("value")?.GetValue(c)}:");
+                if (t.GetProperty("options")?.GetValue(c) is System.Collections.IEnumerable ops)
+                {
+                    int i = 0;
+                    foreach (var o in ops) sb.Append($" {i++}={o.GetType().GetProperty("text")?.GetValue(o)}");
+                }
             }
             return sb.ToString();
         }

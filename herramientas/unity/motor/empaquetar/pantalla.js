@@ -94,6 +94,17 @@
     })();
   }
 
+  // el idioma del teléfono para el juego (carga.json, "idioma": {"clave": la de PlayerPrefs, "tabla":
+  // {"es-ES": 25, "es": 9, ...}}): primero el idioma con región, después sin; main.js lo pone si el
+  // jugador todavía no eligió uno
+  if (CONFIG.idioma && CONFIG.idioma.tabla) {
+    const tabla = CONFIG.idioma.tabla;
+    for (const l of (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''])) {
+      const v = tabla[l] ?? tabla[l.split('-')[0].toLowerCase()];
+      if (v != null) { globalThis.porteoPreferencias = { [CONFIG.idioma.clave]: v }; break; }
+    }
+  }
+
   // lo primero: el escenario horizontal 16:9 (girado si el teléfono está en vertical) y el registro
   // (errores en pantalla en vez de negro y, si hay dónde, lo que pasa mandado al sitio)
   if (Porteo.escenario) Porteo.escenario({ relacion: CONFIG.relacion || 16 / 9 });

@@ -492,6 +492,9 @@ public static partial class Programa
     [JSExport] public static void Mirar(double dx, double dy) => Entrada.Mirar((float)dx, (float)dy);
     // el juego trabó el puntero (Cursor.lockState): se está jugando, no en un menú
     [JSExport] public static bool CursorTrabado() => Cursor.lockState == CursorLockMode.Locked && Time.timeScale > 0;
+    // una preferencia del juego (PlayerPrefs) si todavía no la tiene: el idioma del teléfono la
+    // primera vez (carga.json, "idioma"), sin pisar lo que se eligió después en el juego
+    [JSExport] public static void PreferenciaInicial(string clave, int valor) { if (!PlayerPrefs.HasKey(clave)) PlayerPrefs.SetInt(clave, valor); }
     [JSExport] public static void Texto(string s) => Entrada.Texto(s);
     [JSExport] public static void Toque(int dedo, int fase, double x, double y) => Entrada.Toque(dedo, fase, (float)x, (float)y);
 }

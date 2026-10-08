@@ -22,6 +22,14 @@ namespace UnityEngine
         internal int ordenCapa, capaOrdenId, pantallaDestino;
         internal AdditionalCanvasShaderChannels canales;
         internal int ordenDibujo;
+        // el rect como estaba antes de manejarlo como raíz: si después lo cuelgan de otro canvas
+        // vuelve (TMP_Dropdown instancia la lista suelta, activa, y recién después la mueve adentro:
+        // quedaba del tamaño de la pantalla, gigante en un teléfono con muchos píxeles)
+        internal bool conducido;
+        internal int cuadroConducido;
+        internal Vector2 pivoteAntes, anclaMinAntes, anclaMaxAntes, tamAntes;
+        internal Vector3 posAntes, escalaAntes;
+        internal Quaternion rotAntes;
 
         public delegate void WillRenderCanvases();
         static event WillRenderCanvases antesDeDibujar;
@@ -556,6 +564,27 @@ namespace Porteo.UI
             return m;
         }
 
+        // un Transform cambió de padre: un canvas que se manejó como raíz en este mismo cuadro y ahora
+        // está dentro de otro recupera su rect (ver Canvas.conducido). Sólo en el mismo cuadro: uno
+        // que fue raíz un rato y después se mueve se queda como estaba, como en Unity
+        static readonly HashSet<Canvas> conducidos = new HashSet<Canvas>();
+        static readonly List<Canvas> soltar = new List<Canvas>();
+
+        internal static void PadreCambiado(Transform t)
+        {
+            if (conducidos.Count == 0) return;
+            soltar.Clear();
+            foreach (var c in conducidos) if (c.destruido || !c.isRootCanvas) soltar.Add(c);
+            foreach (var c in soltar)
+            {
+                conducidos.Remove(c);
+                c.conducido = false;
+                if (c.destruido || c.cuadroConducido != Time.frameCount || !(c.transform is RectTransform rt)) continue;
+                rt.pivot = c.pivoteAntes; rt.anchorMin = c.anclaMinAntes; rt.anchorMax = c.anclaMaxAntes; rt.sizeDelta = c.tamAntes;
+                rt.localPosition = c.posAntes; rt.localScale = c.escalaAntes; rt.localRotation = c.rotAntes;
+            }
+        }
+
         static void ActualizarRaices()
         {
             foreach (var c in activos.ToArray()) if (c.isRootCanvas) ActualizarRaiz(c);
@@ -568,6 +597,14 @@ namespace Porteo.UI
             if (c.destruido || !(c.transform is RectTransform rt) || !c.isRootCanvas) return;
             float w = Screen.width, h = Screen.height, s = c.escala;
             if (c.modo == RenderMode.WorldSpace) return;
+            if (!c.conducido)
+            {
+                c.conducido = true;
+                c.cuadroConducido = Time.frameCount;
+                conducidos.Add(c);
+                c.pivoteAntes = rt.pivote; c.anclaMinAntes = rt.anchorMin; c.anclaMaxAntes = rt.anchorMax; c.tamAntes = rt.tamDelta;
+                c.posAntes = rt.localPosition; c.escalaAntes = rt.localScale; c.rotAntes = rt.localRotation;
+            }
             // el rect del canvas raíz lo maneja Unity: pivote al centro y anclas en cero. Las
             // escenas nuevas (2019+) lo guardan todo en cero, y con el pivote abajo a la izquierda
             // el contenido quedaría corrido medio canvas

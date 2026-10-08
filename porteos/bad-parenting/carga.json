@@ -28,5 +28,45 @@
       "Melhor com fones de ouvido e a luz apagada."
     ]
   },
-  "menu": "Main"
+  "menu": "Main",
+  "idioma": {
+    "clave": "language",
+    "tabla": {
+      "en": 0,
+      "vi": 1,
+      "zh": 2,
+      "pt": 3,
+      "sr": 4,
+      "ar": 5,
+      "hu": 6,
+      "pl": 7,
+      "id": 8,
+      "in": 8,
+      "es": 9,
+      "tr": 10,
+      "ko": 11,
+      "ja": 12,
+      "fr": 13,
+      "it": 14,
+      "de": 15,
+      "ru": 16,
+      "uk": 17,
+      "fil": 18,
+      "tl": 18,
+      "th": 19,
+      "nl": 20,
+      "fa": 21,
+      "ro": 22,
+      "el": 23,
+      "cs": 24,
+      "es-ES": 25,
+      "lt": 26,
+      "sv": 27,
+      "hi": 28,
+      "sq": 29,
+      "mn": 30,
+      "bg": 31,
+      "sk": 32
+    }
+  }
 }

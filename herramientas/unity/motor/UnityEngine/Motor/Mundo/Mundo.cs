@@ -242,6 +242,7 @@ namespace Porteo
 
         public static void PadreCambiado(Transform t, Transform viejo)
         {
+            Porteo.UI.Lienzos.PadreCambiado(t);
             Mensaje(t, "OnTransformParentChanged");
             Mensaje(t, "OnCanvasHierarchyChanged");
             if (viejo != null && !viejo.destruido) HijosCambiados(viejo);
