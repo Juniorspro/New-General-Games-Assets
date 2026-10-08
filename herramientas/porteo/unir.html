@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unir partes</title>
+<!-- porteo: vuelve a armar un archivo que se entregó en partes (las entregas por el chat tienen un
+     tope de 30 MB por archivo). Se abre con doble clic, se eligen todas las partes y descarga el
+     archivo entero, igual byte a byte (muestra su SHA-256 para comparar). En PC también sirve:
+       Windows:      copy /b juego.html.parte0 + juego.html.parte1 + ... juego.html
+       Mac o Linux:  cat juego.html.parte* > juego.html -->
+<style>
+  :root { --fondo: #f6f7f9; --texto: #1d2129; --suave: #5b6472; --acento: #2d7d46; --borde: #d7dbe2; }
+  @media (prefers-color-scheme: dark) { :root { --fondo: #15181d; --texto: #e8eaed; --suave: #a0a8b4; --acento: #5cc27f; --borde: #2c323b; } }
+  body { margin: 0; padding: 24px 16px; background: var(--fondo); color: var(--texto); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { color: var(--suave); margin: 8px 0; }
+  label { display: block; margin: 20px 0; padding: 22px; border: 2px dashed var(--borde); border-radius: 12px; text-align: center; cursor: pointer; }
+  input { display: none; }
+  #estado { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 13px; color: var(--texto); }
+  a.boton { display: inline-block; margin-top: 12px; padding: 12px 20px; border-radius: 10px; background: var(--acento); color: #fff; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Unir partes</h1>
+  <p>Elegí todas las partes juntas (por ejemplo <code>juego.html.parte0</code> … <code>parte7</code>). Se unen acá mismo, sin subir nada.</p>
+  <label>Tocá para elegir las partes<input id="partes" type="file" multiple></label>
+  <div id="estado"></div>
+  <div id="salida"></div>
+</main>
+<script>
+const estado = document.getElementById('estado');
+const salida = document.getElementById('salida');
+document.getElementById('partes').addEventListener('change', async (ev) => {
+  // en orden por el número del final del nombre (parte2 antes que parte10)
+  const num = (f) => +(/(\d+)$/.exec(f.name) || [0, 0])[1];
+  const partes = [...ev.target.files].sort((a, b) => num(a) - num(b));
+  if (!partes.length) return;
+  const nombre = partes[0].name.replace(/\.parte\d+$/, '') || 'archivo';
+  const numeros = partes.map(num);
+  const faltan = [];
+  for (let i = 0; i <= Math.max(...numeros); i++) if (!numeros.includes(i)) faltan.push(i);
+  const total = partes.reduce((s, f) => s + f.size, 0);
+  estado.textContent = `${partes.length} partes, ${(total / 1048576).toFixed(1)} MB` +
+    (faltan.length ? `\nFALTAN las partes ${faltan.join(', ')}: elegilas todas de una vez.` : '');
+  if (faltan.length) return;
+  const blob = new Blob(partes, { type: nombre.endsWith('.html') ? 'text/html' : 'application/octet-stream' });
+  salida.innerHTML = '';
+  const a = document.createElement('a');
+  a.className = 'boton';
+  a.href = URL.createObjectURL(blob);
+  a.download = nombre;
+  a.textContent = 'Guardar ' + nombre;
+  salida.appendChild(a);
+  // la huella, para comparar con la que vino en el mensaje (si el navegador la puede calcular)
+  if (crypto.subtle) {
+    estado.textContent += '\ncalculando la SHA-256…';
+    try {
+      const h = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+      const hex = [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
+      estado.textContent = estado.textContent.replace('calculando la SHA-256…', 'SHA-256 ' + hex);
+    } catch (e) {
+      estado.textContent = estado.textContent.replace('calculando la SHA-256…', '(no se pudo calcular la SHA-256 acá)');
+    }
+  }
+});
+</script>
+</body>
+</html>
