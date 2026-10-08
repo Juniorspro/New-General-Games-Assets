@@ -106,6 +106,22 @@ if (args.Contains("textos"))
     foreach (var kv in cuenta) Console.WriteLine($"textos {kv.Key}: {kv.Value}");
     foreach (var e in ejemplos) Console.WriteLine("   " + e);
 }
+// "guardar": guarda la partida como el menú de pausa (SaveGame directo, para ver si falla)
+if (args.Contains("guardar"))
+{
+    var asm = AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == "Assembly-CSharp");
+    var tGc = asm.GetType("GameContext");
+    var gc = asm.GetType("SRSingleton`1").MakeGenericType(tGc).GetProperty("Instance").GetValue(null);
+    var asd = tGc.GetProperty("AutoSaveDirector")?.GetValue(gc) ?? tGc.GetField("AutoSaveDirector")?.GetValue(gc);
+    try { asd.GetType().GetMethod("SaveGame").Invoke(asd, null); Console.WriteLine("guardar: SaveGame terminó"); }
+    catch (Exception e) { Console.WriteLine("guardar: falló " + (e.InnerException ?? e)); }
+    try { asd.GetType().GetMethod("SaveProfile", new[] { typeof(bool) })?.Invoke(asd, new object[] { false }); Console.WriteLine("guardar: SaveProfile terminó"); }
+    catch (Exception e) { Console.WriteLine("guardar: perfil falló " + (e.InnerException ?? e)); }
+    Console.WriteLine(Porteo.Diagnostico.Correr("disco"));
+}
+// "--diag CMD;CMD": los diagnósticos del motor (los mismos que ?diag= en la página)
+if (args.Contains("--diag"))
+    foreach (var c in args[Array.IndexOf(args, "--diag") + 1].Split(';')) Console.WriteLine(Porteo.Diagnostico.Correr(c));
 // "particulas": el estado de los sistemas de partículas de la escena (activos o no)
 if (args.Contains("particulas"))
 {

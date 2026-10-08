@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.WebAssembly">
   <!-- El juego en el navegador: el IL original del juego (de JUEGO, la carpeta Managed del APK)
        sobre el motor (UnityEngine.CoreModule y las fachadas), con .NET para WebAssembly.
-         dotnet publish -c Release -p:JUEGO=.../assets/bin/Data/Managed [-p:RunAOTCompilation=true] -->
+         dotnet publish -c Release -p:JUEGO=.../assets/bin/Data/Managed [-p:RunAOTCompilation=false] -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Porteo</AssemblyName>
@@ -16,6 +16,9 @@
     <WasmIncludeFullIcuData>true</WasmIncludeFullIcuData>
     <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
     <WasmEnableSIMD>true</WasmEnableSIMD>
+    <!-- el IL compilado a WebAssembly: con el intérprete, un cuadro del mundo cuesta ~4,5 veces más
+         de CPU (140 ms contra 30). Para probar rápido se puede apagar con -p:RunAOTCompilation=false -->
+    <RunAOTCompilation Condition="'$(RunAOTCompilation)' == ''">true</RunAOTCompilation>
     <!-- el motor llama a WebGL 2 directo (DllImport "porteo"): hace falta enlazar lo nativo -->
     <WasmBuildNative>true</WasmBuildNative>
     <EmccExtraLDFlags>-lGL -sMAX_WEBGL_VERSION=2 -sMIN_WEBGL_VERSION=2</EmccExtraLDFlags>

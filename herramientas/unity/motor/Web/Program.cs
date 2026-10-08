@@ -106,6 +106,44 @@ public static partial class Programa
 
     [JSExport] public static void SincronizarDisco() => Disco.Sincronizar();
 
+    // para depurar el guardado: SaveGame directo (SaveAllNow se traga las excepciones)
+    [JSExport]
+    public static string ProbarGuardado()
+    {
+        try
+        {
+            var asm = Array.Find(AppDomain.CurrentDomain.GetAssemblies(), a => a.GetName().Name == "Assembly-CSharp");
+            var tGc = asm.GetType("GameContext");
+            var gc = asm.GetType("SRSingleton`1").MakeGenericType(tGc).GetProperty("Instance").GetValue(null);
+            var asd = tGc.GetProperty("AutoSaveDirector")?.GetValue(gc);
+            asd.GetType().GetMethod("SaveGame").Invoke(asd, null);
+            return "guardado: " + Diagnostico.Disco(Plataforma.RutaPersistente);
+        }
+        catch (Exception e) { return "falló: " + (e.InnerException ?? e); }
+    }
+
+    // La versión de Android guarda sola cada 5 minutos y al salir desde el menú de pausa. En el
+    // navegador la pestaña se puede cerrar o dejar de lado en cualquier momento: al ocultarse se
+    // guarda la partida como lo haría ese menú (AutoSaveDirector.SaveAllNow) y se manda al disco.
+    [JSExport]
+    public static void GuardarPartida()
+    {
+        try
+        {
+            var asm = Array.Find(AppDomain.CurrentDomain.GetAssemblies(), a => a.GetName().Name == "Assembly-CSharp");
+            var niveles = asm?.GetType("Levels");
+            if (niveles?.GetMethod("isSpecial", Type.EmptyTypes)?.Invoke(null, null) is bool especial && especial) return;
+            var tGc = asm.GetType("GameContext");
+            var gc = asm.GetType("SRSingleton`1").MakeGenericType(tGc).GetProperty("Instance").GetValue(null);
+            var asd = gc == null ? null : tGc.GetProperty("AutoSaveDirector")?.GetValue(gc);
+            if (asd == null) return;
+            asd.GetType().GetMethod("SaveAllNow")?.Invoke(asd, null);
+            Debug.Log("porteo: partida guardada");
+        }
+        catch (Exception e) { Debug.LogException(e); }
+        Disco.Sincronizar();
+    }
+
     static class Disco
     {
         // lo último que se mandó de cada archivo: largo y fecha de escritura
@@ -162,6 +200,7 @@ public static partial class Programa
         {
             Nueva();
             Adelantando();
+            Ir();
             Mundo.Cuadro(dt);
             DiagnosticoPendiente();
         }
@@ -185,6 +224,23 @@ public static partial class Programa
         var sb = new System.Text.StringBuilder();
         foreach (var c in comandos.Split(';')) if (c.Length > 0) sb.Append(Diagnostico.Correr(c)).Append('\n');
         return sb.ToString();
+    }
+
+    // ?ir=x,z: al terminar el adelanto, el jugador aparece ahí (sobre el suelo): para mirar otras zonas
+    static double[] irA;
+    [JSExport] public static void IrA(double x, double z) => irA = new[] { x, z };
+
+    static void Ir()
+    {
+        if (irA == null || adelantar > 0) return;
+        if (escenaAdelantar != null && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != escenaAdelantar) return;
+        var jugador = GameObject.Find("SimplePlayer");
+        if (jugador == null) return;
+        var desde = new Vector3((float)irA[0], 1000, (float)irA[1]);
+        float y = Physics.Raycast(desde, Vector3.down, out var hit, 2000) ? hit.point.y : 30;
+        jugador.transform.position = new Vector3((float)irA[0], y + 1.5f, (float)irA[1]);
+        Debug.Log($"porteo: jugador en {jugador.transform.position}");
+        irA = null;
     }
 
     static void DiagnosticoPendiente()
@@ -289,6 +345,7 @@ public static partial class Programa
     [JSExport] public static void OcultarShader(string shader) => Porteo.Render.Dibujo.ShadersOcultos.Add(shader);
     [JSExport] public static void VerFs(string shader, string expresion) { Shader.DepurarShader = shader; Shader.DepurarExpresion = expresion; }
     [JSExport] public static void VerVariantes(string shader) => Shader.DepurarVariantes = shader;
+    [JSExport] public static void Desarrollo(bool si) => Plataforma.Desarrollo = si;
     [JSExport] public static void FijarCamara(double x, double y, double z, double yaw, double pitch)
     {
         Porteo.Render.Dibujo.CamaraForzada = true;

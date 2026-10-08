@@ -20,11 +20,44 @@ namespace Porteo
                     case "jerarquia": return Jerarquia(arg);
                     case "cerca": return Cerca(float.TryParse(arg, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var r) ? r : 6);
                     case "camaras": return Camaras();
+                    case "disco": return Disco(arg.Length > 0 ? arg : Plataforma.RutaPersistente);
+                    case "zonas": return Zonas();
                     case "tiempo": return $"tiempo: t={Time.time:F2} escala={Time.timeScale} cuadro={Time.frameCount} real={Time.realtimeSinceStartup:F1} cultura={System.Globalization.CultureInfo.CurrentCulture.Name}";
                     default: return "diagnóstico: no sé " + partes[0];
                 }
             }
             catch (Exception e) { return "diagnóstico: " + e; }
+        }
+
+        // los archivos guardados (las partidas y la configuración del juego)
+        public static string Disco(string raiz)
+        {
+            if (!System.IO.Directory.Exists(raiz)) return "disco: no existe " + raiz;
+            var sb = new StringBuilder("disco " + raiz + ":");
+            foreach (var f in System.IO.Directory.EnumerateFiles(raiz, "*", System.IO.SearchOption.AllDirectories))
+            {
+                var fi = new System.IO.FileInfo(f);
+                sb.Append($"\n   {f} {fi.Length} B {fi.LastWriteTimeUtc:HH:mm:ss}");
+            }
+            return sb.ToString();
+        }
+
+        // las zonas del mundo (las raíces "zone...") con el centro y el tamaño de lo que dibujan
+        public static string Zonas()
+        {
+            var sb = new StringBuilder("zonas:");
+            foreach (var t in Resources.FindObjectsOfTypeAll<Transform>())
+            {
+                if (t.parent != null || !t.gameObject.scene.IsValid() || !t.name.StartsWith("zone")) continue;
+                bool hay = false; Bounds b = default; int n = 0;
+                foreach (var r in t.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (!hay) { b = r.bounds; hay = true; } else b.Encapsulate(r.bounds);
+                    n++;
+                }
+                sb.Append($"\n   {t.name} activo={t.gameObject.activeSelf} renderers={n} centro={b.center} tamaño={b.size}");
+            }
+            return sb.ToString();
         }
 
         public static string Ruta(Transform t) => t.parent == null ? t.name : Ruta(t.parent) + "/" + t.name;

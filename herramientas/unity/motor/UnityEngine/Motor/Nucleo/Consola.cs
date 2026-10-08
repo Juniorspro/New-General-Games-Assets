@@ -5,7 +5,8 @@ namespace UnityEngine
 {
     public partial class Debug
     {
-        public static bool isDebugBuild => false;
+        // como una versión de desarrollo: el Logger del juego también muestra sus avisos (para depurar)
+        public static bool isDebugBuild => Porteo.Plataforma.Desarrollo;
 
         static void Mostrar(LogType tipo, object mensaje, Object contexto, string pila = "")
         {
@@ -121,6 +122,7 @@ namespace Porteo
         public static string Empresa = "Monomi Park";
         public static string Identificador = "com.monomipark.slimerancher";
         public static string RutaPersistente = "/persistente";
+        public static bool Desarrollo;
         public static UnityEngine.SystemLanguage Idioma = UnityEngine.SystemLanguage.English;
         public static int CuadrosObjetivo = -1;
         public static Action Salir;

@@ -120,13 +120,15 @@ setModuleImports('porteo', {
 });
 await runMain();
 const exp = (await getAssemblyExports(getConfig().mainAssemblyName)).Programa;
+// para probar desde afuera (la consola del navegador o las pruebas automáticas)
+globalThis.porteo = exp;
 estado.textContent = '';
 const movil = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 for (const [ruta, datos] of disco.archivos) exp.PonerArchivo(ruta, Array.from(datos));
 exp.Iniciar(indice.escenas, 0, 96 * (window.devicePixelRatio || 1), movil);
 // al irse de la página (o pasarla a segundo plano) se manda lo último que se guardó
-addEventListener('pagehide', () => exp.SincronizarDisco());
-document.addEventListener('visibilitychange', () => { if (document.hidden) exp.SincronizarDisco(); });
+addEventListener('pagehide', () => exp.GuardarPartida());
+document.addEventListener('visibilitychange', () => { if (document.hidden) exp.GuardarPartida(); });
 // ?perfil: cuánto tarda la GPU en cada dibujo (lento: espera a la GPU después de cada uno)
 if (new URLSearchParams(location.search).has('perfil')) exp.PerfilGpu(true);
 // ?apagar=sin3d,sinui...: partes del dibujo apagadas, para aislar problemas
@@ -135,6 +137,8 @@ for (const x of (new URLSearchParams(location.search).get('ocultar') || '').spli
 for (const x of (new URLSearchParams(location.search).get('sinshader') || '').split(',')) if (x) exp.OcultarShader(x);
 // ?verfs=SR/Slime/Body|normalize(vs_TEXCOORD3)*0.5+0.5: la salida de ese shader reemplazada (depurar)
 if (new URLSearchParams(location.search).has('verfs')) { const [s, e] = new URLSearchParams(location.search).get('verfs').split('|'); exp.VerFs(s, e); }
+// ?desarrollo: como una versión de desarrollo de Unity (el juego muestra sus avisos en la consola)
+if (new URLSearchParams(location.search).has('desarrollo')) exp.Desarrollo(true);
 // ?variantes=Standard: qué variante se elige para cada combinación de palabras clave
 if (new URLSearchParams(location.search).has('variantes')) exp.VerVariantes(new URLSearchParams(location.search).get('variantes'));
 // ?uniformes=SR/Slime/Body: qué valores recibe ese shader (en la consola)
@@ -147,6 +151,11 @@ if (new URLSearchParams(location.search).has('camara')) {
 // ?diag=jerarquia:FPSCamera;cerca:6&diagen=30: diagnósticos en la consola (cuadros después del adelanto)
 if (new URLSearchParams(location.search).has('diag'))
   exp.DiagnosticoLuego(new URLSearchParams(location.search).get('diag'), parseInt(new URLSearchParams(location.search).get('diagen')) || 30);
+// ?ir=x,z: el jugador aparece ahí al terminar el adelanto (para mirar otras zonas)
+if (new URLSearchParams(location.search).has('ir')) {
+  const c = new URLSearchParams(location.search).get('ir').split(',').map(Number);
+  exp.IrA(c[0] || 0, c[1] || 0);
+}
 // ?nueva: una partida nueva apenas aparece el menú (capturas del juego)
 if (new URLSearchParams(location.search).has('nueva')) exp.NuevaPartida();
 // ?adelantar=N[&escena=X]: N segundos de juego sin dibujar al llegar a la escena (capturas de prueba)
