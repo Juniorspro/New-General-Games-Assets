@@ -75,8 +75,9 @@
     return d;
   }
 
-  // el aviso en pantalla, encima de todo (también de la pantalla de carga)
-  function fallo(mensaje, detalle) {
+  // el aviso en pantalla, encima de todo (también de la pantalla de carga). sinGuardado: no decir que
+  // lo bajado queda (cuando recargar justamente lo vuelve a bajar, ver arranque.js)
+  function fallo(mensaje, detalle, sinGuardado) {
     anotar('fallo', mensaje + (detalle ? ' | ' + detalle : ''));
     mandar();
     if (panel) return;
@@ -94,7 +95,7 @@
     p.textContent = mensaje;
     var q = document.createElement('p');
     q.style.cssText = 'margin:0;max-width:40em;font-size:12px;color:rgba(255,255,255,.55);word-break:break-word';
-    q.textContent = (detalle ? detalle + ' · ' : '') + T[2];
+    q.textContent = sinGuardado ? (detalle || '') : (detalle ? detalle + ' · ' : '') + T[2];
     var b = document.createElement('button');
     b.type = 'button';
     b.textContent = T[1];
@@ -148,5 +149,6 @@
   }, true);
   addEventListener('pagehide', mandar);
   document.addEventListener('visibilitychange', function () { if (document.hidden) mandar(); });
-  setInterval(mandar, 15000);
+  // cada 5 s lo que haya: si un teléfono se traba cargando, que llegue antes de que lo cierren
+  setInterval(mandar, 5000);
 })();

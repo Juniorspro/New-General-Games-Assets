@@ -120,7 +120,7 @@
     motor() { motor = true; actualizar(); anotar('motor', 1); },
     escena(nombre) {
       anotar('escena', nombre);
-      if (nombre === MENU) { escenas = 2; actualizar(); esperarLoQueSeVe(); return; }
+      if (nombre === MENU) { escenas = 2; actualizar(); esperarLoQueSeVe(); if (pantalla && pantalla.mostrarSaltar) pantalla.mostrarSaltar(); return; }
       escenas++;
       actualizar();
     },
@@ -134,7 +134,10 @@
 
   Porteo.intro({ aviso: CONFIG.aviso }).then(() => {
     if (terminado) return;   // el menú ya estaba antes de que terminara la intro
-    pantalla = Porteo.carga({ imagen: CONFIG.imagen, titulo: CONFIG.titulo, consejos: CONFIG.consejos, fondo: CONFIG.fondo });
+    // "Saltar" recién con el menú cargado (lo que falta son sus texturas): antes no hay juego atrás y
+    // saltar dejaba la pantalla en negro (el dueño lo tocó con la carga trabada)
+    pantalla = Porteo.carga({ imagen: CONFIG.imagen, titulo: CONFIG.titulo, consejos: CONFIG.consejos, fondo: CONFIG.fondo, saltarEn: -1 });
+    if (escenas >= 2 && pantalla.mostrarSaltar) pantalla.mostrarSaltar();
     pantalla.saltado.then(() => { terminado = true; tapa = false; anotar('saltar', 1); });
     actualizar();
   });

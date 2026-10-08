@@ -97,8 +97,11 @@
     }
     if (lista.length) { consejo.textContent = lista[k++ % lista.length]; reloj = setInterval(otroConsejo, 5500); }
 
-    // "Saltar" aparece enseguida: el juego ya está arrancando atrás
-    setTimeout(function () { boton.classList.add('visible'); }, op.saltarEn != null ? op.saltarEn : 900);
+    // "Saltar" aparece enseguida: el juego ya está arrancando atrás. Con saltarEn < 0, recién cuando
+    // se pide (mostrarSaltar): saltar antes de que el juego tenga algo que mostrar deja la pantalla en negro
+    function mostrarSaltar() { boton.classList.add('visible'); }
+    var enMs = op.saltarEn != null ? op.saltarEn : 900;
+    if (enMs >= 0) setTimeout(mostrarSaltar, enMs);
     function irse() {
       if (fuera) return;
       fuera = true;
@@ -120,6 +123,7 @@
         pintar();
       },
       listo: function () { p = 1; pintar(); setTimeout(irse, 250); },
+      mostrarSaltar: mostrarSaltar,
       saltado: saltado,
     };
   };

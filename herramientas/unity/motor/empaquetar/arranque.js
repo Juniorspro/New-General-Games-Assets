@@ -474,15 +474,52 @@
   // teléfono: guardarlos otra vez en Cache Storage los duplicaba, y el service worker no tiene red
   const enApk = location.hostname === 'appassets.androidplatform.net';
 
+  // Cache Storage puede no contestar nunca: en el teléfono del dueño, con la versión anterior
+  // guardada, la versión nueva no arrancaba (sin un error: el bloque del código no "llegaba"). Todo lo
+  // que se le pide tiene un tiempo máximo, y pasado ese tiempo se sigue sin la caché
+  const conTiempo = (p, ms, valor) => Promise.race([p, new Promise((ok) => setTimeout(() => ok(valor), ms))]);
+  const NO_CONTESTA = {};
+  const ESPERA_CACHE = 4000;
+  // al registro de la página (registro.js), para ver desde afuera dónde se traba un teléfono
+  const anotar = (t, d) => { try { if (globalThis.Porteo && Porteo.anotar) Porteo.anotar(t, d); } catch (e) { /* sin registro */ } };
+  const t0 = performance.now();
+  const seg = () => ((performance.now() - t0) / 1000).toFixed(1) + ' s';
+  // "Reintentar sin caché" (ver vigilar): la página siguiente arranca con la caché de bloques vacía
+  const SIN_CACHE = 'porteo-sin-cache';
+
   async function abrirCache() {
     if (enApk) return;
-    try { if (self.caches && isSecureContext) cacheBloques = await caches.open('porteo-bloques'); } catch (e) { cacheBloques = null; }
-    if (!cacheBloques) return;
-    // los de versiones anteriores (que ya no están en la tabla) se borran
+    let limpiar = false;
+    try { limpiar = sessionStorage.getItem(SIN_CACHE) === '1'; sessionStorage.removeItem(SIN_CACHE); } catch (e) { /* sin sessionStorage */ }
     try {
-      const sirven = new Set(T.bloques.map((b) => b.f));
-      for (const r of await cacheBloques.keys()) if (!sirven.has(r.url.slice(r.url.lastIndexOf('/') + 1))) cacheBloques.delete(r);
-    } catch (e) { /* no importa */ }
+      if (!self.caches || !isSecureContext) return;
+      if (limpiar) { await conTiempo(caches.delete('porteo-bloques'), ESPERA_CACHE); anotar('cache', 'vaciada al reintentar'); }
+      cacheBloques = await conTiempo(caches.open('porteo-bloques'), ESPERA_CACHE, null);
+    } catch (e) { cacheBloques = null; }
+    if (!cacheBloques) { anotar('cache', 'sin caché (' + seg() + ')'); return; }
+    // los de versiones anteriores (que ya no están en la tabla) se borran, sin esperar
+    const c = cacheBloques, sirven = new Set(T.bloques.map((b) => b.f));
+    (async () => {
+      try { for (const r of await c.keys()) if (!sirven.has(r.url.slice(r.url.lastIndexOf('/') + 1))) c.delete(r).catch(() => {}); } catch (e) { /* no importa */ }
+    })();
+  }
+
+  // si no llegó nada en un rato (ni de la red ni de la caché), queda anotado qué se esperaba y la
+  // pantalla ofrece reintentar con la caché vacía
+  function vigilar() {
+    let antes = -1, quieto = 0;
+    const reloj = setInterval(() => {
+      if (fallo) { clearInterval(reloj); return; }
+      const pendientes = [];
+      for (let i = 0; i < nB; i++) if (urgente[i] && !comp[i]) pendientes.push(i);
+      if (!pendientes.length || llegando !== antes) { antes = llegando; quieto = 0; return; }
+      if (++quieto < 5) return;   // 25 s sin un byte con algo esperado
+      clearInterval(reloj);
+      anotar('trabado', seg() + ': esperando ' + pendientes.map((i) => i + (bajando.has(i) ? 'b' : '')).join(',') + ' · ' +
+        (llegando / 1048576).toFixed(1) + ' MB · caché ' + (cacheBloques ? 'sí' : 'no'));
+      try { sessionStorage.setItem(SIN_CACHE, '1'); } catch (e) { /* sin sessionStorage */ }
+      if (globalThis.Porteo && Porteo.fallo) Porteo.fallo('La carga se trabó. Al recargar se baja de nuevo lo guardado en este teléfono.', 'sin datos en 25 s', true);
+    }, 5000);
   }
 
   function traer(i, esUrgente) {
@@ -551,28 +588,48 @@
     else if (el.textContent.startsWith('bajando')) el.textContent = '';
   }
 
+  // sin un byte en este tiempo, una descarga (o una lectura de la caché) se corta y se reintenta
+  const FRENADO = 20000;
+  const esCodigo = (i) => { const ij = donde.get('fmain.js'); return !!ij && ij[0] === i; };
+
   async function bajar(i) {
     bajando.add(i);
     const b = T.bloques[i], url = 'b/' + b.f;
+    let saltarCache = false;
     for (let intento = 0; ; intento++) {
+      const control = typeof AbortController === 'function' ? new AbortController() : null;
+      let lector = null, vigia = 0, frenado = false;
+      const frenar = () => { frenado = true; if (control) control.abort(); if (lector) lector.cancel().catch(() => {}); };
+      const rearmar = () => { clearTimeout(vigia); vigia = setTimeout(frenar, FRENADO); };
       try {
-        let r = cacheBloques && await cacheBloques.match(url);
-        let guardando = null;
-        if (!r) {
-          r = await fetch(url, { priority: urgente[i] ? 'high' : 'low' });
+        let r = null;
+        if (cacheBloques && !saltarCache) {
+          r = await conTiempo(cacheBloques.match(url), ESPERA_CACHE, NO_CONTESTA);
+          // una caché que no contesta no va a contestar para el bloque siguiente: el resto, sin ella
+          if (r === NO_CONTESTA) { r = null; cacheBloques = null; anotar('cache', 'no contesta: sigo sin caché (' + seg() + ')'); }
+        }
+        const deRed = !r;
+        if (deRed) {
+          if (esCodigo(i)) anotar('codigo', 'pedido a la red ' + seg());
+          rearmar();
+          r = await fetch(url, { priority: urgente[i] ? 'high' : 'low', signal: control ? control.signal : undefined });
           if (!r.ok) throw new Error('HTTP ' + r.status);
-          // la caché lee su copia mientras acá se lee la otra
-          if (cacheBloques) guardando = cacheBloques.put(url, r.clone()).catch(() => {});
+          // a la caché en paralelo y sin esperarla: lo que sigue no depende de que termine (esperarla
+          // dejaba la carga colgada si la escritura no terminaba nunca)
+          if (cacheBloques) cacheBloques.put(url, r.clone()).catch(() => {});
         }
         // de a pedazos, contando lo que llega (ver P.bajados)
         let c;
-        const lector = r.body && r.body.getReader ? r.body.getReader() : null;
+        lector = r.body && r.body.getReader ? r.body.getReader() : null;
+        rearmar();
         if (lector) {
           const partes = [];
           let n = 0;
           for (;;) {
             const { done, value } = await lector.read();
+            if (frenado) throw new Error('sin datos en ' + FRENADO / 1000 + ' s');
             if (done) break;
+            rearmar();
             partes.push(value);
             n += value.length;
             llegando += value.length;
@@ -584,21 +641,29 @@
           c = new Uint8Array(await r.arrayBuffer());
           llegando += c.length;
         }
-        if (guardando) await guardando;
-        if (c.length !== b.c) { if (cacheBloques) cacheBloques.delete(url); throw new Error('llegó con otro tamaño'); }
+        clearTimeout(vigia);
+        if (c.length !== b.c) { if (cacheBloques) cacheBloques.delete(url).catch(() => {}); saltarCache = true; throw new Error('llegó con otro tamaño'); }
         bajando.delete(i);
         bajados += c.length;
+        if (esCodigo(i)) anotar('codigo', 'llegó ' + seg() + (deRed ? ' de la red' : ' de la caché'));
         llego(i, c);
         if (urgente[i]) avisar();
         bombear();
         return;
       } catch (e) {
+        clearTimeout(vigia);
+        // si lo que se trabó o vino mal fue la copia guardada, la próxima vez de la red
+        if (frenado) saltarCache = true;
+        anotar('reintento', url + ' (' + (intento + 1) + '): ' + (frenado ? 'sin datos en ' + FRENADO / 1000 + ' s' : e && e.message || e));
         if (intento >= 5) {
           fallo = true;
           bajando.delete(i);
           console.error('porteo: no pude bajar ' + url + ': ' + e);
           const el = estado();
           if (el) el.textContent = 'No se pudo bajar una parte del juego. Revisá la conexión y recargá la página.';
+          // al recargar, sin lo guardado: si el problema era la caché, así se arregla solo
+          try { sessionStorage.setItem(SIN_CACHE, '1'); } catch (e2) { /* sin sessionStorage */ }
+          if (globalThis.Porteo && Porteo.fallo) Porteo.fallo('No se pudo bajar una parte del juego. Revisá la conexión y recargá.', url + ': ' + (e && e.message || e), true);
           return;
         }
         await new Promise((ok) => setTimeout(ok, 1000 * 2 ** intento));
@@ -697,6 +762,7 @@
       const ij = donde.get('fmain.js');
       if (ij) traer(ij[0], true);
       bombear();
+      vigilar();
       P.arrancar();
     });
   }

@@ -300,11 +300,18 @@ def preparar_proyecto(cf, nombre, clave, kv=None):
     return p
 
 
-def desplegar(cf, nombre, carpeta, mensaje, wrangler):
-    antes = (cf.proyecto(nombre)["result"].get("latest_deployment") or {}).get("id")
+def ultima_subida(cf, nombre):
+    """La subida más nueva del proyecto, de producción o de vista previa."""
+    r = cf("GET", f"/accounts/{cf.cuenta}/pages/projects/{nombre}/deployments?per_page=1")
+    return (r.get("result") or [{}])[0] if r.get("success") else {}
+
+
+def desplegar(cf, nombre, carpeta, mensaje, wrangler, rama="main"):
+    """Sube la carpeta; rama "main" es producción, cualquier otra una vista previa con su dirección."""
+    antes = ultima_subida(cf, nombre).get("id")
     env = dict(os.environ, CLOUDFLARE_API_TOKEN=cf.token, CLOUDFLARE_ACCOUNT_ID=cf.cuenta,
                WRANGLER_SEND_METRICS="false", CI="true")
-    r = subprocess.run([wrangler, "pages", "deploy", str(carpeta), "--project-name", nombre, "--branch", "main",
+    r = subprocess.run([wrangler, "pages", "deploy", str(carpeta), "--project-name", nombre, "--branch", rama,
                         "--commit-message", mensaje, "--commit-dirty=true"],
                        cwd=carpeta.parent, env=env, capture_output=True, text=True)
     if r.returncode:
@@ -313,7 +320,7 @@ def desplegar(cf, nombre, carpeta, mensaje, wrangler):
     # de darla por perdida
     fin = time.time() + 90
     while True:
-        d = cf.proyecto(nombre)["result"].get("latest_deployment") or {}
+        d = ultima_subida(cf, nombre)
         if d.get("id") and d["id"] != antes:
             break
         if time.time() > fin:
@@ -392,11 +399,13 @@ def main():
         (prueba / "b" / "prueba.bin").write_bytes(falsos["/b/prueba.bin"])
         (prueba / "sw.js").write_text("// prueba\n", encoding="utf-8")
         con_puerta(prueba)
-        url = desplegar(cf, a.proyecto, prueba, "porteo: prueba de la puerta (sin el juego)", a.wrangler)
-        # 3. verificarla en las dos direcciones
-        for b in (url, base):
-            esperar(b, clave, falsos["/"])
-            verificar(b, clave, falsos, ["/sw.js"])
+        # como vista previa (su propia dirección, con el mismo secreto y fail closed): subida a
+        # producción, mientras duraba la prueba el sitio de verdad no estaba (y quien entrara en ese
+        # minuto se llevaba la página de prueba y su sw.js de mentira)
+        url = desplegar(cf, a.proyecto, prueba, "porteo: prueba de la puerta (sin el juego)", a.wrangler, rama="prueba-puerta")
+        # 3. verificarla
+        esperar(url, clave, falsos["/"])
+        verificar(url, clave, falsos, ["/sw.js"])
 
         # 4. la de verdad, y verificar otra vez
         real = tmp / "real"

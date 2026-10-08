@@ -187,8 +187,12 @@ public static partial class Programa
             var asm = Array.Find(AppDomain.CurrentDomain.GetAssemblies(), a => a.GetName().Name == "Assembly-CSharp");
             var niveles = asm?.GetType("Levels");
             if (niveles?.GetMethod("isSpecial", Type.EmptyTypes)?.Invoke(null, null) is bool especial && especial) return;
-            var tGc = asm.GetType("GameContext");
-            var gc = asm.GetType("SRSingleton`1").MakeGenericType(tGc).GetProperty("Instance").GetValue(null);
+            // la partida de Slime Rancher (su director de guardado); en otros juegos no está y alcanza
+            // con pasar el disco a IndexedDB (en Bad Parenting esto tiraba un NullReference en cada pagehide)
+            var tGc = asm?.GetType("GameContext");
+            var tSingleton = asm?.GetType("SRSingleton`1");
+            if (tGc == null || tSingleton == null) { Disco.Sincronizar(); return; }
+            var gc = tSingleton.MakeGenericType(tGc).GetProperty("Instance")?.GetValue(null);
             var asd = gc == null ? null : tGc.GetProperty("AutoSaveDirector")?.GetValue(gc);
             if (asd == null) return;
             asd.GetType().GetMethod("SaveAllNow")?.Invoke(asd, null);
