@@ -35,6 +35,9 @@ namespace Porteo.Render
         static bool iniciado;
         static int versionAmbiente = -1;
 
+        // para adelantar la simulación sin dibujar (capturas de prueba)
+        public static bool Omitir;
+
         // Perfil de la GPU (para depurar): espera a que termine cada dibujo y suma cuánto tardó por
         // shader y malla; cada tanto informa los que más tardan.
         public static bool PerfilGpu;
@@ -87,7 +90,7 @@ namespace Porteo.Render
         // ── el cuadro ──
         static void Cuadro()
         {
-            if (!Gpu.Activo) return;
+            if (!Gpu.Activo || Omitir) return;
             if (PerfilGpu) { Medir("(antes del cuadro: subidas, compilación)"); InformarPerfil(); }
             Gpu.ActualizarTamano();
             Pantalla.Ancho = Gpu.Ancho; Pantalla.Alto = Gpu.Alto;
@@ -136,6 +139,7 @@ namespace Porteo.Render
         }
 
         static Item[] items = new Item[4096];
+        static bool sinEstaticos, soloEstaticos;
         static int nItems;
         static readonly Plane[] planos = new Plane[6];
         static Camera camara;
@@ -235,6 +239,8 @@ namespace Porteo.Render
         static void Juntar(Camera cam, in Matrix4x4 vp)
         {
             nItems = 0;
+            sinEstaticos = Apagado.Contains("sinestaticos");
+            soloEstaticos = Apagado.Contains("soloestaticos");
             Planos(vp);
             float mitadTan = (float)Math.Tan(cam.fov * 0.5f * Math.PI / 180);
             foreach (var g in Renders.lods) g.Elegir(posCamara, mitadTan, cam.orto, cam.tamOrto);
@@ -252,6 +258,7 @@ namespace Porteo.Render
                     int s = r.lodGrupo.seleccion;
                     if (s < 0 || (r.lodMascara & (1 << s)) == 0) continue;
                 }
+                if (r.estaticoPrimera >= 0 ? sinEstaticos : soloEstaticos) continue;
                 var m = r.MallaParaDibujar();
                 if ((object)m == null || m.destruido) continue;
                 var b = r.bounds;

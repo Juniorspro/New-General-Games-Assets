@@ -280,5 +280,23 @@ namespace Porteo.Datos
         }
 
         public static int TamanoElemento(byte tipo) => tipo switch { 0 or 1 => 1, 2 or 3 => 2, 4 or 5 or 6 => 4, _ => 8 };
+
+        // Un arreglo de números que el exportador mandó a recursos/ por grande: empieza con un
+        // byte con su tipo (arbol.py), a diferencia de los bytes crudos (texturas, vértices).
+        public static Array ArregloDeRecurso(byte[] b)
+        {
+            if (b == null || b.Length == 0) return Array.Empty<byte>();
+            int p = 1;
+            return LeerArreglo(b[0], b, ref p, (b.Length - 1) / TamanoElemento(b[0]));
+        }
+
+        // los bytes de un arreglo de bytes guardado como recurso (sin el byte del tipo)
+        public static byte[] BytesDeRecurso(byte[] b)
+        {
+            if (b == null || b.Length == 0 || b[0] != 0) return b;
+            var r = new byte[b.Length - 1];
+            Buffer.BlockCopy(b, 1, r, 0, r.Length);
+            return r;
+        }
     }
 }

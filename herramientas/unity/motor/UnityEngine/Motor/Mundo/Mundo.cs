@@ -32,6 +32,9 @@ namespace Porteo
         // los datos que hacen falta antes de empezar (Resources, shaders siempre incluidos)
         internal static Espera Arranque;
 
+        // si el próximo cuadro no correría por estar esperando datos
+        public static bool Esperando => (Arranque != null && !Arranque.Lista) || Escenas.Esperando;
+
         public static void Cuadro(double dtReal)
         {
             // mientras llegan los datos de una carga que en Unity bloquearía, no corre nada

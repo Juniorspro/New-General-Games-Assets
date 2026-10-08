@@ -238,6 +238,7 @@ struct FiltroConsulta : PxQueryFilterCallback
 {
     PxU32 mascara = 0xffffffff;
     bool triggers = false, todos = false;
+    bool sinInicial = false;   // rayos: Unity no ve los colisionadores que contienen el origen
     int excluirCc = -1;   // el actor del CharacterController que se mueve
 
     PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* s, const PxRigidActor* a, PxHitFlags&) override
@@ -249,7 +250,12 @@ struct FiltroConsulta : PxQueryFilterCallback
         return todos ? PxQueryHitType::eTOUCH : PxQueryHitType::eBLOCK;
     }
 
-    PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit&) override { return PxQueryHitType::eBLOCK; }
+    // PhysX informa un rayo que empieza adentro de una forma como golpe a distancia 0
+    PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit& h) override
+    {
+        if (sinInicial && static_cast<const PxLocationHit&>(h).distance <= 0.0f) return PxQueryHitType::eNONE;
+        return todos ? PxQueryHitType::eTOUCH : PxQueryHitType::eBLOCK;
+    }
 };
 
 FiltroConsulta filtroConsulta;
@@ -272,9 +278,10 @@ void Anotar(const PxLocationHit& h, bool barrido)
     golpes.push_back(g);
 }
 
-PxQueryFilterData DatosFiltro(bool todos, bool estaticos = true, bool dinamicos = true)
+PxQueryFilterData DatosFiltro(bool todos, bool estaticos = true, bool dinamicos = true, bool post = false)
 {
     PxQueryFlags f = PxQueryFlag::ePREFILTER;
+    if (post) f |= PxQueryFlag::ePOSTFILTER;
     if (estaticos) f |= PxQueryFlag::eSTATIC;
     if (dinamicos) f |= PxQueryFlag::eDYNAMIC;
     return PxQueryFilterData(f);
@@ -285,6 +292,7 @@ void PrepararFiltro(uint32_t mascara, int triggers, int todos)
     filtroConsulta.mascara = mascara;
     filtroConsulta.triggers = triggers != 0;
     filtroConsulta.todos = todos != 0;
+    filtroConsulta.sinInicial = false;
     filtroConsulta.excluirCc = -1;
 }
 
@@ -916,19 +924,20 @@ EXPORTAR int fx_rayo(const float* o, const float* d, float max, uint32_t mascara
     PxVec3 dir = V(d);
     if (dir.normalize() <= 0) return 0;
     PrepararFiltro(mascara, triggers, todos);
+    filtroConsulta.sinInicial = true;
     PxHitFlags f = PxHitFlag::eDEFAULT;
     if (caraTrasera) f |= PxHitFlag::eMESH_BOTH_SIDES;
     if (todos)
     {
         PxRaycastBuffer b(toquesRayo, MAX_GOLPES);
-        escena->raycast(V(o), dir, max, b, f, DatosFiltro(true), &filtroConsulta);
+        escena->raycast(V(o), dir, max, b, f, DatosFiltro(true, true, true, true), &filtroConsulta);
         for (PxU32 i = 0; i < b.getNbTouches(); i++) Anotar(b.getTouch(i), false);
         if (b.hasBlock) Anotar(b.block, false);
     }
     else
     {
         PxRaycastBuffer b;
-        if (escena->raycast(V(o), dir, max, b, f, DatosFiltro(false), &filtroConsulta) && b.hasBlock) Anotar(b.block, false);
+        if (escena->raycast(V(o), dir, max, b, f, DatosFiltro(false, true, true, true), &filtroConsulta) && b.hasBlock) Anotar(b.block, false);
     }
     *sal = golpes.data();
     return (int)golpes.size();

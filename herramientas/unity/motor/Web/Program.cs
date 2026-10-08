@@ -53,8 +53,36 @@ public static partial class Programa
     [JSExport]
     public static void Cuadro(double dt)
     {
-        try { Mundo.Cuadro(dt); }
+        try
+        {
+            Adelantando();
+            Mundo.Cuadro(dt);
+        }
         catch (Exception e) { Debug.LogException(e); }
+    }
+
+    // ?adelantar=N: al llegar a la escena pedida se simulan N segundos de juego sin dibujar (en
+    // tandas, para no colgar la página), así una captura muestra la escena ya andando aunque el
+    // navegador dibuje lento
+    static double adelantar;
+    static string escenaAdelantar;
+    [JSExport] public static void Adelantar(double segundos, string escena) { adelantar = segundos; escenaAdelantar = escena; }
+
+    static void Adelantando()
+    {
+        if (adelantar <= 0) return;
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != escenaAdelantar) return;
+        Porteo.Render.Dibujo.Omitir = true;
+        try
+        {
+            for (int i = 0; i < 120 && adelantar > 0 && !Mundo.Esperando; i++)
+            {
+                Mundo.Cuadro(1 / 30.0);
+                adelantar -= 1 / 30.0;
+            }
+        }
+        finally { Porteo.Render.Dibujo.Omitir = false; }
+        if (adelantar <= 0) Debug.Log("porteo: listo el adelanto");
     }
 
     // la entrada: main.js ya traduce las teclas a KeyCode y las coordenadas a píxeles del lienzo

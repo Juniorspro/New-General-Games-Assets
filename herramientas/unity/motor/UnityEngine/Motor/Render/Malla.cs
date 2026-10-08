@@ -12,6 +12,7 @@ namespace Porteo.Render
     public struct CanalMalla
     {
         public byte Stream, Offset, Formato, Dim;   // Formato: VertexFormat de Unity (0 Float ... 11 SInt32)
+        public byte Relleno;                        // lo que ocupa con la alineación (mayor o igual que Dim)
 
         public static int Tam(int formato) => formato switch { 0 => 4, 1 => 2, 2 => 1, 3 => 1, 4 => 2, 5 => 2, 6 => 1, 7 => 1, 8 => 2, 9 => 2, _ => 4 };
 
@@ -118,7 +119,10 @@ namespace UnityEngine
             {
                 if (indicesCrudos == null && recursoIndices >= 0)
                 {
-                    indicesCrudos = Anfitrion.Recurso(recursoIndices, true);
+                    // m_IndexBuffer es una lista de bytes: de recursos/ viene con el byte del tipo adelante
+                    // (sin sacarlo, las mallas grandes, como las del batching estático, salen hechas trizas)
+                    var b = Anfitrion.Recurso(recursoIndices, true);
+                    indicesCrudos = b != null && (b.Length & 1) == 1 ? Paquete.BytesDeRecurso(b) : b;
                     if (indicesCrudos != null) recursoIndices = -1;
                 }
                 return indicesCrudos;
@@ -151,7 +155,12 @@ namespace UnityEngine
                 for (int i = 0; i < chs.Count && i < Canales.CANTIDAD; i++)
                 {
                     var c = (Mapa)chs[i];
-                    canales[i] = new CanalMalla { Stream = (byte)c.I32("stream"), Offset = (byte)c.I32("offset"), Formato = (byte)c.I32("format"), Dim = (byte)(c.I32("dimension") & 15) };
+                    // en las mallas del batching estático la dimensión viene como 0x34: 3 componentes
+                    // en media precisión ocupando 4 por la alineación (el cuarto es relleno: leído como
+                    // w de la posición manda los vértices lejísimos)
+                    int d = c.I32("dimension");
+                    int real = d >> 4 != 0 ? d >> 4 : d & 15;
+                    canales[i] = new CanalMalla { Stream = (byte)c.I32("stream"), Offset = (byte)c.I32("offset"), Formato = (byte)c.I32("format"), Dim = (byte)real, Relleno = (byte)Math.Max(real, d & 15) };
                 }
             switch (vd?["m_DataSize"])
             {
@@ -212,7 +221,7 @@ namespace UnityEngine
             {
                 var c = canales[i];
                 if (c.Dim == 0) continue;
-                int fin = c.Offset + c.Dim * CanalMalla.Tam(c.Formato);
+                int fin = c.Offset + Math.Max(c.Dim, c.Relleno) * CanalMalla.Tam(c.Formato);
                 if (fin > pasoStream[c.Stream]) pasoStream[c.Stream] = fin;
             }
             int p = 0;

@@ -51,7 +51,7 @@ namespace UnityEngine
                 case short[] a: return a;
                 case ushort[] a: { var c = new short[a.Length]; Buffer.BlockCopy(a, 0, c, 0, a.Length * 2); return c; }
                 case byte[] b: { var c = new short[b.Length / 2]; Buffer.BlockCopy(b, 0, c, 0, c.Length * 2); return c; }
-                case Recurso rec: return Cortos(r.Recurso(rec.Id), r);
+                case Recurso rec: return Cortos(Paquete.ArregloDeRecurso(r.Recurso(rec.Id)), r);
                 case List<object> l: { var c = new short[l.Count]; for (int i = 0; i < c.Length; i++) c[i] = (short)Convert.ToInt32(l[i]); return c; }
                 case Array a: { var c = new short[a.Length]; for (int i = 0; i < c.Length; i++) c[i] = (short)Convert.ToInt32(a.GetValue(i)); return c; }
                 default: return null;
