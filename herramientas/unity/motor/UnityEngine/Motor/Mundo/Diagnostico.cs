@@ -41,6 +41,7 @@ namespace Porteo
                     case "materiales": return Materiales(arg);
                     case "luces": return Luces(arg);
                     case "campos": return Campos(arg);
+                    case "pieles": return Pieles(arg);
                     default: return "diagnóstico: no sé " + partes[0];
                 }
             }
@@ -502,6 +503,32 @@ namespace Porteo
                 sb.Append($"\n   {ruta} caja={b.center}±{b.extents} principal={c.Principal?.name}");
                 for (int i = 0; i < c.NPixel; i++) sb.Append($"\n      píxel {c.Pixel[i].name} {c.Pixel[i].transform.position}");
                 for (int i = 0; i < c.NVertice; i++) sb.Append($"\n      vértice {c.Vertice[i].name} {c.Vertice[i].transform.position}");
+            }
+            return sb.ToString();
+        }
+
+        // las pieles (SkinnedMeshRenderer) cuya ruta contiene el texto: malla, poses, huesos (los que
+        // no se resolvieron), raíz y cómo vienen los canales de posición, pesos e índices
+        public static string Pieles(string arg)
+        {
+            var sb = new StringBuilder("pieles:");
+            foreach (var r in Resources.FindObjectsOfTypeAll<SkinnedMeshRenderer>())
+            {
+                if (r.go == null) continue;
+                var ruta = Ruta(r.transform);
+                if (arg.Length > 0 && !ruta.Contains(arg)) continue;
+                var m = r.malla;
+                sb.Append($"\n   {ruta} activo={r.go.activoEnJerarquia} malla={m?.name} raíz={r.raiz?.name}");
+                if (m == null) continue;
+                int nulos = 0;
+                foreach (var h in r.huesos) if (h == null) nulos++;
+                sb.Append($" poses={m.poses.Length} huesos={r.huesos.Length} (sin resolver {nulos}) vértices={m.nVertices}");
+                foreach (var (nombre, c) in new[] { ("pos", Porteo.Render.Canales.POSICION), ("normal", Porteo.Render.Canales.NORMAL), ("pesos", Porteo.Render.Canales.PESOS), ("índices", Porteo.Render.Canales.HUESOS) })
+                {
+                    var ca = m.canales[c];
+                    sb.Append($" {nombre}=(stream {ca.Stream} off {ca.Offset} formato {ca.Formato} dim {ca.Dim})");
+                }
+                sb.Append($"\n      primeros huesos: {string.Join(", ", r.huesos.Take(4).Select(h => h?.name ?? "null"))}; {r.LimitesPiel()}");
             }
             return sb.ToString();
         }

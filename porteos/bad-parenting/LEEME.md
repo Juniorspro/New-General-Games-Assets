@@ -9,14 +9,26 @@ LEEME del motor).
 **Estado:** el logo de 2OO2 (video), el menú, las opciones (idioma, brillo, filtro), la primera
 escena entera (los diálogos se pasan tocando; al final el jugador queda libre), caminar, correr,
 mirar y usar las cosas andan, probados en Chromium emulando un teléfono en vertical; las 13
-escenas cargan y corren en la prueba de consola sin miembros faltantes. El filtro VHS y el verde de
-las habitaciones salen como en el original (comparado con las capturas de itch.io). Falta jugarlo
-entero en un teléfono de verdad (rendimiento, el resto de las escenas).
+escenas cargan y corren en la prueba de consola sin miembros faltantes. Las habitaciones (el
+empapelado claro, el techo con la mancha de la lámpara, la alfombra, el acolchado) y el filtro
+verde salen como en las capturas de itch.io. Falta jugarlo entero en un teléfono de verdad
+(rendimiento, el resto de las escenas).
 
-Lo que hubo que arreglar en el motor: las señales de Timeline (la del final no se disparaba porque la
-raíz del grafo no tenía el modo del director, y Resume rearrancaba un director parado: el
-jugador quedaba sin control o la escena volvía a empezar) y el ratón con el puntero trabado (un
-toque giraba la cámara).
+Lo que hubo que arreglar en el motor:
+
+- Las luces de los objetos enormes. Las paredes (y pisos y techos) de toda la casa son una sola
+  malla; el motor les buscaba luces sólo en la celda del centro y les llegaba únicamente la de la
+  cocina: los cuartos salían casi negros. Ahora las elige como Unity (todas las que tocan la caja,
+  por importancia en el centro, la principal y las Important dentro de pixelLightCount, sin las que
+  quedan fuera de cámara): la lámpara del cuarto ilumina las paredes por vértice, parejas.
+- Los personajes. Sus mallas no son legibles y el motor soltaba los vértices de la CPU al subirlas a
+  la GPU, pero la piel se hace en la CPU: mamá, papá y el chico se dibujaban crudos en el espacio de
+  la cadera, acostados y flotando. Las mallas con piel se quedan con sus vértices.
+- Las señales de Timeline (la del final no se disparaba porque la raíz del grafo no tenía el modo
+  del director, y Resume rearrancaba un director parado: el jugador quedaba sin control o la escena
+  volvía a empezar) y el ratón con el puntero trabado (un toque giraba la cámara).
+- La lista de idiomas de la pausa (un lienzo que el motor conducía como raíz y después se muda
+  adentro de otro volvía a su tamaño) y el idioma del teléfono como el del juego la primera vez.
 
 ## Controles
 

@@ -385,7 +385,10 @@ namespace Porteo.Render
                     else if (r is SkinnedMeshRenderer smr && m.poses.Length > 0)
                     {
                         piel = smr.Piel();
-                        o2w = smr.Espacio.localToWorldMatrix;
+                        // sin piel (faltan los vértices o los canales no se entienden) la malla va
+                        // como está, en su pose de origen y con su transform: en el espacio de la
+                        // raíz quedaría girada y corrida
+                        o2w = piel != 0 ? smr.Espacio.localToWorldMatrix : r.transform.localToWorldMatrix;
                     }
                     else o2w = r.transform.localToWorldMatrix;
                     bool espejo = Determinante3(o2w) < 0;

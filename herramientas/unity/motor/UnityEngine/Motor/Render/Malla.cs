@@ -790,8 +790,11 @@ namespace UnityEngine
             versionGpu = version;
             firmaGpu = firma;
             // si nadie lee los vértices, no hace falta guardarlos también en la CPU (salvo los que
-            // no se pueden volver a pedir: un MeshCollider puede necesitarlos después)
-            if (!legible && !hayArreglos && recursoOrigen >= 0) crudo2 = null;
+            // no se pueden volver a pedir: un MeshCollider puede necesitarlos después). Las mallas con
+            // piel sí se leen en cada cuadro (la piel se hace en la CPU, SkinnedMeshRenderer.Piel):
+            // soltadas, los personajes de Bad Parenting se dibujaban crudos en el espacio de la
+            // cadera, acostados y flotando
+            if (!legible && !hayArreglos && recursoOrigen >= 0 && poses.Length == 0) crudo2 = null;
             return true;
         }
 
