@@ -323,7 +323,7 @@ GD.Partida = class {
     const w = Math.min(380, VW - 40), h = 220;
     r.panel('GJ_square01.png', VW / 2 - w / 2, cy - h / 2, VW / 2 + w / 2, cy + h / 2, [1, 1, 1, 1], 16);
     r.sprite(cartel, VW / 2, cy + h / 2 - 8, Math.min(0.6, (w + 30) / cw), 0, [1, 1, 1, 1]);
-    const seg = Math.floor(this.segundos);
+    const seg = Math.floor(Math.max(this.segundos, this.juego.tiempo));
     const tiempo = `${String(Math.floor(seg / 60)).padStart(2, '0')}:${String(seg % 60).padStart(2, '0')}`;
     r.texto('goldFont', `Attempts: ${this.juego.intento}`, VW / 2, cy + 52, 0.75, [1, 1, 1, 1]);
     r.texto('goldFont', `Jumps: ${this.saltos}`, VW / 2, cy + 26, 0.75, [1, 1, 1, 1]);

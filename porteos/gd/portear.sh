@@ -4,7 +4,9 @@
 #   porteos/gd/portear.sh JUEGO.apk [CARPETA_DE_ENTREGA] [--un-archivo]
 #
 # Deja en CARPETA_DE_ENTREGA (default: ./entrega-gd):
-#   gd/        la versión web (index.html, el motor en src/ y los datos del juego en datos/)
+#   gd/        la versión web (index.html, el motor en src/ y los datos del juego en datos/),
+#              instalable y sin red (pwa.py)
+#   gd-web.zip la carpeta web comprimida, para subir a un hosting
 #   gd.html    con --un-archivo: todo en un solo .html que se abre con doble clic
 #
 # El motor es nuestro (src/: física de la 2.2, triggers, dibujo con WebGL 2, menús). Del APK
@@ -56,7 +58,13 @@ cp -r "$AQUI/src" "$W/src"
 cp "$H/porteo/intro.js" "$W/porteo-intro.js"
 cp "$H/porteo/web.js" "$W/porteo-web.js"
 
-# ── 5. un solo archivo ───────────────────────────────────────────────────────
+# ── 5. instalable y sin red (PWA), con el ícono del APK, y el zip ─────────────
+unzip -q -o "$APK" 'res/mipmap-xxxhdpi-v4/ic_f.png' -d "$T/apk"
+python3 "$H/porteo/pwa.py" "$W" --nombre "Geometry Dash" --corto "Geometry Dash" \
+    --orientacion landscape --icono "$T/apk/res/mipmap-xxxhdpi-v4/ic_f.png" --color "#000000"
+(cd "$SALIDA" && rm -f gd-web.zip && zip -qr -9 gd-web.zip gd)
+
+# ── 6. un solo archivo ───────────────────────────────────────────────────────
 if [[ $UN_ARCHIVO == 1 ]]; then
   # La música de los niveles (~17 MB) va al final, en el orden de los niveles: el menú abre con
   # lo primero (~6 MB) y cada canción llega mientras se juega. La de práctica, temprano.

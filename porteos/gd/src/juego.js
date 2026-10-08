@@ -73,9 +73,19 @@ GD.Juego = class {
     const j = this.jugador;
     const dt = 60 / GD.PASOS;
     if (j.pidioArana) { j.pidioArana = false; this.saltoArana(); }
+    // la rampa en la que venía: el salto desde ella y la salida por arriba usan su velocidad
+    const rampa = j.enRampa;
+    j.rampaAntes = rampa && rampa.pend * j.signo() > 0 ? rampa : null;
+    j.enRampa = null;
     j.paso(dt);
     this.colisiones();
     if (this.muerto) return;
+    // Salir por arriba de una rampa que subía lanza al jugador con la velocidad vertical que
+    // traía (m_slopeVelocity de la 2.2): así la bola cruza los huecos de Hexagon Force.
+    if (j.rampaAntes && !j.enRampa && !j.enSuelo) {
+      const v = GD.velocidadRampa(j.rampaAntes, j);
+      if (j.vy * j.signo() < v) j.vy = v * j.signo();
+    }
     const ts = this.nivel.triggers;
     while (this.indiceTrigger < ts.length && ts[this.indiceTrigger].x <= j.x) this.triggers.activar(ts[this.indiceTrigger++]);
     this.triggers.paso(1 / GD.PASOS);
@@ -108,6 +118,10 @@ GD.Juego = class {
 
   colisiones() {
     const j = this.jugador;
+    // El piso y el techo primero, como PlayLayer::checkCollisions: un pad azul apoyado en el piso
+    // da vuelta la gravedad en este paso, y si el piso se revisara después lo mataría ahí mismo.
+    this.limites();
+    if (this.muerto) return;
     let c = j.caja();
     const lista = this.cerca(c.x0 - 60, c.x1 + 60);
     const solidos = [], peligros = [];
@@ -129,8 +143,6 @@ GD.Juego = class {
         if (GD.toca(f, j.caja())) this.resolverSolido(j, o, f);
       }
     }
-    if (this.muerto) return;
-    this.limites();
     if (this.muerto) return;
     c = j.caja(j.modo === 'onda' ? 0.4 : 1);
     for (const [o, f] of peligros) {
@@ -380,6 +392,15 @@ GD.Juego = class {
 };
 
 // ── geometría ────────────────────────────────────────────────────────────
+// Velocidad vertical al dejar una rampa que sube (collidedWithSlopeInternal de la 2.2): la de
+// avanzar por la pendiente, aumentada según el ángulo, y un cuarto menos para la bola y los que
+// vuelan.
+GD.velocidadRampa = function (f, j) {
+  const m = Math.abs(f.pend), ang = Math.atan(m);
+  if (ang < 0.01) return 0;
+  return Math.min(1.12 / ang, 1.54) * m * j.avance * j.velocidad * (j.volador || j.modo === 'bola' ? 0.75 : 1);
+};
+
 // La forma de choque de un objeto, con su escala, volteo y giro (los grados de GD son horarios).
 GD.formaDe = function (o, hb) {
   const sx = o.sx, sy = o.sy, ax = Math.abs(sx), ay = Math.abs(sy);

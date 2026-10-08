@@ -146,6 +146,34 @@ def leer_plist(ruta):
     return cuadros
 
 
+ANIMACIONES = {  # robot y araña: se arman con piezas, como en el juego (GJRobotSprite / GJSpiderSprite)
+    "Robot_AnimDesc.plist": ["Robot_run", "Robot_jump_loop", "Robot_fall_loop", "Robot_idle"],
+    "Spider_AnimDesc.plist": ["Spider_run", "Spider_jump", "Spider_fall_loop", "Spider_idle"],
+}
+
+
+def leer_animaciones(A):
+    """De *_AnimDesc.plist: animación → cuadros → piezas [textura, x, y, ex, ey, giro, vx, vy, z]."""
+    num = lambda s: [float(x) for x in re.findall(r"-?[0-9.]+(?:e-?\d+)?", s)]
+    res = {}
+    for archivo, nombres in ANIMACIONES.items():
+        # el archivo trae un salto de línea antes de "<?xml": plistlib no lo acepta
+        d = plistlib.loads((A / archivo).read_bytes().strip())["animationContainer"]
+        for nombre in nombres:
+            cuadros = sorted(k for k in d if re.fullmatch(re.escape(nombre) + r"_\d+\.png", k))
+            res[nombre] = []
+            for c in cuadros:
+                piezas = []
+                for s in d[c].values():
+                    x, y = num(s["position"])
+                    ex, ey = num(s["scale"])
+                    vx, vy = num(s["flipped"])
+                    piezas.append([s["texture"], round(x, 3), round(y, 3), round(ex, 4), round(ey, 4),
+                                   round(float(s["rotation"]), 3), int(vx), int(vy), int(float(s["zValue"]))])
+                res[nombre].append(sorted(piezas, key=lambda p: p[8]))
+    return res
+
+
 def leer_fnt(ruta):
     fuente = {"chars": {}}
     for linea in Path(ruta).read_text("utf-8").splitlines():
@@ -310,6 +338,7 @@ def main():
 
     datos = {
         "hojas": hojas, "cuadros": cuadros, "fuentes": fuentes, "objetos": objetos,
+        "animaciones": leer_animaciones(A),
         "fondos": sorted(fondos), "pisos": sorted(pisos),
         "pisos2": sorted(p for p in pisos if (A / f"groundSquare_{p:02d}_2_001-hd.png").exists()),
         "niveles": [{"id": n, "nombre": META[n][0], "cancion": META[n][1], "dificultad": META[n][2],

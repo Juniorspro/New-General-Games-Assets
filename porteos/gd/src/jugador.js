@@ -40,6 +40,8 @@ GD.Jugador = class {
     this.xAnterior = this.x; this.yAnterior = this.y;
     this.ultimoSueloY = this.y;
     this.dash = null;
+    this.enRampa = null;
+    this.rampaAntes = null;
   }
 
   ponerVelocidad(v) {
@@ -154,6 +156,8 @@ GD.Jugador = class {
       this.robotExtra = 0;
       const salto = this.modo === 'robot' ? this.salto * 0.5 : this.salto;
       this.vy = f * salto * tam;
+      // saltar desde una rampa que sube suma un cuarto de su velocidad (con tope de 1,4 veces)
+      if (this.rampaAntes) this.vy = f * Math.min(salto * tam * 1.4, salto * tam + GD.velocidadRampa(this.rampaAntes, this) * 0.25);
       if (this.modo === 'bola') {
         this.invertirGravedad(!this.invertido);
         this.sosteniendo = false;

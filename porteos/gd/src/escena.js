@@ -240,6 +240,7 @@ GD.Escena = class {
         r.sprite(n, px, py, esc, giro, color, 1, ey);
       }
     };
+    if (J.modo === 'robot' || J.modo === 'arana') { this.dibujarPiezas(J, x, y, k, inv); return; }
     if (J.modo === 'nave' || J.modo === 'ovni') {
       // el cubo va adentro, más chico, arriba de la nave
       const ang = J.rot * Math.PI / 180;
@@ -248,6 +249,30 @@ GD.Escena = class {
       pintar(capas, x, y - (J.modo === 'nave' ? 5 : 6) * k * inv, k, J.rot, inv);
     } else {
       pintar(capas, x, y, k, J.rot, J.modo === 'cubo' ? 1 : inv);
+    }
+  }
+
+  // Robot y araña: piezas animadas como en el juego (GJRobotSprite / GJSpiderSprite, con las
+  // animaciones de *_AnimDesc.plist). Con la gravedad dada vuelta se espeja todo en vertical.
+  dibujarPiezas(J, x, y, k, inv) {
+    const r = this.r, anims = r.datos.animaciones || {};
+    const robot = J.modo === 'robot';
+    const subiendo = J.vy * J.signo() > 0.5;
+    const nombre = robot ? (J.enSuelo ? 'Robot_run' : subiendo ? 'Robot_jump_loop' : 'Robot_fall_loop')
+                         : (J.enSuelo ? 'Spider_run' : 'Spider_fall_loop');
+    const anim = anims[nombre];
+    if (!anim || !anim.length) return;
+    // la carrera va al ritmo del jugador; saltar y caer, a su propio ritmo
+    const fps = J.enSuelo ? 30 * J.velocidad / 0.9 : 20;
+    const cuadro = anim[Math.floor(this.reloj * fps) % anim.length];
+    const c1 = [...GD.JUGADOR1, 1], c2 = [...GD.JUGADOR2, 1];
+    for (const [tex, px, py, ex, ey, giro, vx, vy] of cuadro) {
+      const sx = x + px * k, sy = y + py * k * inv;
+      const fx = (vx ? -1 : 1) * ex, fy = (vy ? -1 : 1) * ey * inv, g = giro * inv;
+      const base = tex.replace(/_001\.png$/, '');
+      r.sprite(`${base}_2_001.png`, sx, sy, k, g, c2, fx, fy);
+      r.sprite(tex, sx, sy, k, g, c1, fx, fy);
+      if (r.cuadros[`${base}_extra_001.png`]) r.sprite(`${base}_extra_001.png`, sx, sy, k, g, [1, 1, 1, 1], fx, fy);
     }
   }
 

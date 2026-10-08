@@ -57,7 +57,9 @@
   window.addEventListener('error', function (ev) { if (!listo) fallo(ev.error || ev.message); });
 
   // botón atrás: primero pausa (o vuelve un menú); dos seguidos salen (web.js)
-  Porteo.web({ offline: false, orientacion: 'landscape', atras: function () { if (app) app.atras(); } });
+  // sin red: la carpeta web trae sw.js (pwa.py); el .html único no lo necesita (todo va adentro)
+  Porteo.web({ offline: window.__porteoUnArchivo ? false : undefined, orientacion: 'landscape',
+               atras: function () { if (app) app.atras(); } });
 
   // la intro de JXStudios tapa la carga; si termina antes, queda la barra finita
   var intro = Porteo.intro({ aviso: {
