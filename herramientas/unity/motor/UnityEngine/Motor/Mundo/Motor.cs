@@ -17,6 +17,8 @@ namespace Porteo
             };
             Fisica.Simulacion.Iniciar();
             Animacion.Animadores.Iniciar();
+            // después de la animación: los emisores pegados a huesos ya están en su lugar
+            Particulas.Particulas.Iniciar();
             Audio.Sonido.Iniciar();
             UI.Fuentes.Iniciar();
             Entrada.Iniciar();

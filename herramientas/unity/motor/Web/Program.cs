@@ -25,6 +25,8 @@ public static partial class Programa
     [JSImport("audioFrecuencia", "porteo")] internal static partial int AudioFrecuencia();
 
     [JSImport("fuenteRegistrar", "porteo")] internal static partial void FuenteRegistrar(int fuente, [JSMarshalAs<JSType.MemoryView>] Span<byte> ttf);
+    [JSImport("discoGuardar", "porteo")] internal static partial void DiscoGuardar(string ruta, [JSMarshalAs<JSType.MemoryView>] Span<byte> datos);
+    [JSImport("discoBorrar", "porteo")] internal static partial void DiscoBorrar(string ruta);
     [JSImport("fuenteRasterizar", "porteo")] internal static partial bool FuenteRasterizar(int fuente, int codigo, int tamPx, int estilo, int ox, int oy, int w, int h, [JSMarshalAs<JSType.MemoryView>] Span<byte> salida);
 
     // los glifos de UI.Text, dibujados con el canvas 2D del navegador (fuentes.js)
@@ -79,8 +81,78 @@ public static partial class Programa
         Pantalla.Dpi = (float)dpi;
         Plataforma.Movil = movil;
         if (Porteo.Render.Gpu.Iniciar("#lienzo", false)) Porteo.Render.Dibujo.Iniciar();
+        Disco.Iniciar();
+        Mundo.AlTerminarCuadro += Disco.Cuadro;
         try { Porteo.Motor.Iniciar(escenas, primera); }
         catch (Exception e) { Debug.LogException(e); }
+    }
+
+    // ── partidas guardadas ──
+    // El juego guarda con System.IO en Application.persistentDataPath; en el navegador eso es un
+    // disco en memoria. main.js trae lo que había en IndexedDB antes de arrancar (PonerArchivo) y
+    // cada tanto se mandan los archivos que cambiaron (y los que se borraron) de vuelta.
+    [JSExport]
+    public static void PonerArchivo(string ruta, [JSMarshalAs<JSType.Array<JSType.Number>>] byte[] datos)
+    {
+        try
+        {
+            var dir = System.IO.Path.GetDirectoryName(ruta);
+            if (!string.IsNullOrEmpty(dir)) System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.WriteAllBytes(ruta, datos);
+            Disco.Conocido(ruta);
+        }
+        catch (Exception e) { Debug.LogException(e); }
+    }
+
+    [JSExport] public static void SincronizarDisco() => Disco.Sincronizar();
+
+    static class Disco
+    {
+        // lo último que se mandó de cada archivo: largo y fecha de escritura
+        static readonly System.Collections.Generic.Dictionary<string, (long largo, DateTime fecha)> vistos = new();
+        static double ultimo;
+
+        public static void Iniciar() => System.IO.Directory.CreateDirectory(Plataforma.RutaPersistente);
+
+        public static void Conocido(string ruta)
+        {
+            var fi = new System.IO.FileInfo(ruta);
+            if (fi.Exists) vistos[ruta] = (fi.Length, fi.LastWriteTimeUtc);
+        }
+
+        public static void Cuadro()
+        {
+            double ahora = Time.realtimeSinceStartup;
+            if (ahora - ultimo < 2) return;
+            ultimo = ahora;
+            Sincronizar();
+        }
+
+        public static void Sincronizar()
+        {
+            try
+            {
+                var raiz = Plataforma.RutaPersistente;
+                if (!System.IO.Directory.Exists(raiz)) return;
+                var hay = new System.Collections.Generic.HashSet<string>();
+                foreach (var f in System.IO.Directory.EnumerateFiles(raiz, "*", System.IO.SearchOption.AllDirectories))
+                {
+                    // los .tmp son pasos intermedios del guardado del juego (se copian y se borran)
+                    if (f.EndsWith(".tmp", StringComparison.Ordinal)) continue;
+                    hay.Add(f);
+                    var fi = new System.IO.FileInfo(f);
+                    var marca = (fi.Length, fi.LastWriteTimeUtc);
+                    if (vistos.TryGetValue(f, out var v) && v == marca) continue;
+                    var datos = System.IO.File.ReadAllBytes(f);
+                    DiscoGuardar(f, datos);
+                    vistos[f] = marca;
+                }
+                var borrados = new System.Collections.Generic.List<string>();
+                foreach (var k in vistos.Keys) if (!hay.Contains(k)) borrados.Add(k);
+                foreach (var k in borrados) { vistos.Remove(k); DiscoBorrar(k); }
+            }
+            catch (Exception e) { Debug.LogException(e); }
+        }
     }
 
     [JSExport]

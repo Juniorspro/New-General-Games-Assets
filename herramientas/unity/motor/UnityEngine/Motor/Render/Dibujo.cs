@@ -319,11 +319,13 @@ namespace Porteo.Render
                 if ((object)m == null || m.destruido) continue;
                 var b = r.bounds;
                 if (!Visible(b)) continue;
-                if (!m.Lista()) continue;
                 r.cuadroVisible = cuadro;
+                if (!r.PrepararDibujo(cam)) continue;
+                if (!m.Lista()) continue;
                 Matrix4x4 o2w;
                 uint piel = 0;
-                if (r.estaticoPrimera >= 0) o2w = r.raizEstatica != null ? r.raizEstatica.localToWorldMatrix : Matrix4x4.identity;
+                if (r.VerticesEnMundo) o2w = Matrix4x4.identity;
+                else if (r.estaticoPrimera >= 0) o2w = r.raizEstatica != null ? r.raizEstatica.localToWorldMatrix : Matrix4x4.identity;
                 else if (r is SkinnedMeshRenderer smr && m.poses.Length > 0)
                 {
                     piel = smr.Piel();
@@ -342,6 +344,8 @@ namespace Porteo.Render
                     if (ShadersOcultos.Count > 0 && ShadersOcultos.Contains(mat.sh.m_Name)) continue;
                     int sub = r.estaticoPrimera >= 0 ? r.estaticoPrimera + Math.Min(i, r.estaticoCantidad - 1) : Math.Min(i, subs - 1);
                     if (sub < 0 || sub >= subs) continue;
+                    // una submalla vacía (las estelas de un sistema que no tiene)
+                    if (m.submallas[sub].Cantidad == 0) continue;
                     if (luces < 0) luces = LucesObjeto.Para(r, b);
                     if (nItems == items.Length) Array.Resize(ref items, items.Length * 2);
                     items[nItems++] = new Item { R = r, M = m, Sub = sub, Mat = mat, Cola = mat.Cola, Dist = dist, Orden = r.orden, O2W = o2w, Espejo = espejo, Piel = piel, Luces = luces };
@@ -533,8 +537,8 @@ namespace Porteo.Render
             objeto.Poner(ID_WTP, Valor.Vec(new Vector4(0, 0, 0, a.Espejo ? -1 : 1)));
             if (!p.Instanciado)
             {
-                objeto.Poner(ID_O2W, Valor.Matriz(a.O2W));
-                objeto.Poner(ID_W2O, Valor.Matriz(a.O2W.inverse));
+                objeto.Poner(ID_O2W, Valor.MatrizEn(bufO2W, a.O2W));
+                objeto.Poner(ID_W2O, Valor.MatrizEn(bufW2O, a.O2W.inverse));
             }
             luz.Vertices(objeto, ID_4X, ID_4Y, ID_4Z, ID_4AT, ID_LCOLOR);
             if (luzPasada != null) LuzPasada(luzPasada);
@@ -572,8 +576,8 @@ namespace Porteo.Render
                 for (int i = desde + 1; i < hasta; i++)
                 {
                     ref var b = ref items[i];
-                    objeto.Poner(ID_O2W, Valor.Matriz(b.O2W));
-                    objeto.Poner(ID_W2O, Valor.Matriz(b.O2W.inverse));
+                    objeto.Poner(ID_O2W, Valor.MatrizEn(bufO2W, b.O2W));
+                    objeto.Poner(ID_W2O, Valor.MatrizEn(bufW2O, b.O2W.inverse));
                     SubirObjeto(p);
                     Gl.DrawElements(modo, sm.Cantidad, a.M.TipoIndice, off);
                 }
@@ -722,6 +726,33 @@ namespace Porteo.Render
         }
 
         static readonly float[] cero = new float[16 * 8];
+        static readonly float[] bufO2W = new float[16], bufW2O = new float[16];
+
+        // si el programa ya tiene este valor (se guarda una copia de los arreglos: los Valor de
+        // matrices son arreglos nuevos en cada dibujo aunque el contenido sea el mismo)
+        static bool Repetido(ref Uniforme u, in Valor v)
+        {
+            if (v.O is float[] a)
+            {
+                var c = u.UltimoA;
+                if (u.Subido && c != null && c.Length == a.Length)
+                {
+                    bool igual = true;
+                    for (int i = 0; i < a.Length; i++) if (c[i] != a[i]) { igual = false; break; }
+                    if (igual) return true;
+                }
+                if (c == null || c.Length != a.Length) u.UltimoA = c = new float[a.Length];
+                Array.Copy(a, c, a.Length);
+                u.Subido = true;
+                return false;
+            }
+            if (v.O != null) { u.Subido = false; return false; }
+            if (u.Subido && u.UltimoA == null && u.UltimoV == v.V) return true;
+            u.UltimoV = v.V;
+            u.UltimoA = null;
+            u.Subido = true;
+            return false;
+        }
 
         static void Poner(ref Uniforme u, in Valor v, Shader sh)
         {
@@ -742,6 +773,7 @@ namespace Porteo.Render
                 Gpu.Textura(u.Unidad, u.Objetivo, id);
                 return;
             }
+            if (Repetido(ref u, v)) return;
             switch (u.Tipo)
             {
                 case Gl.FLOAT:
@@ -852,8 +884,8 @@ namespace Porteo.Render
             bool espejo = Determinante3(o2w) < 0;
             Gpu.Aplicar(pa.Estado.Resolver(mat), espejo);
             objeto.Limpiar();
-            objeto.Poner(ID_O2W, Valor.Matriz(o2w));
-            objeto.Poner(ID_W2O, Valor.Matriz(o2w.inverse));
+            objeto.Poner(ID_O2W, Valor.MatrizEn(bufO2W, o2w));
+            objeto.Poner(ID_W2O, Valor.MatrizEn(bufW2O, o2w.inverse));
             objeto.Poner(ID_WTP, Valor.Vec(new Vector4(0, 0, 0, espejo ? -1 : 1)));
             objeto.Poner(ID_LODFADE, Valor.Vec(new Vector4(1, 1, 0, 0)));
             Subir(p, mat, propias);

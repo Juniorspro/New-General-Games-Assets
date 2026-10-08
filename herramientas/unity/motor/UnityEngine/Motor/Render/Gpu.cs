@@ -293,6 +293,11 @@ namespace Porteo.Render
         public int N;           // tamaño del arreglo
         public int Unidad;      // unidad de textura (-1: no es textura)
         public uint Objetivo;   // TEXTURE_2D / CUBE_MAP / 3D
+        // lo último que se le subió a este programa: el valor de un uniform queda en el programa,
+        // así que si no cambió no hace falta volver a mandarlo (cada llamada a GL cruza a JS)
+        public bool Subido;
+        public Vector4 UltimoV;
+        public float[] UltimoA;
     }
 
     // Un programa de GL armado con el GLSL de GLES3 de Unity (un subprograma de una pasada).

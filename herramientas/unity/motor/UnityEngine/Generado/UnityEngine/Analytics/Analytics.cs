@@ -4,7 +4,5 @@ namespace UnityEngine.Analytics
 {
     public static partial class Analytics
     {
-        public static global::UnityEngine.Analytics.AnalyticsResult CustomEvent(string customEventName, global::UnityEngine.Vector3 position) { global::Porteo.Falta.Llamada("UnityEngine.Analytics.Analytics::CustomEvent"); return default; }
-        public static global::UnityEngine.Analytics.AnalyticsResult CustomEvent(string customEventName, global::System.Collections.Generic.IDictionary<string, object> eventData) { global::Porteo.Falta.Llamada("UnityEngine.Analytics.Analytics::CustomEvent"); return default; }
     }
 }

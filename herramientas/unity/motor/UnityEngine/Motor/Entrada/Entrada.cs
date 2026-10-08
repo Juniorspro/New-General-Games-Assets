@@ -67,6 +67,8 @@ namespace Porteo
                         var k = (KeyCode)e.A;
                         if (e.B != 0) { if (abajo.Add(k)) bajaron.Add(k); }
                         else if (abajo.Remove(k)) subieron.Add(k);
+                        // para los campos de texto de uGUI (Event.PopEvent)
+                        Event.Encolar(e.B != 0 ? EventType.KeyDown : EventType.KeyUp, k, '\0');
                         break;
                     }
                     case TipoEvento.Boton:
@@ -78,7 +80,11 @@ namespace Porteo
                     }
                     case TipoEvento.Raton: raton = new Vector3(e.X, e.Y, 0); hayRaton = true; break;
                     case TipoEvento.Rueda: rueda += new Vector2(e.X, e.Y); break;
-                    case TipoEvento.Texto: texto += e.Texto; break;
+                    case TipoEvento.Texto:
+                        texto += e.Texto;
+                        // los caracteres de control ("\b" al borrar) ya van como su tecla
+                        foreach (var c in e.Texto) if (c >= ' ' || c == '\n') Event.Encolar(EventType.KeyDown, KeyCode.None, c);
+                        break;
                     case TipoEvento.Toque:
                     {
                         // un dedo cambia de fase una sola vez por cuadro: si ya tuvo, lo demás queda para el siguiente

@@ -24,6 +24,13 @@ namespace Porteo.Render
             return new Valor { Tipo = TipoValor.Matriz, O = a };
         }
 
+        // la matriz en un arreglo que se reusa (para lo que se pone en cada dibujo: no crear basura)
+        public static Valor MatrizEn(float[] a, in Matrix4x4 m)
+        {
+            for (int i = 0; i < 16; i++) a[i] = m[i];
+            return new Valor { Tipo = TipoValor.Matriz, O = a };
+        }
+
         public static Valor Numeros(float[] a) => new Valor { Tipo = TipoValor.Numeros, O = (float[])a.Clone() };
 
         public static Valor Vectores(Vector4[] vs)

@@ -66,6 +66,37 @@ function seguir() {
   }
 }
 
+// las partidas guardadas: un archivo por clave en IndexedDB (se cargan antes de arrancar)
+const disco = await abrirDisco();
+async function abrirDisco() {
+  try {
+    const db = await new Promise((ok, mal) => {
+      const r = indexedDB.open('porteo-slime-rancher', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('archivos');
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => mal(r.error);
+    });
+    const archivos = await new Promise((ok, mal) => {
+      const t = db.transaction('archivos', 'readonly').objectStore('archivos');
+      const l = [];
+      const c = t.openCursor();
+      c.onsuccess = () => { const x = c.result; if (!x) return ok(l); l.push([x.key, x.value]); x.continue(); };
+      c.onerror = () => mal(c.error);
+    });
+    return { db, archivos };
+  } catch (e) {
+    console.warn('porteo: sin IndexedDB, las partidas no se guardan', e);
+    return { db: null, archivos: [] };
+  }
+}
+function discoEscribir(fn) {
+  if (!disco.db) return;
+  try {
+    const t = disco.db.transaction('archivos', 'readwrite');
+    fn(t.objectStore('archivos'));
+  } catch (e) { console.warn('porteo: no se pudo guardar', e); }
+}
+
 const { setModuleImports, getAssemblyExports, getConfig, runMain } = await dotnet.withDiagnosticTracing(false).create();
 const TIPOS = ['error', 'assert', 'warn', 'log', 'exception'];
 const audio = crearAudio(recursos, pedir, alLlegar);
@@ -77,6 +108,8 @@ setModuleImports('porteo', {
   tamanoRecurso: (id) => { const r = recursos.get(id); return r ? r.length : -1; },
   copiarRecurso: (id, vista) => { vista.set(recursos.get(id)); vista.dispose(); },
   pedirRecurso: pedir,
+  discoGuardar: (ruta, vista) => { const b = vista.slice(); vista.dispose(); discoEscribir((s) => s.put(b, ruta)); },
+  discoBorrar: (ruta) => discoEscribir((s) => s.delete(ruta)),
   consola: (t, tipo) => {
     const k = TIPOS[tipo] || 'log';
     if (k === 'error' || k === 'exception' || k === 'assert') console.error(t);
@@ -88,7 +121,11 @@ await runMain();
 const exp = (await getAssemblyExports(getConfig().mainAssemblyName)).Programa;
 estado.textContent = '';
 const movil = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+for (const [ruta, datos] of disco.archivos) exp.PonerArchivo(ruta, Array.from(datos));
 exp.Iniciar(indice.escenas, 0, 96 * (window.devicePixelRatio || 1), movil);
+// al irse de la página (o pasarla a segundo plano) se manda lo último que se guardó
+addEventListener('pagehide', () => exp.SincronizarDisco());
+document.addEventListener('visibilitychange', () => { if (document.hidden) exp.SincronizarDisco(); });
 // ?perfil: cuánto tarda la GPU en cada dibujo (lento: espera a la GPU después de cada uno)
 if (new URLSearchParams(location.search).has('perfil')) exp.PerfilGpu(true);
 // ?apagar=sin3d,sinui...: partes del dibujo apagadas, para aislar problemas

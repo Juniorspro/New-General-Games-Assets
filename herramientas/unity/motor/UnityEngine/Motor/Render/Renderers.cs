@@ -162,7 +162,7 @@ namespace UnityEngine
                 var m = MallaParaDibujar();
                 int vm = m?.version ?? 0;
                 if (t == null) return default;
-                if (versionLimites == t.version && versionMalla == vm && !(this is SkinnedMeshRenderer)) return limitesMundo;
+                if (versionLimites == t.version && versionMalla == vm && !(this is SkinnedMeshRenderer) && !LimitesCambian) return limitesMundo;
                 versionLimites = t.version; versionMalla = vm;
                 limitesMundo = CalcularLimites();
                 return limitesMundo;
@@ -170,6 +170,12 @@ namespace UnityEngine
         }
 
         internal virtual Mesh MallaParaDibujar() => null;
+
+        // las partículas: geometría ya en el mundo, armada para cada cámara, con límites que
+        // cambian cada cuadro aunque el transform no se mueva
+        internal virtual bool VerticesEnMundo => false;
+        internal virtual bool LimitesCambian => false;
+        internal virtual bool PrepararDibujo(Camera cam) => true;
 
         internal virtual Bounds CalcularLimites()
         {

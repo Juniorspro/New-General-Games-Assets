@@ -2,7 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class ParticleSystemRenderer : global::UnityEngine.Renderer
+    public sealed partial class ParticleSystemRenderer
     {
     }
 }

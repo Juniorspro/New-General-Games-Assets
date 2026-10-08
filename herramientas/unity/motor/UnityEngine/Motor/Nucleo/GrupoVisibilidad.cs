@@ -84,5 +84,7 @@ namespace UnityEngine.Analytics
     public static partial class Analytics
     {
         public static AnalyticsResult CustomEvent(string customEventName) => AnalyticsResult.Ok;
+        public static AnalyticsResult CustomEvent(string customEventName, Vector3 position) => AnalyticsResult.Ok;
+        public static AnalyticsResult CustomEvent(string customEventName, System.Collections.Generic.IDictionary<string, object> eventData) => AnalyticsResult.Ok;
     }
 }

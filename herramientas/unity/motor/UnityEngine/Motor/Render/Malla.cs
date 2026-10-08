@@ -137,6 +137,9 @@ namespace UnityEngine
         internal uint hashRaiz;
         internal bool legible = true;
         internal int version = 1;
+        // geometría dinámica (partículas): cuánto de crudo2 y de indices vale (los arreglos se
+        // reusan de un cuadro a otro y pueden ser más grandes)
+        internal int bytesUsados = -1, indicesUsados = -1;
 
         // la copia en arreglos (cuando alguien la pide o la arma el juego)
         Vector3[] pos, nor; Vector4[] tan; Color32[] col; readonly Vector2[][] uvs = new Vector2[8][];
@@ -214,7 +217,7 @@ namespace UnityEngine
                 Descomprimir(cm);
         }
 
-        void CalcularStreams()
+        internal void CalcularStreams()
         {
             Array.Clear(pasoStream, 0, 4);
             for (int i = 0; i < Canales.CANTIDAD; i++)
@@ -768,21 +771,22 @@ namespace UnityEngine
             var b = Crudo();
             if (b == null || indices == null || nVertices == 0) return false;
             long firma = Firma();
+            int nb = bytesUsados >= 0 ? bytesUsados : b.Length, ni = indicesUsados >= 0 ? indicesUsados : indices.Length;
             if (vbo != 0 && ibo != 0 && firma == firmaGpu)
             {
                 // la misma disposición de canales (una malla que el juego rearma seguido, como la
                 // de la UI): se pisan los datos y los VAO siguen sirviendo
                 Gpu.UsarVao(0);
                 Gl.BindBuffer(Gl.ARRAY_BUFFER, vbo);
-                fixed (byte* p = b) Gl.BufferData(Gl.ARRAY_BUFFER, b.Length, p, Gl.DYNAMIC_DRAW);
+                fixed (byte* p = b) Gl.BufferData(Gl.ARRAY_BUFFER, nb, p, Gl.DYNAMIC_DRAW);
                 Gl.BindBuffer(Gl.ELEMENT_ARRAY_BUFFER, ibo);
-                fixed (byte* p = indices) Gl.BufferData(Gl.ELEMENT_ARRAY_BUFFER, indices.Length, p, Gl.DYNAMIC_DRAW);
+                fixed (byte* p = indices) Gl.BufferData(Gl.ELEMENT_ARRAY_BUFFER, ni, p, Gl.DYNAMIC_DRAW);
                 versionGpu = version;
                 return true;
             }
             LiberarGpu();
-            fixed (byte* p = b) vbo = Gpu.Buffer(Gl.ARRAY_BUFFER, p, b.Length, Gl.STATIC_DRAW);
-            fixed (byte* p = indices) ibo = Gpu.Buffer(Gl.ELEMENT_ARRAY_BUFFER, p, indices.Length, Gl.STATIC_DRAW);
+            fixed (byte* p = b) vbo = Gpu.Buffer(Gl.ARRAY_BUFFER, p, nb, Gl.STATIC_DRAW);
+            fixed (byte* p = indices) ibo = Gpu.Buffer(Gl.ELEMENT_ARRAY_BUFFER, p, ni, Gl.STATIC_DRAW);
             versionGpu = version;
             firmaGpu = firma;
             // si nadie lee los vértices, no hace falta guardarlos también en la CPU (salvo los que
@@ -866,6 +870,22 @@ namespace UnityEngine
             faltantes[clave] = falta.ToArray();
             Faltantes(clave);
             return vao;
+        }
+
+        // geometría que se arma cada cuadro en un solo stream (los canales ya puestos): se pisan los
+        // arreglos sin copiarlos y en la GPU se sube sólo lo usado
+        internal void PonerDinamica(byte[] vertices, int nv, int paso, byte[] idx, int ni, bool i32, Bounds limitesMundo)
+        {
+            crudo2 = vertices;
+            recursoVertices = -1;
+            nVertices = nv;
+            bytesUsados = nv * paso;
+            indices = idx;
+            indices32 = i32;
+            indicesUsados = ni * (i32 ? 4 : 2);
+            limites = limitesMundo;
+            CalcularStreams();
+            version++;
         }
 
         internal uint TipoIndice => indices32 ? Gl.UNSIGNED_INT : Gl.UNSIGNED_SHORT;

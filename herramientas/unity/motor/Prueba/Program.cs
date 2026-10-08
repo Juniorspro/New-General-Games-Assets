@@ -89,11 +89,23 @@ if (args.Contains("textos"))
         {
             var f = c.GetType().GetProperty("font")?.GetValue(c) as Font;
             var txt = c.GetType().GetProperty("text")?.GetValue(c) as string;
-            ejemplos.Add($"{c.name} activo={c.gameObject.activeInHierarchy} fuente={f?.name} \"{(txt ?? "").Replace("\n", " ").Substring(0, Math.Min(40, (txt ?? "").Length))}\"");
+            var raiz = c.transform; while (raiz.parent != null) raiz = raiz.parent;
+            ejemplos.Add($"{c.name} activo={c.gameObject.activeInHierarchy} fuente={f?.name} pos={c.transform.position} raíz={raiz.name} \"{(txt ?? "").Replace("\n", " ").Substring(0, Math.Min(40, (txt ?? "").Length))}\"");
         }
     }
     foreach (var kv in cuenta) Console.WriteLine($"textos {kv.Key}: {kv.Value}");
     foreach (var e in ejemplos) Console.WriteLine("   " + e);
+}
+// "particulas": el estado de los sistemas de partículas de la escena (activos o no)
+if (args.Contains("particulas"))
+{
+    var todos = Resources.FindObjectsOfTypeAll<ParticleSystem>().Where(s => s.gameObject.scene.IsValid()).ToList();
+    var activos = todos.Where(s => s.gameObject.activeInHierarchy).ToList();
+    Console.WriteLine($"particulas: {todos.Count} sistemas en escena, {activos.Count} activos, {activos.Count(s => s.isPlaying)} reproduciendo, {activos.Sum(s => s.particleCount)} partículas");
+    foreach (var g in activos.GroupBy(s => (s.isPlaying, s.main.playOnAwake, s.main.loop)).OrderByDescending(g => g.Count()))
+        Console.WriteLine($"   reproduciendo={g.Key.isPlaying} alDespertar={g.Key.playOnAwake} bucle={g.Key.loop}: {g.Count()} ({string.Join(", ", g.Take(8).Select(s => s.name + ":" + s.particleCount + " en " + s.transform.position))})");
+    foreach (var g in todos.Where(s => !s.gameObject.activeInHierarchy).GroupBy(s => s.name).OrderByDescending(g => g.Count()).Take(15))
+        Console.WriteLine($"   inactivo {g.Key}: {g.Count()}");
 }
 // "diag": qué ve cada cámara (los objetos que más pantalla ocupan), para entender una captura
 if (args.Contains("diag"))
