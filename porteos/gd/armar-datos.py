@@ -45,7 +45,8 @@ META = {  # nombre, canción, dificultad (cara del menú), estrellas
 }
 
 HOJAS = ["GJ_GameSheet-hd", "GJ_GameSheet02-hd", "GJ_GameSheet03-hd", "GJ_GameSheet04-hd",
-         "GJ_GameSheetGlow-hd", "GJ_LaunchSheet-hd"]
+         "GJ_GameSheetGlow-hd", "GJ_LaunchSheet-hd",
+         "FireSheet_01-hd"]   # el fuego, las bestias y la moneda chica de Geometrical Dominator, Deadlocked y Fingerdash
 ICONOS = ["player_01", "ship_01", "player_ball_01", "bird_01", "dart_01", "robot_01", "spider_01", "swing_01"]
 FUENTES = ["bigFont", "goldFont", "chatFont"]
 # piezas de interfaz que el juego tiene sueltas (no en una hoja): van a la hoja "extra"

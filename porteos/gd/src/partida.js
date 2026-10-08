@@ -53,7 +53,7 @@ GD.Partida = class {
     this.app.guardado.intento(this.info.id);
     const a = this.app.audio;
     if (!this.practica) a.musica(this.info.cancion, this.desfase);
-    else if (!a.sonando('StayInsideMe')) a.musica('StayInsideMe', 0, true);
+    else if (!a.sonando('StayInsideMe')) this.musicaPractica();
     // si el dedo sigue apoyado, el cubo salta apenas arranca (como en el original)
     if (this.sosteniendo) j.jugador.presionar();
   }
@@ -181,7 +181,8 @@ GD.Partida = class {
     this.juego.jugador.soltar();
     a.pausada = null;
     if (this.practica) {
-      a.musica('StayInsideMe', 0, true);
+      a.pararMusica();
+      this.musicaPractica();
       this.ultimoControl = this.juego.tiempo;
       this.estado = this.antes;
     } else {
@@ -189,6 +190,16 @@ GD.Partida = class {
       this.estado = 'jugando';
       this.empezar();
     }
+  }
+
+  // La de práctica se decodifica recién cuando hace falta (ocupa ~40 MB) y suena en cuanto está.
+  musicaPractica() {
+    this.app.musica('StayInsideMe').then(() => {
+      const a = this.app.audio;
+      if (!this.practica || this.app.partida !== this || a.sonando('StayInsideMe')) return;
+      if (this.estado === 'pausa') a.pausada = { nombre: 'StayInsideMe', pos: 0, bucle: true };
+      else a.musica('StayInsideMe', 0, true);
+    }).catch(() => {});
   }
 
   // ── pausa ────────────────────────────────────────────────────────────────

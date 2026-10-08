@@ -133,13 +133,26 @@ function podarAltura(sig, ancho) {
   return res;
 }
 
-// Las dos juntas: la mitad del ancho para cada una, y lo que sobre se completa con la otra.
-function podar(sig, ancho) {
-  const res = new Set(podarCeldas(sig, Math.ceil(ancho / 2)));
-  for (const h of podarAltura(sig, ancho)) { if (res.size >= ancho) break; res.add(h); }
-  for (const h of podarCeldas(sig, ancho)) { if (res.size >= ancho) break; res.add(h); }
-  return [...res];
+// La primera: todos juntos, repartidos por altura.
+function podarGlobal(sig, ancho) {
+  sig.sort((a, b) => a.s.jugador.y - b.s.jugador.y);
+  const paso = sig.length / ancho;
+  return Array.from({ length: ancho }, (_, i) => sig[Math.floor(i * paso)]);
 }
+
+// Ninguna sirve para todos los niveles (un haz siempre deja algo afuera): ESTRATEGIA elige una
+// y la corrida completa prueba varias. Todas usan la misma física: si una termina el nivel, se puede.
+const PODAS = {
+  global: podarGlobal,
+  altura: podarAltura,
+  celdas: podarCeldas,
+  mixta: (sig, ancho) => {
+    const res = new Set(podarAltura(sig, ancho));
+    for (const h of podarCeldas(sig, Math.ceil(ancho / 4))) res.add(h);
+    return [...res];
+  },
+};
+function podar(sig, ancho) { return (PODAS[process.env.ESTRATEGIA] || PODAS.global)(sig, ancho); }
 
 module.exports = { resolver, podar };
 if (require.main === module) {

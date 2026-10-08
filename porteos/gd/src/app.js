@@ -116,7 +116,7 @@ GD.App = class {
   precargar(info) {
     if (this.precargada === info.cancion) return;
     this.precargada = info.cancion;
-    this.audio.olvidar(['menuLoop', 'StayInsideMe', ...GD.SONIDOS, info.cancion]);
+    this.audio.olvidar(['menuLoop', ...GD.SONIDOS, info.cancion]);
     this.musica(info.cancion).catch(() => {});
   }
 
@@ -154,7 +154,8 @@ GD.App = class {
       this.audio.efecto('playSound_01');
       this.partida = new GD.Partida(this, info, nivel, tex);
       this.pantalla = this.partida;
-      this.musica('StayInsideMe').catch(() => {});      // por si pasa a práctica
+      // decodificada, una canción ocupa ~30 MB: sólo quedan la del nivel y la del menú
+      this.audio.olvidar(['menuLoop', ...GD.SONIDOS, info.cancion]);
     } catch (e) {
       this.fallo(e);
     } finally {
