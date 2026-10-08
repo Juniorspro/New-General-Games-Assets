@@ -83,7 +83,7 @@ namespace UnityEngine
 
         public static ScriptableObject CreateInstance(Type type)
         {
-            var so = (ScriptableObject)Activator.CreateInstance(type, true);
+            var so = (ScriptableObject)Instancias.Crear(type);
             Activacion.DespertarScriptable(so);
             return so;
         }

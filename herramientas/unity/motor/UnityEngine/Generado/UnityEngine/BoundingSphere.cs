@@ -6,6 +6,5 @@ namespace UnityEngine
     {
         public global::UnityEngine.Vector3 position;
         public float radius;
-        public BoundingSphere(global::UnityEngine.Vector4 packedSphere) { this = default; }
     }
 }

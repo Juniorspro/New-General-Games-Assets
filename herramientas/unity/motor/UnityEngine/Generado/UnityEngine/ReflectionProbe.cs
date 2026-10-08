@@ -2,8 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class ReflectionProbe : global::UnityEngine.Behaviour
+    public sealed partial class ReflectionProbe
     {
-        public int RenderProbe() { global::Porteo.Falta.Llamada("UnityEngine.ReflectionProbe::RenderProbe"); return default; }
     }
 }

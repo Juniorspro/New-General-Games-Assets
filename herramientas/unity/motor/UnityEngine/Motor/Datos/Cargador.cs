@@ -130,7 +130,7 @@ namespace Porteo.Datos
                 }
                 if (t != null && typeof(Object).IsAssignableFrom(t) && !t.IsAbstract)
                 {
-                    try { o = (Object)Activator.CreateInstance(t, true); }
+                    try { o = (Object)Instancias.Crear(t); }
                     catch (Exception ex) { Debug.LogException(ex.InnerException ?? ex); }
                 }
             }

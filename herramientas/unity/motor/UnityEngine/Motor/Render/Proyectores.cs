@@ -79,3 +79,16 @@ namespace Porteo.Render
         internal static readonly List<Projector> activos = new List<Projector>();
     }
 }
+
+namespace UnityEngine
+{
+    // Las sondas de reflejo en tiempo real: por ahora el reflejo es el del cielo de la escena
+    // (RenderSettings); RenderProbe responde como Unity para los scripts que la refrescan.
+    public sealed partial class ReflectionProbe : Behaviour
+    {
+        static int siguienteRender = 1;
+        public int RenderProbe() => siguienteRender++;
+        public int RenderProbe(RenderTexture targetTexture) => siguienteRender++;
+        public bool IsFinishedRendering(int renderId) => true;
+    }
+}

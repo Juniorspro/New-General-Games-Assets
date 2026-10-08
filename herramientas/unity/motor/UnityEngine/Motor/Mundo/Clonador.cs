@@ -53,7 +53,7 @@ namespace Porteo
 
             if (original is ScriptableObject so)
             {
-                var c = (ScriptableObject)Activator.CreateInstance(so.GetType(), true);
+                var c = (ScriptableObject)Instancias.Crear(so.GetType());
                 Datos.Serial.Copiar(so, c, o => o);
                 c.m_Name = so.m_Name + "(Clone)";
                 Activacion.DespertarScriptable(c);
@@ -90,7 +90,7 @@ namespace Porteo
                 }
                 else
                 {
-                    try { n = (Component)Activator.CreateInstance(c.GetType(), true); }
+                    try { n = (Component)Instancias.Crear(c.GetType()); }
                     catch (Exception e) { Debug.LogException(e.InnerException ?? e, c); continue; }
                 }
                 n.go = go;

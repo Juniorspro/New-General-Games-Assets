@@ -1,6 +1,7 @@
 // porteo: arranca .NET, trae los datos del juego y corre el bucle de cuadros.
 import { dotnet } from './_framework/dotnet.js';
 import { crearAudio } from './audio.js';
+import { crearFuentes } from './fuentes.js';
 
 const estado = document.getElementById('estado');
 const lienzo = document.getElementById('lienzo');
@@ -70,6 +71,7 @@ const TIPOS = ['error', 'assert', 'warn', 'log', 'exception'];
 const audio = crearAudio(recursos, pedir, alLlegar);
 setModuleImports('porteo', {
   ...audio,
+  ...crearFuentes(),
   tamanoPaquete: (n) => { const p = paquetes.get(n); return p ? p.length : -1; },
   copiarPaquete: (n, vista) => { vista.set(paquetes.get(n)); vista.dispose(); },
   tamanoRecurso: (id) => { const r = recursos.get(id); return r ? r.length : -1; },
@@ -102,6 +104,8 @@ if (new URLSearchParams(location.search).has('camara')) {
   const c = new URLSearchParams(location.search).get('camara').split(',').map(Number);
   exp.FijarCamara(c[0] || 0, c[1] || 0, c[2] || 0, c[3] || 0, c[4] || 0);
 }
+// ?nueva: una partida nueva apenas aparece el menú (capturas del juego)
+if (new URLSearchParams(location.search).has('nueva')) exp.NuevaPartida();
 // ?adelantar=N[&escena=X]: N segundos de juego sin dibujar al llegar a la escena (capturas de prueba)
 if (new URLSearchParams(location.search).has('adelantar'))
   exp.Adelantar(parseFloat(new URLSearchParams(location.search).get('adelantar')) || 0, new URLSearchParams(location.search).get('escena') || 'MainMenu');

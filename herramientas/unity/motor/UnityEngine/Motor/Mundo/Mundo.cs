@@ -35,8 +35,14 @@ namespace Porteo
         // si el próximo cuadro no correría por estar esperando datos
         public static bool Esperando => (Arranque != null && !Arranque.Lista) || Escenas.Esperando;
 
+        // la prueba de consola: el tiempo real avanza con los cuadros, no con el reloj de pared
+        public static bool RelojSimulado { get => Time.simulado; set => Time.simulado = value; }
+        // al simular segundos de juego sin dibujar, el tiempo real también tiene que pasar
+        public static void AdelantarReloj(double segundos) { if (!Time.simulado) Time.extra += segundos; }
+
         public static void Cuadro(double dtReal)
         {
+            if (Time.simulado && dtReal > 0) Time.relojSimulado += dtReal;
             // mientras llegan los datos de una carga que en Unity bloquearía, no corre nada
             if (Arranque != null) { if (!Arranque.Lista) return; Arranque = null; }
             if (Escenas.Esperando) return;

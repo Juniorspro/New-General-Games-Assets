@@ -388,7 +388,7 @@ namespace Porteo
                 if (req != null && go.GetComponent(req) == null) Agregar(go, req);
 
             Component c;
-            try { c = (Component)Activator.CreateInstance(t, true); }
+            try { c = (Component)Instancias.Crear(t); }
             catch (TargetInvocationException e) { Debug.LogException(e.InnerException ?? e); return null; }
             c.go = go;
             go.componentes.Add(c);

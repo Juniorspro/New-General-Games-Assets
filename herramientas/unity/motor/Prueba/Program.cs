@@ -41,11 +41,60 @@ if (args.Length > 1 && args[1] == "alcance")
 }
 
 var reloj = Stopwatch.StartNew();
+Mundo.RelojSimulado = true;
 Porteo.Motor.Iniciar(escenas, escena);
 Console.WriteLine($"porteo: arranque en {reloj.ElapsedMilliseconds} ms");
 reloj.Restart();
-for (int i = 0; i < cuadros; i++) Mundo.Cuadro(1 / 60.0);
+// "nueva": desde el menú, una partida nueva como el botón New Game (AutoSaveDirector.LoadNewGame)
+bool nueva = args.Contains("nueva");
+int desdeMenu = -1; bool disparada = false;
+for (int i = 0; i < cuadros; i++)
+{
+    Mundo.Cuadro(1 / 60.0);
+    if (!nueva) continue;
+    var activa = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+    if (!disparada && activa == "MainMenu")
+    {
+        if (desdeMenu < 0) desdeMenu = i;
+        else if (i - desdeMenu > 120) { disparada = true; NuevaPartida(); }
+    }
+    if (i % 300 == 0) Console.WriteLine($"porteo: cuadro {i} t={Time.time:F1} escena={activa} ({reloj.ElapsedMilliseconds} ms)");
+}
+
+static void NuevaPartida()
+{
+    var asm = AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == "Assembly-CSharp");
+    var tGc = asm.GetType("GameContext");
+    var tSing = asm.GetType("SRSingleton`1").MakeGenericType(tGc);
+    var gc = tSing.GetProperty("Instance").GetValue(null);
+    var asd = tGc.GetField("AutoSaveDirector")?.GetValue(gc) ?? tGc.GetProperty("AutoSaveDirector")?.GetValue(gc);
+    var icono = Enum.Parse(asm.GetType("Identifiable+Id"), "PINK_SLIME");
+    var modo = Enum.Parse(asm.GetType("PlayerState+GameMode"), "CLASSIC");
+    Console.WriteLine("porteo: nueva partida");
+    asd.GetType().GetMethod("LoadNewGame").Invoke(asd, new object[] { "Prueba", icono, modo, (Action)(() => Console.WriteLine("porteo: LoadNewGame falló")) });
+}
 Console.WriteLine($"porteo: {cuadros} cuadros en {reloj.ElapsedMilliseconds} ms; t={Time.time:F2}; activa: {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
+// "textos": qué componentes de texto hay (UI.Text necesita Font/TextGenerator; TMP ya anda)
+if (args.Contains("textos"))
+{
+    var cuenta = new System.Collections.Generic.Dictionary<string, int>();
+    var ejemplos = new System.Collections.Generic.List<string>();
+    foreach (var c in UnityEngine.Object.FindObjectsOfType<Component>())
+    {
+        var n = c.GetType().FullName;
+        if (n != "UnityEngine.UI.Text" && !n.StartsWith("TMPro.")) continue;
+        if (!n.StartsWith("TMPro.TextMeshPro") && n != "UnityEngine.UI.Text") continue;
+        cuenta[n] = (cuenta.TryGetValue(n, out var k0) ? k0 : 0) + 1;
+        if (n == "UnityEngine.UI.Text" && ejemplos.Count < 25)
+        {
+            var f = c.GetType().GetProperty("font")?.GetValue(c) as Font;
+            var txt = c.GetType().GetProperty("text")?.GetValue(c) as string;
+            ejemplos.Add($"{c.name} activo={c.gameObject.activeInHierarchy} fuente={f?.name} \"{(txt ?? "").Replace("\n", " ").Substring(0, Math.Min(40, (txt ?? "").Length))}\"");
+        }
+    }
+    foreach (var kv in cuenta) Console.WriteLine($"textos {kv.Key}: {kv.Value}");
+    foreach (var e in ejemplos) Console.WriteLine("   " + e);
+}
 // "diag": qué ve cada cámara (los objetos que más pantalla ocupan), para entender una captura
 if (args.Contains("diag"))
 {

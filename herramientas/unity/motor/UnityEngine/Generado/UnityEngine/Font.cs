@@ -4,10 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class Font
     {
-        public global::UnityEngine.Material material { get { global::Porteo.Falta.Llamada("UnityEngine.Font::material"); return default; } }
-        public bool dynamic { get { global::Porteo.Falta.Llamada("UnityEngine.Font::dynamic"); return default; } }
-        public int fontSize { get { global::Porteo.Falta.Llamada("UnityEngine.Font::fontSize"); return default; } }
-        public static event global::System.Action<global::UnityEngine.Font> textureRebuilt { add { global::Porteo.Falta.Llamada("UnityEngine.Font::textureRebuilt+"); } remove { } }
-        public bool HasCharacter(char c) { global::Porteo.Falta.Llamada("UnityEngine.Font::HasCharacter"); return default; }
     }
 }

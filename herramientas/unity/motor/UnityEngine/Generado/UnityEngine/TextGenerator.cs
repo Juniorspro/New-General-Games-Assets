@@ -2,21 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class TextGenerator : global::System.IDisposable
+    public sealed partial class TextGenerator
     {
-        public int characterCountVisible { get { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::characterCountVisible"); return default; } }
-        public global::System.Collections.Generic.IList<global::UnityEngine.UIVertex> verts { get { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::verts"); return default; } }
-        public global::System.Collections.Generic.IList<global::UnityEngine.UICharInfo> characters { get { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::characters"); return default; } }
-        public global::System.Collections.Generic.IList<global::UnityEngine.UILineInfo> lines { get { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::lines"); return default; } }
-        public global::UnityEngine.Rect rectExtents { get { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::rectExtents"); return default; } }
-        public int characterCount { get { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::characterCount"); return default; } }
-        public int lineCount { get { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::lineCount"); return default; } }
-        public TextGenerator() { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::.ctor"); }
-        public TextGenerator(int initialCapacity) { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::.ctor"); }
-        void global::System.IDisposable.Dispose() { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::Dispose"); }
-        public void Invalidate() { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::Invalidate"); }
-        public float GetPreferredWidth(string str, global::UnityEngine.TextGenerationSettings settings) { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::GetPreferredWidth"); return default; }
-        public float GetPreferredHeight(string str, global::UnityEngine.TextGenerationSettings settings) { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::GetPreferredHeight"); return default; }
-        public bool PopulateWithErrors(string str, global::UnityEngine.TextGenerationSettings settings, global::UnityEngine.GameObject context) { global::Porteo.Falta.Llamada("UnityEngine.TextGenerator::PopulateWithErrors"); return default; }
     }
 }

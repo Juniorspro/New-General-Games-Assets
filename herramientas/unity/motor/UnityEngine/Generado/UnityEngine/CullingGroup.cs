@@ -2,14 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class CullingGroup : global::System.IDisposable
+    public partial class CullingGroup
     {
-        public CullingGroup() { global::Porteo.Falta.Llamada("UnityEngine.CullingGroup::.ctor"); }
-        public void Dispose() { global::Porteo.Falta.Llamada("UnityEngine.CullingGroup::Dispose"); }
-        public void SetBoundingSpheres(global::UnityEngine.BoundingSphere[] array) { global::Porteo.Falta.Llamada("UnityEngine.CullingGroup::SetBoundingSpheres"); }
-        public void SetBoundingSphereCount(int count) { global::Porteo.Falta.Llamada("UnityEngine.CullingGroup::SetBoundingSphereCount"); }
-        public int QueryIndices(int distanceIndex, int[] result, int firstIndex) { global::Porteo.Falta.Llamada("UnityEngine.CullingGroup::QueryIndices"); return default; }
-        public void SetBoundingDistances(float[] distances) { global::Porteo.Falta.Llamada("UnityEngine.CullingGroup::SetBoundingDistances"); }
-        public void SetDistanceReferencePoint(global::UnityEngine.Transform transform) { global::Porteo.Falta.Llamada("UnityEngine.CullingGroup::SetDistanceReferencePoint"); }
     }
 }

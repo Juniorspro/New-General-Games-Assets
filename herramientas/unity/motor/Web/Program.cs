@@ -24,6 +24,17 @@ public static partial class Programa
     [JSImport("audioPausar", "porteo")] internal static partial void AudioPausar(int voz, bool pausa, double desde);
     [JSImport("audioFrecuencia", "porteo")] internal static partial int AudioFrecuencia();
 
+    [JSImport("fuenteRegistrar", "porteo")] internal static partial void FuenteRegistrar(int fuente, [JSMarshalAs<JSType.MemoryView>] Span<byte> ttf);
+    [JSImport("fuenteRasterizar", "porteo")] internal static partial bool FuenteRasterizar(int fuente, int codigo, int tamPx, int estilo, int ox, int oy, int w, int h, [JSMarshalAs<JSType.MemoryView>] Span<byte> salida);
+
+    // los glifos de UI.Text, dibujados con el canvas 2D del navegador (fuentes.js)
+    sealed class FuentesWeb : Porteo.UI.IFuentes
+    {
+        public void Registrar(int fuente, byte[] ttf) => FuenteRegistrar(fuente, ttf);
+        public bool Rasterizar(int fuente, int codigo, int tamPx, int estilo, int ox, int oy, int w, int h, Span<byte> salida) =>
+            FuenteRasterizar(fuente, codigo, tamPx, estilo, ox, oy, w, h, salida);
+    }
+
     // el sonido del motor, con Web Audio (audio.js)
     sealed class AudioWeb : Porteo.Audio.IAudio
     {
@@ -64,6 +75,7 @@ public static partial class Programa
         Anfitrion.HayRecurso = id => TamanoRecurso(id) >= 0;
         Anfitrion.Consola = (t, tipo) => Consola(t, (int)tipo);
         Porteo.Audio.Sonido.Salida = new AudioWeb();
+        Porteo.UI.Fuentes.Anfitrion = new FuentesWeb();
         Pantalla.Dpi = (float)dpi;
         Plataforma.Movil = movil;
         if (Porteo.Render.Gpu.Iniciar("#lienzo", false)) Porteo.Render.Dibujo.Iniciar();
@@ -76,6 +88,7 @@ public static partial class Programa
     {
         try
         {
+            Nueva();
             Adelantando();
             Mundo.Cuadro(dt);
         }
@@ -89,6 +102,30 @@ public static partial class Programa
     static string escenaAdelantar;
     [JSExport] public static void Adelantar(double segundos, string escena) { adelantar = segundos; escenaAdelantar = escena; }
 
+    // ?nueva: desde el menú, una partida nueva como el botón New Game (capturas del juego)
+    static bool pedirNueva;
+    static int cuadrosEnMenu;
+    [JSExport] public static void NuevaPartida() => pedirNueva = true;
+
+    static void Nueva()
+    {
+        if (!pedirNueva || UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "MainMenu") return;
+        if (++cuadrosEnMenu < 60) return;
+        pedirNueva = false;
+        try
+        {
+            var asm = Array.Find(AppDomain.CurrentDomain.GetAssemblies(), a => a.GetName().Name == "Assembly-CSharp");
+            var tGc = asm.GetType("GameContext");
+            var gc = asm.GetType("SRSingleton`1").MakeGenericType(tGc).GetProperty("Instance").GetValue(null);
+            var asd = tGc.GetProperty("AutoSaveDirector")?.GetValue(gc);
+            var icono = Enum.Parse(asm.GetType("Identifiable+Id"), "PINK_SLIME");
+            var modo = Enum.Parse(asm.GetType("PlayerState+GameMode"), "CLASSIC");
+            asd.GetType().GetMethod("LoadNewGame").Invoke(asd, new object[] { "Prueba", icono, modo, null });
+            Debug.Log("porteo: nueva partida");
+        }
+        catch (Exception e) { Debug.LogException(e); }
+    }
+
     static void Adelantando()
     {
         if (adelantar <= 0) return;
@@ -98,6 +135,7 @@ public static partial class Programa
         {
             for (int i = 0; i < 120 && adelantar > 0 && !Mundo.Esperando; i++)
             {
+                Mundo.AdelantarReloj(1 / 30.0);
                 Mundo.Cuadro(1 / 30.0);
                 adelantar -= 1 / 30.0;
             }

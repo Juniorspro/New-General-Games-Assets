@@ -119,13 +119,12 @@ namespace UnityEngine
             return null;
         }
 
+        // como Unity: un Component[] aunque se pida una interfaz (el juego lo recorre y castea cada uno)
         public Component[] GetComponents(Type type)
         {
             var l = new List<Component>();
             foreach (var c in componentes) if (type.IsInstanceOfType(c) && !c.destruido) l.Add(c);
-            var a = (Component[])Array.CreateInstance(type, l.Count);
-            for (int i = 0; i < l.Count; i++) a[i] = l[i];
-            return a;
+            return l.ToArray();
         }
 
         public void GetComponents(Type type, List<Component> results)
@@ -227,9 +226,7 @@ namespace UnityEngine
         {
             var l = new List<Component>();
             JuntarTipo(this, type, includeInactive, l);
-            var a = (Component[])Array.CreateInstance(type, l.Count);
-            for (int i = 0; i < l.Count; i++) a[i] = l[i];
-            return a;
+            return l.ToArray();
         }
 
         static void JuntarTipo(GameObject go, Type type, bool inactivos, List<Component> l)

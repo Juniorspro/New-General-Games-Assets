@@ -11,6 +11,10 @@ namespace UnityEngine
         internal static int cuadros;
         internal static bool enPasoFijo;
         static readonly Stopwatch reloj = Stopwatch.StartNew();
+        // en la prueba de consola el "tiempo real" es la suma de los cuadros (corre más rápido que el
+        // reloj de pared y tiene que dar lo mismo que en el navegador: las esperas en tiempo real)
+        internal static bool simulado;
+        internal static double relojSimulado, extra;   // extra: lo adelantado sin dibujar (capturas)
 
         public static float time => enPasoFijo ? tFijo : t;
         public static float timeSinceLevelLoad => t - tInicioNivel;
@@ -27,10 +31,10 @@ namespace UnityEngine
         public static float timeScale { get => escala; set => escala = Math.Max(0f, value); }
         public static int frameCount => cuadros;
         public static int renderedFrameCount => cuadros;
-        public static float realtimeSinceStartup => (float)reloj.Elapsed.TotalSeconds;
+        public static float realtimeSinceStartup => (float)Ahora;
         public static bool inFixedTimeStep => enPasoFijo;
         public static int captureFramerate { get; set; }
 
-        internal static double Ahora => reloj.Elapsed.TotalSeconds;
+        internal static double Ahora => simulado ? relojSimulado : reloj.Elapsed.TotalSeconds + extra;
     }
 }

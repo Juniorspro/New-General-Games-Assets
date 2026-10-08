@@ -274,7 +274,7 @@ namespace Porteo.Datos
         public static object Nuevo(Type t)
         {
             if (t.IsValueType) return Activator.CreateInstance(t);
-            try { return Activator.CreateInstance(t, true); }
+            try { return Instancias.Crear(t); }
             catch (MissingMethodException) { return System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(t); }
             catch (TargetInvocationException e) { Debug.LogException(e.InnerException ?? e); return System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(t); }
         }
