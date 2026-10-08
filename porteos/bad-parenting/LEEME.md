@@ -6,10 +6,17 @@ en .NET 10 para WebAssembly (AOT), con WebGL 2 y PhysX. Es el primer juego de PC
 shaders vienen compilados para Direct3D 11 y pasan a GLSL ES con HLSLcc (ver "Juegos de PC" en el
 LEEME del motor).
 
-**Estado:** el logo de 2OO2 (video), el menú, las opciones (idioma, brillo, filtro), la casa, los
-diálogos, caminar, correr, mirar y usar las cosas andan; las 13 escenas cargan y corren en la
-prueba de consola sin miembros faltantes. El filtro VHS y el verde de las habitaciones salen
-como en el original (comparado con las capturas de itch.io).
+**Estado:** el logo de 2OO2 (video), el menú, las opciones (idioma, brillo, filtro), la primera
+escena entera (los diálogos se pasan tocando; al final el jugador queda libre), caminar, correr,
+mirar y usar las cosas andan, probados en Chromium emulando un teléfono en vertical; las 13
+escenas cargan y corren en la prueba de consola sin miembros faltantes. El filtro VHS y el verde de
+las habitaciones salen como en el original (comparado con las capturas de itch.io). Falta jugarlo
+entero en un teléfono de verdad (rendimiento, el resto de las escenas).
+
+Lo que pidió arreglar en el motor: las señales de Timeline (la del final no se disparaba porque la
+raíz del grafo no tenía el modo del director, y Resume rearrancaba un director parado: el
+jugador quedaba sin control o la escena volvía a empezar) y el ratón con el puntero trabado (un
+toque giraba la cámara).
 
 ## Controles
 
@@ -36,8 +43,10 @@ porteos/bad-parenting/portear.sh "Bad Parenting 1.zip" entrega-bp1
 
 Deja en `entrega-bp1/`: `sitio/` (la versión para subir: baja lo que hace falta, queda en caché y
 se instala como app) y `bad-parenting-1.html` (el HTML único, se abre como archivo). El APK sale
-del sitio con `herramientas/porteo/apk/armar.py ... --orientacion horizontal`, y la subida privada
-con `herramientas/porteo/cloudflare/subir.py` (una puerta con clave delante de todo).
+del sitio con `herramientas/porteo/apk/armar.py ... --orientacion horizontal` (36 MB, sin permiso de
+red). La subida privada: `herramientas/porteo/cloudflare/descargas.py` mete el APK y el HTML único
+en `descargas/` (se bajan desde el teléfono con un toque) y `subir.py` pone la puerta con clave
+delante de todo.
 
 | archivo | qué es |
 |---|---|
@@ -48,8 +57,10 @@ con `herramientas/porteo/cloudflare/subir.py` (una puerta con clave delante de t
 
 ## La carga
 
-Con 5 Mbps: el código (.NET compilado, 5,5 MB con LZMA) llega primero, el motor arranca mientras
-llegan los paquetes, y el menú espera sólo lo suyo. Lo que lo hizo más chico:
+En total son 37 MB. Con 5 Mbps (medido en Chromium con la red limitada) el menú aparece a los
+~17 s; antes de esto eran ~24. El código (.NET compilado, 5,5 MB con LZMA) llega primero, el motor
+arranca mientras llegan los paquetes, y el menú espera sólo lo suyo (7,7 MB). Lo que lo hizo más
+chico:
 
 - el corte de `orden.json`: lo del menú en bloques propios (de 13 MB a 7);
 - los videos no se esperan (`VideoClip` es diferible: el `<video>` busca sus bytes al crearse);
