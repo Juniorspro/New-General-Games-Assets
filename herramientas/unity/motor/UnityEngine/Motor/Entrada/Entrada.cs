@@ -36,8 +36,25 @@ namespace Porteo
         public static void Raton(float x, float y) => cola.Add(new Evento { Tipo = TipoEvento.Raton, X = x, Y = y });
         public static void Rueda(float dx, float dy) => cola.Add(new Evento { Tipo = TipoEvento.Rueda, X = dx, Y = dy });
         public static void Texto(string s) => cola.Add(new Evento { Tipo = TipoEvento.Texto, Texto = s });
-        // fase: 0 empieza, 1 se mueve, 3 termina, 4 se cancela
-        public static void Toque(int dedo, int fase, float x, float y) => cola.Add(new Evento { Tipo = TipoEvento.Toque, A = dedo, B = fase, X = x, Y = y });
+        // fase: 0 empieza, 1 se mueve, 3 termina, 4 se cancela. Los dedos de Unity en Android son
+        // números chicos que se reusan (el más bajo libre) y TouchControlsKit lo supone: arrastra el
+        // joystick o el touchpad sólo si Input.touchCount >= fingerId. El anfitrión manda sus ids (los
+        // del navegador, o los dedos virtuales del teclado y de las pruebas, 20 en adelante) y acá se
+        // traducen; con un 20 tal cual, el joystick nunca se movía.
+        static readonly Dictionary<int, int> dedoInterno = new Dictionary<int, int>();
+        public static void Toque(int dedo, int fase, float x, float y)
+        {
+            if (fase == 0 && !dedoInterno.ContainsKey(dedo))
+            {
+                int d = 0;
+                while (dedoInterno.ContainsValue(d)) d++;
+                dedoInterno[dedo] = d;
+            }
+            // un movimiento o un fin de un dedo que nunca empezó no existe para el juego
+            if (!dedoInterno.TryGetValue(dedo, out var id)) return;
+            if (fase == 3 || fase == 4) dedoInterno.Remove(dedo);
+            cola.Add(new Evento { Tipo = TipoEvento.Toque, A = id, B = fase, X = x, Y = y });
+        }
 
         public static void Iniciar()
         {

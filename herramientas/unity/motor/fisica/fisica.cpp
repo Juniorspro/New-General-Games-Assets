@@ -1170,11 +1170,25 @@ EXPORTAR void fx_cc_forma(int id, float radio, float alto, float pendienteGrados
 
 // ───────────────────────────── juntas ─────────────────────────────
 // marcos locales de cada actor: posición (3) y rotación (4); b = -1 es el mundo
+// los cuerpos dinámicos de una junta, despiertos: PhysX no despierta a un cuerpo dormido porque se
+// le arme o cambie una junta (Unity sí); un resorte nuevo sobre algo quieto no tiraba
+void DespertarActores(PxJoint* j)
+{
+    PxRigidActor *a0 = nullptr, *a1 = nullptr;
+    j->getActors(a0, a1);
+    for (PxRigidActor* a : { a0, a1 })
+    {
+        PxRigidDynamic* d = a ? a->is<PxRigidDynamic>() : nullptr;
+        if (d && d->getScene() && !(d->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC)) d->wakeUp();
+    }
+}
+
 PxJoint* Registrar(PxJoint* j)
 {
     if (!j) return nullptr;
     int id = juntas.Alta(j);
     j->userData = (void*)(intptr_t)(id + 1);
+    DespertarActores(j);
     return j;
 }
 
@@ -1197,6 +1211,20 @@ EXPORTAR int fx_junta_resorte(int a, const float* pa, int b, const float* pb, fl
     j->setDamping(amortiguacion);
     j->setDistanceJointFlags(PxDistanceJointFlag::eMIN_DISTANCE_ENABLED | PxDistanceJointFlag::eMAX_DISTANCE_ENABLED | PxDistanceJointFlag::eSPRING_ENABLED);
     return IdJunta(Registrar(j));
+}
+
+// los parámetros del resorte sin rehacer la junta (como SpringJoint.spring en Unity): rehacerla
+// vuelve a calcular el ancla conectada sobre donde está el cuerpo y el resorte nunca se estira
+EXPORTAR void fx_junta_resorte_parametros(int id, float resorte, float amortiguacion, float min, float max, float tolerancia)
+{
+    auto* j = static_cast<PxDistanceJoint*>(juntas[id]);
+    if (!j) return;
+    j->setMinDistance(PxMax(min, 0.0f));
+    j->setMaxDistance(PxMax(max, min));
+    j->setTolerance(tolerancia);
+    j->setStiffness(resorte);
+    j->setDamping(amortiguacion);
+    DespertarActores(j);
 }
 
 EXPORTAR int fx_junta_bisagra(int a, const float* pa, const float* qa, int b, const float* pb, const float* qb)

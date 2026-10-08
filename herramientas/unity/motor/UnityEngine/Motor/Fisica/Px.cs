@@ -113,6 +113,7 @@ namespace Porteo.Fisica
 
         [DllImport(L)] public static extern int fx_junta_fija(int a, float* pa, float* qa, int b, float* pb, float* qb);
         [DllImport(L)] public static extern int fx_junta_resorte(int a, float* pa, int b, float* pb, float resorte, float amortiguacion, float min, float max, float tolerancia);
+        [DllImport(L)] public static extern void fx_junta_resorte_parametros(int id, float resorte, float amortiguacion, float min, float max, float tolerancia);
         [DllImport(L)] public static extern int fx_junta_bisagra(int a, float* pa, float* qa, int b, float* pb, float* qb);
         [DllImport(L)] public static extern int fx_junta_d6(int a, float* pa, float* qa, int b, float* pb, float* qb, int* movs);
         [DllImport(L)] public static extern void fx_junta_d6_limites(int id, float lineal, float resLin, float amLin, float giroBajo, float giroAlto, float resGiro, float amGiro, float limY, float limZ, float resYZ, float amYZ);

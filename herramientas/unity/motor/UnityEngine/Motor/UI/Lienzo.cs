@@ -451,6 +451,32 @@ namespace Porteo.UI
             Mundo.AntesDeDibujar += () => { ActualizarRaices(); Canvas.Disparar(); };
             Dibujo.Superpuesto += DibujarSuperpuestos;
             Dibujo.EnCamara += DibujarDeCamara;
+            Mundo.Dibujar += () => { if (!Gpu.Activo || Dibujo.Omitir) AsignarProfundidades(); };
+        }
+
+        // Sin dibujar (la prueba de consola, el adelanto) la profundidad de cada CanvasRenderer igual
+        // se asigna, como hace Unity al armar los lotes de la UI aunque ninguna cámara dibuje: el
+        // GraphicRaycaster de uGUI ignora lo que tiene profundidad -1 y, sin esto, nada se podía tocar
+        static void AsignarProfundidades()
+        {
+            profundidad = 0;
+            foreach (var c in activos)
+                if (c.isActiveAndEnabled && c.isRootCanvas) SoloProfundidad(c.transform);
+        }
+
+        static void SoloProfundidad(Transform t)
+        {
+            var go = t.go;
+            if (go == null || !go.activoEnJerarquia) return;
+            var comps = go.componentes;
+            for (int i = 0; i < comps.Count; i++)
+                if (comps[i] is CanvasRenderer cr && !cr.destruido)
+                {
+                    cr.profundidad = !cr.descartado && cr.pos.Length > 0 && cr.tris.Length > 0 ? profundidad++ : -1;
+                    break;
+                }
+            var hs = t.hijos;
+            for (int i = 0; i < hs.Count; i++) SoloProfundidad(hs[i]);
         }
 
         internal static void Alta(Canvas c) { if (!activos.Contains(c)) activos.Add(c); ActualizarRaiz(c); }

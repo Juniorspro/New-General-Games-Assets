@@ -390,48 +390,10 @@ public static partial class Programa
         if (adelantar <= 0) Debug.Log("porteo: listo el adelanto");
     }
 
-    // ── teclado y mouse sobre los controles táctiles ──
-    // La versión de Android sólo se maneja con los controles de TouchControlsKit (el joystick, el
-    // touchpad para mirar y los botones). Para jugar en una computadora, controles.js aprieta esos
-    // mismos controles con dedos virtuales: necesita saber dónde está cada uno en el lienzo.
-    static readonly System.Collections.Generic.Dictionary<string, RectTransform> controles = new();
-    static float ultimaBusqueda = -10;
-
-    // [centro x, centro y, ancho, alto, radio del joystick] en píxeles del lienzo (origen abajo a la
-    // izquierda); vacío si el control no está activo
-    [JSExport]
-    public static double[] ControlTactil(string nombre)
-    {
-        try
-        {
-            if (!controles.TryGetValue(nombre, out var rt) || rt == null)
-            {
-                // se buscan todos juntos (y no más de una vez cada 5 s: recorrer todos los objetos cuesta)
-                if (Time.realtimeSinceStartup - ultimaBusqueda < 5) return Array.Empty<double>();
-                ultimaBusqueda = Time.realtimeSinceStartup;
-                foreach (var x in Resources.FindObjectsOfTypeAll<RectTransform>())
-                    if (x.gameObject.scene.IsValid() && x.parent != null && x.parent.name == "VirtualController") controles[x.name] = x;
-                if (!controles.TryGetValue(nombre, out rt) || rt == null) return Array.Empty<double>();
-            }
-            if (rt == null || !rt.gameObject.activeInHierarchy) return Array.Empty<double>();
-            var esq = new Vector3[4];
-            rt.GetWorldCorners(esq);
-            double radio = 0;
-            // el joystick satura a (diagonal del fondo / 2) * borderSize / 16 (TCKJoystick.UpdatePosition)
-            foreach (var c in rt.GetComponents<MonoBehaviour>())
-            {
-                if (c.GetType().Name != "TCKJoystick") continue;
-                var fondo = c.GetType().GetField("backgroundRT")?.GetValue(c) as RectTransform;
-                var borde = c.GetType().GetField("borderSize")?.GetValue(c) is float b ? b : 5.85f;
-                if (fondo != null) radio = fondo.sizeDelta.magnitude / 2 * borde / 16;
-            }
-            return new double[] { (esq[0].x + esq[2].x) / 2, (esq[0].y + esq[2].y) / 2, esq[2].x - esq[0].x, esq[2].y - esq[0].y, radio };
-        }
-        catch (Exception e) { Debug.LogException(e); return Array.Empty<double>(); }
-    }
-
-    // si se está jugando (no en un menú ni en pausa): ahí el mouse trabado mira y dispara
-    [JSExport] public static bool EnJuego() => Time.timeScale > 0 && ControlTactil("Touchpad").Length > 0;
+    // ── teclado y mouse sobre los controles táctiles (ver Porteo.ControlesTactiles) ──
+    // [centro x, centro y, ancho, alto, radio del joystick] de un control, para controles.js
+    [JSExport] public static double[] ControlTactil(string nombre) => Porteo.ControlesTactiles.Rect(nombre);
+    [JSExport] public static bool EnJuego() => Porteo.ControlesTactiles.EnJuego();
 
     // la entrada: main.js ya traduce las teclas a KeyCode y las coordenadas a píxeles del lienzo
     // con el origen abajo a la izquierda (como Input.mousePosition)

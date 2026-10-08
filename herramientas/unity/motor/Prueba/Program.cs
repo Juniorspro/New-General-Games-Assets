@@ -54,6 +54,8 @@ reloj.Restart();
 // "nueva": desde el menú, una partida nueva como el botón New Game (AutoSaveDirector.LoadNewGame)
 bool nueva = args.Contains("nueva");
 int desdeMenu = -1; bool disparada = false; int enMundo = 0;
+// "guion ARCHIVO.json": entrada simulada desde que está la partida (ver la clase Guion, al final)
+var guion = args.Contains("guion") ? new Guion(File.ReadAllText(args[Array.IndexOf(args, "guion") + 1])) : null;
 for (int i = 0; i < cuadros; i++)
 {
     Mundo.Cuadro(1 / 60.0);
@@ -74,6 +76,11 @@ for (int i = 0; i < cuadros; i++)
         if (enMundo == (int)tq[2]) Entrada.Toque(5, 0, tq[0], tq[1]);
         else if (enMundo > tq[2] && enMundo < tq[3]) Entrada.Toque(5, 1, tq[0], tq[1]);
         else if (enMundo == (int)tq[3]) Entrada.Toque(5, 3, tq[0], tq[1]);
+    }
+    if (guion != null && activa == "worldGenerated")
+    {
+        guion.Cuadro();
+        if (guion.Terminado) { Console.WriteLine($"guion: terminado en el cuadro {i}"); break; }
     }
 }
 
@@ -394,3 +401,135 @@ if (args.Contains("textura"))
 var faltan = Porteo.Falta.Vistos.ToList();
 Console.WriteLine($"porteo: {faltan.Count} miembros sin hacer usados:");
 foreach (var f in faltan) Console.WriteLine("  " + f);
+
+// Un guion de prueba de juego: pasos de entrada cuadro a cuadro (cada cuadro, 1/60 s de juego), para
+// probar aspirar, disparar, comprar o guardar sin dibujar (la consola anda decenas de veces más
+// rápido que el navegador con GL por software). Cada paso dura "cuadros" (1 si no dice) y puede
+// juntar varias cosas a la vez:
+//   {"cuadros":300}                     esperar
+//   {"tecla":"W","cuadros":120}         una tecla (o varias: ["W","LeftShift"]) apretada esos cuadros
+//   {"boton":1,"cuadros":180}           un botón del mouse (0 disparar, 1 aspirar) apretado
+//   {"girar":[400,0],"cuadros":30}      el mouse se mueve eso en total (píxeles: mirar)
+//   {"toque":[x,y],"cuadros":20}        un dedo apretado ahí (píxeles, abajo a la izquierda)
+//   {"rueda":-1}                        la ruedita (cambiar de casillero)
+//   {"control":"Vacum","cuadros":120}   un control táctil del juego apretado (Attack, Jump, Interact...)
+//   {"mover":[0,1],"cuadros":180}       el joystick hacia ahí (1 = a 0.85 del radio: camina; 1.4 corre)
+//   {"mirar":[300,0],"cuadros":30}      un dedo arrastrado eso en el touchpad (píxeles en total)
+//   {"diag":"jugador;cerca:6"}          diagnósticos del motor en ese momento
+//   {"diagfin":"jugador"}               los mismos, en el último cuadro del paso (con todo apretado)
+//   {"diagcada":30,"diagde":"aspiradora"} esos diagnósticos cada tantos cuadros mientras dura el paso
+//   {"log":"texto"}                     una marca en la salida
+class Guion
+{
+    readonly JsonElement[] pasos;
+    int i = -1, resta;
+    float rx = 640, ry = 360, gx, gy, tx, ty;
+    readonly System.Collections.Generic.List<KeyCode> teclas = new System.Collections.Generic.List<KeyCode>();
+    readonly System.Collections.Generic.List<int> botones = new System.Collections.Generic.List<int>();
+    bool dedo;
+    string diagFin, diagDe;
+    int diagCada, enPaso;
+    // los dedos de los controles táctiles: (dedo, x, y) para soltarlos; el del touchpad se mueve
+    readonly System.Collections.Generic.List<(int d, float x, float y)> dedos = new System.Collections.Generic.List<(int, float, float)>();
+    float mx, my, px, py, gx2, gy2; bool moverPend, mirando;
+    int siguienteDedo = 22;
+    public bool Terminado => i >= pasos.Length;
+
+    public Guion(string json) { pasos = JsonDocument.Parse(json).RootElement.EnumerateArray().ToArray(); }
+
+    public void Cuadro()
+    {
+        if (resta > 0)
+        {
+            if (gx != 0 || gy != 0) { rx += gx; ry += gy; Entrada.Raton(rx, ry); }
+            // el joystick: apoyado en el centro un cuadro, después corrido (una fase por cuadro)
+            if (moverPend) { Entrada.Toque(20, 1, mx, my); moverPend = false; }
+            if (mirando) { px += gx2; py += gy2; Entrada.Toque(21, 1, px, py); }
+            if (diagCada > 0 && ++enPaso % diagCada == 0)
+                foreach (var cmd in diagDe.Split(';')) Console.WriteLine($"[cuadro {enPaso} del paso] " + Porteo.Diagnostico.Correr(cmd));
+            if (--resta == 0) { Fin(); Soltar(); }
+            return;
+        }
+        if (++i >= pasos.Length) return;
+        var p = pasos[i];
+        resta = p.TryGetProperty("cuadros", out var c) ? c.GetInt32() : 1;
+        Console.WriteLine($"guion: paso {i} t={Time.time:F1} {p.GetRawText()}");
+        if (p.TryGetProperty("tecla", out var t))
+            foreach (var n in t.ValueKind == JsonValueKind.Array ? t.EnumerateArray().Select(x => x.GetString()) : new[] { t.GetString() })
+            {
+                var k = (KeyCode)Enum.Parse(typeof(KeyCode), n, true);
+                teclas.Add(k); Entrada.Tecla((int)k, true);
+            }
+        if (p.TryGetProperty("boton", out var b))
+            foreach (var n in b.ValueKind == JsonValueKind.Array ? b.EnumerateArray().Select(x => x.GetInt32()) : new[] { b.GetInt32() })
+            {
+                botones.Add(n); Entrada.BotonRaton(n, true);
+            }
+        if (p.TryGetProperty("girar", out var g))
+        {
+            gx = g[0].GetSingle() / resta; gy = g[1].GetSingle() / resta;
+            Entrada.Raton(rx, ry);
+        }
+        if (p.TryGetProperty("control", out var co))
+            foreach (var n in co.ValueKind == JsonValueKind.Array ? co.EnumerateArray().Select(x => x.GetString()) : new[] { co.GetString() })
+            {
+                var rc = Porteo.ControlesTactiles.Rect(n);
+                if (rc.Length == 0) { Console.WriteLine($"guion: el control {n} no está"); continue; }
+                int dd = siguienteDedo++;
+                Entrada.Toque(dd, 0, (float)rc[0], (float)rc[1]);
+                dedos.Add((dd, (float)rc[0], (float)rc[1]));
+            }
+        if (p.TryGetProperty("mover", out var mv))
+        {
+            var j = Porteo.ControlesTactiles.Rect("Joystick");
+            if (j.Length == 0) Console.WriteLine("guion: el joystick no está");
+            else
+            {
+                float dx = mv[0].GetSingle(), dy = mv[1].GetSingle();
+                float radio = (float)(j[4] > 0 ? j[4] : Math.Min(j[2], j[3]) * 0.3);
+                Entrada.Toque(20, 0, (float)j[0], (float)j[1]);
+                mx = (float)j[0] + dx * 0.85f * radio; my = (float)j[1] + dy * 0.85f * radio; moverPend = true;
+                dedos.Add((20, mx, my));
+            }
+        }
+        if (p.TryGetProperty("mirar", out var mi))
+        {
+            var t2 = Porteo.ControlesTactiles.Rect("Touchpad");
+            if (t2.Length == 0) Console.WriteLine("guion: el touchpad no está");
+            else
+            {
+                px = (float)t2[0]; py = (float)t2[1];
+                gx2 = mi[0].GetSingle() / resta; gy2 = mi[1].GetSingle() / resta;
+                Entrada.Toque(21, 0, px, py); mirando = true;
+            }
+        }
+        if (p.TryGetProperty("toque", out var to)) { tx = to[0].GetSingle(); ty = to[1].GetSingle(); Entrada.Toque(7, 0, tx, ty); dedo = true; }
+        if (p.TryGetProperty("rueda", out var r)) Entrada.Rueda(0, r.GetSingle());
+        if (p.TryGetProperty("diag", out var d))
+            foreach (var cmd in d.GetString().Split(';')) Console.WriteLine(Porteo.Diagnostico.Correr(cmd));
+        if (p.TryGetProperty("log", out var l)) Console.WriteLine("guion: " + l.GetString());
+        diagFin = p.TryGetProperty("diagfin", out var df) ? df.GetString() : null;
+        diagCada = p.TryGetProperty("diagcada", out var dc) ? dc.GetInt32() : 0;
+        diagDe = p.TryGetProperty("diagde", out var dd2) ? dd2.GetString() : "";
+        enPaso = 0;
+        if (--resta == 0) { Fin(); Soltar(); }
+    }
+
+    void Fin()
+    {
+        if (diagFin == null) return;
+        foreach (var cmd in diagFin.Split(';')) Console.WriteLine(Porteo.Diagnostico.Correr(cmd));
+        diagFin = null;
+    }
+
+    void Soltar()
+    {
+        foreach (var k in teclas) Entrada.Tecla((int)k, false);
+        foreach (var n in botones) Entrada.BotonRaton(n, false);
+        if (dedo) Entrada.Toque(7, 3, tx, ty);
+        foreach (var (d, x, y) in dedos) Entrada.Toque(d, 3, x, y);
+        if (mirando) Entrada.Toque(21, 3, px, py);
+        teclas.Clear(); botones.Clear(); dedos.Clear(); dedo = false; mirando = moverPend = false; gx = gy = gx2 = gy2 = 0;
+        if (siguienteDedo > 40) siguienteDedo = 22;
+    }
+}

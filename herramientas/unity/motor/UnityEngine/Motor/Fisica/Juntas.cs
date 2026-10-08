@@ -148,6 +148,7 @@ namespace UnityEngine
     public partial class SpringJoint : Joint
     {
         internal float resorte = 2f, amortiguacion = 0.2f, min, max, tolerancia = 0.025f;
+        float distanciaInicial;
 
         internal override void LeerJunta(Mapa m)
         {
@@ -164,8 +165,16 @@ namespace UnityEngine
         // la distancia de reposo es la de las anclas al crearla, más [min, max]
         internal override unsafe int CrearPx(int a, Vector3 pa, Quaternion qa, int b, Vector3 pb, Quaternion qb)
         {
-            float d = DistanciaInicial();
+            float d = distanciaInicial = DistanciaInicial();
             return Px.fx_junta_resorte(a, (float*)&pa, b, (float*)&pb, resorte, amortiguacion, d + min, d + max, tolerancia);
+        }
+
+        // spring, damper, min, max y tolerancia cambian la junta armada, no la rehacen: rehecha, el ancla
+        // conectada (autoConfigureConnectedAnchor) vuelve a caer sobre el cuerpo y el resorte no tira.
+        // La aspiradora cambia spring en cada cuadro mientras acerca el ancla a la boca.
+        void Parametros()
+        {
+            if (idPx >= 0) Px.fx_junta_resorte_parametros(idPx, resorte, amortiguacion, distanciaInicial + min, distanciaInicial + max, tolerancia);
         }
 
         // Unity mide min y max respecto del largo con que se creó la junta
@@ -177,11 +186,11 @@ namespace UnityEngine
             return (pa - pb).magnitude;
         }
 
-        public float spring { get => resorte; set { resorte = value; Rehacer(); } }
-        public float damper { get => amortiguacion; set { amortiguacion = value; Rehacer(); } }
-        public float minDistance { get => min; set { min = value; Rehacer(); } }
-        public float maxDistance { get => max; set { max = value; Rehacer(); } }
-        public float tolerance { get => tolerancia; set { tolerancia = value; Rehacer(); } }
+        public float spring { get => resorte; set { resorte = value; Parametros(); } }
+        public float damper { get => amortiguacion; set { amortiguacion = value; Parametros(); } }
+        public float minDistance { get => min; set { min = value; Parametros(); } }
+        public float maxDistance { get => max; set { max = value; Parametros(); } }
+        public float tolerance { get => tolerancia; set { tolerancia = value; Parametros(); } }
     }
 
     public sealed partial class HingeJoint : Joint

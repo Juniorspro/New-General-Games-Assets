@@ -27,6 +27,10 @@ namespace Porteo
                     case "rayo": return Rayo(arg);
                     case "rayomalla": return RayoMalla(arg);
                     case "estatico": return Estatico(arg);
+                    case "jugador": return Jugador();
+                    case "ui": return Ui(arg);
+                    case "crear": return Crear(arg);
+                    case "aspiradora": return Aspiradora();
                     case "tiempo": return $"tiempo: t={Time.time:F2} escala={Time.timeScale} cuadro={Time.frameCount} real={Time.realtimeSinceStartup:F1} cultura={System.Globalization.CultureInfo.CurrentCulture.Name}";
                     default: return "diagnóstico: no sé " + partes[0];
                 }
@@ -236,6 +240,155 @@ namespace Porteo
                 var uo = v as UnityEngine.Object;
                 var texto = v == null ? "null" : uo is null ? v.ToString() : $"{v.GetType().Name} \"{uo.name}\" destruido={uo.destruido} id={uo.GetInstanceID()}";
                 sb.Append($"\n   {asm.GetName().Name} ({asm.GetHashCode()}): {donde.Name}.{miembro} = {texto}");
+            }
+            return sb.ToString();
+        }
+
+        // jugador: dónde está, la plata, salud/energía/radiación, lo que lleva en la aspiradora y la hora
+        // del juego (SceneContext de Slime Rancher, por reflexión): para comprobar una prueba de juego
+        // (aspirar, disparar, vender, guardar y cargar) sin depender de lo que se ve en la captura
+        public static string Jugador()
+        {
+            var asm = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == "Assembly-CSharp");
+            var tSc = asm?.GetType("SceneContext");
+            if (tSc == null) return "jugador: no está el juego";
+            var sc = asm.GetType("SRSingleton`1").MakeGenericType(tSc).GetProperty("Instance").GetValue(null);
+            if (sc == null || (sc is UnityEngine.Object u && u == null)) return "jugador: no hay SceneContext (¿en el menú?)";
+            object P(object o, string n) => o?.GetType().GetProperty(n)?.GetValue(o);
+            object M(object o, string n, params object[] a) => o?.GetType().GetMethod(n, a.Select(x => x.GetType()).ToArray())?.Invoke(o, a);
+            var ps = P(sc, "PlayerState");
+            var sb = new StringBuilder("jugador:");
+            if (P(sc, "Player") is GameObject g && g != null)
+            {
+                var p = g.transform.position;
+                sb.Append($" en ({p.x:F1}, {p.y:F1}, {p.z:F1}) mirando {g.transform.eulerAngles.y:F0}°");
+            }
+            if (ps != null)
+            {
+                sb.Append($"\n   plata {M(ps, "GetCurrency")} | salud {M(ps, "GetCurrHealth")}/{M(ps, "GetMaxHealth")} | energía {M(ps, "GetCurrEnergy")}/{M(ps, "GetMaxEnergy")} | radiación {M(ps, "GetCurrRad")} | modo {M(ps, "GetAmmoMode")}");
+                var ammo = P(ps, "Ammo");
+                var n = ammo?.GetType().GetField("numSlots", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(ammo) as int? ?? 0;
+                sb.Append($"\n   aspiradora (elegido {M(ammo, "GetSelectedAmmoIdx")}):");
+                for (int i = 0; i < n; i++)
+                    sb.Append($" [{i}] {M(ammo, "GetSlotName", i)} {M(ammo, "GetSlotCount", i)}/{M(ammo, "GetSlotMaxCount", i)}");
+            }
+            var td = P(sc, "TimeDirector");
+            if (td != null) sb.Append($"\n   día {M(td, "CurrDay")} {M(td, "CurrTimeString")} (tiempo del mundo {M(td, "WorldTime"):F0} s)");
+            // lo que el juego lee de la entrada (SRInput: acciones de InControl) y si está en pausa
+            var tIn = asm.GetType("SRInput");
+            var inst = tIn?.GetProperty("Instance")?.GetValue(null);
+            if (inst != null)
+            {
+                var acc = tIn.GetProperty("Actions")?.GetValue(null);
+                float V(string n) => acc?.GetType().GetField(n)?.GetValue(acc) is object a ? Convert.ToSingle(a.GetType().GetProperty("Value")?.GetValue(a) ?? 0f) : float.NaN;
+                sb.Append($"\n   entrada {M(inst, "GetInputMode")} | adelante {V("vertical"):F2} costado {V("horizontal"):F2} mirarX {V("lookX"):F2} mirarY {V("lookY"):F2} aspirar {V("vac"):F0} disparar {V("attack"):F0} saltar {V("jump"):F0} | escala del tiempo {Time.timeScale}");
+            }
+            // los controles táctiles del port de Android (TouchControlsKit): con eso se mueve y mira
+            var tck = asm.GetType("TouchControlsKit.TCKInput");
+            if (tck != null)
+            {
+                string Eje(string n) { try { return tck.GetMethod("GetAxis", new[] { typeof(string) })?.Invoke(null, new object[] { n }) is Vector2 v ? $"({v.x:F2}, {v.y:F2})" : "?"; } catch (Exception e) { return "error " + (e.InnerException ?? e).Message; } }
+                string R(string n) { var r = ControlesTactiles.Rect(n); return r.Length == 0 ? "no está" : $"({r[0]:F0}, {r[1]:F0}) {r[2]:F0}x{r[3]:F0}"; }
+                sb.Append($"\n   táctil: joystick {Eje("Joystick")} en {R("Joystick")} radio {(ControlesTactiles.Rect("Joystick") is var rj && rj.Length > 4 ? rj[4] : 0):F0} | touchpad {Eje("Touchpad")} en {R("Touchpad")} | pantalla {Screen.width}x{Screen.height} | toques {Input.touchCount}");
+            }
+            return sb.ToString();
+        }
+
+        // aspiradora: el estado de WeaponVacuum (modo, lo que está en la zona de aspirado) y, para cada
+        // cosa ahí, lo que hace ConsumeVacItem: el rayo de línea de vista desde la boca y si se puede
+        // capturar. Para ver dónde se corta cuando no aspira nada
+        public static string Aspiradora()
+        {
+            const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+            var wv = Resources.FindObjectsOfTypeAll<MonoBehaviour>().FirstOrDefault(m => m.GetType().Name == "WeaponVacuum" && m.gameObject.activeInHierarchy);
+            if (wv == null) return "aspiradora: no hay WeaponVacuum activo";
+            var t = wv.GetType();
+            object C(object o, string n) => o?.GetType().GetField(n, F)?.GetValue(o);
+            var origen = C(wv, "vacOrigin") as GameObject;
+            float maxDist = C(wv, "maxVacDist") is float md ? md : 0;
+            var sb = new StringBuilder($"aspiradora: modo {C(wv, "vacMode")} | boca {origen?.transform.position} | alcance {maxDist} | sostenido {C(wv, "held")}");
+            var tracker = C(wv, "tracker");
+            var dentro = tracker?.GetType().GetMethod("CurrColliders")?.Invoke(tracker, null) as System.Collections.IEnumerable;
+            if (dentro == null) return sb.Append(" | sin tracker").ToString();
+            foreach (var o in dentro)
+            {
+                if (!(o is GameObject go) || go == null) continue;
+                sb.Append($"\n   en la zona: {Ruta(go.transform)} en {go.transform.position}");
+                var vac = go.GetComponents<MonoBehaviour>().FirstOrDefault(m => m.GetType().Name == "Vacuumable");
+                if (vac == null) { sb.Append(" (no es aspirable)"); continue; }
+                string M(string n) { try { return vac.GetType().GetMethod(n, Type.EmptyTypes)?.Invoke(vac, null)?.ToString() ?? "?"; } catch (Exception e) { return "error " + (e.InnerException ?? e).Message; } }
+                sb.Append($" aspirable(habilitado={vac.enabled} capturable={M("canCapture")} cautivo={M("isCaptive")})");
+                if (origen == null) continue;
+                var desde = origen.transform.position;
+                var ray = new Ray(desde, go.transform.position - desde);
+                if (Physics.Raycast(ray, out var hit, maxDist, -536887557))
+                    sb.Append($"\n      el rayo toca {Ruta(hit.collider.transform)} a {hit.distance:F2} m (cuerpo {(hit.rigidbody != null ? Ruta(hit.rigidbody.transform) : "ninguno")}, capa {hit.collider.gameObject.layer})");
+                else sb.Append("\n      el rayo no toca nada");
+            }
+            return sb.ToString();
+        }
+
+        // crear:PINK_SLIME[,n[,distancia]]: n actores del juego (Identifiable.Id) delante del jugador, como
+        // los crea el juego (LookupDirector.GetPrefab + SRBehaviour.InstantiateActor): para probar
+        // aspirar, disparar, alimentar o vender sin ir a buscarlos
+        public static string Crear(string arg)
+        {
+            var p = arg.Split(',');
+            var ci = System.Globalization.CultureInfo.InvariantCulture;
+            int n = p.Length > 1 ? int.Parse(p[1], ci) : 1;
+            float dist = p.Length > 2 ? float.Parse(p[2], ci) : 4f;
+            var asm = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == "Assembly-CSharp");
+            var tId = asm?.GetType("Identifiable+Id");
+            if (tId == null) return "crear: no está el juego";
+            var id = Enum.Parse(tId, p[0], true);
+            var tGc = asm.GetType("GameContext");
+            var gc = asm.GetType("SRSingleton`1").MakeGenericType(tGc).GetProperty("Instance").GetValue(null);
+            var lookup = tGc.GetProperty("LookupDirector").GetValue(gc);
+            var prefab = lookup.GetType().GetMethod("GetPrefab", new[] { tId }).Invoke(lookup, new[] { id }) as GameObject;
+            if (prefab == null) return "crear: no hay prefab para " + p[0];
+            var cam = Camera.main;
+            if (cam == null) return "crear: no hay cámara";
+            var inst = asm.GetType("SRBehaviour").GetMethod("InstantiateActor", new[] { typeof(GameObject), typeof(Vector3), typeof(Quaternion), typeof(bool) });
+            var sb = new StringBuilder($"crear {p[0]}:");
+            var adelante = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
+            for (int i = 0; i < n; i++)
+            {
+                var lugar = cam.transform.position + adelante * dist + Vector3.up * (0.5f + i * 1.2f);
+                var go = inst.Invoke(null, new object[] { prefab, lugar, Quaternion.identity, false }) as GameObject;
+                sb.Append(go != null ? $" {go.name} en {lugar}" : " (no se creó)");
+            }
+            return sb.ToString();
+        }
+
+        // ui:x,y: qué tocaría un dedo en ese punto de la pantalla (el raycast del EventSystem de uGUI,
+        // que es del juego: por reflexión), con qué módulo de entrada, y cómo están los controles de
+        // TouchControlsKit (si el joystick se dio por tocado y con qué dedo)
+        public static string Ui(string arg)
+        {
+            var p = arg.Split(',');
+            var ci = System.Globalization.CultureInfo.InvariantCulture;
+            float x = p.Length > 1 ? float.Parse(p[0], ci) : 0, y = p.Length > 1 ? float.Parse(p[1], ci) : 0;
+            var asmUi = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == "UnityEngine.UI");
+            var tEs = asmUi?.GetType("UnityEngine.EventSystems.EventSystem");
+            var es = tEs?.GetProperty("current")?.GetValue(null);
+            if (es == null) return "ui: no hay EventSystem";
+            var modulo = tEs.GetProperty("currentInputModule")?.GetValue(es);
+            var sb = new StringBuilder($"ui ({x}, {y}): EventSystem {((Component)es).name} módulo {modulo?.GetType().Name ?? "ninguno"} | toques {Input.touchCount} ratón {Input.mousePresent}");
+            var tPed = asmUi.GetType("UnityEngine.EventSystems.PointerEventData");
+            var ped = Activator.CreateInstance(tPed, es);
+            tPed.GetProperty("position").SetValue(ped, new Vector2(x, y));
+            var tRr = asmUi.GetType("UnityEngine.EventSystems.RaycastResult");
+            var lista = Activator.CreateInstance(typeof(System.Collections.Generic.List<>).MakeGenericType(tRr));
+            tEs.GetMethod("RaycastAll").Invoke(es, new[] { ped, lista });
+            foreach (var r in (System.Collections.IEnumerable)lista)
+                if (tRr.GetProperty("gameObject")?.GetValue(r) is GameObject go) sb.Append($"\n   toca {Ruta(go.transform)}");
+            const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.FlattenHierarchy;
+            foreach (var mb in Resources.FindObjectsOfTypeAll<MonoBehaviour>())
+            {
+                var t = mb.GetType();
+                if (t.Namespace != "TouchControlsKit" || !mb.gameObject.activeInHierarchy) continue;
+                object Campo(string n) { for (var tt = t; tt != null; tt = tt.BaseType) { var f = tt.GetField(n, F); if (f != null) return f.GetValue(mb); } return "?"; }
+                sb.Append($"\n   {t.Name} {mb.name}: tocado={Campo("touchDown")} dedo={Campo("touchId")} habilitado={mb.enabled}");
             }
             return sb.ToString();
         }
