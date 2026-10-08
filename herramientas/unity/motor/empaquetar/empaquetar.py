@@ -318,11 +318,13 @@ def escribir_sitio(carpeta, tabla, comprimidos, web, a):
     arranque = (AQUI / "arranque.js").read_text(encoding="utf-8").replace("/*TABLA*/null", json.dumps(tabla, separators=(",", ":")))
     estilo = re.search(r"<style>.*?</style>", (web / "index.html").read_text(encoding="utf-8"), re.S).group(0)
     titulo = a.titulo
+    # el manifest con use-credentials: sin eso el navegador lo pide sin cookies aunque sea del mismo
+    # sitio, y detrás de una puerta (herramientas/porteo/cloudflare, Cloudflare Access) no llega
     (carpeta / "index.html").write_text(
         "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\">\n"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover\">\n"
         f"<title>{titulo}</title>\n<meta name=\"theme-color\" content=\"#000000\">\n"
-        "<link rel=\"manifest\" href=\"manifest.webmanifest\">\n<link rel=\"icon\" href=\"icono-192.png\">\n"
+        "<link rel=\"manifest\" href=\"manifest.webmanifest\" crossorigin=\"use-credentials\">\n<link rel=\"icon\" href=\"icono-192.png\">\n"
         "<link rel=\"apple-touch-icon\" href=\"icono-192.png\">\n<meta name=\"mobile-web-app-capable\" content=\"yes\">\n"
         "<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n"
         f"{estilo}\n</head>\n<body>\n<canvas id=\"lienzo\"></canvas>\n<div id=\"estado\">cargando…</div>\n"

@@ -1,0 +1,31 @@
+# Versión web privada en Cloudflare Pages
+
+Para el dueño de un porteo que quiere jugarlo desde una dirección propia sin que quede a la vista
+de nadie más. La versión web (`empaquetar.py --sitio`) se sube a **su** cuenta de Cloudflare con
+una puerta delante: sin la clave no sale ni la página ni un byte del juego.
+
+```sh
+export CLOUDFLARE_API_TOKEN=…   # de la cuenta, con "Cloudflare Pages: Edit"
+export CLOUDFLARE_ACCOUNT_ID=…
+python3 subir.py CARPETA --proyecto NOMBRE --clave ~/claves/NOMBRE.txt --wrangler RUTA/A/wrangler
+python3 subir.py CARPETA --proyecto NOMBRE --clave ~/claves/NOMBRE.txt --verificar   # sólo mira
+```
+
+- `_worker.js` es la puerta (el "modo avanzado" de Pages: atiende todos los pedidos antes que los
+  archivos). Muestra una página para poner la clave; con la clave buena deja una cookie firmada que
+  dura un año, así el juego instalado arranca sin red y no la vuelve a pedir. También entra con un
+  enlace `https://…/#clave=XXXX-XXXX-XXXX-XXXX` (lo de después del `#` no viaja al servidor).
+- La clave: si el archivo de `--clave` no existe, se inventa una al azar (16 letras y números, ~79
+  bits) y se guarda ahí. Va al proyecto como secreto `CLAVE`; nunca al repo ni a lo que se sube.
+  Cambiarla (borrar el archivo y volver a subir) cierra todas las sesiones.
+- `subir.py` pone el proyecto en **fail closed**: en el plan gratis, si un día se pasan los 100.000
+  pedidos, Pages por defecto sirve los archivos sin pasar por el worker. Cerrado, da un error hasta
+  el día siguiente.
+- Antes de subir el juego sube una prueba sin el juego y verifica desde afuera (en la dirección del
+  proyecto y en la de la subida) que sin la clave no sale nada, ni con rutas disfrazadas ni con
+  cookies inventadas o adulteradas; después de subirlo, lo mismo con la página y bloques reales.
+- Pasan sin clave sólo `sw.js`, el manifest y los íconos (el navegador los puede pedir sin cookies
+  para instalar la app; no tienen nada del juego).
+
+Si la cuenta tiene Cloudflare Access (Zero Trust) activado, es una alternativa igual de buena: entrar
+con el mail en vez de una clave. Hay que activarlo a mano en el panel.

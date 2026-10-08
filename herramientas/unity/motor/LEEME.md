@@ -54,7 +54,9 @@ python3 -I empaquetar/empaquetar.py ... CARPETA --sitio --bloque 8 [--icono icon
   la segunda vez arranca enseguida y sin red, y se instala como app. Anda en cualquier hosting
   estático (todo viene comprimido con LZMA, no depende de cómo comprime el servidor); `_headers`
   le dice a Netlify o Cloudflare Pages que guarden los bloques para siempre. `abrir.html` es el
-  lanzador: pide la dirección una vez y después abre directo.
+  lanzador: pide la dirección una vez y después abre directo. Para que quede privada (es lo que
+  corresponde con un juego que no es nuestro): `herramientas/porteo/cloudflare/subir.py` la sube a
+  Cloudflare Pages con una puerta con clave delante de todo.
 
 El orden (`--orden`) es la lista de recursos en el orden en que el motor los usó la primera vez:
 `globalThis.porteoOrden` en la consola del navegador, después de jugar un rato con la versión que
