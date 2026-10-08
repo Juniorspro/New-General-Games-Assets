@@ -1,0 +1,18 @@
+<Project>
+  <!-- Bad Parenting 1 (Unity 2022.2, Windows): el código del juego y los paquetes que usa.
+       Visual Scripting, Unity Services y Newtonsoft.Json vienen en el build pero el juego no los
+       usa (ninguna escena tiene grafos; los servicios son la telemetría de Unity): no van. -->
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Fachadas/*/*.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(JUEGO)' != ''">
+    <Reference Include="Assembly-CSharp"><HintPath>$(JUEGO)/Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(JUEGO)/UnityEngine.UI.dll</HintPath></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>$(JUEGO)/Unity.TextMeshPro.dll</HintPath></Reference>
+    <Reference Include="RTLTMPro"><HintPath>$(JUEGO)/RTLTMPro.dll</HintPath></Reference>
+    <Reference Include="Unity.Timeline"><HintPath>$(JUEGO)/Unity.Timeline.dll</HintPath></Reference>
+    <Reference Include="Unity.Postprocessing.Runtime"><HintPath>$(JUEGO)/Unity.Postprocessing.Runtime.dll</HintPath></Reference>
+    <Reference Include="com.rlabrecque.steamworks.net"><HintPath>$(JUEGO)/com.rlabrecque.steamworks.net.dll</HintPath></Reference>
+    <TrimmerRootAssembly Include="Assembly-CSharp;UnityEngine.UI;Unity.TextMeshPro;RTLTMPro;Unity.Timeline;Unity.Postprocessing.Runtime;com.rlabrecque.steamworks.net;UnityEngine.CoreModule" />
+  </ItemGroup>
+</Project>

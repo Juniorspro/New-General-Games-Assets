@@ -3,6 +3,10 @@
 //   dotnet run -c Release -- --juego MANAGED_DEL_APK --unity MANAGED_DE_UNITY/UnityEngine
 //                            --propios MOTOR/UnityEngine --salida MOTOR/UnityEngine/Generado
 //                            --fachadas MOTOR/Fachadas
+//   (otro juego, con otra versión de Unity: su propio perfil, que se compila con -p:PERFIL=NOMBRE)
+//   dotnet run -c Release -- --juego JUEGO_Data/Managed --unity JUEGO_Data/Managed
+//                            --propios MOTOR/UnityEngine/Motor --salida MOTOR/perfiles/NOMBRE/Generado
+//                            --fachadas MOTOR/perfiles/NOMBRE/Fachadas --ensamblados Assembly-CSharp,...
 //
 // Lee el IL del juego (Assembly-CSharp y compañía, y el UnityEngine.UI del APK, que corre tal
 // cual) y junta cada tipo y miembro de Unity que se usa. Le suma lo que hace falta para que el
@@ -23,7 +27,7 @@ gen.Correr();
 
 sealed class Opciones
 {
-    public string Juego, Unity, Propios, Salida, Fachadas;
+    public string Juego, Unity, Propios, Salida, Fachadas, Nucleo;
     public string[] Ensamblados = { "Assembly-CSharp", "Assembly-UnityScript", "Logger", "UnityEngine.UI" };
 
     public static Opciones Leer(string[] a)
@@ -38,11 +42,19 @@ sealed class Opciones
                 case "--propios": o.Propios = a[++i]; break;
                 case "--salida": o.Salida = a[++i]; break;
                 case "--fachadas": o.Fachadas = a[++i]; break;
+                // el proyecto del motor (para que las fachadas lo referencien desde donde estén)
+                case "--nucleo": o.Nucleo = a[++i]; break;
                 case "--ensamblados": o.Ensamblados = a[++i].Split(','); break;
                 default: throw new ArgumentException("opción desconocida: " + a[i]);
             }
         }
         if (o.Juego == null || o.Unity == null || o.Salida == null) throw new ArgumentException("faltan --juego, --unity o --salida");
+        if (o.Nucleo == null && o.Propios != null)
+        {
+            // MOTOR/UnityEngine o MOTOR/UnityEngine/Motor
+            var x = Path.Combine(o.Propios, "UnityEngine.CoreModule.csproj");
+            o.Nucleo = File.Exists(x) ? x : Path.Combine(o.Propios, "..", "UnityEngine.CoreModule.csproj");
+        }
         return o;
     }
 }
@@ -70,7 +82,7 @@ sealed class Generador
     public void Correr()
     {
         CargarUnity();
-        if (opc.Propios != null) LeerPropios();
+        if (opc.Propios != null) { LeerPropios(); UsadosPorPropios(); }
         foreach (var nombre in opc.Ensamblados)
         {
             var ruta = Path.Combine(opc.Juego, nombre + ".dll");
@@ -99,6 +111,8 @@ sealed class Generador
         if (Directory.Exists(bcl)) res.AddSearchDirectory(bcl);
         foreach (var dll in Directory.GetFiles(opc.Unity, "UnityEngine*.dll"))
         {
+            // UnityEngine.UI es un paquete (código del juego), aunque esté en la misma carpeta
+            if (Path.GetFileName(dll) == "UnityEngine.UI.dll") continue;
             var asm = AssemblyDefinition.ReadAssembly(dll, new ReaderParameters { AssemblyResolver = res });
             foreach (var t in asm.MainModule.GetTypes())
                 if (!t.Name.StartsWith("<")) unity.TryAdd(t.FullName, t);
@@ -413,7 +427,42 @@ sealed class Generador
         foreach (var f in Directory.GetFiles(opc.Propios, "*.cs", SearchOption.AllDirectories))
         {
             if (Path.GetFullPath(f).StartsWith(Path.GetFullPath(opc.Salida))) continue;
-            Sintaxis.Leer(File.ReadAllText(f), propios, tiposPropiosCompletos);
+            var texto = File.ReadAllText(f);
+            Sintaxis.Leer(texto, propios, tiposPropiosCompletos);
+            foreach (Match m in Regex.Matches(Sintaxis.SinComentarios(texto), @"\b[A-Za-z_]\w*\b")) nombresPropios.Add(m.Value);
+        }
+    }
+
+    // Lo que el motor escrito a mano usa de Unity también tiene que estar: con otra versión de
+    // Unity (otro perfil) el esqueleto de un juego no trae, por ejemplo, los enums que el motor
+    // nombra (CameraClearFlags, LightType...). Se agrega cada tipo de Unity cuyo nombre aparece en
+    // lo escrito a mano y, de él, los miembros cuyo nombre también aparece. Sobra algo, pero son
+    // trozos que no se llaman.
+    readonly HashSet<string> nombresPropios = new();
+
+    void UsadosPorPropios()
+    {
+        foreach (var t in unity.Values)
+        {
+            var n = t.Name; int k = n.IndexOf('`'); if (k > 0) n = n.Substring(0, k);
+            if (!nombresPropios.Contains(n) || t.Name.StartsWith("<") || !(t.IsPublic || t.IsNestedPublic)) continue;
+            // sólo de los espacios de nombres que el motor usa (UIElements y compañía arrastran jerarquías enteras)
+            var raiz = t; while (raiz.DeclaringType != null) raiz = raiz.DeclaringType;
+            if (raiz.Namespace is not ("UnityEngine" or "UnityEngine.Events" or "UnityEngine.Rendering" or "UnityEngine.SceneManagement"
+                or "UnityEngine.Audio" or "UnityEngine.Serialization" or "UnityEngine.Scripting" or "UnityEngine.Playables" or "UnityEngine.Animations"
+                or "UnityEngine.Video" or "UnityEngine.AI" or "UnityEngine.Experimental.Rendering" or "UnityEngine.Analytics")) continue;
+            Agregar(t);
+            foreach (var m in t.Methods)
+            {
+                if (!(m.IsPublic || m.IsFamily)) continue;
+                var mn = m.Name;
+                if (mn.StartsWith("get_") || mn.StartsWith("set_")) mn = mn.Substring(4);
+                else if (mn.StartsWith("add_")) mn = mn.Substring(4);
+                else if (mn.StartsWith("remove_")) mn = mn.Substring(7);
+                // (los constructores no: uno protegido taparía el público implícito que usa el motor)
+                if (!m.IsConstructor && nombresPropios.Contains(mn)) Miembro(m);
+            }
+            foreach (var f in t.Fields) if (f.IsPublic && nombresPropios.Contains(f.Name)) Miembro(f);
         }
     }
 
@@ -468,7 +517,8 @@ namespace Porteo
         var nombre = NombreTipoPropio(t);
         var s = Sangria(nivel);
         bool delegado = t.BaseType?.FullName == "System.MulticastDelegate";
-        if ((t.IsEnum || delegado) && tiposPropiosCompletos.Contains(t.FullName)) return false;
+        // escrito a mano entero (un enum, un delegado, o una clase o struct sin partial)
+        if (tiposPropiosCompletos.Contains(t.FullName)) return false;
         propios.TryGetValue(t.FullName, out var hechos);
         bool propio = hechos != null;
 
@@ -492,6 +542,11 @@ namespace Porteo
 
         var cab = new StringBuilder();
         cab.Append(s).Append(Visibilidad(t)).Append(' ');
+        // con punteros en algún campo o firma (NativeArray: void* m_Buffer)
+        bool punteros(TypeReference x) => x is PointerType || x is TypeSpecification ts && punteros(ts.ElementType);
+        if (t.Fields.Any(f => miembros.Contains(f) && punteros(f.FieldType)) ||
+            t.Methods.Any(m => miembros.Contains(m) && (punteros(m.ReturnType) || m.Parameters.Any(p => punteros(p.ParameterType)))))
+            cab.Append("unsafe ");
         if (t.IsInterface) cab.Append("partial interface ");
         else if (t.IsValueType) cab.Append("partial struct ");
         else
@@ -863,6 +918,10 @@ namespace Porteo
     }
 
     // ── fachadas ─────────────────────────────────────────────────────────────
+    // la ruta al proyecto del motor desde la carpeta de una fachada
+    string Nucleo(string dir) => opc.Nucleo == null ? "../../UnityEngine/UnityEngine.CoreModule.csproj"
+        : Path.GetRelativePath(dir, Path.GetFullPath(opc.Nucleo)).Replace('\\', '/');
+
     void EscribirFachadas()
     {
         Directory.CreateDirectory(opc.Fachadas);
@@ -893,7 +952,7 @@ namespace Porteo
   </PropertyGroup>
   <ItemGroup>
     <Compile Include=""{mod}.cs"" />
-    <ProjectReference Include=""../../UnityEngine/UnityEngine.CoreModule.csproj"" />
+    <ProjectReference Include=""{Nucleo(dir)}"" />
   </ItemGroup>
 </Project>
 ");
@@ -910,12 +969,17 @@ static class Sintaxis
     static readonly Regex TIPO = new(@"\b(class|struct|interface|enum)\s+(\w+)\s*(<[^>]*>)?\s*(:[^{]*)?$", RegexOptions.Compiled);
     static readonly Regex DELEGADO = new(@"\bdelegate\s+[\w.<>\[\], ?]+?\s+(\w+)\s*(<[^>(]*>)?\s*\(", RegexOptions.Compiled);
 
-    public static void Leer(string texto, Dictionary<string, HashSet<string>> propios, HashSet<string> completos)
+    public static string SinComentarios(string texto)
     {
         texto = Regex.Replace(texto, @"/\*.*?\*/", "", RegexOptions.Singleline);
         texto = Regex.Replace(texto, @"//[^\n]*", "");
         texto = Regex.Replace(texto, "@?\"(?:[^\"\\\\]|\\\\.)*\"", "\"\"");
-        texto = Regex.Replace(texto, @"'(?:[^'\\]|\\.)'", "' '");
+        return Regex.Replace(texto, @"'(?:[^'\\]|\\.)'", "' '");
+    }
+
+    public static void Leer(string texto, Dictionary<string, HashSet<string>> propios, HashSet<string> completos)
+    {
+        texto = SinComentarios(texto);
         texto = Regex.Replace(texto, @"^\s*#.*$", "", RegexOptions.Multiline);
         var pila = new List<(string clase, string nombre, int prof)>();
         int prof = 0, inicio = 0;
@@ -938,7 +1002,8 @@ static class Sintaxis
                     pila.Add((m.Groups[1].Value, m.Groups[2].Value + Aridad(m.Groups[3].Value), prof));
                     var n = NombreActual(pila);
                     Registrar(propios, n, null);
-                    if (m.Groups[1].Value == "enum") completos.Add(n);
+                    // un enum, o una clase o struct escrita sin partial: está entera, no se le agrega nada
+                    if (m.Groups[1].Value == "enum" || !Regex.IsMatch(trozo, @"\bpartial\b")) completos.Add(n);
                 }
                 else if (enTipo) Miembro(propios, NombreActual(pila), trozo, pila[^1].nombre);
                 prof++;
@@ -1002,6 +1067,22 @@ static class Sintaxis
         }
         var igual = PrimerIgual(t);
         var cabeza = igual >= 0 ? t.Substring(0, igual).Trim() : t;
+        // varios campos con valor en una declaración: "const int A = 4, B = -5, C = -1"
+        if (igual >= 0 && !INICIO_METODO.IsMatch(cabeza))
+        {
+            int pr = 0;
+            for (int k = igual + 1; k < t.Length; k++)
+            {
+                char ch = t[k];
+                if (ch is '(' or '[' or '{' or '<') pr++;
+                else if (ch is ')' or ']' or '}' or '>') pr--;
+                else if (ch == ',' && pr == 0)
+                {
+                    var sig = Regex.Match(t.Substring(k + 1), @"^\s*(\w+)\s*=");
+                    if (sig.Success) { Registrar(propios, tipo, "F:" + sig.Groups[1].Value); Registrar(propios, tipo, "P:" + sig.Groups[1].Value); }
+                }
+            }
+        }
         if ((m = INICIO_METODO.Match(cabeza)).Success)
         {
             var nombre = m.Groups[1].Value;

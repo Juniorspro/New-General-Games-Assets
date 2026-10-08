@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- El motor: la API de Unity que usa el juego, con el nombre del módulo que más nombra su IL.
        Motor/ es lo escrito a mano; Generado/ lo escribe ../generar con lo que falta (trozos que
-       avisan una vez). Los demás módulos son fachadas (../Fachadas) que reenvían acá. -->
+       avisan una vez). Los demás módulos son fachadas (../Fachadas) que reenvían acá.
+       Cada juego con otra versión de Unity tiene su perfil (-p:PERFIL=NOMBRE): su Generado y sus
+       fachadas en ../perfiles/NOMBRE; sin perfil, los de Slime Rancher (2018.4). -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>UnityEngine.CoreModule</AssemblyName>
@@ -15,4 +17,9 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS0108;CS0114;CS0618;CS0660;CS0661;CS0067;CS0169;CS0649;CS0414;CS8981;CS0282;CS1591</NoWarn>
   </PropertyGroup>
+  <Import Project="../perfiles/$(PERFIL)/motor.props" Condition="'$(PERFIL)' != '' And Exists('../perfiles/$(PERFIL)/motor.props')" />
+  <ItemGroup Condition="'$(PERFIL)' != ''">
+    <Compile Remove="Generado/**" />
+    <Compile Include="../perfiles/$(PERFIL)/Generado/**/*.cs" />
+  </ItemGroup>
 </Project>

@@ -1,0 +1,7 @@
+<Project>
+  <!-- El motor compilado para este juego (Unity 2022.2): lo que cambió de forma entre versiones
+       se elige con UNITY_2022 (por ejemplo, las UV de UIVertex son Vector4). -->
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);UNITY_2022</DefineConstants>
+  </PropertyGroup>
+</Project>

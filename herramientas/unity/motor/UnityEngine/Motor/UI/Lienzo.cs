@@ -4,6 +4,12 @@ using Porteo;
 using Porteo.Datos;
 using Porteo.Render;
 using UnityEngine;
+// las UV de un UIVertex (y de las listas de VertexHelper): Vector2 hasta Unity 2019, Vector4 después
+#if UNITY_2022
+using UvUI = UnityEngine.Vector4;
+#else
+using UvUI = UnityEngine.Vector2;
+#endif
 
 namespace UnityEngine
 {
@@ -20,6 +26,9 @@ namespace UnityEngine
         public delegate void WillRenderCanvases();
         static event WillRenderCanvases antesDeDibujar;
         public static event WillRenderCanvases willRenderCanvases { add => antesDeDibujar += value; remove => antesDeDibujar -= value; }
+        // Unity 2021+: antes de willRenderCanvases (la UI de 2022 hace ahí el layout y las mallas)
+        static event WillRenderCanvases antesDeAntes;
+        public static event WillRenderCanvases preWillRenderCanvases { add => antesDeAntes += value; remove => antesDeAntes -= value; }
 
         internal override void LeerNativo(Mapa m, IResolutor r)
         {
@@ -92,7 +101,12 @@ namespace UnityEngine
 
         internal static void Disparar()
         {
-            var d = antesDeDibujar;
+            Avisar(antesDeAntes);
+            Avisar(antesDeDibujar);
+        }
+
+        static void Avisar(WillRenderCanvases d)
+        {
             if (d == null) return;
             foreach (WillRenderCanvases f in d.GetInvocationList())
             {
@@ -248,13 +262,51 @@ namespace UnityEngine
             }
         }
 
-        // los ayudantes de VertexHelper y de los efectos (Outline, Shadow)
+        // los ayudantes de VertexHelper y de los efectos (Outline, Shadow). Las firmas públicas van
+        // con su tipo escrito (y no con el alias UvUI): así generar ve las dos versiones y no
+        // escribe ninguna de más
+#if UNITY_2022
+        public static void SplitUIVertexStreams(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector4> uv0S, List<Vector4> uv1S,
+            List<Vector3> normals, List<Vector4> tangents, List<int> indices) =>
+            Partir(verts, positions, colors, uv0S, uv1S, new List<UvUI>(), new List<UvUI>(), normals, tangents, indices);
+
+        public static void SplitUIVertexStreams(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector4> uv0S, List<Vector4> uv1S,
+            List<Vector4> uv2S, List<Vector4> uv3S, List<Vector3> normals, List<Vector4> tangents, List<int> indices) =>
+            Partir(verts, positions, colors, uv0S, uv1S, uv2S, uv3S, normals, tangents, indices);
+
+        public static void CreateUIVertexStream(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector4> uv0S, List<Vector4> uv1S,
+            List<Vector3> normals, List<Vector4> tangents, List<int> indices) =>
+            Crear(verts, positions, colors, uv0S, uv1S, null, null, normals, tangents, indices);
+
+        public static void CreateUIVertexStream(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector4> uv0S, List<Vector4> uv1S,
+            List<Vector4> uv2S, List<Vector4> uv3S, List<Vector3> normals, List<Vector4> tangents, List<int> indices) =>
+            Crear(verts, positions, colors, uv0S, uv1S, uv2S, uv3S, normals, tangents, indices);
+
+        public static void AddUIVertexStream(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector4> uv0S, List<Vector4> uv1S,
+            List<Vector3> normals, List<Vector4> tangents) => Sumar(verts, positions, colors, uv0S, uv1S, normals, tangents);
+#else
         public static void SplitUIVertexStreams(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector2> uv0S, List<Vector2> uv1S,
             List<Vector3> normals, List<Vector4> tangents, List<int> indices) =>
-            SplitUIVertexStreams(verts, positions, colors, uv0S, uv1S, new List<Vector2>(), new List<Vector2>(), normals, tangents, indices);
+            Partir(verts, positions, colors, uv0S, uv1S, new List<UvUI>(), new List<UvUI>(), normals, tangents, indices);
 
         public static void SplitUIVertexStreams(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector2> uv0S, List<Vector2> uv1S,
-            List<Vector2> uv2S, List<Vector2> uv3S, List<Vector3> normals, List<Vector4> tangents, List<int> indices)
+            List<Vector2> uv2S, List<Vector2> uv3S, List<Vector3> normals, List<Vector4> tangents, List<int> indices) =>
+            Partir(verts, positions, colors, uv0S, uv1S, uv2S, uv3S, normals, tangents, indices);
+
+        public static void CreateUIVertexStream(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector2> uv0S, List<Vector2> uv1S,
+            List<Vector3> normals, List<Vector4> tangents, List<int> indices) =>
+            Crear(verts, positions, colors, uv0S, uv1S, null, null, normals, tangents, indices);
+
+        public static void CreateUIVertexStream(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector2> uv0S, List<Vector2> uv1S,
+            List<Vector2> uv2S, List<Vector2> uv3S, List<Vector3> normals, List<Vector4> tangents, List<int> indices) =>
+            Crear(verts, positions, colors, uv0S, uv1S, uv2S, uv3S, normals, tangents, indices);
+
+        public static void AddUIVertexStream(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector2> uv0S, List<Vector2> uv1S,
+            List<Vector3> normals, List<Vector4> tangents) => Sumar(verts, positions, colors, uv0S, uv1S, normals, tangents);
+#endif
+
+        static void Partir(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<UvUI> uv0S, List<UvUI> uv1S,
+            List<UvUI> uv2S, List<UvUI> uv3S, List<Vector3> normals, List<Vector4> tangents, List<int> indices)
         {
             positions.Clear(); colors.Clear(); uv0S.Clear(); uv1S.Clear(); uv2S.Clear(); uv3S.Clear(); normals.Clear(); tangents.Clear(); indices.Clear();
             for (int i = 0; i < verts.Count; i++)
@@ -266,12 +318,8 @@ namespace UnityEngine
             }
         }
 
-        public static void CreateUIVertexStream(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector2> uv0S, List<Vector2> uv1S,
-            List<Vector3> normals, List<Vector4> tangents, List<int> indices) =>
-            CreateUIVertexStream(verts, positions, colors, uv0S, uv1S, null, null, normals, tangents, indices);
-
-        public static void CreateUIVertexStream(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector2> uv0S, List<Vector2> uv1S,
-            List<Vector2> uv2S, List<Vector2> uv3S, List<Vector3> normals, List<Vector4> tangents, List<int> indices)
+        static void Crear(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<UvUI> uv0S, List<UvUI> uv1S,
+            List<UvUI> uv2S, List<UvUI> uv3S, List<Vector3> normals, List<Vector4> tangents, List<int> indices)
         {
             verts.Clear();
             foreach (int i in indices)
@@ -287,7 +335,7 @@ namespace UnityEngine
             }
         }
 
-        public static void AddUIVertexStream(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<Vector2> uv0S, List<Vector2> uv1S,
+        static void Sumar(List<UIVertex> verts, List<Vector3> positions, List<Color32> colors, List<UvUI> uv0S, List<UvUI> uv1S,
             List<Vector3> normals, List<Vector4> tangents)
         {
             for (int i = 0; i < positions.Count; i++)
@@ -306,10 +354,17 @@ namespace UnityEngine
         public Vector3 normal;
         public Vector4 tangent;
         public Color32 color;
+#if UNITY_2022
+        public Vector4 uv0;
+        public Vector4 uv1;
+        public Vector4 uv2;
+        public Vector4 uv3;
+#else
         public Vector2 uv0;
         public Vector2 uv1;
         public Vector2 uv2;
         public Vector2 uv3;
+#endif
         public static UIVertex simpleVert = new UIVertex
         {
             position = Vector3.zero, normal = Vector3.back, tangent = new Vector4(1, 0, 0, -1), color = new Color32(255, 255, 255, 255),

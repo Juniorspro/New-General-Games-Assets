@@ -146,6 +146,31 @@ namespace UnityEngine.Events
         public override bool Find(object targetObj, MethodInfo method) => Delegate.Target == targetObj && Delegate.Method.Equals(method);
     }
 
+    class InvokableCall<T1, T2, T3, T4> : BaseInvokableCall
+    {
+        protected event UnityAction<T1, T2, T3, T4> Delegate;
+
+        public InvokableCall(object target, MethodInfo theFunction) : base(target, theFunction)
+        {
+            Delegate = (UnityAction<T1, T2, T3, T4>)System.Delegate.CreateDelegate(typeof(UnityAction<T1, T2, T3, T4>), target, theFunction);
+        }
+
+        public InvokableCall(UnityAction<T1, T2, T3, T4> action) { Delegate += action; }
+
+        public override void Invoke(object[] args)
+        {
+            if (args.Length != 4) throw new ArgumentException("Passed argument 'args' is invalid size. Expected size is 4");
+            ThrowOnInvalidArg<T1>(args[0]);
+            ThrowOnInvalidArg<T2>(args[1]);
+            ThrowOnInvalidArg<T3>(args[2]);
+            ThrowOnInvalidArg<T4>(args[3]);
+            if (AllowInvoke(Delegate)) Delegate((T1)args[0], (T2)args[1], (T3)args[2], (T4)args[3]);
+        }
+
+        public void Invoke(T1 args0, T2 args1, T3 args2, T4 args3) { if (AllowInvoke(Delegate)) Delegate(args0, args1, args2, args3); }
+        public override bool Find(object targetObj, MethodInfo method) => Delegate.Target == targetObj && Delegate.Method.Equals(method);
+    }
+
     // una llamada persistente con su argumento fijo (el del inspector): ignora el del evento
     class CachedInvokableCall<T> : InvokableCall<T>
     {
@@ -505,4 +530,37 @@ namespace UnityEngine.Events
     }
 
     public delegate void UnityAction<T0, T1, T2>(T0 arg0, T1 arg1, T2 arg2);
+
+    [Serializable]
+    public abstract partial class UnityEvent<T0, T1, T2, T3> : UnityEventBase
+    {
+        object[] m_InvokeArray;
+
+        public UnityEvent() { }
+
+        public void AddListener(UnityAction<T0, T1, T2, T3> call) => AddCall(GetDelegate(call));
+        public void RemoveListener(UnityAction<T0, T1, T2, T3> call) => RemoveListener(call.Target, call.Method);
+
+        protected override MethodInfo FindMethod_Impl(string name, object targetObj) => GetValidMethodInfo(targetObj, name, new[] { typeof(T0), typeof(T1), typeof(T2), typeof(T3) });
+        public override BaseInvokableCall GetDelegate(object target, MethodInfo theFunction) => new InvokableCall<T0, T1, T2, T3>(target, theFunction);
+        static BaseInvokableCall GetDelegate(UnityAction<T0, T1, T2, T3> action) => new InvokableCall<T0, T1, T2, T3>(action);
+
+        public void Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+        {
+            var calls = PrepareInvoke();
+            for (int i = 0; i < calls.Count; i++)
+            {
+                if (calls[i] is InvokableCall<T0, T1, T2, T3> c) c.Invoke(arg0, arg1, arg2, arg3);
+                else if (calls[i] is InvokableCall c0) c0.Invoke();
+                else
+                {
+                    m_InvokeArray ??= new object[4];
+                    m_InvokeArray[0] = arg0; m_InvokeArray[1] = arg1; m_InvokeArray[2] = arg2; m_InvokeArray[3] = arg3;
+                    calls[i].Invoke(m_InvokeArray);
+                }
+            }
+        }
+    }
+
+    public delegate void UnityAction<T0, T1, T2, T3>(T0 arg0, T1 arg1, T2 arg2, T3 arg3);
 }

@@ -15,13 +15,15 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../UnityEngine/UnityEngine.CoreModule.csproj" />
-    <ProjectReference Include="../Fachadas/*/*.csproj" />
+    <ProjectReference Include="../Fachadas/*/*.csproj" Condition="'$(PERFIL)' == ''" />
   </ItemGroup>
   <!-- la física: libporteo.so (la arma fisica/compilar-physx.py con la opción nativo) va junto al ejecutable -->
   <ItemGroup Condition="'$(FISICA)' != ''">
     <None Include="$(FISICA)" Link="libporteo.so" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-  <ItemGroup Condition="'$(JUEGO)' != ''">
+  <!-- otro juego: sus ensamblados y sus fachadas vienen del perfil -->
+  <Import Project="../perfiles/$(PERFIL)/juego.props" Condition="'$(PERFIL)' != ''" />
+  <ItemGroup Condition="'$(JUEGO)' != '' And '$(PERFIL)' == ''">
     <Reference Include="Assembly-CSharp"><HintPath>$(JUEGO)/Assembly-CSharp.dll</HintPath></Reference>
     <Reference Include="Assembly-UnityScript"><HintPath>$(JUEGO)/Assembly-UnityScript.dll</HintPath></Reference>
     <Reference Include="Logger"><HintPath>$(JUEGO)/Logger.dll</HintPath></Reference>

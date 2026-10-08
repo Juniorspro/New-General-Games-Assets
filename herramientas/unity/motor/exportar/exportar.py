@@ -1,19 +1,27 @@
 #!/usr/bin/env python3
-"""Exporta los datos de un juego de Unity 2018.4 (Mono) al formato del motor.
+"""Exporta los datos de un juego de Unity (Mono; probado con 2018.4 de Android y 2022.2 de Windows)
+al formato del motor.
 
     python -I exportar.py DATA SALIDA [--solo level0,globalgamemanagers ...] [--arreglar-swizzles]
+                          [--dxbc-glsl RUTA]
 
-DATA es assets/bin/Data del APK (sacado con unzip). En SALIDA quedan:
+DATA es assets/bin/Data del APK (sacado con unzip) o la carpeta JUEGO_Data de un build de PC. En
+SALIDA quedan:
     paquetes/NOMBRE.paq   un archivo serializado de Unity entero (ver arbol.py)
-    recursos/ID.bin       lo grande (texturas, mallas, audio, código de shaders), aparte
-    indice.json           los archivos, las escenas en orden y la tabla de recursos
+    recursos/ID.bin       lo grande (texturas, mallas, audio, video, código de shaders), aparte
+    indice.json           los archivos, las escenas en orden, la tabla de recursos y la convención
+                          de los shaders ("gles3" o "d3d11")
 
 Cada objeto se lee con su typetree (UnityPy trae los de las clases del motor para cada
 versión; los de los MonoBehaviour se generan desde las DLL del juego) y se guarda entero: el
 motor ve lo mismo que Unity al cargar. Lo que cambia:
   - los datos que Unity guarda aparte (.resS, .resource) se traen como recursos;
   - de cada Shader, en vez de los blobs comprimidos de cada plataforma, va el GLSL de GLES3 de
-    cada subprograma (con --arreglar-swizzles, reparado: ver shaders.py);
+    cada subprograma (con --arreglar-swizzles, reparado: ver shaders.py). Si el build sólo trae
+    DirectX 11 (uno de PC), cada variante se traduce con HLSLcc (ver dxbc.py; --dxbc-glsl es la
+    herramienta que arma dxbc/compilar.sh);
+  - las texturas de PC (DXT1, DXT5, BC7...) pasan a ETC2, que es lo que leen los teléfonos (y el
+    motor lo descomprime donde no hay ETC2); las HDR (BC6H), a RGBA de 8 bits;
   - OcclusionCullingData no va (es el formato propio de Umbra; el motor hace su descarte).
 
 Lo bajado es de terceros: los datos se leen, no se ejecuta nada de ellos. Correr con python -I.
@@ -37,10 +45,16 @@ from UnityPy.streams import EndianBinaryReader
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from arbol import Escritor  # noqa: E402
 from shaders import arreglar_swizzles, partir_glsl  # noqa: E402
+import dxbc  # noqa: E402
+import texturas  # noqa: E402
 
 GLES3 = 4             # ShaderGpuProgramType.kShaderGpuProgramGLES3
 PLATAFORMA_GLES3 = 9  # ShaderCompilerPlatform.kShaderCompPlatformGLES3Plus
 OMITIR = {"OcclusionCullingData"}
+
+# TextureFormat de Unity
+RGBA32, RGBA_HALF, DXT1, DXT5, BC6H, BC7, BC4, BC5 = 4, 17, 10, 12, 24, 25, 26, 27
+ETC2_RGB, ETC2_RGBA8 = 45, 47
 
 
 def log(*a):
@@ -93,22 +107,28 @@ class Recursos:
 
 
 class Exportador:
-    def __init__(self, datos, salida, arreglar):
+    def __init__(self, datos, salida, arreglar, dxbc_glsl=None):
         self.datos = Path(datos)
         self.salida = Path(salida)
         self.arreglar = arreglar
+        self.dxbc_glsl = dxbc_glsl
         log("cargando", self.datos)
         self.env = UnityPy.load(str(self.datos))
-        self.gen = TypeTreeGenerator("2018.4.36f1")
+        self.archivos = {nombre_archivo(n): f for n, f in self.env.files.items() if hasattr(f, "objects")}
+        # la versión de Unity del build: las reglas de serialización de los scripts cambian con ella
+        self.version = next((f.unity_version for f in self.archivos.values() if getattr(f, "unity_version", None)), "2018.4.36f1")
+        log("Unity", self.version)
+        self.gen = TypeTreeGenerator(self.version)
         self.gen.load_local_dll_folder(str(self.datos / "Managed"))
         self.env.typetree_generator = self.gen
         self.recursos = Recursos(self.salida / "recursos")
         (self.salida / "paquetes").mkdir(parents=True, exist_ok=True)
-        self.archivos = {nombre_archivo(n): f for n, f in self.env.files.items() if hasattr(f, "objects")}
         self.scripts = {}       # (archivo, pathID del MonoScript) -> (ensamblado, ns, clase)
         self.nodos = {}         # (ensamblado, clase) -> nodos del typetree (o None)
         self.avisos = set()
         self.fallas = {}
+        self.convencion = "gles3"
+        self.shaders_d3d = {}   # (id del archivo, pathID) -> árbol ya traducido (ver traducir_shaders)
 
     # ── MonoBehaviour ──
     def _archivo_externo(self, af, fid):
@@ -177,27 +197,60 @@ class Exportador:
             arbol = self.audio(o, arbol)
         elif tipo in ("Texture2D", "Cubemap", "Texture3D", "Texture2DArray"):
             arbol = self.textura(o, arbol)
+        elif tipo == "Mesh":
+            arbol = self.malla(o, arbol)
+        elif tipo == "VideoClip":
+            arbol = self.video(o, arbol)
         return arbol, None
 
     def leer_stream(self, af, ruta, desde, largo):
         nombre = nombre_archivo(ruta)
-        p = self.datos / nombre
-        if not p.exists():
+        # los nombres se comparan en minúsculas (en el APK lo están; en un build de PC no:
+        # "resources.assets.resS")
+        if not hasattr(self, "_por_nombre"):
+            self._por_nombre = {x.name.lower(): x for x in self.datos.iterdir() if x.is_file()}
+        p = self._por_nombre.get(nombre)
+        if p is None:
             # partido en .split0, .split1... como en el APK
-            partes = sorted(self.datos.glob(nombre + ".split*"), key=lambda x: int(x.suffix[6:]))
+            partes = sorted((x for k, x in self._por_nombre.items() if k.startswith(nombre + ".split")), key=lambda x: int(x.suffix[6:]))
             if not partes:
                 raise FileNotFoundError(ruta)
-            datos = b"".join(x.read_bytes() for x in partes)
-        else:
-            datos = p.read_bytes()
-        return datos[desde:desde + largo]
+            return b"".join(x.read_bytes() for x in partes)[desde:desde + largo]
+        with open(p, "rb") as f:
+            f.seek(desde)
+            return f.read(largo)
 
     def textura(self, o, a):
         sd = a.get("m_StreamData")
+        datos = None
         if sd and sd.get("size"):
             datos = self.leer_stream(o.assets_file, sd["path"], sd["offset"], sd["size"])
-            a["image data"] = {"_recurso": self.recursos(datos)}
             a["m_StreamData"] = {"offset": 0, "size": 0, "path": ""}
+        elif isinstance(a.get("image data"), (bytes, bytearray)) and texturas.es_de_pc(a.get("m_TextureFormat")):
+            datos = bytes(a["image data"])
+        if datos is not None and texturas.es_de_pc(a.get("m_TextureFormat")):
+            caras = 6 if o.type.name == "Cubemap" else max(1, a.get("m_ImageCount", 1))
+            nuevo = texturas.para_telefono(a["m_TextureFormat"], a["m_Width"], a["m_Height"], a.get("m_MipCount", 1), datos, caras)
+            if nuevo:
+                a["m_TextureFormat"], datos = nuevo
+                a["m_CompleteImageSize"] = len(datos) // caras
+        if datos is not None:
+            a["image data"] = {"_recurso": self.recursos(datos)}
+        return a
+
+    def malla(self, o, a):
+        """En los builds nuevos los vértices van aparte (.resS): se traen a m_VertexData."""
+        sd = a.get("m_StreamData")
+        if sd and sd.get("size") and isinstance(a.get("m_VertexData"), dict):
+            a["m_VertexData"]["m_DataSize"] = self.leer_stream(o.assets_file, sd["path"], sd["offset"], sd["size"])
+            a["m_StreamData"] = {"offset": 0, "size": 0, "path": ""}
+        return a
+
+    def video(self, o, a):
+        """El archivo del video tal cual (el navegador lo reproduce: H.264 o VP8)."""
+        r = a.get("m_ExternalResources")
+        if r and r.get("m_Size"):
+            a["_datos"] = {"_recurso": self.recursos(self.leer_stream(o.assets_file, r["m_Source"], r["m_Offset"], r["m_Size"]))}
         return a
 
     def audio(self, o, a):
@@ -207,8 +260,54 @@ class Exportador:
             a["_datos"] = {"_recurso": self.recursos(datos)}   # FSB5 tal cual: después fsb-ogg lo pasa a Ogg
         return a
 
+    def traducir_shaders(self):
+        """Si el build sólo trae DirectX 11 (uno de PC), todos los shaders se traducen antes, juntos
+        (HLSLcc tarda segundos con miles de variantes), y quedan en la convención de D3D."""
+        candidatos = []
+        for af in self.archivos.values():
+            for pid, o in af.objects.items():
+                if o.type.name == "Shader":
+                    candidatos.append((id(af), pid, o))
+        hay_gles = solo_d3d = False
+        arboles = {}
+        for nombre, pid, o in candidatos:
+            t = o.read_typetree(check_read=False)
+            plats = list(t.get("platforms") or [])
+            hay_gles |= PLATAFORMA_GLES3 in plats
+            solo_d3d |= dxbc.PLATAFORMA_D3D11 in plats and PLATAFORMA_GLES3 not in plats
+            arboles[(nombre, pid)] = t
+        if not solo_d3d:
+            return
+        if not self.dxbc_glsl:
+            raise SystemExit("los shaders son de DirectX 11: hace falta --dxbc-glsl (ver dxbc/compilar.sh)")
+        self.convencion = "d3d11"
+        preps, trabajos = {}, []
+        for k, t in arboles.items():
+            p = dxbc.preparar_shader(t)
+            if p is None:
+                continue
+            p["base"] = len(trabajos)
+            trabajos.extend(p["trabajos"])
+            preps[k] = p
+        t0 = time.time()
+        avisos = []
+        glsl = dxbc.traducir(trabajos, self.dxbc_glsl, avisos)
+        log(f"shaders de D3D11: {len(trabajos)} variantes, {sum(1 for g in glsl if g)} traducidas ({time.time() - t0:.0f} s)")
+        for a in avisos[:10]:
+            self.avisos.add(a)
+        for k, p in preps.items():
+            t = arboles[k]
+            programas = dxbc.aplicar(t, p, glsl[p["base"]:p["base"] + len(p["trabajos"])])
+            for c in ("compressedBlob", "offsets", "compressedLengths", "decompressedLengths", "stageCounts"):
+                t.pop(c, None)
+            t["_gles3"] = {"_recurso": self.recursos(json.dumps(programas, ensure_ascii=False).encode("utf-8"))}
+            self.shaders_d3d[k] = t
+
     def shader(self, o, a):
         """El GLSL de GLES3 de cada subprograma, en vez de los blobs de todas las plataformas."""
+        ya = self.shaders_d3d.get((id(o.assets_file), o.path_id))
+        if ya is not None:
+            return ya
         programas = []
         sh = o.read()
         for i, plat in enumerate(sh.platforms):
@@ -261,6 +360,7 @@ class Exportador:
 
     def correr(self, solo=None):
         indice = {"archivos": {}, "escenas": [], "recursos": None}
+        self.traducir_shaders()
         for nombre, af in sorted(self.archivos.items()):
             if solo and nombre not in solo:
                 continue
@@ -272,6 +372,8 @@ class Exportador:
                 if o.type.name == "BuildSettings":
                     indice["escenas"] = list(o.read_typetree(check_read=False)["scenes"])
         indice["recursos"] = self.recursos.tabla
+        indice["unity"] = self.version
+        indice["convencion"] = self.convencion
         indice["fallas"] = self.fallas
         (self.salida / "indice.json").write_text(json.dumps(indice, ensure_ascii=False, indent=1))
         for a in sorted(self.avisos)[:60]:
@@ -289,9 +391,10 @@ def main():
     ap.add_argument("salida")
     ap.add_argument("--solo", default="", help="archivos a exportar, separados por comas")
     ap.add_argument("--arreglar-swizzles", action="store_true", help="reparar los shaders decompilados (ver shaders.py)")
+    ap.add_argument("--dxbc-glsl", default=None, help="el traductor de shaders de D3D11 (dxbc/compilar.sh): hace falta con builds de PC")
     a = ap.parse_args()
     solo = set(x.strip().lower() for x in a.solo.split(",") if x.strip()) or None
-    Exportador(a.datos, a.salida, a.arreglar_swizzles).correr(solo)
+    Exportador(a.datos, a.salida, a.arreglar_swizzles, a.dxbc_glsl).correr(solo)
 
 
 if __name__ == "__main__":

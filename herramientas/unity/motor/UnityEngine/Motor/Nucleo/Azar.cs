@@ -4,8 +4,9 @@ namespace UnityEngine
 {
     // Random con el mismo generador que Unity (xorshift128 sembrado como el de Unity): con la misma
     // semilla (InitState) da la misma secuencia, que es lo que usan los juegos para generar cosas
-    // repetibles.
-    public sealed partial class Random
+    // repetibles. Sin static ni sealed: en Unity 2018 es sealed y en 2022 static, y eso lo pone el
+    // esqueleto de cada perfil (el IL del juego no ve la diferencia).
+    public partial class Random
     {
         [Serializable]
         public struct State

@@ -57,7 +57,7 @@ namespace UnityEngine
         static ShadowQuality sombras = ShadowQuality.HardOnly;
         static ShadowProjection proyeccion = ShadowProjection.StableFit;
         static AnisotropicFiltering aniso = AnisotropicFiltering.ForceEnable;
-        static BlendWeights pesos = BlendWeights.FourBones;
+        static BlendWeights pesos = (BlendWeights)4;   // FourBones (en 2022 el enum ya no trae los valores)
         static bool particulasSuaves;
 
         static void Iniciar()

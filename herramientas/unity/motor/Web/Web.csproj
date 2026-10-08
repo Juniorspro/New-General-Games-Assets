@@ -39,10 +39,12 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../UnityEngine/UnityEngine.CoreModule.csproj" />
-    <ProjectReference Include="../Fachadas/*/*.csproj" />
+    <ProjectReference Include="../Fachadas/*/*.csproj" Condition="'$(PERFIL)' == ''" />
   </ItemGroup>
   <!-- el código del juego, tal cual viene en el APK -->
-  <ItemGroup Condition="'$(JUEGO)' != ''">
+  <!-- otro juego: sus ensamblados y sus fachadas vienen del perfil -->
+  <Import Project="../perfiles/$(PERFIL)/juego.props" Condition="'$(PERFIL)' != ''" />
+  <ItemGroup Condition="'$(JUEGO)' != '' And '$(PERFIL)' == ''">
     <Reference Include="Assembly-CSharp"><HintPath>$(JUEGO)/Assembly-CSharp.dll</HintPath></Reference>
     <Reference Include="Assembly-UnityScript"><HintPath>$(JUEGO)/Assembly-UnityScript.dll</HintPath></Reference>
     <Reference Include="Logger"><HintPath>$(JUEGO)/Logger.dll</HintPath></Reference>
