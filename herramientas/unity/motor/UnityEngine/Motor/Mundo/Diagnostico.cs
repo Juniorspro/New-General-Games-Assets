@@ -330,13 +330,16 @@ namespace Porteo
 
         // crear:PINK_SLIME[,n[,distancia]]: n actores del juego (Identifiable.Id) delante del jugador, como
         // los crea el juego (LookupDirector.GetPrefab + SRBehaviour.InstantiateActor): para probar
-        // aspirar, disparar, alimentar o vender sin ir a buscarlos
+        // aspirar, disparar, alimentar o vender sin ir a buscarlos. Con @Componente en vez de la
+        // distancia, encima del primer objeto que lo tenga (crear:PINK_PLORT,1,@ScorePlort: en el
+        // mercado)
         public static string Crear(string arg)
         {
             var p = arg.Split(',');
             var ci = System.Globalization.CultureInfo.InvariantCulture;
             int n = p.Length > 1 ? int.Parse(p[1], ci) : 1;
-            float dist = p.Length > 2 ? float.Parse(p[2], ci) : 4f;
+            string sobre = p.Length > 2 && p[2].StartsWith("@") ? p[2].Substring(1) : null;
+            float dist = p.Length > 2 && sobre == null ? float.Parse(p[2], ci) : 4f;
             var asm = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == "Assembly-CSharp");
             var tId = asm?.GetType("Identifiable+Id");
             if (tId == null) return "crear: no está el juego";
@@ -351,9 +354,19 @@ namespace Porteo
             var inst = asm.GetType("SRBehaviour").GetMethod("InstantiateActor", new[] { typeof(GameObject), typeof(Vector3), typeof(Quaternion), typeof(bool) });
             var sb = new StringBuilder($"crear {p[0]}:");
             var adelante = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
+            Vector3? encima = null;
+            if (sobre != null)
+            {
+                var mb = Resources.FindObjectsOfTypeAll<MonoBehaviour>().FirstOrDefault(m => m.GetType().Name == sobre && m.gameObject.activeInHierarchy);
+                if (mb == null) return "crear: no hay ningún " + sobre + " activo";
+                var col = mb.GetComponent<Collider>();
+                encima = (col != null ? col.bounds.center : mb.transform.position) + Vector3.up * 0.3f;
+                sb.Append($" sobre {Ruta(mb.transform)}");
+            }
             for (int i = 0; i < n; i++)
             {
-                var lugar = cam.transform.position + adelante * dist + Vector3.up * (0.5f + i * 1.2f);
+                var lugar = encima ?? cam.transform.position + adelante * dist + Vector3.up * (0.5f + i * 1.2f);
+                if (encima.HasValue) lugar += Vector3.up * (i * 0.6f);
                 var go = inst.Invoke(null, new object[] { prefab, lugar, Quaternion.identity, false }) as GameObject;
                 sb.Append(go != null ? $" {go.name} en {lugar}" : " (no se creó)");
             }

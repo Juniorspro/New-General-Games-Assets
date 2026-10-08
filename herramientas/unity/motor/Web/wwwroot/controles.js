@@ -124,18 +124,21 @@ export function crearControles(exp, lienzo) {
     const dx = (teclas.has('KeyD') || teclas.has('ArrowRight') ? 1 : 0) - (teclas.has('KeyA') || teclas.has('ArrowLeft') ? 1 : 0);
     const dy = (teclas.has('KeyW') || teclas.has('ArrowUp') ? 1 : 0) - (teclas.has('KeyS') || teclas.has('ArrowDown') ? 1 : 0);
     if (j && (dx || dy)) {
-      // el centro de la zona; a 0.85 del radio camina, a fondo (con Shift) corre
+      // el centro de la zona; a 0.85 del radio camina, a fondo (con Shift) corre. El dedo se apoya en
+      // un cuadro y se corre en el siguiente: el joystick de TCK se centra donde se apoya el dedo, y
+      // si el motor recibe las dos cosas juntas el toque empieza ya corrido y el eje queda en 0
       const radio = j[4] > 0 ? j[4] : Math.min(j[2], j[3]) * 0.3;
       const k = (teclas.has('ShiftLeft') || teclas.has('ShiftRight') ? 1.2 : 0.85) * radio / Math.hypot(dx, dy);
       if (!joy) { joy = [j[0], j[1]]; tocar(DEDO_JOY, 0, joy[0], joy[1]); }
-      tocar(DEDO_JOY, 1, joy[0] + dx * k, joy[1] + dy * k);
+      else tocar(DEDO_JOY, 1, joy[0] + dx * k, joy[1] + dy * k);
     } else if (joy) {
       tocar(DEDO_JOY, 3, joy[0], joy[1]);
       joy = null;
     }
     const p = rect('Touchpad');
     if (p && (movX || movY)) {
-      if (!pad) { pad = [p[0], p[1]]; tocar(DEDO_PAD, 0, pad[0], pad[1]); }
+      // igual que el joystick: apoyado en este cuadro, el movimiento queda para el siguiente
+      if (!pad) { pad = [p[0], p[1]]; tocar(DEDO_PAD, 0, pad[0], pad[1]); padQuieto = 0; return; }
       pad = [pad[0] + movX, pad[1] - movY];
       tocar(DEDO_PAD, 1, pad[0], pad[1]);
       padQuieto = 0;
