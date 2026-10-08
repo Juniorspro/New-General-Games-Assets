@@ -332,6 +332,8 @@ console.log('A. Teléfono acostado (844×390): del menú a jugar, cada control m
   const atras = await esperar(t.pg, (e) => e.destino === 2, 4000);
   const at2 = await t.pg.evaluate(() => window.porteoAtras());
   ch('A: atrás abre el menú del juego; dos seguidos salen', at1 === true && !!atras && at2 === 'salir');
+  // (con el menú recién abierto, como en "Pausa": apretado en el mismo instante, a veces no llegaba)
+  await t.pg.waitForTimeout(1000);
   await t.pg.keyboard.press('Escape');
   ch('A: Escape en el menú vuelve al juego', !!(await esperar(t.pg, (e) => e.destino === 1, 4000)));
 
