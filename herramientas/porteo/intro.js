@@ -5,6 +5,9 @@
  *
  *   Porteo.intro({ aviso: { es: '…', en: '…', pt: '…' } }).then(function () { … });
  *
+ * "presenta" y el aviso van en el idioma del teléfono, o en `idioma` si el juego lo pasa (el que se
+ * eligió en el juego).
+ *
  * Todo va en este archivo (la moneda también), así anda igual en el .html único.
  */
 (function () {
@@ -39,7 +42,7 @@
   var Porteo = window.Porteo = window.Porteo || {};
   Porteo.intro = function (opciones) {
     opciones = opciones || {};
-    var idioma = (navigator.language || 'es').slice(0, 2).toLowerCase();
+    var idioma = (opciones.idioma || navigator.language || 'es').slice(0, 2).toLowerCase();
     if (!PRESENTA[idioma]) idioma = 'en';
     var aviso = opciones.aviso || {};
     return new Promise(function (listo) {

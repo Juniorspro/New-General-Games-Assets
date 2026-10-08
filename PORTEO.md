@@ -262,7 +262,8 @@ archivo (la moneda también), así anda igual en el `.html` único.
 ```
 
 - Dura 4,3 s. Un toque la saltea, y ese toque no le llega al juego.
-- "presenta" y el aviso salen en el idioma del teléfono (es, en o pt).
+- "presenta" y el aviso salen en el idioma del teléfono (es, en o pt), o en `idioma` si el juego
+  lo pasa (Half-Life pregunta el idioma antes de la intro y se lo pasa).
 - El juego arranca por detrás al mismo tiempo, no al terminar.
 
 **`herramientas/porteo/web.js`** — lo que hacía la parte nativa (§6).
@@ -604,6 +605,7 @@ créditos ni se tapa al autor.
 | guardar la partida con Emscripten (Xash3D) | el motor guarda las funciones de cada entidad por nombre con `dladdr()`, que en Emscripten es un stub: al cargar o volver a un nivel, trenes, puertas y disparadores quedaban quietos (y ninguna prueba lo veía: cargaba "bien") | buscar el nombre en las exportaciones del módulo por el lugar de la tabla de funciones (`LDSO.loadedLibsByHandle`, parche de `lib_posix.c`), y **probar que lo cargado se mueve** |
 | sonidos en otro formato que el que pide el juego (`.opus` por `.wav`) | el motor los carga, pero al entrar al nivel el cliente revisa que exista el `.wav` de cada sonido precargado y apaga el que no encuentra para todo el nivel ("Could not load sound") | que la revisión acepte el `.opus` y, jugando en el mismo navegador, no dé ningún sonido por faltante (parche de `cl_custom.c`) |
 | retener un pedido con `page.route` de Playwright | no ve lo que pide el service worker: el paquete pasaba igual y la prueba "fallaba" | esa prueba, en un contexto con `serviceWorkers: 'block'` |
+| preguntar algo al empezar (el idioma) después de la intro | si la respuesta va en el arranque del motor (`-language`), el motor no puede cargar por detrás de la intro: se arranca recién al contestar, y la intro ya no tapa la carga | preguntar **antes** de la intro y bajar mientras tanto lo que no depende de la respuesta (y lo de la opción marcada); la intro sale en el idioma elegido (`Porteo.intro({ idioma })`). En Half-Life, en 4G: jugando a los 22,8 s en vez de 27,7 |
 | `wrangler pages project create` (wrangler 4.148) | intenta crear el proyecto en Workers ("Delegating to the latest version of Cloudflare Pages"), falla y no crea nada | `--force` al crearlo (el Pages clásico, como los demás porteos) |
 
 ## 14. Registro de porteos
@@ -893,10 +895,11 @@ Tamaños: copias de ~520 MB cada una → web 180 MB con los dos idiomas (al abri
          motor con brotli y el menú; para la primera partida, 14 más mientras se mira el menú; cada
          capítulo y cada nivel, de fondo mientras se juega el anterior) · zip 182 MB · APK 186 MB ·
          un archivo 91 MB (con la llegada en tren, Materiales Anómalos y el entrenamiento)
-Publicado: todavía no — subirlo a una dirección pública es redistribuir el juego (§11): lo decide el
-           dueño. Listo para https://porteo-half-life.pages.dev (proyecto porteo-half-life ya creado)
-Pruebas: 75/75 (porteos/half-life/prueba.mjs, contra la entrega: la web servida acá, el APK y el
-         .html único)
+Publicado: https://porteo-half-life.pages.dev (Cloudflare Pages, proyecto porteo-half-life), a pedido
+           del dueño ("idéntica a la de counter strike", con el idioma a elegir al principio); y
+           jugar-half-life.html (3 KB, en el repo), que abre lo publicado
+Pruebas: 79/79 (porteos/half-life/prueba.mjs, contra el sitio publicado, el APK y el .html único) y
+         3/3 del .html que abre lo publicado (directo, en el cuadro de una plataforma y bloqueado)
 ```
 
 - **Qué hizo falta** (detalle en [`porteos/half-life/LEEME.md`](porteos/half-life/LEEME.md)):
@@ -912,8 +915,9 @@ Pruebas: 75/75 (porteos/half-life/prueba.mjs, contra la entrega: la web servida 
     sonidos que faltaron se vuelven a buscar al llegar un paquete;
   - el HUD de alta resolución (`sprites/1280`) y el dibujo limitado a 2 por píxel;
   - el fondo del menú del 25 aniversario, de 17 MB a 0,6;
-  - el menú en español latino (`mainui_spanish.txt`, ~280 frases) y el idioma elegible desde el
-    menú principal;
+  - el menú en español latino (`mainui_spanish.txt`, ~280 frases); el idioma se elige al abrir,
+    **antes** de la intro (va en el arranque del motor: preguntado después, el motor no podría
+    cargar por detrás de la intro), y también se cambia desde el menú principal;
   - dos fallas que las pruebas no veían y salieron jugando con scripts: agarrar armas y balas
     fallaba de a ratos (el servidor recibía funciones vacías del cliente: `-Wl,-Bsymbolic`), y al
     cargar una partida todo quedaba quieto (`dladdr()` de Emscripten no da nombres: el motor los
@@ -922,15 +926,16 @@ Pruebas: 75/75 (porteos/half-life/prueba.mjs, contra la entrega: la web servida 
 - **Controles:** los de CS, con linterna, guardado y carga rápidos; un toque en un casillero pone en
   la mano la siguiente arma (parche de hlsdk: el cambio rápido de Half-Life sólo andaba con una
   arma por casillero).
-- **Probado** (`porteos/half-life/prueba.mjs`, 75/75): del menú a jugar sólo tocando, en español y
-  en inglés; cada control medido en el estado del juego; guardar y cargar (también después de
+- **Probado** (`porteos/half-life/prueba.mjs`, 79/79, contra el sitio publicado): la pregunta del
+  idioma (la marcada, la intro en el elegido, inglés con el teléfono en español, entera en
+  640×360); del menú a jugar sólo tocando, en español y en inglés; cada control medido en el
+  estado del juego; guardar y cargar (también después de
   cerrar la página): lo cargado se sigue moviendo y ningún sonido queda apagado; el paso de nivel
   con el siguiente sin bajar (pausa con el cartel, y sigue al llegar); parado, pantalla chica, 4G
-  (menú a los 10 s, jugando a los 27,7 s), sin internet, el `.html` único y el APK. Aparte, con
+  (menú a los 5,8 s, jugando a los 22,8 s), sin internet, el `.html` único y el APK. Aparte, con
   scripts: agarrar armas y balas (4 de 4, antes fallaba de a ratos) y el tren después de cargar.
 - **Problemas conocidos:** no se probó en un teléfono real ni en Safari; sin multijugador; los
-  botones del menú del juego quedan chicos en un teléfono; firmado con la clave de esta sesión (§7);
-  sin publicar (ver arriba).
+  botones del menú del juego quedan chicos en un teléfono; firmado con la clave de esta sesión (§7).
 - **Rearmarlo:** `porteos/half-life/portear.sh Half_Life_1_\(Justhin\).rar Half-Life.rar [SALIDA]`
   (unos minutos con Emscripten y los fuentes ya compilados). **Probarlo:** `node
   porteos/half-life/prueba.mjs http://127.0.0.1:8861/half-life/ entrega-half-life/half-life.apk

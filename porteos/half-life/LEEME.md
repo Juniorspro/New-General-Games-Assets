@@ -29,11 +29,12 @@ porteos/half-life/portear.sh Half_Life_1_\(Justhin\).rar Half-Life.rar entrega-h
 python3 -m http.server 8861 --bind 127.0.0.1 --directory entrega-half-life &
 node porteos/half-life/prueba.mjs http://127.0.0.1:8861/half-life/ entrega-half-life/half-life.apk file://$PWD/entrega-half-life/half-life.html
 
-# publicarlo (Cloudflare Pages, proyecto porteo-half-life → https://porteo-half-life.pages.dev),
-# sólo si el dueño lo pide: una dirección pública es redistribuir el juego (PORTEO.md §11)
+# publicarlo (Cloudflare Pages, proyecto porteo-half-life → https://porteo-half-life.pages.dev; lo
+# pidió el dueño: una dirección pública es redistribuir el juego, PORTEO.md §11). Probarlo ahí
+# (NODE_USE_ENV_PROXY=1 si la máquina sale por un proxy: el fetch de Node no lo lee solo)
 export CLOUDFLARE_API_TOKEN=$(cat /root/.cloudflare-claude) CLOUDFLARE_ACCOUNT_ID=$(cat /root/.cloudflare-cuenta)
 npx wrangler@4 pages deploy entrega-half-life/half-life --project-name porteo-half-life --branch main
-node porteos/half-life/prueba.mjs https://porteo-half-life.pages.dev/
+NODE_USE_ENV_PROXY=1 node porteos/half-life/prueba.mjs https://porteo-half-life.pages.dev/ entrega-half-life/half-life.apk file://$PWD/entrega-half-life/half-life.html
 ```
 
 La primera vez baja los fuentes en los commits fijados y compila (Emscripten se comparte con el
@@ -55,8 +56,12 @@ letras. `portear.sh` deja la inglesa en `valve/` y lo que cambia en `valve_spani
 Xash un idioma (`-language spanish`). Xash busca esa carpeta sólo en la escribible: la página
 escribe los paquetes del español en `/rwdir/valve_spanish`.
 
-- El idioma se elige con el botón del menú principal (Español · English); queda guardado y la
-  primera vez sale del idioma del teléfono. Cambiarlo recarga la página (sin repetir la intro).
+- **Al abrir, lo primero es elegir el idioma** (Español latino · English), antes de la intro: así
+  el juego ya carga por detrás de la intro en ese idioma (y la intro sale en ese idioma). Sale
+  marcado el de la vez pasada (la primera vez, el del teléfono); mientras se elige ya se bajan el
+  motor, el menú y lo del marcado, y si se elige el otro, lo suyo (1 o 2 MB) al tocarlo.
+- También se cambia con el botón del menú principal (Español · English): recarga la página con el
+  otro, sin la intro ni la pregunta.
 - En inglés el menú es el de siempre (los botones dibujados de `extras.pk3`); en español, sin
   esos dibujos, el menú escribe sus textos: los del juego y los de `mainui_spanish.txt`.
 - Los controles táctiles y los carteles de la página van en el idioma elegido.

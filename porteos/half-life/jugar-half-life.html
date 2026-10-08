@@ -32,14 +32,15 @@
 <body>
 <h1>Half-Life</h1>
 <div class="rueda"></div>
-<p id="texto">Abriendo el juego…</p>
-<a class="jugar" href="https://porteo-half-life.pages.dev/" target="_blank" rel="noopener">Jugar</a>
+<p id="texto">Abriendo el juego… · Opening the game…</p>
+<a class="jugar" href="https://porteo-half-life.pages.dev/" target="_blank" rel="noopener">Jugar · Play</a>
 <script>
 (function () {
   var JUEGO = 'https://porteo-half-life.pages.dev/';
   var trabado = function () {
     document.body.className = 'trabado';
-    document.getElementById('texto').textContent = '¿No se abre? Toca el botón (o abre porteo-half-life.pages.dev en el navegador).';
+    document.getElementById('texto').innerHTML = '¿No se abre? Toca el botón (o abre porteo-half-life.pages.dev en el navegador).' +
+      '<br>Not opening? Tap the button (or open porteo-half-life.pages.dev in your browser).';
   };
   if (window.top === window) {
     // Abierto directo: en la misma pestaña, como si se hubiera tocado el link (y con lo que ya

@@ -50,8 +50,27 @@ async function esperar(pg, cond, ms = 20000, paso = 150) {
     await pg.waitForTimeout(paso);
   }
 }
-async function hastaElMenu(t) {
-  await t.pg.waitForFunction(() => window.__hl && window.__hl.fase === 'jugando', null, { timeout: 180000 });
+// Al abrir, lo primero es elegir el idioma: se toca su botón y se anota en qué idioma salió la
+// intro, que viene después (salvo al recargar desde el botón del idioma, que ya viene elegido).
+const eligiendo = (pg) => pg.evaluate(() => (document.getElementById('hl-elegir') || {}).className === 'si');
+async function elegir(t, idioma) {
+  await t.pg.waitForFunction(() => (document.getElementById('hl-elegir') || {}).className === 'si', null, { timeout: 60000 });
+  const b = await t.pg.evaluate((L) => {
+    const r = document.querySelector(`#hl-elegir [data-idioma="${L}"]`).getBoundingClientRect();
+    return [r.left + r.width / 2, r.top + r.height / 2];
+  }, idioma);
+  await tocar(t, b[0], b[1]);
+  await t.pg.waitForFunction(() => !!document.getElementById('porteo-intro'), null, { timeout: 5000 }).catch(() => {});
+  return t.pg.evaluate(() => { const p = document.querySelector('#porteo-intro .presenta'); return p ? p.textContent : null; });
+}
+async function hastaElMenu(t, { idioma = 'es' } = {}) {
+  await t.pg.waitForFunction(() => (window.__hl && window.__hl.fase === 'jugando') || (document.getElementById('hl-elegir') || {}).className === 'si',
+    null, { timeout: 180000 });
+  if (await eligiendo(t.pg)) t.intro = await elegir(t, idioma);
+  // el motor arranca por detrás de la intro: se anota si la intro seguía cuando ya andaba
+  const h = await t.pg.waitForFunction(() => window.__hl && window.__hl.fase === 'jugando' && { intro: !!document.getElementById('porteo-intro') },
+    null, { timeout: 180000, polling: 100 });
+  t.motorBajoIntro = (await h.jsonValue()).intro;
   const listo = (Date.now() - t.t0) / 1000;
   await t.pg.waitForFunction(() => !document.getElementById('porteo-intro'), null, { timeout: 30000 });
   await esperar(t.pg, (e) => e.destino === 2, 30000);
@@ -178,7 +197,15 @@ console.log('A. Teléfono acostado (844×390), en español: del menú a jugar, c
   const t = await abrir(conConsola(WEB));
   // lo que avisa el motor: una entidad que no se pudo guardar entera, o un sonido que se apagó para todo el nivel
   const perdidos = () => t.pg.evaluate(() => window.__hl.log.filter((l) => /Invalid function|Could not load sound/.test(l)));
+  await t.pg.waitForFunction(() => (document.getElementById('hl-elegir') || {}).className === 'si', null, { timeout: 60000 });
+  const pantalla = await t.pg.evaluate(() => ({
+    opciones: [...document.querySelectorAll('#hl-elegir button')].map((b) => b.dataset.idioma + (b.classList.contains('antes') ? ' (marcado)' : '')),
+    intro: !!document.getElementById('porteo-intro'),
+  }));
+  await t.pg.screenshot({ path: `${CAPTURAS}/a-idioma.png` });
+  ch('A: al abrir, lo primero es elegir el idioma (marcado el del teléfono)', pantalla.opciones.join(', ') === 'es (marcado), en' && !pantalla.intro, JSON.stringify(pantalla));
   const listo = await hastaElMenu(t);
+  ch('A: después de elegir, la intro en español, con el juego arrancando por detrás', t.intro === 'presenta' && t.motorBajoIntro, `intro «${t.intro}», motor andando con la intro: ${t.motorBajoIntro}`);
   ch('A: carga hasta el menú', listo > 0, `motor andando a los ${r1(listo)} s`);
   await t.pg.screenshot({ path: `${CAPTURAS}/a-menu.png` });
   const es = await t.pg.evaluate(() => !!window.__hl.montado['idioma-es'] && window.M.FS.analyzePath('/rwdir/valve_spanish/porteo-idioma-es.pk3').exists);
@@ -370,9 +397,10 @@ console.log('A. Teléfono acostado (844×390), en español: del menú a jugar, c
   await esperar(t.pg, (e) => e.destino === 2, 30000);
   await t.pg.waitForTimeout(2000);
   const ingles = await t.pg.evaluate(() => ({ idioma: window.__hl.idioma, intro: !!document.getElementById('porteo-intro'), lang: document.documentElement.lang,
-    paquetes: Object.keys(window.__hl.montado).filter((n) => /idioma/.test(n)) }));
+    pregunta: document.getElementById('hl-elegir').className === 'si', paquetes: Object.keys(window.__hl.montado).filter((n) => /idioma/.test(n)) }));
   await t.pg.screenshot({ path: `${CAPTURAS}/a-menu-ingles.png` });
-  ch('A: el botón del idioma pasa el juego a inglés (sin repetir la intro)', ingles.idioma === 'en' && !ingles.intro && ingles.paquetes.includes('idioma-en') && !ingles.paquetes.includes('idioma-es'), JSON.stringify(ingles));
+  ch('A: el botón del idioma pasa el juego a inglés (sin repetir la intro ni la pregunta)', ingles.idioma === 'en' && !ingles.intro && !ingles.pregunta
+    && ingles.paquetes.includes('idioma-en') && !ingles.paquetes.includes('idioma-es'), JSON.stringify(ingles));
   ch('A: en inglés, sin errores', t.errores.length === 0, t.errores.slice(0, 3).join(' | '));
   await t.pg.evaluate(() => localStorage.removeItem('hl-idioma'));
   await t.c.close();
@@ -440,7 +468,20 @@ console.log('\nB. Teléfono parado (390×844): la página se gira sola y los toq
 console.log('\nC. Pantalla chica (640×360): nada cortado ni inalcanzable');
 {
   const t = await abrir(WEB, { w: 640, h: 360 });
-  await hastaElMenu(t);
+  // la pantalla del idioma: entera y con botones grandes; acá se elige inglés (el teléfono está en español)
+  await t.pg.waitForFunction(() => (document.getElementById('hl-elegir') || {}).className === 'si', null, { timeout: 60000 });
+  const partes = await t.pg.evaluate(() => [...document.querySelectorAll('#hl-elegir h1, #hl-elegir p, #hl-elegir button')].map((b) => {
+    const r = b.getBoundingClientRect();
+    return { n: b.tagName.toLowerCase() + (b.dataset.idioma ? ' ' + b.dataset.idioma : ''), l: r.left, t: r.top, r: r.right, b: r.bottom, h: r.height };
+  }));
+  await t.pg.screenshot({ path: `${CAPTURAS}/c-idioma.png` });
+  const cortadas = partes.filter((m) => m.l < 0 || m.t < 0 || m.r > 640 || m.b > 360 || (/^button/.test(m.n) && m.h < 48)).map((m) => `${m.n} ${Math.round(m.h)} px`);
+  ch('C: la pantalla del idioma entra entera, con botones de 48 px o más', partes.length === 4 && cortadas.length === 0, cortadas.join(', '));
+  await hastaElMenu(t, { idioma: 'en' });
+  const enIngles = await t.pg.evaluate(() => ({ idioma: window.__hl.idioma, lang: document.documentElement.lang,
+    paquetes: Object.keys(window.__hl.montado).filter((n) => /idioma/.test(n)), guardado: localStorage.getItem('hl-idioma') }));
+  ch('C: elegido English, todo en inglés (también la intro, con el teléfono en español)', enIngles.idioma === 'en' && enIngles.lang === 'en'
+    && t.intro === 'presents' && enIngles.paquetes.join() === 'idioma-en' && enIngles.guardado === 'en', JSON.stringify({ ...enIngles, intro: t.intro }));
   await t.pg.screenshot({ path: `${CAPTURAS}/c-menu.png` });
   // los controles como si se estuviera jugando (sin cargar un mapa): sólo se mide dónde quedan
   await t.pg.evaluate(() => { window.HL.estado = () => ({ estado: 4, destino: 1 }); });
@@ -480,8 +521,7 @@ console.log('\nG. Como en un teléfono: 4G, sin permiso de sonar hasta tocar, y 
   await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 60, downloadThroughput: 10e6 / 8, uploadThroughput: 2e6 / 8 });
   const t = { c, pg, cdp, errores, t0: Date.now() };
   await pg.goto(WEB);
-  await pg.waitForTimeout(1200);
-  await tocar(t, 420, 200);                                  // saltea la intro (y pide pantalla completa)
+  await elegir(t, 'es');                                     // el primer toque: el idioma (y pide pantalla completa)
   await pg.setViewportSize({ width: 800, height: 360 });     // la pantalla completa cambia el tamaño
   const listo = await hastaElMenu(t);
   await pg.setViewportSize({ width: 844, height: 390 });

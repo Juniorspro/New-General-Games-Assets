@@ -49,6 +49,24 @@
     background: rgba(0, 0, 0, .6); color: rgba(255, 255, 255, .6); font: 600 15px system-ui, sans-serif; }
   #hl-idioma b { color: #ffa53c; }
   #hl-idioma.si { display: block; }
+  /* el idioma, al empezar: antes de la intro, así el juego ya carga por detrás en el elegido */
+  #hl-elegir { position: fixed; inset: 0; z-index: 46; display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2.4vh; padding: 4vh 4vw; background: radial-gradient(ellipse at 50% 45%, #141414 0%, #000 62%); color: #fff;
+    font-family: system-ui, sans-serif; text-align: center; }
+  #hl-elegir.si { display: flex; animation: hl-aparecer .35s ease; }
+  @keyframes hl-aparecer { from { opacity: 0; } }
+  #hl-elegir h1 { margin: 0; color: #ffa53c; font: 700 clamp(26px, 9vh, 64px)/1 system-ui, sans-serif; letter-spacing: .3em; text-indent: .3em; }
+  #hl-elegir p { margin: 0 0 1.6vh; color: rgba(255, 255, 255, .7); font: 500 clamp(14px, 3.6vh, 20px) system-ui, sans-serif; }
+  #hl-elegir .opciones { display: flex; gap: 3vw; }
+  #hl-elegir button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .8vh;
+    width: min(38vw, 300px); min-height: max(64px, 20vh); padding: 1.6vh 2vw; border-radius: 18px;
+    border: 2px solid rgba(255, 165, 60, .45); background: rgba(255, 255, 255, .04); color: #fff; cursor: pointer;
+    font: 700 clamp(19px, 6vh, 30px)/1.1 system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+  #hl-elegir button small { color: rgba(255, 255, 255, .62); font: 500 clamp(12px, 3vh, 16px)/1.2 system-ui, sans-serif; }
+  /* la de la vez pasada */
+  #hl-elegir button.antes { border-color: #ffa53c; background: rgba(255, 165, 60, .14); }
+  #hl-elegir button:active { transform: scale(.97); }
+  #hl-elegir button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
   /* el teclado del teléfono: un campo de verdad, invisible (16px: si no, iOS hace zoom al enfocarlo) */
   #hl-teclado { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0;
     font-size: 16px; pointer-events: none; -webkit-user-select: text; user-select: text; }
@@ -63,6 +81,14 @@
 <div id="hl-aviso"><div><b></b><p></p><button type="button"></button></div></div>
 <button id="hl-sonido" type="button"></button>
 <button id="hl-idioma" type="button"></button>
+<div id="hl-elegir" role="dialog" aria-modal="true" aria-labelledby="hl-elegir-titulo">
+  <h1 id="hl-elegir-titulo">HALF-LIFE</h1>
+  <p>Elige el idioma · Choose your language</p>
+  <div class="opciones">
+    <button type="button" data-idioma="es" lang="es">Español<small>latino · voces dobladas</small></button>
+    <button type="button" data-idioma="en" lang="en">English<small>original voices</small></button>
+  </div>
+</div>
 <input id="hl-teclado" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-hidden="true" tabindex="-1">
 <script src="porteo-web.js"></script>
 <script src="porteo-intro.js"></script>
@@ -72,18 +98,20 @@
 'use strict';
 // Half-Life en el navegador: el motor es Xash3D FWGS (una reimplementación abierta de GoldSrc)
 // compilado a WebAssembly, con hlsdk-portable (la lógica del juego), y los datos de las copias del
-// dueño: en inglés o en español latino, a elección. Este archivo carga, conecta el motor con la
-// página (controles táctiles, niveles que se bajan cuando hacen falta, partidas guardadas en el
-// teléfono) y muestra la intro de JXStudios.
+// dueño: en inglés o en español latino, a elección (se elige al empezar). Este archivo pregunta el
+// idioma, muestra la intro de JXStudios, carga, y conecta el motor con la página (controles
+// táctiles, niveles que se bajan cuando hacen falta, partidas guardadas en el teléfono).
 (function () {
   const $ = (id) => document.getElementById(id);
 
-  // ── el idioma: el elegido antes, o el del teléfono ──────────────────────────────────
+  // ── el idioma: se elige al empezar (y se puede cambiar en el menú principal) ─────────
+  // Hasta que se elige vale el de la vez pasada (o el del teléfono): es el que sale marcado, y lo
+  // suyo se empieza a bajar mientras se elige.
   let idioma = '';
   try { idioma = localStorage.getItem('hl-idioma') || ''; } catch (_) {}
   if (idioma !== 'es' && idioma !== 'en') idioma = /^es\b/i.test(navigator.language || '') ? 'es' : 'en';
   document.documentElement.lang = idioma;
-  const T = {
+  const TEXTOS = {
     es: {
       cargando: 'Cargando…', actualizando: 'Actualizando el juego…', nivel: 'Cargando el nivel…', de: 'de',
       noCargo: 'No se pudo cargar el juego.', revisa: 'Revisa la conexión y vuelve a abrirlo.',
@@ -104,7 +132,8 @@
       finDemo: 'This single-file version ends here: the full game is in the web version.',
       idioma: 'Español · <b>English</b>',
     },
-  }[idioma];
+  };
+  let T = TEXTOS[idioma];
 
   // El motor dibuja a la resolución física de la pantalla (SDL con "high DPI"): en un teléfono, el
   // triple del ancho. Se limita a 2 por píxel (más liviano, y en el juego se ve igual de nítido) y a
@@ -157,7 +186,7 @@
     mostrarAviso(fatal ? T.fatalTitulo : T.errorTitulo, detalle, fatal);
   };
 
-  Porteo.web({ orientacion: 'landscape', offline: window.__porteoUnArchivo ? false : undefined, textoSalir: T.salir, textoGirar: T.girar });
+  Porteo.web({ orientacion: 'landscape', offline: window.__porteoUnArchivo ? false : undefined, textoSalir: () => T.salir, textoGirar: () => T.girar });
   // La página puede haber salido de lo guardado en el teléfono: si hay una versión nueva publicada,
   // se baja lo que cambió y se recarga antes de cargar nada (los paquetes de dos versiones no se mezclan).
   const actualizacion = Porteo.actualizar({ tope: 4000, alAvanzar: (h, t) => {
@@ -165,16 +194,60 @@
     mostrarCarga(T.actualizando, t ? `${mb(h)} ${T.de} ${mb(t)}` : '');
     progresoCarga(t ? h / t : 0);
   } });
-  // después de actualizar (o de cambiar el idioma) no se repite la intro
-  let sinIntro = false;
-  try { sinIntro = sessionStorage.getItem('hl-sin-intro') === '1'; sessionStorage.removeItem('hl-sin-intro'); } catch (_) {}
-  let introLista = false;
+  // después de actualizar (o de cambiar el idioma) no se repite la intro; después de cambiar el
+  // idioma (o de elegirlo, si la actualización llegó después) tampoco se vuelve a preguntar
+  let sinIntro = false, yaElegido = false;
+  try {
+    sinIntro = sessionStorage.getItem('hl-sin-intro') === '1'; sessionStorage.removeItem('hl-sin-intro');
+    yaElegido = sessionStorage.getItem('hl-idioma-ya') === '1'; sessionStorage.removeItem('hl-idioma-ya');
+  } catch (_) {}
+  let introLista = false, eligio = false;
   const avisoIntro = {
     es: 'Port no oficial de «Half-Life» (Valve) para jugar en el navegador. Motor: Xash3D FWGS + hlsdk-portable.',
     en: 'Unofficial browser port of «Half-Life» (Valve). Engine: Xash3D FWGS + hlsdk-portable.',
   };
-  (sinIntro ? Promise.resolve() : Porteo.intro({ aviso: avisoIntro[idioma] }))
+  // Primero el idioma; después la intro, en ese idioma, con el juego cargando por detrás.
+  const eleccion = (yaElegido ? Promise.resolve(idioma) : elegirIdioma()).then((L) => { aplicarIdioma(L); eligio = true; return L; });
+  eleccion.then(() => (sinIntro ? null : Porteo.intro({ aviso: avisoIntro[idioma], idioma })))
     .then(() => { introLista = true; if (estado.fase === 'cargando') mostrarCarga(T.cargando); });
+
+  // La pantalla del idioma: las dos opciones, con la de la vez pasada marcada. Con teclado, Enter
+  // elige la marcada y las flechas pasan de una a otra.
+  function elegirIdioma() {
+    return new Promise((listo) => {
+      const el = $('hl-elegir'), botones = [...el.querySelectorAll('button')];
+      const marcado = () => botones.find((b) => b.dataset.idioma === idioma);
+      const elegir = (b) => {
+        if (el.className !== 'si') return;
+        el.className = '';
+        removeEventListener('keydown', teclas, true);
+        listo(b.dataset.idioma);
+      };
+      const teclas = (e) => {
+        e.stopPropagation();
+        const i = botones.indexOf(document.activeElement);
+        if (/^Arrow/.test(e.key)) { e.preventDefault(); botones[(i + 1) % botones.length].focus(); }
+        else if (e.key === 'Enter' && i < 0) { e.preventDefault(); elegir(marcado()); }
+      };
+      botones.forEach((b) => {
+        b.classList.toggle('antes', b === marcado());
+        b.addEventListener('click', (e) => { e.stopPropagation(); elegir(b); });
+      });
+      addEventListener('keydown', teclas, true);
+      el.className = 'si';
+    });
+  }
+  // los textos de la página, en el idioma elegido (que queda guardado para la próxima)
+  function aplicarIdioma(L) {
+    idioma = estado.idioma = L;
+    T = TEXTOS[L];
+    document.documentElement.lang = L;
+    try { localStorage.setItem('hl-idioma', L); } catch (_) {}
+    $('hl-sonido').textContent = T.sonido;
+    $('hl-reintentar').textContent = T.reintentar;
+    $('hl-volver').textContent = T.volver;
+    $('hl-idioma').innerHTML = T.idioma;
+  }
 
   // ── carga con progreso ───────────────────────────────────────────────────────────────
   let cargaDe = null;     // qué está mostrando el cartel
@@ -418,7 +491,6 @@
   // Si igual sigue callado (el teléfono no lo dejó), un botón a la vista: un toque directo sobre él
   // siempre cuenta como permiso.
   const botonSonido = $('hl-sonido');
-  botonSonido.textContent = T.sonido;
   botonSonido.addEventListener('click', (e) => { e.stopPropagation(); despertar(); });
   document.addEventListener('visibilitychange', () => {
     const a = audio();
@@ -434,21 +506,26 @@
     M.FS.syncfs(false, () => { guardando = false; });
   }
 
-  // El idioma se cambia en el menú principal (fuera de una partida): recarga la página con el otro.
-  $('hl-reintentar').textContent = T.reintentar;
-  $('hl-volver').textContent = T.volver;
+  // El idioma también se cambia en el menú principal (fuera de una partida): recarga la página con
+  // el otro, sin la intro ni la pantalla de elegir.
   const botonIdioma = $('hl-idioma');
-  botonIdioma.innerHTML = T.idioma;
   botonIdioma.addEventListener('click', (e) => {
     e.stopPropagation();
-    try { localStorage.setItem('hl-idioma', idioma === 'es' ? 'en' : 'es'); sessionStorage.setItem('hl-sin-intro', '1'); } catch (_) {}
+    try {
+      localStorage.setItem('hl-idioma', idioma === 'es' ? 'en' : 'es');
+      sessionStorage.setItem('hl-sin-intro', '1');
+      sessionStorage.setItem('hl-idioma-ya', '1');
+    } catch (_) {}
     guardar();
     setTimeout(() => location.reload(), 300);
   });
 
   async function arrancar() {
     if (await actualizacion) {
-      if (introLista) try { sessionStorage.setItem('hl-sin-intro', '1'); } catch (_) {}
+      try {
+        if (introLista) sessionStorage.setItem('hl-sin-intro', '1');
+        if (eligio) sessionStorage.setItem('hl-idioma-ya', '1');
+      } catch (_) {}
       location.reload();
       return;
     }
@@ -458,14 +535,26 @@
       if (introLista) mostrarCarga(T.cargando); else ocultarCarga();
     }
     indice = await (await fetch('datos/indice.json')).json();
-    const inicio = [...indice.inicio, ...indice.idiomas[idioma].inicio];
+    // Mientras se elige el idioma ya se baja lo que no depende de él (el menú, los .wad del sistema,
+    // el motor y sus módulos) y lo del idioma marcado, que casi siempre se vuelve a elegir; si se
+    // elige el otro, lo suyo (1 o 2 MB) se baja al tocarlo.
+    const traerBinario = (ruta) => fetch(ruta).then((r) => { if (!r.ok) throw new Error(`${ruta} (${r.status})`); return r.arrayBuffer(); });
+    const extras = {}, deWads = new Map(), wadsEnCurso = new Map();
+    const traerExtras = (L) => extras[L] || (extras[L] = traerBinario(`motor/extras-${L}.pk3`));
     // los .wad del sistema (calcomanías, gráficos, fuentes): sueltos, el motor los monta al iniciar
-    const wads = (indice.wads || []).filter((w) => !w.idioma || w.idioma === idioma);
-    const deWads = new Map();
-    const totalInicio = bytesDe(inicio) + wads.reduce((a, w) => a + w.gz, 0);
-    const hechoInicio = () => hechoDe(inicio) + [...deWads.values()].reduce((a, b) => a + b, 0);
-    const wadsBajados = wads.map((w) => traerGz('datos/' + w.archivo, w.gz, (b) => deWads.set(w.ruta, b)));
-    inicio.forEach((n) => bajar(n, true));
+    const traerWad = (w) => {
+      if (!wadsEnCurso.has(w.ruta)) wadsEnCurso.set(w.ruta, traerGz('datos/' + w.archivo, w.gz, (b) => deWads.set(w.ruta, b)));
+      return wadsEnCurso.get(w.ruta);
+    };
+    const wadsDe = (L) => (indice.wads || []).filter((w) => (w.idioma || '') === L);
+    const anticipar = (L) => {
+      indice.idiomas[L].inicio.forEach((n) => bajar(n, true));
+      wadsDe(L).forEach((w) => traerWad(w).catch(() => {}));
+      traerExtras(L).catch(() => {});
+    };
+    indice.inicio.forEach((n) => bajar(n, true));
+    wadsDe('').forEach((w) => traerWad(w).catch(() => {}));
+    anticipar(idioma);
     const motorListo = XashMotor({
       canvas: $('canvas'),
       locateFile: (p) => 'motor/' + p,
@@ -476,8 +565,14 @@
     });
     // mientras compila el motor ya se bajan el menú y los módulos
     // (los módulos viajan como .wasm, que el hosting comprime; adentro del motor son los .so de siempre)
-    const modulos = ['filesystem_stdio.wasm', 'libref_gles3compat.wasm', 'client.wasm', 'menu.wasm', 'server.wasm', `extras-${idioma}.pk3`]
-      .map((n) => fetch('motor/' + n).then((r) => { if (!r.ok) throw new Error(`motor/${n} (${r.status})`); return r.arrayBuffer(); }));
+    const modulos = ['filesystem_stdio.wasm', 'libref_gles3compat.wasm', 'client.wasm', 'menu.wasm', 'server.wasm'].map((n) => traerBinario('motor/' + n));
+
+    await eleccion;
+    anticipar(idioma);                                    // (si se eligió el otro)
+    const inicio = [...indice.inicio, ...indice.idiomas[idioma].inicio];
+    const wads = [...wadsDe(''), ...wadsDe(idioma)];
+    const totalInicio = bytesDe(inicio) + wads.reduce((a, w) => a + w.gz, 0);
+    const hechoInicio = () => hechoDe(inicio) + wads.reduce((a, w) => a + (deWads.get(w.ruta) || 0), 0);
     M = await motorListo;
     window.M = M;
     const FS = M.FS;
@@ -489,13 +584,13 @@
     const intervalo = setInterval(() => progresoCarga(hechoInicio() / totalInicio, ''), 150);
     await Promise.all(inicio.map((n) => paquete(n, true)));
     inicio.forEach((n) => { montados.add(n); estado.montado[n] = true; });
-    (await Promise.all(wadsBajados)).forEach((datos, i) => FS.writeFile(carpetaDe(wads[i].ruta.split('/')[0]) + '/' + wads[i].ruta.split('/').slice(1).join('/'), datos));
+    (await Promise.all(wads.map(traerWad))).forEach((datos, i) => FS.writeFile(carpetaDe(wads[i].ruta.split('/')[0]) + '/' + wads[i].ruta.split('/').slice(1).join('/'), datos));
     clearInterval(intervalo);
     progresoCarga(1);
 
     // los módulos del motor: se precompilan acá porque en el hilo principal no se puede
     // compilar un .wasm grande en el momento del dlopen
-    const [fsLib, ref, cliente, menu, servidor, extras] = await Promise.all(modulos);
+    const [fsLib, ref, cliente, menu, servidor, extrasDelIdioma] = await Promise.all([...modulos, traerExtras(idioma)]);
     const precompilar = (dir, nombre, datos) => new Promise((ok, mal) =>
       FS.createPreloadedFile(dir, nombre, new Uint8Array(datos), true, false, ok, () => mal(new Error(nombre))));
     await Promise.all([
@@ -505,7 +600,7 @@
       precompilar('/rodir/valve/cl_dlls', 'menu_emscripten_wasm32.so', menu),
       precompilar('/rodir/valve/dlls', 'hl_emscripten_wasm32.so', servidor),
     ]);
-    FS.writeFile('/rodir/valve/extras.pk3', new Uint8Array(extras));
+    FS.writeFile('/rodir/valve/extras.pk3', new Uint8Array(extrasDelIdioma));
     // liblist.gam suelto: el motor reconoce la carpeta del juego por él antes de montar los pk3
     for (const [ruta, texto] of Object.entries(indice.sueltos || {})) FS.writeFile('/rodir/' + ruta, texto);
 
