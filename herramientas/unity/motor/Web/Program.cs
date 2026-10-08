@@ -15,6 +15,8 @@ public static partial class Programa
     [JSImport("hayRecurso", "porteo")] internal static partial bool HayRecursoJS(int id);
     [JSImport("tamanoRecurso", "porteo")] internal static partial int TamanoRecurso(int id);
     [JSImport("tamanoRecursoListo", "porteo")] internal static partial int TamanoRecursoListo(int id);
+    [JSImport("hayPaquete", "porteo")] internal static partial bool HayPaqueteJS(string nombre);
+    [JSImport("pedirPaquete", "porteo")] internal static partial void PedirPaqueteJS(string nombre);
     [JSImport("copiarRecurso", "porteo")] internal static partial void CopiarRecurso(int id, [JSMarshalAs<JSType.MemoryView>] Span<byte> destino);
     [JSImport("pedirRecurso", "porteo")] internal static partial void PedirRecurso(int id);
     [JSImport("consola", "porteo")] internal static partial void Consola(string texto, int tipo);
@@ -87,6 +89,8 @@ public static partial class Programa
         Anfitrion.LeerRecurso = Recurso;
         Anfitrion.LeerRecursoListo = RecursoListo;
         Anfitrion.PedirRecurso = PedirRecurso;
+        Anfitrion.PaqueteLlego = HayPaqueteJS;
+        Anfitrion.PedirPaquete = PedirPaqueteJS;
         // sin traerlo: en el HTML único, traerlo es descomprimir su bloque
         Anfitrion.HayRecurso = HayRecursoJS;
         Anfitrion.Consola = (t, tipo) => Consola(t, (int)tipo);

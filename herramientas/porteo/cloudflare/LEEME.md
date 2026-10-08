@@ -27,5 +27,19 @@ python3 subir.py CARPETA --proyecto NOMBRE --clave ~/claves/NOMBRE.txt --verific
 - Pasan sin clave sólo `sw.js`, el manifest y los íconos (el navegador los puede pedir sin cookies
   para instalar la app; no tienen nada del juego).
 
+## Qué le pasa al teléfono de otro
+
+La página puede contar lo que pasa (`empaquetar.py --registro __registro`, ver
+`herramientas/porteo/registro.js`): qué teléfono y navegador, si hay WebGL 2, qué GPU, hasta dónde
+llegó la carga y los errores. El worker lo recibe en `/__registro` (sólo con sesión) y lo guarda en
+un KV de la cuenta si se sube con `--registro-kv TITULO` (14 días). Para leerlo:
+
+```sh
+python3 registro.py TITULO [--horas 24]
+```
+
+También sale en `wrangler pages deployment tail`, pero ahí, con muchos pedidos juntos (la carga de
+los bloques), Cloudflare se saltea algunos.
+
 Si la cuenta tiene Cloudflare Access (Zero Trust) activado, es una alternativa igual de buena: entrar
 con el mail en vez de una clave. Hay que activarlo a mano en el panel.

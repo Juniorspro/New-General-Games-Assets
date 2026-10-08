@@ -241,7 +241,20 @@ def esperar(base, clave, pagina):
     morir(f"{base} no mostró la subida nueva en {ESPERA} s")
 
 
-def preparar_proyecto(cf, nombre, clave):
+def kv_registro(cf, titulo):
+    """El id del KV donde el worker guarda lo que cuenta la página (se crea si no existe)."""
+    r = cf("GET", f"/accounts/{cf.cuenta}/storage/kv/namespaces?per_page=100")
+    for n in r.get("result") or []:
+        if n.get("title") == titulo:
+            return n["id"]
+    r = cf("POST", f"/accounts/{cf.cuenta}/storage/kv/namespaces", {"title": titulo})
+    if not r.get("success"):
+        morir(f"no se pudo crear el KV {titulo}: {r.get('errors')}")
+    log(f"KV nuevo para el registro: {titulo}")
+    return r["result"]["id"]
+
+
+def preparar_proyecto(cf, nombre, clave, kv=None):
     r = cf.proyecto(nombre)
     if r.get("success"):
         p = r["result"]
@@ -258,6 +271,8 @@ def preparar_proyecto(cf, nombre, clave):
         log(f"proyecto nuevo: {nombre}")
     conf = {"env_vars": {"CLAVE": {"type": "secret_text", "value": clave}}, "fail_open": False,
             "compatibility_date": COMPATIBILIDAD}
+    if kv:
+        conf["kv_namespaces"] = {"REGISTRO": {"namespace_id": kv}}
     r = cf("PATCH", f"/accounts/{cf.cuenta}/pages/projects/{nombre}",
            {"deployment_configs": {"production": conf, "preview": conf}})
     if not r.get("success"):
@@ -274,6 +289,8 @@ def preparar_proyecto(cf, nombre, clave):
                 faltas.append(f"{entorno}: no quedó en fail closed")
             if ((c.get("env_vars") or {}).get("CLAVE") or {}).get("type") != "secret_text":
                 faltas.append(f"{entorno}: no quedó el secreto CLAVE")
+            if kv and ((c.get("kv_namespaces") or {}).get("REGISTRO") or {}).get("namespace_id") != kv:
+                faltas.append(f"{entorno}: no quedó atado el KV del registro")
         if not faltas:
             break
         if time.time() > fin:
@@ -329,6 +346,8 @@ def main():
     ap.add_argument("--clave", required=True, help="archivo con la clave (si no existe se inventa una); fuera de todo repo")
     ap.add_argument("--wrangler", default="wrangler")
     ap.add_argument("--verificar", action="store_true", help="no sube nada: sólo verifica la puerta del sitio ya subido")
+    ap.add_argument("--registro-kv", metavar="TITULO", help="un KV de la cuenta (se crea si no existe) donde el worker guarda lo "
+                    "que cuenta la página (empaquetar.py --registro __registro); se lee con registro.py")
     a = ap.parse_args()
     token = os.environ.get("CLOUDFLARE_API_TOKEN", "").strip()
     cuenta = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
@@ -352,7 +371,7 @@ def main():
         return
 
     # 1. el proyecto, el secreto y fail closed, antes de subir nada
-    p = preparar_proyecto(cf, a.proyecto, clave)
+    p = preparar_proyecto(cf, a.proyecto, clave, kv_registro(cf, a.registro_kv) if a.registro_kv else None)
     base = "https://" + p["subdomain"]
 
     with tempfile.TemporaryDirectory(prefix="porteo-cf-") as tmp:

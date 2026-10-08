@@ -21,6 +21,12 @@ namespace Porteo
         // cuando llega y las texturas se dibujan con la de por defecto hasta que llegan.
         public static bool DiferirAudio, DiferirTexturas;
 
+        // el .paq de una escena puede llegar recién cuando se la carga (el sitio no trae de entrada
+        // el del mundo: 4 MB menos antes del menú). null: están todos desde el principio
+        public static Func<string, bool> PaqueteLlego;
+        public static Action<string> PedirPaquete;
+        public static bool HayPaquete(string nombre) => PaqueteLlego == null || PaqueteLlego(nombre);
+
         // como LeerRecurso, pero null si para darlo habría que descomprimirlo ahora: lo descomprime
         // otro hilo y el que lo pidió vuelve a probar en el cuadro siguiente (si no hay, LeerRecurso)
         public static Func<int, byte[]> LeerRecursoListo;

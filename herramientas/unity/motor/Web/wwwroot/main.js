@@ -27,13 +27,18 @@ function ajustar() {
 }
 ajustar();
 addEventListener('resize', ajustar);
+// el escenario de la página (16:9, girado en vertical) cambia el tamaño del lienzo por su cuenta
+if (globalThis.ResizeObserver) new ResizeObserver(ajustar).observe(lienzo);
 
 const datos = U ? U.fuente : crearFuenteRed(BASE, estado);
 const indice = await datos.indice();
-// los .paq (árboles de objetos): todos a mano antes de empezar el juego; los recursos (texturas,
-// mallas, audio, shaders), cuando el motor los pide. Se esperan recién antes de Iniciar: mientras
-// llegan, arranca .NET (compilar el WebAssembly del juego lleva su rato)
-const paquetes = datos.prepararPaquetes(Object.keys(indice.archivos));
+// los .paq (árboles de objetos): a mano antes de empezar el juego, menos los de las escenas que no
+// son la primera (levelN: sólo los abre la carga de esa escena, que los espera; en Slime Rancher el
+// del mundo son 4 MB que no hacen falta para el menú); los recursos (texturas, mallas, audio,
+// shaders), cuando el motor los pide. Se esperan recién antes de Iniciar: mientras llegan, arranca
+// .NET (compilar el WebAssembly del juego lleva su rato)
+const deEscena = (n) => /^level[1-9]\d*$/.test(n);
+const paquetes = datos.prepararPaquetes(Object.keys(indice.archivos).filter((n) => !deEscena(n) || !datos.pedirPaquete));
 
 // las partidas guardadas: un archivo por clave en IndexedDB (se cargan antes de arrancar)
 const disco = await abrirDisco();
@@ -76,6 +81,8 @@ setModuleImports('porteo', {
   ...audio,
   ...crearFuentes(),
   tamanoPaquete: (n) => { const p = datos.paquete(n); return p ? p.length : -1; },
+  hayPaquete: (n) => (datos.hayPaquete ? datos.hayPaquete(n) : true),
+  pedirPaquete: (n) => { if (datos.pedirPaquete) datos.pedirPaquete(n); },
   copiarPaquete: (n, vista) => { vista.set(datos.paquete(n)); vista.dispose(); },
   hayRecurso: (id) => datos.hay(id),
   tamanoRecurso: (id) => { const r = datos.recurso(id); return r ? r.length : -1; },
@@ -157,8 +164,15 @@ if (new URLSearchParams(location.search).has('adelantar'))
 
 // ── entrada ──
 // Las coordenadas van en píxeles del lienzo con el origen abajo a la izquierda (como
-// Input.mousePosition) y las teclas como KeyCode de Unity.
+// Input.mousePosition) y las teclas como KeyCode de Unity. Con el escenario de la página
+// (herramientas/porteo/escenario.js: 16:9, girado 90° si el teléfono está en vertical) el punto se
+// pasa primero a sus coordenadas; el lienzo lo ocupa entero
 function punto(e) {
+  const esc = globalThis.Porteo && Porteo.escenario && Porteo.escenario.local;
+  if (esc) {
+    const [x, y] = esc(e.clientX, e.clientY);
+    return [x * lienzo.width / lienzo.clientWidth, lienzo.height - y * lienzo.height / lienzo.clientHeight];
+  }
   const r = lienzo.getBoundingClientRect();
   return [(e.clientX - r.left) * lienzo.width / r.width, lienzo.height - (e.clientY - r.top) * lienzo.height / r.height];
 }

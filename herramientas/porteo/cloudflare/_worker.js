@@ -13,6 +13,12 @@
 const COOKIE = 'porteo';
 const DURA = 365 * 24 * 3600;   // un año: instalada, la app arranca sin red y no vuelve a pedir la clave
 const ENTRAR = '/__entrar';
+// lo que cuenta la página (qué teléfono, si hay WebGL 2, hasta dónde llegó, los errores): va a los
+// registros del worker ("wrangler pages deployment tail", que con muchos pedidos juntos se saltea
+// algunos) y, si el proyecto tiene un KV atado como REGISTRO, también ahí (14 días; lo lee
+// registro.py). Sólo con sesión
+const REGISTRO = '/__registro';
+const DURA_REGISTRO = 14 * 24 * 3600;
 const LIBRES = new Set(['/sw.js', '/manifest.webmanifest', '/icono-192.png', '/icono-512.png']);
 
 const utf8 = new TextEncoder();
@@ -101,7 +107,7 @@ function pagina(error) {
 }
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const clave = normal(env.CLAVE);
     // sin clave configurada no se abre nada (mejor cerrado que abierto por un descuido)
     if (clave.length < 12) {
@@ -126,6 +132,20 @@ export default {
 
     const libre = LIBRES.has(url.pathname);
     if (!libre && !(await sesionValida(req, clave))) return pagina(false);
+
+    if (url.pathname === REGISTRO) {
+      if (req.method === 'POST') {
+        const texto = (await req.text()).slice(0, 16384);
+        console.log('porteo-registro ' + texto);
+        // la clave ordena por fecha; el teléfono va aparte para saber de quién es cada línea
+        if (env.REGISTRO) {
+          const clave = Date.now().toString(36).padStart(9, '0') + '-' + Math.random().toString(36).slice(2, 6);
+          const meta = { ua: (req.headers.get('User-Agent') || '').slice(0, 200) };
+          ctx.waitUntil(env.REGISTRO.put(clave, texto, { expirationTtl: DURA_REGISTRO, metadata: meta }).catch(() => {}));
+        }
+      }
+      return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
+    }
 
     const r = await env.ASSETS.fetch(req);
     const h = new Headers(r.headers);

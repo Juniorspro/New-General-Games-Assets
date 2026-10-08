@@ -22,12 +22,39 @@
     pt: ['Abrindo o jogo…', 'Preparando o motor…', 'Carregando o menu…', 'Trazendo o que se vê…'],
   }[idioma] || ['Opening the game…', 'Getting the engine ready…', 'Loading the menu…', 'Fetching what you see…'];
 
-  // los datos pesan la mitad de la barra; el motor y las escenas hasta el menú, el resto
+  // la barra: si se sabe cuánto hay que bajar para el menú (carga.json, mbMenu: medido), sigue a
+  // los MB bajados, que es lo que tarda con una conexión lenta; si no, a las etapas (los datos que
+  // el motor espera la mitad, el motor y las escenas hasta el menú el resto). Abajo, cuánto va y a
+  // qué velocidad: con 5 Mbps son más de 40 s, y así se ve que avanza
+  let mbAntes = 0, tAntes = 0, velocidadMB = 0;
+  function megas() {
+    const U = globalThis.porteoUnArchivo;
+    return U && U.bajados ? U.bajados() / 1048576 : 0;
+  }
   function actualizar(texto) {
     if (!pantalla) return;
-    const f = 0.5 * datos + (motor ? 0.2 : 0) + Math.min(escenas, 2) * 0.12;
-    pantalla.progreso(Math.min(f, 0.97), texto || (!motor ? T[0] : escenas === 0 ? T[1] : T[2]));
+    const mb = megas(), meta = CONFIG.mbMenu || 0;
+    const f = meta ? 0.95 * Math.min(1, mb / meta) + (escenas >= 2 ? 0.02 : 0)
+                   : 0.5 * datos + (motor ? 0.2 : 0) + Math.min(escenas, 2) * 0.12;
+    const coma = (x) => x.toFixed(1).replace('.', idioma === 'en' ? '.' : ',');
+    let extra = '';
+    if (mb > 0.05 && !texto) {
+      extra = coma(mb) + (meta ? ' / ~' + meta : '') + ' MB';
+      if (velocidadMB > 0.01) extra += ' · ' + coma(velocidadMB) + ' MB/s';
+    }
+    pantalla.progreso(Math.min(f, 0.97), texto || (!motor ? T[0] : escenas === 0 ? T[1] : T[2]), extra);
   }
+  // cada medio segundo: la velocidad (promediada) y la barra, aunque no pase nada más
+  setInterval(() => {
+    if (terminado) return;
+    const ahora = performance.now(), mb = megas();
+    if (tAntes) {
+      const v = (mb - mbAntes) * 1000 / (ahora - tAntes);
+      velocidadMB = velocidadMB ? velocidadMB * 0.8 + v * 0.2 : v;
+    }
+    mbAntes = mb; tAntes = ahora;
+    actualizar();
+  }, 500);
   function fin() {
     if (terminado) return;
     terminado = true;
@@ -38,6 +65,8 @@
   function listo() {
     if (menuListo) return;
     menuListo = true;
+    anotar('menu', 'listo');
+    if (Porteo.arrancado) Porteo.arrancado();
     fin();
     for (const f of alListo.splice(0)) { try { f(); } catch (e) { console.error(e); } }
   }
@@ -61,10 +90,21 @@
     })();
   }
 
+  // lo primero: el escenario horizontal 16:9 (girado si el teléfono está en vertical) y el registro
+  // (errores en pantalla en vez de negro y, si hay dónde, lo que pasa mandado al sitio)
+  if (Porteo.escenario) Porteo.escenario({ relacion: CONFIG.relacion || 16 / 9 });
+  if (Porteo.registro) Porteo.registro({ url: CONFIG.registro || null });
+  const anotar = (t, d) => { if (Porteo.anotar) Porteo.anotar(t, d); };
+  let datosAnotados = 0;
+
   globalThis.porteoCarga = {
-    datos(f) { if (f > datos) { datos = Math.min(1, f); actualizar(); } },
-    motor() { motor = true; actualizar(); },
+    datos(f) {
+      if (f > datos) { datos = Math.min(1, f); actualizar(); }
+      if (datos >= datosAnotados + 0.25) { datosAnotados = Math.floor(datos * 4) / 4; anotar('datos', datosAnotados); }
+    },
+    motor() { motor = true; actualizar(); anotar('motor', 1); },
     escena(nombre) {
+      anotar('escena', nombre);
       if (nombre === MENU) { escenas = 2; actualizar(); esperarLoQueSeVe(); return; }
       escenas++;
       actualizar();
@@ -79,8 +119,8 @@
 
   Porteo.intro({ aviso: CONFIG.aviso }).then(() => {
     if (terminado) return;   // el menú ya estaba antes de que terminara la intro
-    pantalla = Porteo.carga({ imagen: CONFIG.imagen, titulo: CONFIG.titulo, consejos: CONFIG.consejos });
-    pantalla.saltado.then(() => { terminado = true; tapa = false; });
+    pantalla = Porteo.carga({ imagen: CONFIG.imagen, titulo: CONFIG.titulo, consejos: CONFIG.consejos, fondo: CONFIG.fondo });
+    pantalla.saltado.then(() => { terminado = true; tapa = false; anotar('saltar', 1); });
     actualizar();
   });
 })();

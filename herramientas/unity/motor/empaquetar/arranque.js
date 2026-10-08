@@ -462,8 +462,12 @@
   // lo de fondo va en el orden del archivo (el de uso), pero el audio al final: las escenas esperan
   // sus texturas y no sus sonidos (Alcance.Diferible en el motor), y el sonido que falta suena
   // apenas llega
+  // (y los .paq de las escenas que no son la primera, también después: la escena los pide cuando
+  // se carga, ver hayPaquete)
+  const deEscena = (b) => b.e.every((e) => /^plevel[1-9]\d*$/.test(e[0]));
   const fondo = [];
-  for (let i = 0; i < nB; i++) if (T.bloques[i].k !== 'audio') fondo.push(i);
+  for (let i = 0; i < nB; i++) if (T.bloques[i].k !== 'audio' && !deEscena(T.bloques[i])) fondo.push(i);
+  for (let i = 0; i < nB; i++) if (deEscena(T.bloques[i])) fondo.push(i);
   for (let i = 0; i < nB; i++) if (T.bloques[i].k === 'audio') fondo.push(i);
 
   async function abrirCache() {
@@ -498,6 +502,11 @@
       bajar(i);
     }
   }
+
+  // lo bajado hasta ahora, en bytes y contando lo que viene llegando de cada bloque (la pantalla de
+  // carga muestra cuánto y a qué velocidad: de a bloques enteros, con 5 Mbps saltaba cada 10 s)
+  let llegando = 0;
+  P.bajados = () => llegando;
 
   // lo que el motor pidió para dibujar y todavía no llegó, en bytes: la pantalla de carga se queda
   // hasta que llega lo que el menú muestra (pantalla.js). El sonido no: la música entra cuando llega
@@ -536,12 +545,34 @@
     for (let intento = 0; ; intento++) {
       try {
         let r = cacheBloques && await cacheBloques.match(url);
+        let guardando = null;
         if (!r) {
           r = await fetch(url, { priority: urgente[i] ? 'high' : 'low' });
           if (!r.ok) throw new Error('HTTP ' + r.status);
-          if (cacheBloques) await cacheBloques.put(url, r.clone()).catch(() => {});
+          // la caché lee su copia mientras acá se lee la otra
+          if (cacheBloques) guardando = cacheBloques.put(url, r.clone()).catch(() => {});
         }
-        const c = new Uint8Array(await r.arrayBuffer());
+        // de a pedazos, contando lo que llega (ver P.bajados)
+        let c;
+        const lector = r.body && r.body.getReader ? r.body.getReader() : null;
+        if (lector) {
+          const partes = [];
+          let n = 0;
+          for (;;) {
+            const { done, value } = await lector.read();
+            if (done) break;
+            partes.push(value);
+            n += value.length;
+            llegando += value.length;
+          }
+          c = new Uint8Array(n);
+          let o = 0;
+          for (const p of partes) { c.set(p, o); o += p.length; }
+        } else {
+          c = new Uint8Array(await r.arrayBuffer());
+          llegando += c.length;
+        }
+        if (guardando) await guardando;
         if (c.length !== b.c) { if (cacheBloques) cacheBloques.delete(url); throw new Error('llegó con otro tamaño'); }
         bajando.delete(i);
         bajados += c.length;
@@ -577,6 +608,9 @@
     },
     // el motor lo copia apenas lo pide: ya cuenta como usado
     paquete: (n) => { const d = obtener('p' + n); if (d) usar('p' + n); return d; },
+    // los de las escenas que no se esperan de entrada (main.js): el motor pregunta y pide
+    hayPaquete: (n) => { const ij = donde.get('p' + n); return !ij || !!comp[ij[0]]; },
+    pedirPaquete: (n) => { const ij = donde.get('p' + n); if (ij) pedirBloque(ij[0]); },
     hay: (id) => { const ij = donde.get('r' + id); return !!ij && !!comp[ij[0]]; },
     recurso: (id) => obtener('r' + id),
     // sin trabar: sólo si su bloque ya está descomprimido; si no, se lo pasa a un trabajador y da
@@ -645,6 +679,13 @@
     // la página guardada para arrancar sin red, y que el navegador no borre lo bajado si le falta lugar
     if ('serviceWorker' in navigator && isSecureContext) navigator.serviceWorker.register('sw.js').catch((e) => console.warn('porteo: sin service worker', e));
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    abrirCache().then(() => { bombear(); P.arrancar(); });
+    abrirCache().then(() => {
+      // lo primero y solo, con todo el ancho: el código (con él arranca .NET mientras baja lo
+      // demás). Pedido antes de bombear: si no, salen también de fondo los bloques siguientes
+      const ij = donde.get('fmain.js');
+      if (ij) traer(ij[0], true);
+      bombear();
+      P.arrancar();
+    });
   }
 })();

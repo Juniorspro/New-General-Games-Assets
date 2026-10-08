@@ -290,9 +290,33 @@ def pantalla_de_carga(a):
         img = Path(a.imagen_carga)
         tipo = "image/webp" if img.suffix.lower() == ".webp" else "image/png"
         config["imagen"] = f"data:{tipo};base64," + base64.b64encode(img.read_bytes()).decode()
+    if a.fondo_carga:
+        config["fondo"] = "data:image/webp;base64," + base64.b64encode(fondo_difuminado(a.fondo_carga)).decode()
+    if a.registro:
+        config["registro"] = a.registro
     pegamento = (AQUI / "pantalla.js").read_text(encoding="utf-8").replace("/*CONFIG*/null", json.dumps(config, ensure_ascii=False))
-    js = "\n".join([(porteo / "intro.js").read_text(encoding="utf-8"), (porteo / "carga.js").read_text(encoding="utf-8"), pegamento])
+    # el registro y el escenario primero: los errores de lo que sigue y la pantalla ya horizontal
+    partes = [porteo / "registro.js", porteo / "escenario.js", porteo / "intro.js", porteo / "carga.js"]
+    js = "\n".join([p.read_text(encoding="utf-8") for p in partes] + [pegamento])
     return f"<script>\n{js}\n</script>\n"
+
+
+def fondo_difuminado(ruta):
+    """La portada para el fondo de la pantalla de carga: 16:9, chica y ya difuminada (en el teléfono
+    un filter: blur se recalcula en cada cuadro de la animación). WebP de pocos KB."""
+    import io
+    from PIL import Image, ImageFilter
+    im = Image.open(ruta).convert("RGB")
+    w, h = im.size
+    if w / h > 16 / 9:
+        nw = round(h * 16 / 9); im = im.crop(((w - nw) // 2, 0, (w - nw) // 2 + nw, h))
+    else:
+        nh = round(w * 9 / 16); im = im.crop((0, (h - nh) // 2, w, (h - nh) // 2 + nh))
+    im = im.resize((640, 360), Image.LANCZOS).filter(ImageFilter.GaussianBlur(8))
+    salida = io.BytesIO()
+    im.save(salida, "WEBP", quality=82, method=6)
+    log(f"fondo de la pantalla de carga: {len(salida.getvalue()) / 1e3:.1f} KB")
+    return salida.getvalue()
 
 
 def escribir_sitio(carpeta, tabla, comprimidos, web, a):
@@ -372,6 +396,9 @@ def main():
     ap.add_argument("--carga", help="JSON con el título, el aviso de la intro y los consejos: al abrir, la intro de la marca "
                     "y después la pantalla de carga con el personaje girando y \"Saltar\" (ver pantalla.js)")
     ap.add_argument("--imagen-carga", help="la imagen del personaje que gira en la pantalla de carga (webp o png)")
+    ap.add_argument("--fondo-carga", help="la portada (una captura del menú, por ejemplo): va difuminada de fondo en la pantalla de carga")
+    ap.add_argument("--registro", help="dirección relativa a donde la página manda lo que pasa (errores, teléfono, hitos), "
+                    "p. ej. __registro con la puerta de herramientas/porteo/cloudflare")
     a = ap.parse_args()
     web, datos = Path(a.web), Path(a.datos)
     BLOQUE = int(a.bloque * 1048576)

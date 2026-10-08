@@ -11,6 +11,12 @@ export function crearAudio(datos) {
   let contadas = 0;
   const clips = new Map();   // recurso → { estado, buffer, url, esperando: [] }
   const voces = new Map();   // voz → { ... }
+  // lo decodificado (PCM en float: un efecto de 3 s en estéreo son 1,1 MB) tiene tope: en una
+  // partida suenan cientos de efectos (los del juego decodificados son casi 500 MB) y un teléfono
+  // se queda sin memoria. Pasado el tope se sueltan los que hace más que no suenan; si vuelven a
+  // sonar, se decodifican de nuevo (unos milisegundos)
+  const TOPE_PCM = (navigator.deviceMemory && navigator.deviceMemory <= 4 ? 48 : 128) << 20;
+  let pcm = 0;
 
   function contexto() {
     if (ctx) return ctx;
@@ -82,6 +88,10 @@ export function crearAudio(datos) {
       // decodeAudioData se queda con el ArrayBuffer: va una copia
       a.decodeAudioData(bytes.slice().buffer).then((b) => {
         c.buffer = b; c.estado = 2; soltar(id); avisar(c);
+        c.bytes = b.length * b.numberOfChannels * 4;
+        c.usado = performance.now();
+        pcm += c.bytes;
+        recortar(id);
       }, (e) => {
         console.warn('porteo: no se pudo decodificar el audio ' + id, e);
         c.estado = 3; avisar(c);
@@ -91,6 +101,20 @@ export function crearAudio(datos) {
     if (datos.cuandoListo) datos.cuandoListo(id, listo, urgente);
     else if (datos.hay(id)) listo();
     else { datos.alLlegar(id, listo); datos.pedir(id); }
+  }
+
+  // pasado el tope, los decodificados que hace más que no suenan (y no están sonando)
+  function recortar(nuevo) {
+    if (pcm <= TOPE_PCM) return;
+    const enUso = new Set();
+    for (const v of voces.values()) enUso.add(v.clip);
+    const viejos = [...clips.entries()].filter(([id, c]) => c.buffer && id !== nuevo && !enUso.has(id))
+      .sort((x, y) => x[1].usado - y[1].usado);
+    for (const [, c] of viejos) {
+      if (pcm <= TOPE_PCM * 0.8) break;
+      pcm -= c.bytes;
+      c.buffer = null; c.bytes = 0; c.estado = 0;
+    }
   }
 
   // el clip ya está decodificado (o en un Blob): los bytes no hacen falta más
@@ -134,6 +158,7 @@ export function crearAudio(datos) {
   function arrancar(id, v) {
     const c = clips.get(v.clip);
     if (!c || c.estado !== 2 || v.parada) return;
+    c.usado = performance.now();
     if (depurar && contadas++ < 40) console.log(`porteo audio: voz ${id} clip ${v.clip}${v.streaming ? ' (streaming)' : ''} desde ${v.desde.toFixed(2)} bucle=${v.bucle} tono=${v.tono}`);
     const a = contexto();
     if (!a) return;

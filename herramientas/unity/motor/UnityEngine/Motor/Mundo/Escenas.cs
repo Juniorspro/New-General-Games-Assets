@@ -193,7 +193,14 @@ namespace Porteo
 
         static bool Preparado(Pedido p)
         {
-            p.Datos ??= new Espera(Alcance.DeArchivo(Cargador.Archivo("level" + p.Indice), true));
+            if (p.Datos == null)
+            {
+                // primero el .paq de la escena (puede no haber llegado: ver Anfitrion.HayPaquete);
+                // sin él no se sabe qué más espera
+                string nombre = "level" + p.Indice;
+                if (!Anfitrion.HayPaquete(nombre)) { Anfitrion.PedirPaquete?.Invoke(nombre); p.Op.avance = 0; return false; }
+                p.Datos = new Espera(Alcance.DeArchivo(Cargador.Archivo(nombre), true));
+            }
             bool listo = p.Datos.Lista;
             // como en Unity: hasta 0.9 cargando; el resto es activar la escena
             p.Op.avance = 0.9f * p.Datos.Avance;

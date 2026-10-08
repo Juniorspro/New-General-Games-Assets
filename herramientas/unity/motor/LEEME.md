@@ -47,8 +47,15 @@ python3 -I empaquetar/empaquetar.py ... CARPETA --sitio --bloque 8 [--icono icon
 
 - `--carga`: al abrir, la intro de la marca (`herramientas/porteo/intro.js`) y después la pantalla
   de carga (`herramientas/porteo/carga.js`: el personaje girando, la barra, consejos y "Saltar" para
-  empezar ya con lo que haya). El JSON tiene el título, el aviso de la intro y los consejos por
-  idioma (ver `porteos/slime-rancher/carga.json`); `pantalla.js` la une al motor.
+  empezar ya con lo que haya). El JSON tiene el título, el aviso de la intro, los consejos por
+  idioma y `mbMenu` (lo que hay que bajar hasta el menú, medido: la barra sigue a los MB y abajo se
+  ve cuánto va y a qué velocidad; ver `porteos/slime-rancher/carga.json`); `pantalla.js` la une al
+  motor. `--fondo-carga captura.png`: la portada, difuminada, de fondo detrás del personaje.
+  Siempre horizontal y en 16:9 (`herramientas/porteo/escenario.js`): con el teléfono en vertical,
+  todo gira 90°; en Android el primer toque pide pantalla completa y traba la orientación.
+  `--registro __registro`: la página cuenta lo que pasa y los errores (`herramientas/porteo/registro.js`;
+  con la puerta de Cloudflare se lee con `cloudflare/registro.py`); si algo grave falla, lo dice en
+  pantalla con un botón para recargar en vez de quedar en negro.
 - `--sitio`: cada bloque es un archivo `b/<hash>.bin` que se baja cuando hace falta (lo que el motor
   espera primero, lo demás de a poco), queda en Cache Storage y el service worker guarda la página:
   la segunda vez arranca enseguida y sin red, y se instala como app. Anda en cualquier hosting

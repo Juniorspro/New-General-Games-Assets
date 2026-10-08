@@ -5,8 +5,9 @@
  * imagen se pasa como data:), así anda igual en el .html único.
  *
  *   var c = Porteo.carga({ imagen: 'data:image/webp;base64,…', titulo: 'Slime Rancher',
+ *                          fondo: 'data:image/webp;base64,…',   // opcional: la portada, ya difuminada
  *                          consejos: { es: ['…'], en: ['…'], pt: ['…'] } });
- *   c.progreso(0.42, 'Cargando el menú…');   // de 0 a 1 (sólo avanza) y el texto
+ *   c.progreso(0.42, 'Cargando el menú…', '12,3 MB');   // de 0 a 1 (sólo avanza), el texto y algo al lado
  *   c.listo();                               // se va con un fundido
  *   c.saltado.then(…);                       // el jugador tocó "Saltar"
  */
@@ -14,7 +15,7 @@
   'use strict';
   var SALTAR = { es: 'Saltar', en: 'Skip', pt: 'Pular' };
   var CSS =
-    '#porteo-carga{position:fixed;inset:0;z-index:2147482000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:min(3vmin,22px);' +
+    '#porteo-carga{position:fixed;top:0;right:0;bottom:0;left:0;z-index:2147482000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:min(3vmin,22px);' +
       'background:radial-gradient(ellipse at 50% 40%,#3a1a4f 0%,#1b0f2b 55%,#0b0612 100%);color:#fff;font:15px/1.4 system-ui,sans-serif;' +
       '-webkit-user-select:none;user-select:none;touch-action:none;transition:opacity .45s ease}' +
     '#porteo-carga.fuera{opacity:0;pointer-events:none}' +
@@ -22,7 +23,7 @@
       'background:linear-gradient(180deg,#fff 0%,#ffd1e3 100%);-webkit-background-clip:text;background-clip:text;color:transparent;' +
       'filter:drop-shadow(0 3px 10px rgba(255,92,154,.35))}' +
     '#porteo-carga .escena{position:relative;width:min(34vmin,230px);height:min(40vmin,270px)}' +
-    '#porteo-carga .brillo{position:absolute;inset:-25%;border-radius:50%;background:radial-gradient(circle,rgba(255,92,154,.28) 0%,transparent 62%);' +
+    '#porteo-carga .brillo{position:absolute;top:-25%;right:-25%;bottom:-25%;left:-25%;border-radius:50%;background:radial-gradient(circle,rgba(255,92,154,.28) 0%,transparent 62%);' +
       'animation:porteo-latido 2.2s ease-in-out infinite}' +
     '#porteo-carga .sombra{position:absolute;left:24%;right:24%;bottom:3%;height:7%;border-radius:50%;background:rgba(0,0,0,.5);filter:blur(5px);' +
       'animation:porteo-sombra 1.1s cubic-bezier(.33,0,.4,1) infinite}' +
@@ -58,6 +59,13 @@
     document.head.appendChild(estilo);
     var el = document.createElement('div');
     el.id = 'porteo-carga';
+    // la portada de fondo, oscurecida para que se lea lo de adelante (viene difuminada de antes:
+    // un filter: blur en el teléfono cuesta en cada cuadro de la animación)
+    if (op.fondo) {
+      el.style.backgroundImage = 'radial-gradient(ellipse at 50% 45%,rgba(40,12,60,.35) 0%,rgba(12,6,20,.78) 75%),url("' + op.fondo + '")';
+      el.style.backgroundSize = 'cover';
+      el.style.backgroundPosition = 'center';
+    }
     el.innerHTML = '<p class="titulo"></p><div class="escena"><i class="brillo"></i><i class="sombra"></i>' +
       '<div class="salto"><div class="giro"><img alt=""></div></div></div>' +
       '<div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100"><i></i></div>' +
@@ -70,12 +78,12 @@
     boton.textContent = SALTAR[idioma] + ' ›';
     document.body.appendChild(el);
 
-    var p = 0, leyenda = '', fuera = false, alSaltar;
+    var p = 0, leyenda = '', extra = '', fuera = false, alSaltar;
     var saltado = new Promise(function (ok) { alSaltar = ok; });
     function pintar() {
       relleno.style.width = (p * 100).toFixed(1) + '%';
       barra.setAttribute('aria-valuenow', String(Math.round(p * 100)));
-      texto.textContent = (leyenda ? leyenda + ' ' : '') + Math.round(p * 100) + '%';
+      texto.textContent = (leyenda ? leyenda + ' ' : '') + Math.round(p * 100) + '%' + (extra ? ' · ' + extra : '');
     }
     pintar();
 
@@ -103,10 +111,12 @@
     el.addEventListener('pointerdown', function (e) { if (e.target !== boton) { e.preventDefault(); e.stopPropagation(); } });
 
     return {
-      progreso: function (f, txt) {
+      // f de 0 a 1 (sólo avanza), txt lo que se está haciendo, mas algo chico al lado (los MB)
+      progreso: function (f, txt, mas) {
         if (fuera) return;
         if (typeof f === 'number' && f > p) p = Math.min(1, f);
         if (txt != null) leyenda = txt;
+        extra = mas || '';
         pintar();
       },
       listo: function () { p = 1; pintar(); setTimeout(irse, 250); },
