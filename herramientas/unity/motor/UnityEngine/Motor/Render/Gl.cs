@@ -97,11 +97,13 @@ namespace Porteo.Render
         [DllImport(L, EntryPoint = "glUniform1f")] public static extern void Uniform1f(int loc, float v);
         [DllImport(L, EntryPoint = "glUniform1fv")] public static extern void Uniform1fv(int loc, int n, float* v);
         [DllImport(L, EntryPoint = "glUniform1i")] public static extern void Uniform1i(int loc, int v);
-        [DllImport(L, EntryPoint = "glUniform1iv")] public static extern void Uniform1iv(int loc, int n, int* v);
         [DllImport(L, EntryPoint = "glUniform2fv")] public static extern void Uniform2fv(int loc, int n, float* v);
         [DllImport(L, EntryPoint = "glUniform3fv")] public static extern void Uniform3fv(int loc, int n, float* v);
         [DllImport(L, EntryPoint = "glUniform4fv")] public static extern void Uniform4fv(int loc, int n, float* v);
-        [DllImport(L, EntryPoint = "glUniform4iv")] public static extern void Uniform4iv(int loc, int n, int* v);
+        // los enteros de a uno: los glUniformNiv de este emscripten (con más de 2 GB de memoria no
+        // usa las variantes de WebGL 2 que leen del heap) copian a miniTempWebGLIntBuffers, que no
+        // enlaza: "miniTempWebGLIntBuffers is not defined" y se corta el cuadro
+        [DllImport(L, EntryPoint = "glUniform4i")] public static extern void Uniform4i(int loc, int x, int y, int z, int w);
         [DllImport(L, EntryPoint = "glUniformMatrix4fv")] public static extern void UniformMatrix4fv(int loc, int n, byte trans, float* v);
         [DllImport(L, EntryPoint = "glUseProgram")] public static extern void UseProgram(uint p);
         [DllImport(L, EntryPoint = "glVertexAttrib4f")] public static extern void VertexAttrib4f(uint i, float x, float y, float z, float w);

@@ -317,9 +317,13 @@ namespace Porteo.Datos
         public Espera(IEnumerable<int> ids)
         {
             faltan = new List<int>();
-            foreach (var id in ids) if (!Anfitrion.Hay(id)) faltan.Add(id);
+            var todos = new List<int>();
+            foreach (var id in ids) { todos.Add(id); if (!Anfitrion.Hay(id)) faltan.Add(id); }
             Total = faltan.Count;
             foreach (var id in faltan) Anfitrion.PedirRecurso?.Invoke(id);
+            // también los que ya están: en el HTML único "estar" es tener el bloque comprimido, y
+            // pedirlo lo va descomprimiendo de a poco en otros hilos antes de que se use
+            foreach (var id in todos) if (Anfitrion.Hay(id)) Anfitrion.PedirRecurso?.Invoke(id);
         }
 
         public bool Lista

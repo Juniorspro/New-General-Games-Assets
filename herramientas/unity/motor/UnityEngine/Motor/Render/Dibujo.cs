@@ -816,7 +816,7 @@ namespace Porteo.Render
                     else { var id = Matrix4x4.identity; var a = new float[16]; for (int k = 0; k < 16; k++) a[k] = id[k]; fixed (float* x = a) Gl.UniformMatrix4fv(u.Loc, 1, 0, x); }
                     break;
                 case Gl.INT: case Gl.BOOL: Gl.Uniform1i(u.Loc, (int)v.V.x); break;
-                case Gl.INT_VEC4: { var x = stackalloc int[4] { (int)v.V.x, (int)v.V.y, (int)v.V.z, (int)v.V.w }; Gl.Uniform4iv(u.Loc, 1, x); break; }
+                case Gl.INT_VEC4: Gl.Uniform4i(u.Loc, (int)v.V.x, (int)v.V.y, (int)v.V.z, (int)v.V.w); break;
             }
         }
 

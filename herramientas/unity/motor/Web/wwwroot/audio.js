@@ -3,7 +3,8 @@
 //   - lo corto se decodifica entero (decodeAudioData) y se toca con AudioBufferSourceNode
 //   - la música (Streaming en Unity) va por un <audio> con el Ogg en un Blob: no se decodifica
 //     entera (un tema de 4 minutos son 80 MB en PCM)
-export function crearAudio(recursos, pedir, alLlegar) {
+//   - los bytes de cada clip vienen de la fuente de datos (datos.js o el HTML único)
+export function crearAudio(datos) {
   let ctx = null, maestro = null;
   // ?audio=depurar: cada voz que arranca y el nivel de la salida en la consola
   const depurar = new URLSearchParams(location.search).get('audio') === 'depurar';
@@ -57,11 +58,11 @@ export function crearAudio(recursos, pedir, alLlegar) {
     if (c.estado !== 0) return;
     c.estado = 1;
     const listo = () => {
-      const bytes = recursos.get(id);
+      const bytes = datos.recurso(id);
       if (!bytes) { c.estado = 3; avisar(c); return; }
       if (streaming) {
         c.url = URL.createObjectURL(new Blob([bytes], { type: 'audio/ogg' }));
-        recursos.delete(id);
+        soltar(id);
         c.estado = 2;
         avisar(c);
         return;
@@ -70,14 +71,20 @@ export function crearAudio(recursos, pedir, alLlegar) {
       if (!a) { c.estado = 3; avisar(c); return; }
       // decodeAudioData se queda con el ArrayBuffer: va una copia
       a.decodeAudioData(bytes.slice().buffer).then((b) => {
-        c.buffer = b; c.estado = 2; recursos.delete(id); avisar(c);
+        c.buffer = b; c.estado = 2; soltar(id); avisar(c);
       }, (e) => {
         console.warn('porteo: no se pudo decodificar el audio ' + id, e);
         c.estado = 3; avisar(c);
       });
     };
-    if (recursos.has(id)) listo();
-    else { alLlegar(id, listo); pedir(id); }
+    if (datos.hay(id)) listo();
+    else { datos.alLlegar(id, listo); datos.pedir(id); }
+  }
+
+  // el clip ya está decodificado (o en un Blob): los bytes no hacen falta más
+  function soltar(id) {
+    datos.usado(id);
+    if (datos.soltar) datos.soltar(id);
   }
 
   function avisar(c) {

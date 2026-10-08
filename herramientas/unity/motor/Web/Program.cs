@@ -12,6 +12,7 @@ public static partial class Programa
 
     [JSImport("tamanoPaquete", "porteo")] internal static partial int TamanoPaquete(string nombre);
     [JSImport("copiarPaquete", "porteo")] internal static partial void CopiarPaquete(string nombre, [JSMarshalAs<JSType.MemoryView>] Span<byte> destino);
+    [JSImport("hayRecurso", "porteo")] internal static partial bool HayRecursoJS(int id);
     [JSImport("tamanoRecurso", "porteo")] internal static partial int TamanoRecurso(int id);
     [JSImport("copiarRecurso", "porteo")] internal static partial void CopiarRecurso(int id, [JSMarshalAs<JSType.MemoryView>] Span<byte> destino);
     [JSImport("pedirRecurso", "porteo")] internal static partial void PedirRecurso(int id);
@@ -74,7 +75,8 @@ public static partial class Programa
         Anfitrion.LeerPaquete = Paquete;
         Anfitrion.LeerRecurso = Recurso;
         Anfitrion.PedirRecurso = PedirRecurso;
-        Anfitrion.HayRecurso = id => TamanoRecurso(id) >= 0;
+        // sin traerlo: en el HTML único, traerlo es descomprimir su bloque
+        Anfitrion.HayRecurso = HayRecursoJS;
         Anfitrion.Consola = (t, tipo) => Consola(t, (int)tipo);
         Porteo.Audio.Sonido.Salida = new AudioWeb();
         Porteo.UI.Fuentes.Anfitrion = new FuentesWeb();
@@ -226,21 +228,115 @@ public static partial class Programa
         return sb.ToString();
     }
 
-    // ?ir=x,z: al terminar el adelanto, el jugador aparece ahí (sobre el suelo): para mirar otras zonas
-    static double[] irA;
-    [JSExport] public static void IrA(double x, double z) => irA = new[] { x, z };
+    // ?ir=x,y,z o ?ir=nombre (un TeleportDestination del juego): al terminar el adelanto el jugador
+    // aparece ahí, como lo deja un teletransportador (TeleportNetwork + TeleportDestination.OnArrive).
+    // Primero el conjunto de regiones del lugar (el desierto está arriba de y=900 y el valle al sur de
+    // z=-550); después, quieto ahí unos cuadros hasta que su RegionLoader despierta las regiones:
+    // dormidas no tienen colisionadores, se cae, KillOnTrigger lo mata y queda la pantalla negra
+    // del desmayo. Recién con suelo abajo se lo suelta.
+    static Vector3? irA;
+    static Vector3? irMirando;
+    static string irDestino;
+    static MonoBehaviour irLlegada;   // el TeleportDestination elegido (su OnArrive, como el juego)
+    static int irCuadros;
+    [JSExport] public static void IrA(double x, double y, double z) { irA = new Vector3((float)x, (float)y, (float)z); irMirando = null; irLlegada = null; irCuadros = 0; }
+    [JSExport] public static void IrADestino(string nombre) { irDestino = nombre; irCuadros = 0; }
 
+    static System.Reflection.Assembly juego;
+    static object Llamar(object o, string metodo, params object[] args) => o.GetType().GetMethod(metodo).Invoke(o, args);
+    static object Prop(object o, string nombre) => o.GetType().GetProperty(nombre).GetValue(o);
+
+    // si algo del juego no está como se espera, se abandona el viaje (y el cuadro sigue)
     static void Ir()
     {
-        if (irA == null || adelantar > 0) return;
+        try { IrPaso(); }
+        catch (Exception e)
+        {
+            Debug.Log("porteo: no pude llevar al jugador: " + (e.InnerException ?? e));
+            irA = null; irDestino = null; irLlegada = null;
+        }
+    }
+
+    static void IrPaso()
+    {
+        if ((irA == null && irDestino == null) || adelantar > 0) return;
         if (escenaAdelantar != null && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != escenaAdelantar) return;
-        var jugador = GameObject.Find("SimplePlayer");
+        juego ??= Array.Find(AppDomain.CurrentDomain.GetAssemblies(), a => a.GetName().Name == "Assembly-CSharp");
+        var tSC = juego.GetType("SceneContext");
+        var sc = juego.GetType("SRSingleton`1").MakeGenericType(tSC).GetProperty("Instance").GetValue(null);
+        var jugador = sc == null ? null : Prop(sc, "Player") as GameObject;
         if (jugador == null) return;
-        var desde = new Vector3((float)irA[0], 1000, (float)irA[1]);
-        float y = Physics.Raycast(desde, Vector3.down, out var hit, 2000) ? hit.point.y : 30;
-        jugador.transform.position = new Vector3((float)irA[0], y + 1.5f, (float)irA[1]);
-        Debug.Log($"porteo: jugador en {jugador.transform.position}");
-        irA = null;
+        if (irDestino != null && !BuscarDestino(irDestino)) { irDestino = null; return; }
+        irDestino = null;
+        var lugar = irA.Value;
+        var tp = jugador.GetComponent(juego.GetType("TeleportablePlayer"));
+        var control = jugador.GetComponent(juego.GetType("vp_FPController"));
+        void Poner(Vector3 p, Vector3? mirando)
+        {
+            Llamar(tp, "TeleportTo", p, mirando);
+            Llamar(control, "Stop");
+        }
+        if (irCuadros == 0)
+        {
+            Llamar(Prop(sc, "RegionRegistry"), "SetCurrRegionSetForPos", lugar);
+            Llamar(tp, "PreTeleport");
+            Poner(lugar, irMirando);
+            Llamar(tp, "PostTeleport");
+        }
+        // el suelo, buscado desde un poco más arriba (desde muy alto se toparía con el desierto, que
+        // está encima del resto); entre lo que haya, lo más alto que no pase de la altura pedida + 40
+        // (los árboles y los techos quedan arriba). En un destino, la plataforma misma: el techo de
+        // una cueva puede estar a menos de 40
+        var golpes = Physics.RaycastAll(lugar + Vector3.up * 250, Vector3.down, 600, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        float tope = lugar.y + (irLlegada != null ? 2 : 40);
+        float? suelo = null;
+        foreach (var g in golpes)
+            if (g.point.y <= tope && (suelo == null || g.point.y > suelo)) suelo = g.point.y;
+        if (irCuadros > 0 && suelo != null)
+        {
+            Poner(new Vector3(lugar.x, suelo.Value + 1.5f, lugar.z), irMirando);
+            Debug.Log($"porteo: jugador en {jugador.transform.position} ({golpes.Length} golpes, {irCuadros} cuadros esperando la zona)");
+            irA = null;
+            // como TeleportNetwork, la llegada marca su teletransportador para que no lo mande de
+            // vuelta apenas lo pisa. Recién ahora: con la región dormida, OnArrive no encuentra
+            // su Region (GetComponentInParent no ve lo inactivo)
+            if (irLlegada != null)
+                try { Llamar(irLlegada, "OnArrive"); }
+                catch (Exception e) { Debug.Log("porteo: OnArrive: " + (e.InnerException ?? e).Message); }
+            irLlegada = null;
+            return;
+        }
+        if (++irCuadros > 150)
+        {
+            Debug.Log($"porteo: no hay suelo abajo de {lugar} ({golpes.Length} golpes); queda ahí");
+            irA = null;
+            return;
+        }
+        Poner(lugar, irMirando);
+    }
+
+    // un destino de teletransporte por su nombre (teleportDestinationName o el del objeto): parado
+    // ahí y mirando para donde lo dejaría el juego. Los de las zonas dormidas también (están
+    // inactivos, pero en su lugar)
+    static bool BuscarDestino(string nombre)
+    {
+        var tDest = juego.GetType("TeleportDestination");
+        var lista = new System.Text.StringBuilder();
+        foreach (var d in Resources.FindObjectsOfTypeAll(tDest))
+        {
+            var mb = (MonoBehaviour)d;
+            if (!mb.gameObject.scene.IsValid()) continue;
+            var red = tDest.GetField("teleportDestinationName").GetValue(mb) as string ?? "";
+            lista.Append($"\n   {red} ({Diagnostico.Ruta(mb.transform)}) en {mb.transform.position}");
+            if (red.IndexOf(nombre, StringComparison.OrdinalIgnoreCase) < 0 && mb.name.IndexOf(nombre, StringComparison.OrdinalIgnoreCase) < 0) continue;
+            irA = mb.transform.position;
+            irMirando = mb.transform.eulerAngles;
+            irLlegada = mb;
+            Debug.Log($"porteo: destino {red} ({Diagnostico.Ruta(mb.transform)})");
+            return true;
+        }
+        Debug.Log($"porteo: no hay un destino \"{nombre}\"; los que hay:{lista}");
+        return false;
     }
 
     static void DiagnosticoPendiente()

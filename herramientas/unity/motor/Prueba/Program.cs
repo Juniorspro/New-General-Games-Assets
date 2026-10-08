@@ -31,12 +31,18 @@ if (args.Length > 1 && args[1] == "alcance")
     var r0 = Stopwatch.StartNew();
     var siempre = Porteo.Datos.Alcance.Recursos(Porteo.Datos.Ajustes.Siempre());
     Console.WriteLine($"siempre: {Mb(siempre)} ({r0.ElapsedMilliseconds} ms)");
+    var todos = new System.Collections.Generic.HashSet<int>(siempre);
     for (int i = 0; i < escenas.Length; i++)
     {
         r0.Restart();
         var e = Porteo.Datos.Alcance.DeArchivo(Porteo.Datos.Cargador.Archivo("level" + i));
         Console.WriteLine($"{escenas[i]}: {Mb(e)}; sin lo de siempre: {Mb(e.Except(siempre))} ({r0.ElapsedMilliseconds} ms)");
+        todos.UnionWith(e);
     }
+    // lo que ninguna escena alcanza (ni lo de siempre): candidatos a no ir en el HTML único
+    var nunca = Enumerable.Range(0, tam.Length).Where(i => !todos.Contains(i)).ToList();
+    Console.WriteLine($"alcanzables: {Mb(todos)}; ninguna escena: {Mb(nunca)}");
+    if (Environment.GetEnvironmentVariable("NUNCA") is string fn) File.WriteAllText(fn, JsonSerializer.Serialize(nunca));
     return;
 }
 

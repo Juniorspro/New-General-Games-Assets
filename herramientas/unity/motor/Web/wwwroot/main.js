@@ -1,8 +1,13 @@
 // porteo: arranca .NET, trae los datos del juego y corre el bucle de cuadros.
-import { dotnet } from './_framework/dotnet.js';
-import { crearAudio } from './audio.js';
-import { crearFuentes } from './fuentes.js';
-import { crearControles } from './controles.js';
+// Los módulos van con import() y los datos por una "fuente" (datos.js): así el HTML único
+// (empaquetar/empaquetar.py) da los suyos desde adentro, sin red.
+const U = globalThis.porteoUnArchivo;
+const modulo = (ruta) => (U ? U.url(ruta) : './' + ruta);
+const { dotnet } = await import(modulo('_framework/dotnet.js'));
+const { crearAudio } = await import(modulo('audio.js'));
+const { crearFuentes } = await import(modulo('fuentes.js'));
+const { crearControles } = await import(modulo('controles.js'));
+const { crearFuenteRed } = await import(modulo('datos.js'));
 
 const estado = document.getElementById('estado');
 const lienzo = document.getElementById('lienzo');
@@ -19,53 +24,11 @@ function ajustar() {
 ajustar();
 addEventListener('resize', ajustar);
 
-const indice = await (await fetch(BASE + 'indice.json')).json();
-
-// los .paq (árboles de objetos): todos antes de empezar
-const paquetes = new Map();
-let listos = 0;
-const nombres = Object.keys(indice.archivos);
-await Promise.all(nombres.map(async (n) => {
-  const r = await fetch(BASE + 'paquetes/' + encodeURIComponent(n) + '.paq');
-  if (r.ok) paquetes.set(n, new Uint8Array(await r.arrayBuffer()));
-  estado.textContent = `datos ${++listos}/${nombres.length}`;
-}));
-
-// los recursos (texturas, mallas, audio, shaders): cuando el motor los pide, de a varios a la
-// vez (al cargar una escena pide cientos de una)
-const recursos = new Map();
-const pedidos = new Set();
-const cola = [];
-const esperas = new Map();   // recurso → funciones a llamar cuando llegue (el audio)
-let enVuelo = 0;
-const SIMULTANEOS = 8;
-function alLlegar(id, f) {
-  if (!esperas.has(id)) esperas.set(id, []);
-  esperas.get(id).push(f);
-}
-function llego(id) {
-  const l = esperas.get(id);
-  if (!l) return;
-  esperas.delete(id);
-  for (const f of l) f();
-}
-function pedir(id) {
-  if (recursos.has(id) || pedidos.has(id)) return;
-  pedidos.add(id);
-  cola.push(id);
-  seguir();
-}
-function seguir() {
-  while (enVuelo < SIMULTANEOS && cola.length) {
-    const id = cola.shift();
-    enVuelo++;
-    fetch(BASE + 'recursos/' + id + '.bin')
-      .then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-      .then((b) => { recursos.set(id, new Uint8Array(b)); })
-      .catch((e) => console.warn('porteo: recurso ' + id, e))
-      .finally(() => { pedidos.delete(id); enVuelo--; llego(id); seguir(); });
-  }
-}
+const datos = U ? U.fuente : crearFuenteRed(BASE, estado);
+const indice = await datos.indice();
+// los .paq (árboles de objetos): todos a mano antes de empezar; los recursos (texturas, mallas,
+// audio, shaders), cuando el motor los pide
+await datos.prepararPaquetes(Object.keys(indice.archivos));
 
 // las partidas guardadas: un archivo por clave en IndexedDB (se cargan antes de arrancar)
 const disco = await abrirDisco();
@@ -98,17 +61,21 @@ function discoEscribir(fn) {
   } catch (e) { console.warn('porteo: no se pudo guardar', e); }
 }
 
-const { setModuleImports, getAssemblyExports, getConfig, runMain } = await dotnet.withDiagnosticTracing(false).create();
+let arranque = dotnet.withDiagnosticTracing(false);
+// en el HTML único, el runtime y los ensamblados también salen de adentro
+if (U) arranque = arranque.withResourceLoader(U.cargadorDotnet);
+const { setModuleImports, getAssemblyExports, getConfig, runMain } = await arranque.create();
 const TIPOS = ['error', 'assert', 'warn', 'log', 'exception'];
-const audio = crearAudio(recursos, pedir, alLlegar);
+const audio = crearAudio(datos);
 setModuleImports('porteo', {
   ...audio,
   ...crearFuentes(),
-  tamanoPaquete: (n) => { const p = paquetes.get(n); return p ? p.length : -1; },
-  copiarPaquete: (n, vista) => { vista.set(paquetes.get(n)); vista.dispose(); },
-  tamanoRecurso: (id) => { const r = recursos.get(id); return r ? r.length : -1; },
-  copiarRecurso: (id, vista) => { vista.set(recursos.get(id)); vista.dispose(); },
-  pedirRecurso: pedir,
+  tamanoPaquete: (n) => { const p = datos.paquete(n); return p ? p.length : -1; },
+  copiarPaquete: (n, vista) => { vista.set(datos.paquete(n)); vista.dispose(); },
+  hayRecurso: (id) => datos.hay(id),
+  tamanoRecurso: (id) => { const r = datos.recurso(id); return r ? r.length : -1; },
+  copiarRecurso: (id, vista) => { vista.set(datos.recurso(id)); vista.dispose(); datos.usado(id); },
+  pedirRecurso: (id) => datos.pedir(id),
   discoGuardar: (ruta, vista) => { const b = vista.slice(); vista.dispose(); discoEscribir((s) => s.put(b, ruta)); },
   discoBorrar: (ruta) => discoEscribir((s) => s.delete(ruta)),
   consola: (t, tipo) => {
@@ -151,10 +118,14 @@ if (new URLSearchParams(location.search).has('camara')) {
 // ?diag=jerarquia:FPSCamera;cerca:6&diagen=30: diagnósticos en la consola (cuadros después del adelanto)
 if (new URLSearchParams(location.search).has('diag'))
   exp.DiagnosticoLuego(new URLSearchParams(location.search).get('diag'), parseInt(new URLSearchParams(location.search).get('diagen')) || 30);
-// ?ir=x,z: el jugador aparece ahí al terminar el adelanto (para mirar otras zonas)
+// ?ir=x,y,z (o x,z: a la altura del rancho) o ?ir=nombre de un destino de teletransporte: el
+// jugador aparece ahí al terminar el adelanto (para mirar otras zonas)
 if (new URLSearchParams(location.search).has('ir')) {
-  const c = new URLSearchParams(location.search).get('ir').split(',').map(Number);
-  exp.IrA(c[0] || 0, c[1] || 0);
+  const ir = new URLSearchParams(location.search).get('ir');
+  const c = ir.split(',').map(Number);
+  if (c.some(isNaN)) exp.IrADestino(ir);
+  else if (c.length >= 3) exp.IrA(c[0], c[1], c[2]);
+  else exp.IrA(c[0] || 0, 30, c[1] || 0);
 }
 // ?nueva: una partida nueva apenas aparece el menú (capturas del juego)
 if (new URLSearchParams(location.search).has('nueva')) exp.NuevaPartida();
@@ -283,7 +254,7 @@ function cuadro(ahora) {
     enCuadro += performance.now() - t0;
     nCuadros++;
     if (ahora - desdeMedida > 5000) {
-      console.log(`porteo js: ${(nCuadros * 1000 / (ahora - desdeMedida)).toFixed(1)} rAF/s, ${(enCuadro / nCuadros).toFixed(1)} ms en Cuadro, ${enVuelo} recursos en vuelo, ${cola.length} en cola, ${recursos.size} llegados`);
+      console.log(`porteo js: ${(nCuadros * 1000 / (ahora - desdeMedida)).toFixed(1)} rAF/s, ${(enCuadro / nCuadros).toFixed(1)} ms en Cuadro${datos.resumen ? ', ' + datos.resumen() : ''}`);
       nCuadros = 0; enCuadro = 0; desdeMedida = ahora;
     }
   }
