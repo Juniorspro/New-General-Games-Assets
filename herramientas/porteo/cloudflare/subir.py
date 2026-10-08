@@ -309,9 +309,16 @@ def desplegar(cf, nombre, carpeta, mensaje, wrangler):
                        cwd=carpeta.parent, env=env, capture_output=True, text=True)
     if r.returncode:
         morir("wrangler falló:\n" + (r.stdout + r.stderr)[-3000:])
-    d = cf.proyecto(nombre)["result"].get("latest_deployment") or {}
-    if not d.get("id") or d["id"] == antes:
-        morir("wrangler terminó pero no aparece la subida nueva")
+    # la API tarda en mostrar la subida nueva (como con la configuración): se insiste un rato antes
+    # de darla por perdida
+    fin = time.time() + 90
+    while True:
+        d = cf.proyecto(nombre)["result"].get("latest_deployment") or {}
+        if d.get("id") and d["id"] != antes:
+            break
+        if time.time() > fin:
+            morir("wrangler terminó pero no aparece la subida nueva:\n" + (r.stdout + r.stderr)[-2000:])
+        time.sleep(5)
     log(f"subido ({mensaje}): {d['url']}")
     return d["url"].rstrip("/")
 
