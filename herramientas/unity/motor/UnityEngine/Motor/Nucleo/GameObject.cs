@@ -120,6 +120,18 @@ namespace UnityEngine
             return null;
         }
 
+        public bool TryGetComponent<T>(out T component)
+        {
+            component = GetComponent<T>();
+            return component != null;
+        }
+
+        public bool TryGetComponent(Type type, out Component component)
+        {
+            component = GetComponent(type);
+            return component != null;
+        }
+
         // como Unity: un Component[] aunque se pida una interfaz (el juego lo recorre y castea cada uno)
         public Component[] GetComponents(Type type)
         {

@@ -8,7 +8,6 @@ namespace UnityEngine
         public void EnableKeyword(in global::UnityEngine.Rendering.LocalKeyword keyword) { global::Porteo.Falta.Llamada("UnityEngine.Material::EnableKeyword"); }
         public void DisableKeyword(in global::UnityEngine.Rendering.LocalKeyword keyword) { global::Porteo.Falta.Llamada("UnityEngine.Material::DisableKeyword"); }
         public bool IsKeywordEnabled(in global::UnityEngine.Rendering.LocalKeyword keyword) { global::Porteo.Falta.Llamada("UnityEngine.Material::IsKeywordEnabled"); return default; }
-        public int ComputeCRC() { global::Porteo.Falta.Llamada("UnityEngine.Material::ComputeCRC"); return default; }
         public void SetInteger(string name, int value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetInteger"); }
         public void SetInteger(int nameID, int value) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetInteger"); }
         public void SetTexture(string name, global::UnityEngine.RenderTexture value, global::UnityEngine.Rendering.RenderTextureSubElement element) { global::Porteo.Falta.Llamada("UnityEngine.Material::SetTexture"); }

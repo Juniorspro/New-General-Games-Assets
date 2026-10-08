@@ -4,7 +4,6 @@ namespace UnityEngine
 {
     public partial class Component
     {
-        public bool TryGetComponent(global::System.Type type, out global::UnityEngine.Component component) { component = default;  global::Porteo.Falta.Llamada("UnityEngine.Component::TryGetComponent"); return default;  }
         public global::UnityEngine.Component[] GetComponentsInChildren(global::System.Type t) { global::Porteo.Falta.Llamada("UnityEngine.Component::GetComponentsInChildren"); return default; }
         public global::UnityEngine.Component GetComponentInParent(global::System.Type t, bool includeInactive) { global::Porteo.Falta.Llamada("UnityEngine.Component::GetComponentInParent"); return default; }
         public T GetComponentInParent<T>(bool includeInactive) { global::Porteo.Falta.Llamada("UnityEngine.Component::GetComponentInParent"); return default; }

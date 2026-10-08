@@ -21,6 +21,7 @@ Anfitrion.Consola = (t, tipo) => Console.WriteLine((tipo == LogType.Log ? "" : "
 
 var indice = JsonDocument.Parse(File.ReadAllText(Path.Combine(datos, "indice.json")));
 var escenas = indice.RootElement.GetProperty("escenas").EnumerateArray().Select(e => e.GetString()).ToArray();
+Porteo.Render.Convencion.D3D = indice.RootElement.TryGetProperty("convencion", out var conv) && conv.GetString() == "d3d11";
 
 // "alcance": cuánto hay que traer para cada escena y para lo que se pide en cualquier momento
 if (args.Length > 1 && args[1] == "alcance")

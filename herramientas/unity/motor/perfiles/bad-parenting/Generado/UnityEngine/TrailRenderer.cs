@@ -7,6 +7,8 @@ namespace UnityEngine
         public float time { get { global::Porteo.Falta.Llamada("UnityEngine.TrailRenderer::time"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.TrailRenderer::time="); } }
         public global::UnityEngine.Color startColor { get { global::Porteo.Falta.Llamada("UnityEngine.TrailRenderer::startColor"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.TrailRenderer::startColor="); } }
         public float shadowBias { get { global::Porteo.Falta.Llamada("UnityEngine.TrailRenderer::shadowBias"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.TrailRenderer::shadowBias="); } }
+        public void SetPosition(int index, global::UnityEngine.Vector3 position) { global::Porteo.Falta.Llamada("UnityEngine.TrailRenderer::SetPosition"); }
+        public global::UnityEngine.Vector3 GetPosition(int index) { global::Porteo.Falta.Llamada("UnityEngine.TrailRenderer::GetPosition"); return default; }
         public void Clear() { global::Porteo.Falta.Llamada("UnityEngine.TrailRenderer::Clear"); }
         public void BakeMesh(global::UnityEngine.Mesh mesh, bool useTransform = false) { global::Porteo.Falta.Llamada("UnityEngine.TrailRenderer::BakeMesh"); }
         public void BakeMesh(global::UnityEngine.Mesh mesh, global::UnityEngine.Camera camera, bool useTransform = false) { global::Porteo.Falta.Llamada("UnityEngine.TrailRenderer::BakeMesh"); }

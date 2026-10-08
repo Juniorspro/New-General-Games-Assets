@@ -577,6 +577,10 @@ namespace Porteo
             var extra = string.Join("", au.Properties.Select(p => $", {p.Name} = {Literal(p.Argument.Value, p.Argument.Type)}"));
             sb.AppendLine($"{s}[System.AttributeUsage((System.AttributeTargets){Convert.ToInt64(au.ConstructorArguments[0].Value)}{extra})]");
         }
+        // las clases y structs serializables de Unity que vienen en los datos del juego (sin esto el
+        // motor no las lee: Serial sólo arma las que tienen [Serializable]). Si el motor escribió
+        // una parte, el atributo va en la suya (no se puede repetir)
+        if (t.IsSerializable && !t.IsInterface && !propio) sb.AppendLine(s + "[System.Serializable]");
         sb.AppendLine(cab.ToString());
         sb.AppendLine(s + "{");
         var dentro = new StringBuilder();

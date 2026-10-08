@@ -33,6 +33,14 @@ namespace UnityEngine
         public float mipMapBias { get => sesgoMip; set => sesgoMip = value; }
         public Vector2 texelSize => new Vector2(1f / Math.Max(1, width), 1f / Math.Max(1, height));
         public int mipmapCount => mips;
+        public virtual UnityEngine.Rendering.TextureDimension dimension
+        {
+            get => objetivoGl == Porteo.Render.Gl.TEXTURE_CUBE_MAP ? UnityEngine.Rendering.TextureDimension.Cube : UnityEngine.Rendering.TextureDimension.Tex2D;
+            set { }
+        }
+        public virtual bool isReadable => false;
+        public static int masterTextureLimit { get; set; }
+        public static AnisotropicFiltering anisotropicFiltering { get; set; } = AnisotropicFiltering.Enable;
 
         public IntPtr GetNativeTexturePtr() => (IntPtr)gl;
 
@@ -130,7 +138,7 @@ namespace UnityEngine
         }
 
         public TextureFormat format => formato;
-        public bool isReadable => legible;
+        public override bool isReadable => legible;
         public override int width { get => ancho; set => throw new UnityException("Texture2D width is read-only"); }
         public override int height { get => alto; set => throw new UnityException("Texture2D height is read-only"); }
 
@@ -283,8 +291,37 @@ namespace UnityEngine
         {
             ancho = Math.Max(1, width); alto = Math.Max(1, height);
             pixeles = new Color32[ancho * alto];
+            // lo del archivo ya no corresponde (otro tamaño)
+            datos = null; recurso = -1; subida = false;
             return true;
         }
+
+        // Los bytes Alpha8 del nivel 0 para escribir desde la CPU (el FontEngine de TextMeshPro
+        // dibuja los glifos en el atlas así): los del archivo, o los de los píxeles, o nuevos.
+        // Quedan como los datos de la textura y se suben enteros cuando se va a dibujar.
+        internal byte[] BytesAlfa()
+        {
+            int n = ancho * alto;
+            byte[] b = formato == TextureFormat.Alpha8 ? Bytes() : null;
+            if (b == null && pixeles != null)
+            {
+                b = new byte[n];
+                for (int i = 0; i < n && i < pixeles.Length; i++) b[i] = pixeles[i].a;
+            }
+            if (b == null || b.Length < n)
+            {
+                var nb = new byte[n];
+                if (b != null) Buffer.BlockCopy(b, 0, nb, 0, b.Length);
+                b = nb;
+            }
+            formato = TextureFormat.Alpha8;
+            mips = 1;
+            datos = b; recurso = -1; pixeles = null;
+            legible = true;   // se sigue escribiendo: la copia en la CPU no se suelta al subirla
+            return b;
+        }
+
+        internal void BytesCambiados() => subida = false;
 
         public bool Resize(int width, int height, TextureFormat format, bool hasMipMap)
         {
@@ -300,13 +337,16 @@ namespace UnityEngine
             int w = (int)source.width, h = (int)source.height;
             if (!Gpu.Activo || w <= 0 || h <= 0) return;
             var buf = new Color32[w * h];
-            fixed (Color32* d = buf) Porteo.Render.Gl.ReadPixels((int)source.x, (int)source.y, w, h, Porteo.Render.Gl.RGBA, Porteo.Render.Gl.UNSIGNED_BYTE, d);
+            // el lienzo con la convención de D3D tiene la fila 0 arriba: se lee de ahí y se da vuelta
+            bool lienzo = (object)Destinos.Actual == null && Convencion.D3D;
+            int sy = Convencion.FilaMemoria((object)Destinos.Actual == null, Destinos.Alto, (int)source.y, h);
+            fixed (Color32* d = buf) Porteo.Render.Gl.ReadPixels((int)source.x, sy, w, h, Porteo.Render.Gl.RGBA, Porteo.Render.Gl.UNSIGNED_BYTE, d);
             for (int j = 0; j < h; j++)
                 for (int i = 0; i < w; i++)
                 {
                     int x = destX + i, y = destY + j;
                     if (x < 0 || y < 0 || x >= ancho || y >= alto) continue;
-                    p[y * ancho + x] = buf[j * w + i];
+                    p[y * ancho + x] = buf[(lienzo ? h - 1 - j : j) * w + i];
                 }
         }
 
@@ -407,8 +447,9 @@ namespace Porteo.Render
         public static void Subir(Texture2D t, byte[] b)
         {
             if (!Gpu.Activo) return;
-            uint id;
-            Gl.GenTextures(1, &id);
+            // si ya tenía una (se vuelve a subir porque cambiaron los datos) se reusa
+            uint id = t.gl;
+            if (id == 0) Gl.GenTextures(1, &id);
             t.gl = id;
             t.objetivoGl = Gl.TEXTURE_2D;
             Gpu.AtarParaSubir(Gl.TEXTURE_2D, id);

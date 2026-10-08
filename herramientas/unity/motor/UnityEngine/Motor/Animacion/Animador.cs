@@ -102,7 +102,9 @@ namespace UnityEngine
 
         public Avatar avatar { get => avatarDatos; set { avatarDatos = value; Rebind(); } }
         public bool isInitialized => Rep() != null;
-        public bool hasBoundPlayables => false;
+        // las salidas de Timeline que lo mueven (MezcladorTimeline)
+        internal int salidasPlayables;
+        public bool hasBoundPlayables => salidasPlayables > 0;
         public bool isHuman => avatarDatos?.humano != null;
         public float humanScale => avatarDatos?.humano?.Escala ?? 1;
         public bool applyRootMotion { get => raiz; set => raiz = value; }

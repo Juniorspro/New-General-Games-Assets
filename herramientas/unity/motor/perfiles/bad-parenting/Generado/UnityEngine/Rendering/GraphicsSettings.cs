@@ -2,9 +2,7 @@
 #pragma warning disable
 namespace UnityEngine.Rendering
 {
-    public sealed partial class GraphicsSettings : global::UnityEngine.Object
+    public sealed partial class GraphicsSettings
     {
-        public static global::UnityEngine.Rendering.RenderPipelineAsset currentRenderPipeline { get { global::Porteo.Falta.Llamada("UnityEngine.Rendering.GraphicsSettings::currentRenderPipeline"); return default; } }
-        public static global::UnityEngine.Rendering.BuiltinShaderMode GetShaderMode(global::UnityEngine.Rendering.BuiltinShaderType type) { global::Porteo.Falta.Llamada("UnityEngine.Rendering.GraphicsSettings::GetShaderMode"); return default; }
     }
 }

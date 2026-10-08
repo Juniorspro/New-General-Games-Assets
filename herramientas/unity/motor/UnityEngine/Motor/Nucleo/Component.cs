@@ -20,6 +20,8 @@ namespace UnityEngine
         public Component GetComponent(Type type) => go.GetComponent(type);
         public T GetComponent<T>() => go.GetComponent<T>();
         public Component GetComponent(string type) => go.GetComponent(type);
+        public bool TryGetComponent<T>(out T component) => go.TryGetComponent(out component);
+        public bool TryGetComponent(Type type, out Component component) => go.TryGetComponent(type, out component);
         public Component GetComponentInChildren(Type t) => go.GetComponentInChildren(t);
         public Component GetComponentInChildren(Type t, bool includeInactive) => go.GetComponentInChildren(t, includeInactive);
         public T GetComponentInChildren<T>(bool includeInactive) => go.GetComponentInChildren<T>(includeInactive);

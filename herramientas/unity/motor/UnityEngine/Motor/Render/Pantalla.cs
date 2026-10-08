@@ -176,6 +176,13 @@ namespace UnityEngine
         public static bool supportsImageEffects => true;
         public static bool supports3DTextures => true;
         public static bool supportsComputeShaders => false;
+        // con los shaders de D3D11 (juegos de PC) el motor imita a Unity en D3D: ver Convencion
+        public static bool graphicsUVStartsAtTop => Porteo.Render.Convencion.D3D;
+        public static bool usesReversedZBuffer => Porteo.Render.Convencion.D3D;
+        public static bool supportsMotionVectors => false;
+        public static bool supports3DRenderTextures => false;
+        public static int supportedRenderTargetCount => 1;
+        public static bool usesLoadStoreActions => false;
         public static bool supportsInstancing => true;
         public static bool supportsShadows => true;
         public static bool supportsVibration => Plataforma.Movil;

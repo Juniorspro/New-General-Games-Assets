@@ -110,6 +110,7 @@ namespace UnityEngine
         internal EventoClip[] eventos = Array.Empty<EventoClip>();
         internal float inicio, fin;
         internal bool bucle, legado;
+        internal bool raizGenerica, curvasMovimiento;   // m_HasGenericRootTransform, m_HasMotionFloatCurves (Unity 2018.3+)
         internal float frecuencia = 60;
         internal WrapMode envoltura;
         internal Bounds limites;
@@ -122,6 +123,8 @@ namespace UnityEngine
         internal override void LeerNativo(Mapa m, IResolutor r)
         {
             legado = m.B("m_Legacy");
+            raizGenerica = m.B("m_HasGenericRootTransform");
+            curvasMovimiento = m.B("m_HasMotionFloatCurves");
             frecuencia = m.F("m_SampleRate", 60);
             envoltura = (WrapMode)m.I32("m_WrapMode");
             var b = m.M("m_Bounds");
@@ -235,6 +238,9 @@ namespace UnityEngine
                     EsPPtr = b.I("isPPtrCurve") != 0, Curva = curva, N = 1,
                 };
                 if (b["script"] is PPtr ps && !ps.Nulo) e.Script = r.Resolver(ps);
+                // Unity 2022 marca la rotación en euler del Transform con su propio customType (4);
+                // las versiones viejas, con 0 como el resto del Transform
+                if (e.Clase == 4 && e.Especial == 4 && e.Atributo == 4) e.Especial = 0;
                 if (e.Clase == 4 && e.Especial == 0) e.N = e.Atributo == 2 ? 4 : e.Atributo >= 1 && e.Atributo <= 4 ? 3 : 1;
                 curva += e.N;
                 es[i] = e;
@@ -404,11 +410,25 @@ namespace UnityEngine
 
         public float length => Math.Max(0, fin - inicio);
         public float frameRate { get => frecuencia; set => frecuencia = value; }
-        public bool legacy { get => legado; set => legado = value; }
+        public new bool legacy { get => legado; set => legado = value; }
         public WrapMode wrapMode { get => envoltura; set => envoltura = value; }
         public Bounds localBounds { get => limites; set => limites = value; }
-        public bool isLooping => bucle;
+        public new bool isLooping => bucle;
         public bool empty => enlaces.Length == 0;
+        // lo que mira Timeline para decidir si corre el clip con los desplazamientos de la pista
+        public bool hasGenericRootTransform
+        {
+            get
+            {
+                if (raizGenerica) return true;
+                foreach (var e in enlaces) if (e.Clase == 4 && e.Ruta == 0 && e.Especial == 0 && e.Atributo != 3) return true;
+                return false;
+            }
+        }
+        public bool hasMotionCurves => curvasMovimiento;
+        public bool hasRootCurves => raizHumana.Hay && Array.Exists(enlaces, e => e.Especial == 8);
+        public bool hasRootMotion => hasMotionCurves || hasRootCurves;
+        public bool hasMotionFloatCurves => curvasMovimiento;
 
         public AnimationEvent[] events
         {
@@ -451,5 +471,16 @@ namespace UnityEngine
         internal float pesoInterno;
         public AnimationClip clip => clipInterno;
         public float weight => pesoInterno;
+    }
+}
+
+namespace UnityEngine
+{
+    // lo de Motion que preguntan los paquetes (Timeline): en Unity vale para cualquier Motion; los
+    // árboles de mezcla no existen acá, así que sólo los clips tienen algo que decir
+    public partial class Motion : Object
+    {
+        public bool isLooping => this is AnimationClip c && c.bucle;
+        public bool legacy => this is AnimationClip c && c.legado;
     }
 }

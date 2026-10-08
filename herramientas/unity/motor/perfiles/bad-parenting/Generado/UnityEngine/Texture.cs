@@ -4,9 +4,5 @@ namespace UnityEngine
 {
     public partial class Texture
     {
-        public static int masterTextureLimit { get { global::Porteo.Falta.Llamada("UnityEngine.Texture::masterTextureLimit"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Texture::masterTextureLimit="); } }
-        public static global::UnityEngine.AnisotropicFiltering anisotropicFiltering { get { global::Porteo.Falta.Llamada("UnityEngine.Texture::anisotropicFiltering"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Texture::anisotropicFiltering="); } }
-        public virtual global::UnityEngine.Rendering.TextureDimension dimension { get { global::Porteo.Falta.Llamada("UnityEngine.Texture::dimension"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Texture::dimension="); } }
-        public virtual bool isReadable { get { global::Porteo.Falta.Llamada("UnityEngine.Texture::isReadable"); return default; } }
     }
 }

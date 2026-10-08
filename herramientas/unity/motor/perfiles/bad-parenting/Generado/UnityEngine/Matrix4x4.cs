@@ -6,5 +6,6 @@ namespace UnityEngine
     {
         public global::UnityEngine.FrustumPlanes decomposeProjection { get { global::Porteo.Falta.Llamada("UnityEngine.Matrix4x4::decomposeProjection"); return default; } }
         public static global::UnityEngine.Matrix4x4 Frustum(global::UnityEngine.FrustumPlanes fp) { global::Porteo.Falta.Llamada("UnityEngine.Matrix4x4::Frustum"); return default; }
+        public global::UnityEngine.Vector3 GetPosition() { global::Porteo.Falta.Llamada("UnityEngine.Matrix4x4::GetPosition"); return default; }
     }
 }

@@ -408,6 +408,16 @@ namespace UnityEngine
             return rect.rect.Contains(p);
         }
 
+        // con el relleno del raycast de uGUI (x izquierda, y abajo, z derecha, w arriba; positivo achica)
+        public static bool RectangleContainsScreenPoint(RectTransform rect, Vector2 screenPoint, Camera cam, Vector4 offset)
+        {
+            if (rect == null) return false;
+            if (!ScreenPointToLocalPointInRectangle(rect, screenPoint, cam, out var p)) return false;
+            var r = rect.rect;
+            r.xMin += offset.x; r.yMin += offset.y; r.xMax -= offset.z; r.yMax -= offset.w;
+            return r.Contains(p);
+        }
+
         public static Vector2 WorldToScreenPoint(Camera cam, Vector3 worldPoint) => cam == null ? new Vector2(worldPoint.x, worldPoint.y) : (Vector2)cam.WorldToScreenPoint(worldPoint);
 
         public static Vector2 PixelAdjustPoint(Vector2 point, Transform elementTransform, Canvas canvas)
@@ -617,15 +627,15 @@ namespace Porteo.UI
                     raices.Add(c);
             if (raices.Count == 0) return;
             Destinos.Atar(null);
-            Gl.Viewport(0, 0, Gpu.Ancho, Gpu.Alto);
+            Convencion.Viewport(0, 0, Gpu.Ancho, Gpu.Alto);
             var g = Globales.Tabla;
-            var orto = Matrix4x4.Ortho(0, Gpu.Ancho, 0, Gpu.Alto, -10000, 10000);
+            var orto = Convencion.Gpu(Matrix4x4.Ortho(0, Gpu.Ancho, 0, Gpu.Alto, -10000, 10000), false);
             g.Poner(ID_VP, Valor.Matriz(orto));
             g.Poner(ID_P, Valor.Matriz(orto));
             g.Poner(ID_V, Valor.Matriz(Matrix4x4.identity));
             g.Poner(ID_SCREEN, Valor.Vec(new Vector4(Gpu.Ancho, Gpu.Alto, 1f + 1f / Gpu.Ancho, 1f + 1f / Gpu.Alto)));
             g.Poner(ID_ZTEST, Valor.Numero(8));
-            Gl.ClearDepthf(1);
+            Gl.ClearDepthf(Convencion.Lejos);
             Gl.ClearStencil(0);
             Gpu.Limpiar(Gl.DEPTH_BUFFER_BIT | Gl.STENCIL_BUFFER_BIT);
             Dibujar(raices);

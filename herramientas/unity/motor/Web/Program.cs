@@ -82,6 +82,10 @@ public static partial class Programa
         return b;
     }
 
+    // la convención de los shaders del juego (indice.json): "d3d11" para los de PC (ver Convencion)
+    [JSExport]
+    public static void Convencion(string c) => Porteo.Render.Convencion.D3D = c == "d3d11";
+
     [JSExport]
     public static void Iniciar(string[] escenas, int primera, double dpi, bool movil)
     {

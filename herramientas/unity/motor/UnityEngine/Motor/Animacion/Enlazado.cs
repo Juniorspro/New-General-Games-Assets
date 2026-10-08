@@ -310,6 +310,8 @@ namespace Porteo.Animacion
             {
                 var mb = Script(go, e.Script);
                 if (mb == null) return null;
+                if (e.Atributo == ATR_HABILITADO)
+                    return Cache(mb, e.Atributo, 0, () => { var v = Nuevo(TipoValor.Habilitado, 1); v.C = mb; return v; });
                 if (!CampoScript(mb.GetType(), e, out var f, out int sub)) return Avisar(e, mb.GetType().Name);
                 return Cache(mb, e.Atributo, 0, () => { var v = Nuevo(TipoValor.Campo, 1); v.C = mb; v.F = f; v.SubCampo = sub; return v; });
             }

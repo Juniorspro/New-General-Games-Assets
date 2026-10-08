@@ -4,6 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class RectTransformUtility
     {
-        public static bool RectangleContainsScreenPoint(global::UnityEngine.RectTransform rect, global::UnityEngine.Vector2 screenPoint, global::UnityEngine.Camera cam, global::UnityEngine.Vector4 offset) { global::Porteo.Falta.Llamada("UnityEngine.RectTransformUtility::RectangleContainsScreenPoint"); return default; }
     }
 }

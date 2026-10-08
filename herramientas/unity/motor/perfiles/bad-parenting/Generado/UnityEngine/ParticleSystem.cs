@@ -8,6 +8,7 @@ namespace UnityEngine
         public bool loop { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::loop"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::loop="); } }
         public bool playOnAwake { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::playOnAwake"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::playOnAwake="); } }
         public float duration { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::duration"); return default; } }
+        public float playbackSpeed { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::playbackSpeed"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::playbackSpeed="); } }
         public float startSpeed { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::startSpeed"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::startSpeed="); } }
         public float startSize { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::startSize"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::startSize="); } }
         public global::UnityEngine.Color startColor { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::startColor"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem::startColor="); } }
@@ -32,6 +33,7 @@ namespace UnityEngine
         public partial struct EmissionModule
         {
             public global::UnityEngine.ParticleSystemEmissionType type { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem/EmissionModule::type"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem/EmissionModule::type="); } }
+            public global::UnityEngine.ParticleSystem.MinMaxCurve rate { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem/EmissionModule::rate"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem/EmissionModule::rate="); } }
         }
         public partial struct EmitParams
         {
@@ -75,6 +77,7 @@ namespace UnityEngine
         public partial struct TextureSheetAnimationModule
         {
             public global::UnityEngine.ParticleSystemAnimationMode mode { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem/TextureSheetAnimationModule::mode"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem/TextureSheetAnimationModule::mode="); } }
+            public float fps { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem/TextureSheetAnimationModule::fps"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem/TextureSheetAnimationModule::fps="); } }
             public global::UnityEngine.ParticleSystemAnimationType animation { get { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem/TextureSheetAnimationModule::animation"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.ParticleSystem/TextureSheetAnimationModule::animation="); } }
         }
         public partial struct TriggerModule

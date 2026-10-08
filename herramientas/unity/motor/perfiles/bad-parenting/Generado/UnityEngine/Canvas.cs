@@ -5,6 +5,5 @@ namespace UnityEngine
     public sealed partial class Canvas
     {
         public global::UnityEngine.Rect pixelRect { get { global::Porteo.Falta.Llamada("UnityEngine.Canvas::pixelRect"); return default; } }
-        public static event global::UnityEngine.Canvas.WillRenderCanvases preWillRenderCanvases { add { global::Porteo.Falta.Llamada("UnityEngine.Canvas::preWillRenderCanvases+"); } remove { } }
     }
 }

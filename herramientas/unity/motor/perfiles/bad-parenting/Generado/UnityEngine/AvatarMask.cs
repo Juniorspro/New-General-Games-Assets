@@ -2,7 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class AvatarMask : global::UnityEngine.Object
+    public sealed partial class AvatarMask
     {
         public int transformCount { get { global::Porteo.Falta.Llamada("UnityEngine.AvatarMask::transformCount"); return default; } }
         public bool GetHumanoidBodyPartActive(global::UnityEngine.AvatarMaskBodyPart index) { global::Porteo.Falta.Llamada("UnityEngine.AvatarMask::GetHumanoidBodyPartActive"); return default; }

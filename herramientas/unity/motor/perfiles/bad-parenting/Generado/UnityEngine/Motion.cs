@@ -2,9 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public partial class Motion : global::UnityEngine.Object
+    public partial class Motion
     {
-        public bool isLooping { get { global::Porteo.Falta.Llamada("UnityEngine.Motion::isLooping"); return default; } }
-        public bool legacy { get { global::Porteo.Falta.Llamada("UnityEngine.Motion::legacy"); return default; } }
     }
 }

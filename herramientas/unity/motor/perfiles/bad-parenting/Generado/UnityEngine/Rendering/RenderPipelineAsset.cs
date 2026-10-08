@@ -5,5 +5,6 @@ namespace UnityEngine.Rendering
     public abstract partial class RenderPipelineAsset : global::UnityEngine.ScriptableObject
     {
         protected abstract global::UnityEngine.Rendering.RenderPipeline CreatePipeline();
+        protected virtual void OnDisable() { global::Porteo.Falta.Llamada("UnityEngine.Rendering.RenderPipelineAsset::OnDisable"); }
     }
 }

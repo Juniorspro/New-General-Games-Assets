@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
 namespace Porteo.Render
@@ -21,7 +22,7 @@ namespace Porteo.Render
             ID_V = Ids.De("hlslcc_mtx4x4unity_MatrixV"), ID_VP = Ids.De("hlslcc_mtx4x4unity_MatrixVP"), ID_P = Ids.De("hlslcc_mtx4x4glstate_matrix_projection"),
             ID_INVV = Ids.De("hlslcc_mtx4x4unity_MatrixInvV"), ID_CAMPROJ = Ids.De("hlslcc_mtx4x4unity_CameraProjection"), ID_CAMINVPROJ = Ids.De("hlslcc_mtx4x4unity_CameraInvProjection"),
             ID_CAMPOS = Ids.De("_WorldSpaceCameraPos"), ID_PROJPARAMS = Ids.De("_ProjectionParams"), ID_SCREEN = Ids.De("_ScreenParams"), ID_ZBUF = Ids.De("_ZBufferParams"),
-            ID_ORTHO = Ids.De("unity_OrthoParams"),
+            ID_ORTHO = Ids.De("unity_OrthoParams"), ID_C2W = Ids.De("hlslcc_mtx4x4unity_CameraToWorld"), ID_W2C = Ids.De("hlslcc_mtx4x4unity_WorldToCamera"),
             ID_O2W = Ids.De("hlslcc_mtx4x4unity_ObjectToWorld"), ID_W2O = Ids.De("hlslcc_mtx4x4unity_WorldToObject"), ID_LODFADE = Ids.De("unity_LODFade"),
             ID_WTP = Ids.De("unity_WorldTransformParams"), ID_4X = Ids.De("unity_4LightPosX0"), ID_4Y = Ids.De("unity_4LightPosY0"), ID_4Z = Ids.De("unity_4LightPosZ0"),
             ID_4AT = Ids.De("unity_4LightAtten0"), ID_LCOLOR = Ids.De("unity_LightColor"), ID_LPOS = Ids.De("_WorldSpaceLightPos0"), ID_LCOLOR0 = Ids.De("_LightColor0"),
@@ -112,13 +113,13 @@ namespace Porteo.Render
                 Camara(cam);
                 alguna |= cam.destino == null;
             }
-            Gl.BindFramebuffer(Gl.FRAMEBUFFER, 0);
-            Gl.Viewport(0, 0, Gpu.Ancho, Gpu.Alto);
+            Destinos.Atar(null);
+            Convencion.Viewport(0, 0, Gpu.Ancho, Gpu.Alto);
             if (PerfilGpu) Medir("(cámaras: borrar, cielo, copias)");
             if (!alguna)
             {
                 Gl.ClearColor(0, 0, 0, 1);
-                Gl.ClearDepthf(1);
+                Gl.ClearDepthf(Convencion.Lejos);
                 Gl.ClearStencil(0);
                 Gpu.Limpiar(Gl.COLOR_BUFFER_BIT | Gl.DEPTH_BUFFER_BIT | Gl.STENCIL_BUFFER_BIT);
             }
@@ -176,26 +177,27 @@ namespace Porteo.Render
             else Destinos.Atar(destino);
             var r = cam.pixelRect;
             int vx = (int)r.x, vy = (int)r.y, vw = Math.Max(1, (int)r.width), vh = Math.Max(1, (int)r.height);
-            Gl.Viewport(vx, vy, vw, vh);
+            Convencion.Viewport(vx, vy, vw, vh);
             Borrar(cam, vx, vy, vw, vh);
 
-            // matrices y parámetros de la cámara
+            // matrices y parámetros de la cámara (la proyección de GPU depende de adónde se dibuja)
             var V = cam.worldToCameraMatrix;
             var P = cam.projectionMatrix;
             var VP = P * V;
             posCamara = cam.transform.position;
             var g = Globales.Tabla;
             g.Poner(ID_V, Valor.Matriz(V));
-            g.Poner(ID_VP, Valor.Matriz(VP));
-            g.Poner(ID_P, Valor.Matriz(P));
             g.Poner(ID_INVV, Valor.Matriz(V.inverse));
             g.Poner(ID_CAMPROJ, Valor.Matriz(P));
             g.Poner(ID_CAMINVPROJ, Valor.Matriz(P.inverse));
             g.Poner(ID_CAMPOS, Valor.Vec(new Vector4(posCamara.x, posCamara.y, posCamara.z, 1)));
+            var c2w = Matrix4x4.TRS(posCamara, cam.transform.rotation, Vector3.one);
+            g.Poner(ID_C2W, Valor.Matriz(c2w));
+            g.Poner(ID_W2C, Valor.Matriz(c2w.inverse));
             float n = cam.cerca, f = cam.lejos;
-            g.Poner(ID_PROJPARAMS, Valor.Vec(new Vector4(1, n, f, 1f / f)));
+            ProyeccionGpu(P, V, n, f, (object)Destinos.Actual != null);
             g.Poner(ID_SCREEN, Valor.Vec(new Vector4(vw, vh, 1f + 1f / vw, 1f + 1f / vh)));
-            g.Poner(ID_ZBUF, Valor.Vec(new Vector4(1 - f / n, f / n, (1 - f / n) / f, (f / n) / f)));
+            g.Poner(ID_ZBUF, Valor.Vec(Convencion.ParametrosZ(n, f)));
             g.Poner(ID_ORTHO, Valor.Vec(new Vector4(cam.tamOrto * cam.aspect, cam.tamOrto, 0, cam.orto ? 1 : 0)));
             var refl = RenderSettings.reflejoPropio ?? RenderSettings.reflejoGenerado;
             if (refl is Cubemap) g.Poner(ID_SPECCUBE, Valor.Tex(refl)); else g.Quitar(ID_SPECCUBE);
@@ -223,23 +225,39 @@ namespace Porteo.Render
                     if (cam.borrar == CameraClearFlags.Depth || cam.borrar == CameraClearFlags.Nothing)
                         Profundidad.CopiarColor(destino, intermediaProf, vx, vy, vw, vh);
                     Destinos.Atar(intermediaProf);
-                    Gl.Viewport(vx, vy, vw, vh);
+                    Convencion.Viewport(vx, vy, vw, vh);
                     Borrar(cam, vx, vy, vw, vh);
                     paraProfundidad = intermediaProf;
+                    // ahora se dibuja en una textura: en D3D la proyección va invertida
+                    if (Convencion.D3D) ProyeccionGpu(P, V, n, f, true);
                 }
             }
-            // opacos, cielo y transparentes
+            // opacos, cielo y transparentes (con los CommandBuffer de la cámara en sus eventos; su
+            // CameraTarget es adonde se está dibujando)
+            var objetivo = intermedia ?? paraProfundidad ?? destino;
             int i = 0;
+            Comandos.Evento(cam, CameraEvent.BeforeForwardOpaque, objetivo);
             while (i < nItems && items[i].Cola <= 2500) i = Apagado.Contains("sinopacos") ? i + 1 : DibujarDesde(i, 2500);
+            Comandos.Evento(cam, CameraEvent.AfterForwardOpaque, objetivo);
             if (cam.borrar == CameraClearFlags.Skybox && !Apagado.Contains("sincielo")) Cielo.Dibujar(cam);
             if (paraProfundidad != null) Profundidad.Copiar(paraProfundidad);
+            Comandos.Evento(cam, CameraEvent.BeforeImageEffectsOpaque, objetivo);
+            Destinos.Atar(objetivo);
+            Convencion.Viewport(vx, vy, vw, vh);
             if (Proyectores.activos.Count > 0 && !Apagado.Contains("sinproyectores")) DibujarProyectores(i);
+            Comandos.Evento(cam, CameraEvent.BeforeForwardAlpha, objetivo);
             while (i < nItems) i = Apagado.Contains("sintransparentes") ? i + 1 : DibujarDesde(i, int.MaxValue);
             Mensajes.Accion(() => EnCamara?.Invoke(cam), null);
+            Comandos.Evento(cam, CameraEvent.AfterForwardAlpha, objetivo);
 
             Camera.onPostRender?.Invoke(cam);
             Mensajes.Enviar(cam.go, "OnPostRender", null, false, SendMessageOptions.DontRequireReceiver);
 
+            if (Comandos.Tiene(cam, CameraEvent.BeforeImageEffects))
+            {
+                Comandos.Evento(cam, CameraEvent.BeforeImageEffects, objetivo);
+                Destinos.Atar(objetivo);
+            }
             if (intermedia != null)
             {
                 Encadenar(efectos, intermedia, destino);
@@ -252,11 +270,29 @@ namespace Porteo.Render
                 RenderTexture.ReleaseTemporary(intermediaProf);
             }
             intermediaProf = null;
+            if (cam.comandos != null)
+            {
+                Comandos.Evento(cam, CameraEvent.AfterImageEffects, destino);
+                Comandos.Evento(cam, CameraEvent.AfterEverything, destino);
+                // los temporales que los CommandBuffer no soltaron se van con la cámara
+                Comandos.SoltarTemporales();
+                Destinos.Atar(destino);
+            }
             Camaras.actual = null;
             camara = null;
         }
 
         static RenderTexture intermediaProf;
+
+        // la proyección que ven los shaders y _ProjectionParams (con su signo en D3D)
+        static void ProyeccionGpu(in Matrix4x4 P, in Matrix4x4 V, float n, float f, bool aTextura)
+        {
+            var g = Globales.Tabla;
+            var pg = Convencion.Gpu(P, aTextura);
+            g.Poner(ID_P, Valor.Matriz(pg));
+            g.Poner(ID_VP, Valor.Matriz(pg * V));
+            g.Poner(ID_PROJPARAMS, Valor.Vec(new Vector4(Convencion.SignoProyeccion(aTextura), n, f, 1f / f)));
+        }
 
         static bool NecesitaProfundidad(Camera cam)
         {
@@ -285,8 +321,8 @@ namespace Porteo.Render
             }
             if (bits == 0) return;
             Gl.Enable(Gl.SCISSOR_TEST);
-            Gl.Scissor(x, y, w, h);
-            Gl.ClearDepthf(1);
+            Convencion.Scissor(x, y, w, h);
+            Gl.ClearDepthf(Convencion.Lejos);
             Gl.ClearStencil(0);
             Gpu.Limpiar(bits);
             Gl.Disable(Gl.SCISSOR_TEST);
@@ -882,11 +918,14 @@ namespace Porteo.Render
         }
 
         // dibuja una malla con un material y una pasada (Graphics.DrawMeshNow, Blit, GL)
-        public static void Inmediato(Mesh m, int sub, in Matrix4x4 o2w, Material mat, PasadaShader pa)
+        public static void Inmediato(Mesh m, int sub, in Matrix4x4 o2w, Material mat, PasadaShader pa) => InmediatoCon(m, sub, o2w, mat, pa, null);
+
+        // con propiedades propias del dibujo (un MaterialPropertyBlock de un CommandBuffer)
+        public static void InmediatoCon(Mesh m, int sub, in Matrix4x4 o2w, Material mat, PasadaShader pa, Tabla propias)
         {
             if ((object)m == null || m.submallas.Length == 0) return;
             var sm = m.submallas[Math.Clamp(sub, 0, m.submallas.Length - 1)];
-            Rango(m, sm.Primero, sm.Cantidad, o2w, mat, pa, null, Niebla());
+            Rango(m, sm.Primero, sm.Cantidad, o2w, mat, pa, propias, Niebla());
         }
 
         // Un tramo de índices de una malla con un material y una pasada, con propiedades propias

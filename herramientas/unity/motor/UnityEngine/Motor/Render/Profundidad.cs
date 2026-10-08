@@ -60,14 +60,19 @@ namespace Porteo.Render
             g.Poner(ID_TEXEL, Valor.Vec(new Vector4(1f / w, 1f / h, w, h)));
         }
 
-        // copia el color de un destino a otro (null = el lienzo), en el rectángulo de la cámara
+        // copia el color de un destino a otro (null = el lienzo), en el rectángulo de la cámara. Con
+        // la convención de D3D el lienzo tiene la fila 0 arriba y las texturas abajo: entre uno y
+        // otro la copia va dada vuelta
         internal static void CopiarColor(RenderTexture desde, RenderTexture hacia, int x, int y, int w, int h)
         {
-            Gl.BindFramebuffer(Gl.READ_FRAMEBUFFER, (object)desde == null ? 0 : desde.Fbo());
-            Gl.BindFramebuffer(Gl.DRAW_FRAMEBUFFER, (object)hacia == null ? 0 : hacia.Fbo());
-            Gl.BlitFramebuffer(x, y, x + w, y + h, x, y, x + w, y + h, Gl.COLOR_BUFFER_BIT, Gl.NEAREST);
-            Gl.BindFramebuffer(Gl.FRAMEBUFFER, 0);
-            Destinos.Actual = null;
+            bool dl = (object)desde == null, hl = (object)hacia == null;
+            int sy = Convencion.FilaMemoria(dl, dl ? Gpu.Alto : desde.height, y, h);
+            int dy = Convencion.FilaMemoria(hl, hl ? Gpu.Alto : hacia.height, y, h);
+            Gl.BindFramebuffer(Gl.READ_FRAMEBUFFER, dl ? 0 : desde.Fbo());
+            Gl.BindFramebuffer(Gl.DRAW_FRAMEBUFFER, hl ? 0 : hacia.Fbo());
+            if (Convencion.D3D && dl != hl) Gl.BlitFramebuffer(x, sy, x + w, sy + h, x, dy + h, x + w, dy, Gl.COLOR_BUFFER_BIT, Gl.NEAREST);
+            else Gl.BlitFramebuffer(x, sy, x + w, sy + h, x, dy, x + w, dy + h, Gl.COLOR_BUFFER_BIT, Gl.NEAREST);
+            Destinos.Atar(null);
         }
     }
 }

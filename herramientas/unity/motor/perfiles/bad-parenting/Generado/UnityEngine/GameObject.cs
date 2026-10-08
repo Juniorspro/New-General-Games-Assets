@@ -10,7 +10,6 @@ namespace UnityEngine
         public global::UnityEngine.Component[] GetComponentsInChildren(global::System.Type type) { global::Porteo.Falta.Llamada("UnityEngine.GameObject::GetComponentsInChildren"); return default; }
         public global::UnityEngine.Component[] GetComponentsInParent(global::System.Type type) { global::Porteo.Falta.Llamada("UnityEngine.GameObject::GetComponentsInParent"); return default; }
         public global::UnityEngine.Component[] GetComponentsInParent(global::System.Type type, bool includeInactive) { global::Porteo.Falta.Llamada("UnityEngine.GameObject::GetComponentsInParent"); return default; }
-        public bool TryGetComponent<T>(out T component) { component = default;  global::Porteo.Falta.Llamada("UnityEngine.GameObject::TryGetComponent"); return default;  }
         public void SendMessageUpwards(string methodName, object value, global::UnityEngine.SendMessageOptions options) { global::Porteo.Falta.Llamada("UnityEngine.GameObject::SendMessageUpwards"); }
         public void SendMessageUpwards(string methodName, object value) { global::Porteo.Falta.Llamada("UnityEngine.GameObject::SendMessageUpwards"); }
         public void SendMessageUpwards(string methodName) { global::Porteo.Falta.Llamada("UnityEngine.GameObject::SendMessageUpwards"); }

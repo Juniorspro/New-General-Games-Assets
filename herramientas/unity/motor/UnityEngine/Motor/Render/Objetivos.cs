@@ -22,11 +22,13 @@ namespace Porteo.Render
                 Gl.BindFramebuffer(Gl.FRAMEBUFFER, 0);
                 Ancho = Gpu.Ancho; Alto = Gpu.Alto;
                 Actual = null;
+                Convencion.AlAtar();
                 return;
             }
             Gl.BindFramebuffer(Gl.FRAMEBUFFER, rt.Fbo());
             Ancho = rt.width; Alto = rt.height;
             Actual = rt;
+            Convencion.AlAtar();
         }
     }
 
@@ -48,6 +50,7 @@ namespace Porteo.Render
             var P = cam.projectionMatrix;
             P.m20 = P.m30 * 0.999999f; P.m21 = P.m31 * 0.999999f; P.m22 = P.m32 * 0.999999f; P.m23 = P.m33 * 0.999999f;
             var V = cam.worldToCameraMatrix;
+            P = Convencion.GpuActual(P);
             g.Poner(ID_VP, Valor.Matriz(P * V));
             g.Poner(ID_P, Valor.Matriz(P));
             var o2w = Matrix4x4.TRS(cam.transform.position, Quaternion.identity, Vector3.one * Math.Max(1f, cam.lejos * 0.5f));
@@ -133,6 +136,44 @@ namespace UnityEngine
         bool creada;
 
         public RenderTexture(int width, int height, int depth) : this(width, height, depth, RenderTextureFormat.Default) { }
+        public RenderTexture(int width, int height, int depth, RenderTextureFormat format, RenderTextureReadWrite readWrite) : this(width, height, depth, format) { }
+        public RenderTexture(RenderTextureDescriptor desc) : this(desc.width, desc.height, desc.depthBufferBits, desc.colorFormat)
+        {
+            aaRt = Math.Max(1, desc.msaaSamples);
+            useMipMap = desc.useMipMap; autoGenerateMips = desc.autoGenerateMips; enableRandomWrite = desc.enableRandomWrite;
+        }
+        public RenderTexture(RenderTexture textureToCopy) : this(textureToCopy.descriptor) { }
+
+        public RenderTextureDescriptor descriptor
+        {
+            get => new RenderTextureDescriptor(ancho, alto, formatoRt, profundidad)
+            {
+                msaaSamples = aaRt, useMipMap = useMipMap, autoGenerateMips = autoGenerateMips, enableRandomWrite = enableRandomWrite,
+            };
+            set
+            {
+                Release();
+                ancho = Math.Max(1, value.width); alto = Math.Max(1, value.height); profundidad = value.depthBufferBits;
+                formatoRt = value.colorFormat == RenderTextureFormat.Default ? RenderTextureFormat.ARGB32 : value.colorFormat;
+                aaRt = Math.Max(1, value.msaaSamples);
+            }
+        }
+
+        public int volumeDepth { get => 1; set { } }
+        public bool useDynamicScale { get; set; }
+        public static bool enabled { get; set; } = true;
+        public RenderBuffer colorBuffer => new RenderBuffer { rt = this };
+        public RenderBuffer depthBuffer => new RenderBuffer { rt = this, profundidad = true };
+        public override UnityEngine.Rendering.TextureDimension dimension { get => UnityEngine.Rendering.TextureDimension.Tex2D; set { } }
+
+        public static RenderTexture GetTemporary(RenderTextureDescriptor desc) =>
+            GetTemporary(desc.width, desc.height, desc.depthBufferBits, desc.colorFormat, RenderTextureReadWrite.Default, Math.Max(1, desc.msaaSamples));
+        public static RenderTexture GetTemporary(int width, int height, int depthBuffer, RenderTextureFormat format, RenderTextureReadWrite readWrite, int antiAliasing, RenderTextureMemoryless memorylessMode) =>
+            GetTemporary(width, height, depthBuffer, format, readWrite, antiAliasing);
+        public static RenderTexture GetTemporary(int width, int height, int depthBuffer, RenderTextureFormat format, RenderTextureReadWrite readWrite, int antiAliasing, RenderTextureMemoryless memorylessMode, VRTextureUsage vrUsage) =>
+            GetTemporary(width, height, depthBuffer, format, readWrite, antiAliasing);
+        public static RenderTexture GetTemporary(int width, int height, int depthBuffer, RenderTextureFormat format, RenderTextureReadWrite readWrite, int antiAliasing, RenderTextureMemoryless memorylessMode, VRTextureUsage vrUsage, bool useDynamicScale) =>
+            GetTemporary(width, height, depthBuffer, format, readWrite, antiAliasing);
 
         public RenderTexture(int width, int height, int depth, RenderTextureFormat format)
         {
@@ -167,7 +208,7 @@ namespace UnityEngine
         public static RenderTexture active
         {
             get => activa;
-            set { activa = value; Destinos.Atar(value); if (Gpu.Activo) Gl.Viewport(0, 0, Destinos.Ancho, Destinos.Alto); }
+            set { activa = value; Destinos.Atar(value); if (Gpu.Activo) Convencion.Viewport(0, 0, Destinos.Ancho, Destinos.Alto); }
         }
 
         public bool IsCreated() => creada;
@@ -270,7 +311,7 @@ namespace UnityEngine
     {
         static Mesh cuadrado;
         static readonly int ID_MAINTEX = Ids.De("_MainTex"), ID_VP = Ids.De("hlslcc_mtx4x4unity_MatrixVP"), ID_P = Ids.De("hlslcc_mtx4x4glstate_matrix_projection"),
-            ID_V = Ids.De("hlslcc_mtx4x4unity_MatrixV");
+            ID_V = Ids.De("hlslcc_mtx4x4unity_MatrixV"), ID_PROJPARAMS = Ids.De("_ProjectionParams");
         static Material copia;
 
         static Mesh Cuadrado()
@@ -300,16 +341,18 @@ namespace UnityEngine
             if (ss == null) return;
             if ((object)source != null) mat.SetTexture(ID_MAINTEX, source);
             Destinos.Atar(dest);
-            Gl.Viewport(0, 0, Destinos.Ancho, Destinos.Alto);
+            Convencion.Viewport(0, 0, Destinos.Ancho, Destinos.Alto);
             var g = Globales.Tabla;
-            var vp = g[ID_VP]; var p = g[ID_P]; var v = g[ID_V];
-            var orto = Matrix4x4.Ortho(0, 1, 0, 1, -1, 100);
+            var vp = g[ID_VP]; var p = g[ID_P]; var v = g[ID_V]; var pp = g[ID_PROJPARAMS];
+            var orto = Convencion.GpuActual(Matrix4x4.Ortho(0, 1, 0, 1, -1, 100));
             g.Poner(ID_VP, Valor.Matriz(orto));
             g.Poner(ID_P, Valor.Matriz(orto));
             g.Poner(ID_V, Valor.Matriz(Matrix4x4.identity));
+            if (Convencion.D3D) g.Poner(ID_PROJPARAMS, Valor.Vec(new Vector4(Convencion.SignoProyeccion((object)dest != null), 0.01f, 100f, 0.01f)));
             if (pass >= 0) { if (pass < ss.Pasadas.Length) Dibujo.Inmediato(Cuadrado(), 0, Matrix4x4.identity, mat, ss.Pasadas[pass]); }
             else foreach (var pa in ss.Pasadas) Dibujo.Inmediato(Cuadrado(), 0, Matrix4x4.identity, mat, pa);
             g.Poner(ID_VP, vp); g.Poner(ID_P, p); g.Poner(ID_V, v);
+            if (Convencion.D3D) g.Poner(ID_PROJPARAMS, pp);
         }
 
         public static void BlitMultiTap(Texture source, RenderTexture dest, Material mat, params Vector2[] offsets)
@@ -318,7 +361,39 @@ namespace UnityEngine
             Blit(source, dest, mat, 0);
         }
 
+        // sin destino: al que esté activo
+        public static void Blit(Texture source, Material mat) => Blit(source, Destinos.Actual, mat, -1);
+        public static void Blit(Texture source, Material mat, int pass) => Blit(source, Destinos.Actual, mat, pass);
+        public static void Blit(Texture source, Material mat, int pass, int destDepthSlice) => Blit(source, Destinos.Actual, mat, pass);
+        public static void Blit(Texture source, RenderTexture dest, Material mat, int pass, int destDepthSlice) => Blit(source, dest, mat, pass);
+        public static void Blit(Texture source, RenderTexture dest, int sourceDepthSlice, int destDepthSlice) => Blit(source, dest);
+
+        // con escala y desplazamiento de las coordenadas de la fuente (_MainTex_ST del dibujo)
+        public static void Blit(Texture source, RenderTexture dest, Vector2 scale, Vector2 offset)
+        {
+            copia ??= Shader.Find("Hidden/BlitCopy") is Shader s ? new Material(s) { m_Name = "porteo_blitcopy" } : null;
+            if (copia == null) return;
+            copia.SetTextureScale("_MainTex", scale);
+            copia.SetTextureOffset("_MainTex", offset);
+            Blit(source, dest, copia, 0);
+            copia.SetTextureScale("_MainTex", Vector2.one);
+            copia.SetTextureOffset("_MainTex", Vector2.zero);
+        }
+        public static void Blit(Texture source, RenderTexture dest, Vector2 scale, Vector2 offset, int sourceDepthSlice, int destDepthSlice) => Blit(source, dest, scale, offset);
+        public static void BlitMultiTap(Texture source, RenderTexture dest, Material mat, int destDepthSlice, params Vector2[] offsets) => BlitMultiTap(source, dest, mat, offsets);
+
         public static void SetRenderTarget(RenderTexture rt) { RenderTexture.active = rt; }
+        public static void SetRenderTarget(RenderTexture rt, int mipLevel) => SetRenderTarget(rt);
+        public static void SetRenderTarget(RenderTexture rt, int mipLevel, CubemapFace face) => SetRenderTarget(rt);
+        public static void SetRenderTarget(RenderTexture rt, int mipLevel, CubemapFace face, int depthSlice) => SetRenderTarget(rt);
+        public static void SetRenderTarget(RenderBuffer colorBuffer, RenderBuffer depthBuffer) => SetRenderTarget(colorBuffer.rt);
+        public static void SetRenderTarget(RenderBuffer colorBuffer, RenderBuffer depthBuffer, int mipLevel) => SetRenderTarget(colorBuffer.rt);
+        public static void SetRenderTarget(RenderBuffer colorBuffer, RenderBuffer depthBuffer, int mipLevel, CubemapFace face) => SetRenderTarget(colorBuffer.rt);
+        public static void SetRenderTarget(RenderBuffer colorBuffer, RenderBuffer depthBuffer, int mipLevel, CubemapFace face, int depthSlice) => SetRenderTarget(colorBuffer.rt);
+        public static void SetRenderTarget(RenderBuffer[] colorBuffers, RenderBuffer depthBuffer) => SetRenderTarget(colorBuffers != null && colorBuffers.Length > 0 ? colorBuffers[0].rt : null);
+        public static void DrawMeshNow(Mesh mesh, Vector3 position, Quaternion rotation, int materialIndex) => DrawMeshNow(mesh, Matrix4x4.TRS(position, rotation, Vector3.one), materialIndex);
+        public static void SetRandomWriteTarget(int index, RenderTexture uav) { }
+        public static void SetRandomWriteTarget(int index, ComputeBuffer uav, bool preserveCounterValue) { }
 
         public static void DrawMeshNow(Mesh mesh, Matrix4x4 matrix) => DrawMeshNow(mesh, matrix, 0);
 

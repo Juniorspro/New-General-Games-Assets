@@ -121,6 +121,8 @@ const deARatos = U ? !!U.web : true;
 const conPantalla = !!globalThis.porteoCarga;
 exp.Diferir(deARatos, deARatos && conPantalla);
 if (deARatos && conPantalla) porteoCarga.alListo(() => exp.Diferir(true, false));
+// shaders de PC (D3D11): la imagen queda con la fila 0 arriba, el navegador la muestra espejada
+if (indice.convencion === 'd3d11') { exp.Convencion('d3d11'); lienzo.style.transform = 'scaleY(-1)'; }
 exp.Iniciar(indice.escenas, 0, 96 * (window.devicePixelRatio || 1), movil);
 // al irse de la página (o pasarla a segundo plano) se manda lo último que se guardó
 addEventListener('pagehide', () => exp.GuardarPartida());

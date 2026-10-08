@@ -28,6 +28,7 @@
 [assembly: System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::UnityEngine.Avatar))]
 [assembly: System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::UnityEngine.AvatarMask))]
 [assembly: System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::UnityEngine.AvatarMaskBodyPart))]
+[assembly: System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::UnityEngine.AvatarTarget))]
 [assembly: System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::UnityEngine.HumanBone))]
 [assembly: System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::UnityEngine.HumanDescription))]
 [assembly: System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::UnityEngine.HumanLimit))]
@@ -36,3 +37,4 @@
 [assembly: System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::UnityEngine.QueueMode))]
 [assembly: System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::UnityEngine.RuntimeAnimatorController))]
 [assembly: System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::UnityEngine.SkeletonBone))]
+[assembly: System.Runtime.CompilerServices.TypeForwardedTo(typeof(global::UnityEngine.StateMachineBehaviour))]

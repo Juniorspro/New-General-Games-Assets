@@ -8,5 +8,6 @@ namespace UnityEngine
         public global::UnityEngine.Vector4 realtimeLightmapScaleOffset { get { global::Porteo.Falta.Llamada("UnityEngine.Terrain::realtimeLightmapScaleOffset"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Terrain::realtimeLightmapScaleOffset="); } }
         public global::UnityEngine.Rendering.ShadowCastingMode shadowCastingMode { get { global::Porteo.Falta.Llamada("UnityEngine.Terrain::shadowCastingMode"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Terrain::shadowCastingMode="); } }
         public global::UnityEngine.Rendering.ReflectionProbeUsage reflectionProbeUsage { get { global::Porteo.Falta.Llamada("UnityEngine.Terrain::reflectionProbeUsage"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Terrain::reflectionProbeUsage="); } }
+        public global::UnityEngine.Vector3 GetPosition() { global::Porteo.Falta.Llamada("UnityEngine.Terrain::GetPosition"); return default; }
     }
 }

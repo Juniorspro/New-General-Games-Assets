@@ -19,13 +19,23 @@ namespace Porteo.UI
     }
 
     // Lo que hace falta de un TrueType para medir texto: unidades por em, avances, la caja de
-    // cada glifo y la tabla de caracteres.
+    // cada glifo y la tabla de caracteres. También las líneas de la fuente y dónde está el
+    // contorno de cada glifo, para el FontEngine de TextMeshPro (que dibuja los glifos acá).
     internal sealed class TTF
     {
         public int UnidadesEm = 1000;
         ushort[] avances = Array.Empty<ushort>();
         short[] cajas = Array.Empty<short>();     // xMin, yMin, xMax, yMax por glifo
         readonly Dictionary<int, int> mapa = new Dictionary<int, int>();
+
+        internal byte[] B;
+        internal int[] Loca;                       // dónde empieza cada glifo en el archivo (glyf)
+        internal int Glifos;
+        internal short Ascenso, Descenso, Separacion;          // hhea
+        internal int AltoMayusculas, AltoX;                    // OS/2 (0 si no están)
+        internal short SubrayadoPos, SubrayadoGrosor;          // post
+        internal string Familia = "", Estilo = "";
+        internal Dictionary<uint, short> Kern;                 // kern formato 0: (izq << 16 | der) → valor
 
         static int U16(byte[] b, int p) => (b[p] << 8) | b[p + 1];
         static short S16(byte[] b, int p) => (short)((b[p] << 8) | b[p + 1]);
@@ -54,21 +64,80 @@ namespace Porteo.UI
                 for (int g = 0; g < nGlifos; g++) t.avances[g] = (ushort)U16(b, hmtx.off + Math.Min(g, nMetricas - 1) * 4);
                 // las cajas de los glifos (sólo en fuentes TrueType; las CFF se quedan sin caja)
                 t.cajas = new short[nGlifos * 4];
+                t.B = b;
+                t.Glifos = nGlifos;
                 if (tablas.TryGetValue("loca", out var loca) && tablas.TryGetValue("glyf", out var glyf))
+                {
+                    t.Loca = new int[nGlifos + 1];
+                    for (int g = 0; g <= nGlifos; g++)
+                        t.Loca[g] = glyf.off + (formatoLoca == 0 ? U16(b, loca.off + g * 2) * 2 : U32(b, loca.off + g * 4));
                     for (int g = 0; g < nGlifos; g++)
                     {
-                        int a, z;
-                        if (formatoLoca == 0) { a = U16(b, loca.off + g * 2) * 2; z = U16(b, loca.off + g * 2 + 2) * 2; }
-                        else { a = U32(b, loca.off + g * 4); z = U32(b, loca.off + g * 4 + 4); }
-                        if (z <= a) continue;
-                        int p = glyf.off + a;
+                        if (t.Loca[g + 1] <= t.Loca[g]) continue;
+                        int p = t.Loca[g];
                         t.cajas[g * 4] = S16(b, p + 2); t.cajas[g * 4 + 1] = S16(b, p + 4);
                         t.cajas[g * 4 + 2] = S16(b, p + 6); t.cajas[g * 4 + 3] = S16(b, p + 8);
                     }
+                }
+                t.Ascenso = S16(b, hhea.off + 4); t.Descenso = S16(b, hhea.off + 6); t.Separacion = S16(b, hhea.off + 8);
+                if (tablas.TryGetValue("OS/2", out var os2) && os2.len >= 90 && U16(b, os2.off) >= 2)
+                {
+                    t.AltoX = S16(b, os2.off + 86);
+                    t.AltoMayusculas = S16(b, os2.off + 88);
+                }
+                if (tablas.TryGetValue("post", out var post) && post.len >= 12)
+                {
+                    t.SubrayadoPos = S16(b, post.off + 8);
+                    t.SubrayadoGrosor = S16(b, post.off + 10);
+                }
+                if (tablas.TryGetValue("name", out var nombre)) t.LeerNombres(b, nombre.off);
+                if (tablas.TryGetValue("kern", out var kern)) t.LeerKern(b, kern.off, kern.len);
                 t.LeerCmap(b, cmap.off);
                 return t;
             }
             catch (Exception) { return null; }
+        }
+
+        // familia (1, o 16 si está) y estilo (2, o 17) en inglés: Windows Unicode o Mac Roman
+        void LeerNombres(byte[] b, int off)
+        {
+            int n = U16(b, off + 2), cadenas = off + U16(b, off + 4);
+            string fam = null, est = null, famT = null, estT = null;
+            for (int i = 0; i < n; i++)
+            {
+                int p = off + 6 + i * 12;
+                int plat = U16(b, p), enc = U16(b, p + 2), idioma = U16(b, p + 4), id = U16(b, p + 6), len = U16(b, p + 8), o = cadenas + U16(b, p + 10);
+                if (id != 1 && id != 2 && id != 16 && id != 17) continue;
+                string s;
+                if (plat == 3 && (enc == 1 || enc == 10) && (idioma & 0xFF) == 0x09) s = System.Text.Encoding.BigEndianUnicode.GetString(b, o, len);
+                else if (plat == 1 && enc == 0 && idioma == 0) s = System.Text.Encoding.Latin1.GetString(b, o, len);
+                else continue;
+                switch (id) { case 1: fam ??= s; break; case 2: est ??= s; break; case 16: famT ??= s; break; case 17: estT ??= s; break; }
+            }
+            Familia = famT ?? fam ?? "";
+            Estilo = estT ?? est ?? "";
+        }
+
+        // la tabla kern clásica (formato 0, horizontal); la de GPOS no se lee
+        void LeerKern(byte[] b, int off, int len)
+        {
+            if (U16(b, off) != 0) return;   // la de Apple (versión 1.0 en 32 bits) es otra cosa
+            int nt = U16(b, off + 2), p = off + 4;
+            for (int i = 0; i < nt && p + 6 <= off + len; i++)
+            {
+                int largo = U16(b, p + 2), cobertura = U16(b, p + 4);
+                if ((cobertura >> 8) == 0 && (cobertura & 1) != 0 && (cobertura & 4) == 0)
+                {
+                    int pares = U16(b, p + 6);
+                    Kern ??= new Dictionary<uint, short>();
+                    for (int k = 0; k < pares; k++)
+                    {
+                        int q = p + 14 + k * 6;
+                        Kern[(uint)(U16(b, q) << 16 | U16(b, q + 2))] = S16(b, q + 4);
+                    }
+                }
+                p += largo;
+            }
         }
 
         // la subtabla Unicode más completa: formato 12 (todo Unicode) o 4 (el plano básico)

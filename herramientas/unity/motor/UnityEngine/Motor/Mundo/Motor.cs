@@ -16,10 +16,15 @@ namespace Porteo
                 if (o is Datos.AjusteEscena a && a.Clase == 104 && a.crudo != null && a.archivo != null) UnityEngine.RenderSettings.Leer(a.crudo, a.archivo);
             };
             Fisica.Simulacion.Iniciar();
+            // los directores (Timeline) se evalúan después de Update y antes de los animadores; su
+            // pose va después de la de los controladores
+            Playables.Directores.IniciarAntesDeAnimar();
             Animacion.Animadores.Iniciar();
+            Playables.Directores.IniciarDespuesDeAnimar();
             // después de la animación: los emisores pegados a huesos ya están en su lugar
             Particulas.Particulas.Iniciar();
             Audio.Sonido.Iniciar();
+            Video.Videos.Iniciar();
             UI.Fuentes.Iniciar();
             Entrada.Iniciar();
             UI.Lienzos.Iniciar();

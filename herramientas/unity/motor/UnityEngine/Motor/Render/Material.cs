@@ -168,6 +168,29 @@ namespace UnityEngine
 
         public bool GetShaderPassEnabled(string passName) => pasadasApagadas == null || !pasadasApagadas.Contains(passName);
 
+        // un resumen del contenido (shader, propiedades y palabras clave): TextMeshPro lo usa para
+        // saber si cambió el material del que copió uno de respaldo
+        public int ComputeCRC()
+        {
+            unchecked
+            {
+                int h = sh != null ? sh.GetInstanceID() : 0;
+                var ps = new List<KeyValuePair<int, Porteo.Render.Valor>>(props.Todos);
+                ps.Sort((a, b) => a.Key.CompareTo(b.Key));
+                foreach (var kv in ps)
+                {
+                    h = h * 31 + kv.Key;
+                    h = h * 31 + kv.Value.V.GetHashCode();
+                    if (kv.Value.O is Object o) h = h * 31 + o.GetInstanceID();
+                    else if (kv.Value.O is float[] fa) foreach (var f in fa) h = h * 31 + f.GetHashCode();
+                }
+                var ks = new List<string>(claves);
+                ks.Sort(StringComparer.Ordinal);
+                foreach (var k in ks) h = h * 31 + StringComparer.Ordinal.GetHashCode(k);
+                return h;
+            }
+        }
+
         // ── palabras clave ──
         public void EnableKeyword(string keyword) { if (claves.Add(keyword)) versionClaves++; }
         public void DisableKeyword(string keyword) { if (claves.Remove(keyword)) versionClaves++; }

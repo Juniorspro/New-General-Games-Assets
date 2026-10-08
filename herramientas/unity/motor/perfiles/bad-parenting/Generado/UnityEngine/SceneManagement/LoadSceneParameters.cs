@@ -2,6 +2,7 @@
 #pragma warning disable
 namespace UnityEngine.SceneManagement
 {
+    [System.Serializable]
     public partial struct LoadSceneParameters
     {
         public global::UnityEngine.SceneManagement.LoadSceneMode m_LoadSceneMode;

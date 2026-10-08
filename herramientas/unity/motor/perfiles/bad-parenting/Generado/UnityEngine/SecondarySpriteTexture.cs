@@ -2,6 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
+    [System.Serializable]
     public partial struct SecondarySpriteTexture
     {
         public string name;

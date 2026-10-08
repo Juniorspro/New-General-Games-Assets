@@ -6,10 +6,12 @@ namespace UnityEngine
     {
         public bool hasRootMotion { get { global::Porteo.Falta.Llamada("UnityEngine.Animator::hasRootMotion"); return default; } }
         public bool animatePhysics { get { global::Porteo.Falta.Llamada("UnityEngine.Animator::animatePhysics"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Animator::animatePhysics="); } }
+        public global::UnityEngine.Playables.PlayableGraph playableGraph { get { global::Porteo.Falta.Llamada("UnityEngine.Animator::playableGraph"); return default; } }
         public void SetLookAtWeight(float weight, float bodyWeight) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetLookAtWeight"); }
         public void SetLookAtWeight(float weight, float bodyWeight, float headWeight) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetLookAtWeight"); }
         public void SetLookAtWeight(float weight, float bodyWeight, float headWeight, float eyesWeight) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetLookAtWeight"); }
         public void SetLookAtWeight(float weight, float bodyWeight, float headWeight, float eyesWeight, float clampWeight) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetLookAtWeight"); }
+        public T GetBehaviour<T>() where T : global::UnityEngine.StateMachineBehaviour { global::Porteo.Falta.Llamada("UnityEngine.Animator::GetBehaviour"); return default; }
         public void GetCurrentAnimatorClipInfo(int layerIndex, global::System.Collections.Generic.List<global::UnityEngine.AnimatorClipInfo> clips) { global::Porteo.Falta.Llamada("UnityEngine.Animator::GetCurrentAnimatorClipInfo"); }
         public void CrossFadeInFixedTime(string stateName, float fixedTransitionDuration) { global::Porteo.Falta.Llamada("UnityEngine.Animator::CrossFadeInFixedTime"); }
         public void CrossFadeInFixedTime(string stateName, float fixedTransitionDuration, int layer) { global::Porteo.Falta.Llamada("UnityEngine.Animator::CrossFadeInFixedTime"); }
@@ -31,6 +33,7 @@ namespace UnityEngine
         public void Play(string stateName) { global::Porteo.Falta.Llamada("UnityEngine.Animator::Play"); }
         public void Play(int stateNameHash, int layer) { global::Porteo.Falta.Llamada("UnityEngine.Animator::Play"); }
         public void Play(int stateNameHash) { global::Porteo.Falta.Llamada("UnityEngine.Animator::Play"); }
+        public void SetTarget(global::UnityEngine.AvatarTarget targetIndex, float targetNormalizedTime) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetTarget"); }
         public global::UnityEngine.Vector3 GetVector(string name) { global::Porteo.Falta.Llamada("UnityEngine.Animator::GetVector"); return default; }
         public global::UnityEngine.Vector3 GetVector(int id) { global::Porteo.Falta.Llamada("UnityEngine.Animator::GetVector"); return default; }
         public void SetVector(string name, global::UnityEngine.Vector3 value) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetVector"); }

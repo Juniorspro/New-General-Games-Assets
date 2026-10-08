@@ -40,6 +40,7 @@ namespace Porteo.Render
             Debug.Log($"porteo: {Cadena(Gl.VERSION)} | {Cadena(Gl.RENDERER)} | ETC {Etc} S3TC {S3tc} ASTC {Astc}");
             // Unity dibuja con el frente horario (sistema de mano izquierda) en OpenGL
             Gl.FrontFace(Gl.CW);
+            Convencion.Olvidar();
             Gl.Enable(Gl.DEPTH_TEST);
             Gl.PixelStorei(Gl.UNPACK_ALIGNMENT, 1);
             Gl.PixelStorei(Gl.PACK_ALIGNMENT, 1);
@@ -181,7 +182,7 @@ namespace Porteo.Render
         static Estado actual;
         static bool hayActual, espejo, stencilSucio;
 
-        public static void Olvidar() { hayActual = false; programa = 0; vao = uint.MaxValue; Array.Clear(unidades, 0, unidades.Length); unidadActiva = -1; }
+        public static void Olvidar() { hayActual = false; programa = 0; vao = uint.MaxValue; Array.Clear(unidades, 0, unidades.Length); unidadActiva = -1; Convencion.Olvidar(); }
 
         // Borrar el destino: glClear respeta las máscaras de escritura, así que se abren todas
         // (y la próxima pasada con stencil vuelve a poner la suya).
@@ -210,7 +211,7 @@ namespace Porteo.Render
                 {
                     if (!todo && actual.ZPrueba == 0) Gl.Enable(Gl.DEPTH_TEST);
                     else if (todo) Gl.Enable(Gl.DEPTH_TEST);
-                    Gl.DepthFunc(COMPARAR[Math.Min((int)e.ZPrueba, 8)]);
+                    Gl.DepthFunc(COMPARAR[Convencion.Comparacion(Math.Min((int)e.ZPrueba, 8))]);
                 }
             }
             if (todo || e.Caras != actual.Caras || enEspejo != espejo)
@@ -241,7 +242,7 @@ namespace Porteo.Render
             if (todo || e.OffsetFactor != actual.OffsetFactor || e.OffsetUnidades != actual.OffsetUnidades)
             {
                 if (e.OffsetFactor == 0 && e.OffsetUnidades == 0) Gl.Disable(Gl.POLYGON_OFFSET_FILL);
-                else { Gl.Enable(Gl.POLYGON_OFFSET_FILL); Gl.PolygonOffset(e.OffsetFactor, e.OffsetUnidades); }
+                else { Gl.Enable(Gl.POLYGON_OFFSET_FILL); Gl.PolygonOffset(Convencion.Desplazamiento(e.OffsetFactor), Convencion.Desplazamiento(e.OffsetUnidades)); }
             }
             if (todo || e.Stencil != actual.Stencil || e.Stencil && (stencilSucio || e.StRef != actual.StRef || e.StLeer != actual.StLeer || e.StEscribir != actual.StEscribir ||
                 e.StComp != actual.StComp || e.StPasa != actual.StPasa || e.StFalla != actual.StFalla || e.StFallaZ != actual.StFallaZ))

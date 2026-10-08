@@ -4,9 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class AnimationClip
     {
-        public bool hasGenericRootTransform { get { global::Porteo.Falta.Llamada("UnityEngine.AnimationClip::hasGenericRootTransform"); return default; } }
-        public bool hasMotionCurves { get { global::Porteo.Falta.Llamada("UnityEngine.AnimationClip::hasMotionCurves"); return default; } }
-        public bool hasRootCurves { get { global::Porteo.Falta.Llamada("UnityEngine.AnimationClip::hasRootCurves"); return default; } }
-        public bool hasRootMotion { get { global::Porteo.Falta.Llamada("UnityEngine.AnimationClip::hasRootMotion"); return default; } }
     }
 }

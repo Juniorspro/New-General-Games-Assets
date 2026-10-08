@@ -4,7 +4,14 @@ namespace UnityEngine
 {
     public sealed partial class Light
     {
+        public int commandBufferCount { get { global::Porteo.Falta.Llamada("UnityEngine.Light::commandBufferCount"); return default; } }
         public static int pixelLightCount { get { global::Porteo.Falta.Llamada("UnityEngine.Light::pixelLightCount"); return default; } set { global::Porteo.Falta.Llamada("UnityEngine.Light::pixelLightCount="); } }
         public void Reset() { global::Porteo.Falta.Llamada("UnityEngine.Light::Reset"); }
+        public void AddCommandBuffer(global::UnityEngine.Rendering.LightEvent evt, global::UnityEngine.Rendering.CommandBuffer buffer) { global::Porteo.Falta.Llamada("UnityEngine.Light::AddCommandBuffer"); }
+        public void AddCommandBuffer(global::UnityEngine.Rendering.LightEvent evt, global::UnityEngine.Rendering.CommandBuffer buffer, global::UnityEngine.Rendering.ShadowMapPass shadowPassMask) { global::Porteo.Falta.Llamada("UnityEngine.Light::AddCommandBuffer"); }
+        public void RemoveCommandBuffer(global::UnityEngine.Rendering.LightEvent evt, global::UnityEngine.Rendering.CommandBuffer buffer) { global::Porteo.Falta.Llamada("UnityEngine.Light::RemoveCommandBuffer"); }
+        public void RemoveCommandBuffers(global::UnityEngine.Rendering.LightEvent evt) { global::Porteo.Falta.Llamada("UnityEngine.Light::RemoveCommandBuffers"); }
+        public void RemoveAllCommandBuffers() { global::Porteo.Falta.Llamada("UnityEngine.Light::RemoveAllCommandBuffers"); }
+        public global::UnityEngine.Rendering.CommandBuffer[] GetCommandBuffers(global::UnityEngine.Rendering.LightEvent evt) { global::Porteo.Falta.Llamada("UnityEngine.Light::GetCommandBuffers"); return default; }
     }
 }
