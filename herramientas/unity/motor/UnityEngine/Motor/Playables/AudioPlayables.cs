@@ -16,7 +16,9 @@ namespace UnityEngine.Audio
 
         public static AudioClipPlayable Create(PlayableGraph graph, AudioClip clip, bool looping)
         {
-            var n = new Nodo(graph.G, TipoNodo.ClipAudio, typeof(AudioClipPlayable), 0) { ClipAudio = clip, BucleAudio = looping };
+            // al llegar al final no da la vuelta (el bucle del sonido lo lleva BucleAudio): con la vuelta
+            // de los nodos, un clip de Timeline volvía a empezar justo antes de que lo apaguen
+            var n = new Nodo(graph.G, TipoNodo.ClipAudio, typeof(AudioClipPlayable), 0) { ClipAudio = clip, BucleAudio = looping, Envolver = DirectorWrapMode.None };
             if (clip != null) n.Duracion = clip.length;
             return new AudioClipPlayable(new PlayableHandle(n));
         }
@@ -40,14 +42,21 @@ namespace UnityEngine.Audio
         public double GetStartDelay() => m_Handle.m_Nodo?.DemoraAudio ?? 0;
         public double GetPauseDelay() => 0;
         public void Seek(double startTime, double startDelay) => Seek(startTime, startDelay, 0);
+        // Programa el clip: suena desde startTime pasados startDelay segundos, durante duration. Así
+        // lo usa Timeline (ScheduleRuntimeClip): crea el clip en pausa, nunca le hace Play() y lo
+        // programa con Seek un poco antes de que empiece; en Unity eso lo deja sonando. Acá el tiempo
+        // del nodo arranca en startTime - startDelay (en negativo no suena: ver AudioTimeline) y el
+        // nodo queda en reproducción. Sin esto no sonaba ninguna pista de audio de Timeline (la
+        // música de las cinemáticas de Bad Parenting)
         public void Seek(double startTime, double startDelay, double duration)
         {
             var n = m_Handle.N;
             n.InicioAudio = startTime;
             n.DemoraAudio = startDelay;
             n.DuracionAudio = duration > 0 ? duration : double.MaxValue;
-            n.PonerTiempo(startTime);
+            n.PonerTiempo(startTime - Math.Max(0, startDelay));
             if (duration > 0) n.Duracion = startTime + duration;
+            n.Reproduciendo = true;
         }
     }
 
@@ -145,8 +154,10 @@ namespace Porteo.Playables
                 if (clip == null) continue;
                 var fuente = s.FuenteAudio != null && !s.FuenteAudio.destruido ? s.FuenteAudio : Fuente2D();
                 double t = n.Tiempo;
-                if (n.BucleAudio && clip.length > 0) { t %= clip.length; if (t < 0) t += clip.length; }
-                if (!n.BucleAudio && (t < 0 || t >= clip.length)) continue;
+                // en la demora de un Seek (tiempo negativo) todavía no suena, tampoco en bucle
+                if (t < 0) continue;
+                if (n.BucleAudio && clip.length > 0) t %= clip.length;
+                if (!n.BucleAudio && t >= clip.length) continue;
                 if (!s.Voces.TryGetValue(n, out var vt) || vt.V == null || vt.V.Fin || vt.Clip != clip)
                 {
                     vt?.Parar();
@@ -157,9 +168,12 @@ namespace Porteo.Playables
                 else
                 {
                     vt.V.Escala = w * n.Volumen;
-                    // si el grafo saltó (búsqueda) o la voz se corrió mucho, se vuelve a ubicar
+                    // si el grafo saltó (búsqueda) o la voz se corrió mucho, se vuelve a ubicar. Mucho
+                    // es mucho: el sonido va con el reloj real y el grafo con el del juego, que con
+                    // cuadros lentos se atrasa (deltaTime tiene tope); con 0,25 s la música de una
+                    // cinemática se cortaba y volvía a empezar cada medio segundo. Unity no la corrige
                     double va = vt.V.Segundo(Porteo.Audio.Sonido.Ahora);
-                    if (n.Busqueda || Math.Abs(va - t) > 0.25)
+                    if (n.Busqueda || Math.Abs(va - t) > 2)
                     {
                         vt.Parar();
                         vt.V = Porteo.Audio.Sonido.Tocar(fuente, clip, true, w * n.Volumen, t);

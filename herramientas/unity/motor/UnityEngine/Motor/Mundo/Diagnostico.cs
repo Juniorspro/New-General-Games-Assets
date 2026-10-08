@@ -43,6 +43,8 @@ namespace Porteo
                     case "campos": return Campos(arg);
                     case "pieles": return Pieles(arg);
                     case "rects": return Rects(arg);
+                    case "sonidos": return Sonidos(arg);
+                    case "grafos": return Grafos(arg);
                     default: return "diagnóstico: no sé " + partes[0];
                 }
             }
@@ -508,6 +510,49 @@ namespace Porteo
             return sb.ToString();
         }
 
+        // las salidas de audio de los grafos de cada director: a qué fuente van y los nodos de clip que
+        // cuelgan de ellas (si corren, en qué segundo y con qué peso), para ver por qué algo no suena
+        public static string Grafos(string arg)
+        {
+            var sb = new StringBuilder("grafos:");
+            var campo = typeof(UnityEngine.Playables.PlayableDirector).GetField("grafo", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            foreach (var d in Porteo.Playables.Directores.activos)
+            {
+                if (!(campo?.GetValue(d) is Porteo.Playables.Grafo g)) { sb.Append($"\n   {d.name}: sin grafo"); continue; }
+                sb.Append($"\n   {d.name}: reproduciendo={g.Reproduciendo} salidas={g.Salidas.Count}");
+                foreach (var s in g.Salidas)
+                {
+                    if (arg != "todo" && s.Tipo != typeof(UnityEngine.Audio.AudioPlayableOutput)) continue;
+                    sb.Append($"\n      salida {s.Nombre} ({s.Tipo?.Name}) fuente={(s.FuenteAudio != null ? Ruta(s.FuenteAudio.transform) : "-")} peso={s.Peso} puerto={s.Puerto} voces={s.Voces.Count}");
+                    void Ver(Porteo.Playables.Nodo n, string sangria, float w, int nivel)
+                    {
+                        if (n == null || nivel > 6) return;
+                        sb.Append($"\n      {sangria}{n.Tipo} ({n.TipoPlayable?.Name}) corre={n.Reproduciendo} t={n.Tiempo:F2}/{(n.Duracion < 1e9 ? n.Duracion.ToString("F2") : "∞")} peso={w:F2}{(n.ClipAudio != null ? " audio=" + n.ClipAudio.name : "")}");
+                        for (int i = 0; i < n.Entradas.Count; i++) Ver(n.Entradas[i], sangria + "  ", w * n.Pesos[i], nivel + 1);
+                    }
+                    Ver(s.Fuente, "  ", s.Peso, 0);
+                }
+            }
+            return sb.ToString();
+        }
+
+        // el sonido: cada AudioSource (activo o no) con su clip y cómo arranca, y las voces sonando
+        public static string Sonidos(string arg)
+        {
+            var sb = new StringBuilder("sonidos:");
+            foreach (var f in Resources.FindObjectsOfTypeAll<AudioSource>())
+            {
+                if (f.go == null) continue;
+                var ruta = Ruta(f.transform);
+                if (arg.Length > 0 && !ruta.Contains(arg)) continue;
+                var c = f.clipPrincipal;
+                sb.Append($"\n   {ruta} activo={f.go.activoEnJerarquia && f.enabled} clip={c?.name ?? "-"}{(c != null ? $" ({c.largo:F1} s, {(c.Streaming ? "streaming" : "memoria")})" : "")} alDespertar={f.alDespertar} bucle={f.bucle} vol={f.vol:F2} 3D={f.mezcla3D:F2} sonando={f.isPlaying}");
+            }
+            foreach (var v in Porteo.Audio.Sonido.voces)
+                sb.Append($"\n   voz {v.Id}: {v.Clip?.name} de {(v.Fuente != null ? Ruta(v.Fuente.transform) : "-")} bucle={v.Bucle} pausada={v.Pausada} segundo={v.Segundo(Porteo.Audio.Sonido.Ahora):F1}");
+            return sb.ToString();
+        }
+
         // los RectTransform cuya ruta contiene el texto: anclas, tamaño, rect y escala; y de sus textos
         // TMP el tamaño de letra y el preferido (lo que usa un ContentSizeFitter)
         public static string Rects(string arg)
@@ -632,11 +677,28 @@ namespace Porteo
             foreach (var d in Porteo.Playables.Directores.activos)
             {
                 sb.Append($"\n   {Ruta(d.transform)} asset={d.playableAsset?.name} estado={d.state} t={d.time:F3}/{d.duration:F3} envolver={d.extrapolationMode}");
-                if (arg != "marcas" || d.playableAsset == null) continue;
+                if ((arg != "marcas" && arg != "pistas") || d.playableAsset == null) continue;
                 var pistas = d.playableAsset.GetType().GetMethod("GetOutputTracks")?.Invoke(d.playableAsset, null) as System.Collections.IEnumerable;
                 if (pistas == null) continue;
                 foreach (var p in pistas)
                 {
+                    // "pistas": cada pista con su tipo, a qué está atada, si está muda y sus clips
+                    if (arg == "pistas")
+                    {
+                        var po = p as UnityEngine.Object;
+                        var atada = po != null ? d.GetGenericBinding(po) : null;
+                        bool muda = p.GetType().GetProperty("muted")?.GetValue(p) is bool m && m;
+                        sb.Append($"\n      pista {po?.name} ({p.GetType().Name}) atada={(atada as Component != null ? Ruta(((Component)atada).transform) : atada?.name ?? "-")} muda={muda}");
+                        if (p.GetType().GetMethod("GetClips")?.Invoke(p, null) is System.Collections.IEnumerable clips)
+                            foreach (var c in clips)
+                            {
+                                var tc = c.GetType();
+                                var asset = tc.GetProperty("asset")?.GetValue(c);
+                                var clipAudio = asset?.GetType().GetProperty("clip")?.GetValue(asset) as AudioClip;
+                                sb.Append($"\n         clip {tc.GetProperty("displayName")?.GetValue(c)} desde {tc.GetProperty("start")?.GetValue(c):F2} dura {tc.GetProperty("duration")?.GetValue(c):F2}{(clipAudio != null ? $" audio={clipAudio.name} ({clipAudio.largo:F1} s)" : "")}");
+                            }
+                        continue;
+                    }
                     var marcas = p.GetType().GetMethod("GetMarkers")?.Invoke(p, null) as System.Collections.IEnumerable;
                     if (marcas == null) continue;
                     foreach (var mk in marcas)

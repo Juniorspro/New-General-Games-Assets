@@ -36,8 +36,14 @@ export function crearAudio(datos) {
         console.log(`porteo audio: estado=${ctx.state} voces=${voces.size} clips=${clips.size} nivel=${Math.sqrt(s / m.length).toFixed(4)}`);
       }, 2000);
     }
-    // los navegadores no dejan sonar hasta que la persona toca la pantalla o una tecla
-    const despertar = () => { if (ctx.state !== 'running') ctx.resume().then(alDespertar, () => {}); };
+    // los navegadores no dejan sonar hasta que la persona toca la pantalla o una tecla. Las músicas
+    // en streaming (un <audio>) que quisieron arrancar antes quedaron rechazadas: se reintentan acá,
+    // dentro del toque (si no, no sonaban nunca)
+    const despertar = () => {
+      if (ctx.state !== 'running') ctx.resume().then(alDespertar, () => {});
+      for (const v of voces.values())
+        if (v.elemento && v.elemento.paused && !v.pausada && !v.parada && v.bloqueada) { v.bloqueada = false; v.elemento.play().catch(() => { v.bloqueada = true; }); }
+    };
     for (const ev of ['pointerdown', 'pointerup', 'touchend', 'keydown', 'mousedown']) addEventListener(ev, despertar, { capture: true });
     document.addEventListener('visibilitychange', () => { if (document.hidden) ctx.suspend(); else despertar(); });
     return ctx;
@@ -176,7 +182,8 @@ export function crearAudio(datos) {
         const d = el.duration;
         if (isFinite(d) && d > 0) { if (v.bucle) desde %= d; else if (desde >= d) { parar(id); return; } }
         try { el.currentTime = Math.max(0, desde); } catch {}
-        if (!v.pausada) el.play().catch(() => {});
+        // sin un toque antes el navegador lo rechaza: queda marcada y la arranca el primer toque
+        if (!v.pausada) el.play().catch(() => { v.bloqueada = true; });
       };
       if (el.readyState >= 1) empezar(); else el.addEventListener('loadedmetadata', empezar, { once: true });
       el.addEventListener('ended', () => { if (!v.bucle) parar(id); });
@@ -247,7 +254,7 @@ export function crearAudio(datos) {
     const v = voces.get(id);
     if (!v || v.pausada === pausa) return;
     v.pausada = pausa;
-    if (v.elemento) { if (pausa) v.elemento.pause(); else v.elemento.play().catch(() => {}); return; }
+    if (v.elemento) { if (pausa) v.elemento.pause(); else v.elemento.play().catch(() => { v.bloqueada = true; }); return; }
     if (pausa) { if (v.nodo) { try { v.nodo.onended = null; v.nodo.stop(); v.nodo.disconnect(); } catch {} v.nodo = null; } }
     else { v.desde = desde; v.pedida = performance.now() / 1000; arrancar(id, v); }
   }

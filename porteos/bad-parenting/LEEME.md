@@ -29,6 +29,15 @@ Lo que hubo que arreglar en el motor:
   volvía a empezar) y el ratón con el puntero trabado (un toque giraba la cámara).
 - La lista de idiomas de la pausa (un lienzo que el motor conducía como raíz y después se muda
   adentro de otro volvía a su tamaño) y el idioma del teléfono como el del juego la primera vez.
+- La música de las cinemáticas. Timeline programa los clips de audio con AudioClipPlayable.Seek
+  (ScheduleRuntimeClip: los crea en pausa y nunca les hace Play); el motor sólo movía el tiempo y
+  no sonaba ninguna pista de audio de Timeline (el tema de la intro, los golpes, las puertas).
+- Los diálogos (lienzo ConstantPixelSize, pensado para la ventana de 1120×832 del original) se arman
+  siempre como en una pantalla de 800 de alto: con la resolución que baja el sistema de velocidad
+  ocupaban media pantalla.
+- La carga en el teléfono del dueño, que tenía guardada la versión anterior: Cache Storage no
+  contestaba y el arranque quedaba esperando sin error. Ahora todo lo de la caché tiene tiempo
+  máximo, una descarga frenada se corta y se reintenta, y si igual se traba ofrece recargar limpio.
 
 ## Controles
 
