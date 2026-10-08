@@ -22,6 +22,10 @@ GD.Escena = class {
     this.sueloVis = juego.suelo; this.techoVis = juego.techo;
     this.particulas = [];
     this.espejoK = 0;
+    this.rotulo = null;          // "Attempt N": { texto, x, y } en el mundo
+    this.controles = [];         // puntos de control de la práctica
+    this.voladoras = [];         // monedas agarradas, que suben y se desvanecen
+    this.reloj = 0;
     this.linea = ['floorLine_001.png', 'floorLine_01_001.png', 'floorLine_02_001.png'][juego.nivel.ajustes.linea] || 'floorLine_001.png';
   }
 
@@ -42,7 +46,9 @@ GD.Escena = class {
     const bg = col.calcular(1000);
     r.empezar(bg[0], bg[1], bg[2]);
     this.dibujarFondo(bg);
+    this.reloj += dt;
     this.dibujarObjetos();
+    this.dibujarExtras(dt);
     this.dibujarPisos();
     if (!J.muerto && !j.triggers.jugadorOculto) this.dibujarJugador(J);
     this.dibujarParticulas(dt);
@@ -94,7 +100,7 @@ GD.Escena = class {
     const efecto = trig.efectoEntrada;
     const jx = j.jugador.x - this.camX;
     for (const o of lista) {
-      if (!o.partes.length || !trig.objetoActivo(o) || j.rotos.has(o)) continue;
+      if (!o.partes.length || !trig.objetoActivo(o) || j.rotos.has(o) || j.monedas.has(o)) continue;
       let sx = o.x - this.camX;
       if (sx < -90 || sx > VW + 90) continue;
       let alfa = trig.alfaDeObjeto(o);
@@ -139,6 +145,7 @@ GD.Escena = class {
     const cs = Math.cos(ang), sn = Math.sin(ang), sx = o.sx * esc * espejo, sy = o.sy * esc;
     const base = [cs * sx, sn * sx, -sn * sy, cs * sy, px, py];
     const mats = [];
+    const giraMoneda = o.tipo === 'moneda' ? this.cuadroMoneda(o) : null;
     for (let pi = 0; pi < o.partes.length; pi++) {
       const p = o.partes[pi];
       const P = p.padre >= 0 ? mats[p.padre] : base;
@@ -170,8 +177,51 @@ GD.Escena = class {
       const a = c[3] * alfa * p.op;
       if (a <= 0.001) continue;
       const capa = o.capa - ((mezcla !== (o.capa % 2 === 0)) ? 1 : 0);
-      salida.push({ tex: p.tex, M, ancla: p.ax || p.ay ? [p.ax, p.ay] : null, color: [c[0], c[1], c[2], a],
+      salida.push({ tex: pi === 0 && giraMoneda ? giraMoneda : p.tex, M, ancla: p.ax || p.ay ? [p.ax, p.ay] : null, color: [c[0], c[1], c[2], a],
                     mezcla, capa, z: o.orden + p.z, i: o.i, pi });
+    }
+  }
+
+  // La moneda gira con sus cuatro cuadros (secretCoin_01_001…004).
+  cuadroMoneda(o) {
+    const t = o.def.texture || '';
+    if (!/_001\.png$/.test(t)) return null;
+    const n = Math.floor(this.reloj * 10) % 4 + 1;
+    const nombre = t.replace(/_001\.png$/, `_00${n}.png`);
+    return this.r.cuadros[nombre] ? nombre : null;
+  }
+
+  moneda(o) {
+    this.voladoras.push({ o, x: o.x, y: o.y, t: 0 });
+  }
+
+  // Vuelve a dibujar todo como corresponde después de un salto en el tiempo (reintento o punto
+  // de control): el piso y el techo en su lugar, sin restos de la explosión.
+  ajustar() {
+    this.sueloVis = this.juego.suelo;
+    this.techoVis = this.juego.techo;
+    this.particulas = [];
+    this.voladoras = [];
+  }
+
+  dibujarExtras(dt) {
+    const r = this.r;
+    r.modo(false);
+    for (const c of this.controles) {
+      const [sx, sy] = this.aPantalla(c.x, c.y);
+      if (sx < -40 || sx > r.VW + 40) continue;
+      r.sprite('checkpoint_01_001.png', sx, sy, 1, 0, [1, 1, 1, 1]);
+    }
+    for (const v of this.voladoras) {
+      v.t += dt;
+      const [sx, sy] = this.aPantalla(v.x, v.y + v.t * 120);
+      const a = Math.max(0, 1 - v.t / 0.6);
+      if (a > 0) r.sprite(this.cuadroMoneda(v.o) || v.o.def.texture, sx, sy, 1 + v.t, 0, [1, 1, 1, a]);
+    }
+    this.voladoras = this.voladoras.filter((v) => v.t < 0.6);
+    if (this.rotulo) {
+      const [sx, sy] = this.aPantalla(this.rotulo.x, this.rotulo.y);
+      if (sx > -300 && sx < r.VW + 300) r.texto('bigFont', this.rotulo.texto, sx, sy, 0.75, [1, 1, 1, 1]);
     }
   }
 
@@ -202,8 +252,8 @@ GD.Escena = class {
   }
 
   // ── partículas (la explosión al morir y el brillo de los impulsos) ──────
-  explotar(x, y, color) {
-    for (let i = 0; i < 40; i++) {
+  explotar(x, y, color, cantidad = 40) {
+    for (let i = 0; i < cantidad; i++) {
       const a = Math.random() * Math.PI * 2, v = 60 + Math.random() * 220;
       this.particulas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, vida: 0.4 + Math.random() * 0.5,
                              tam: 0.12 + Math.random() * 0.18, color });

@@ -3,6 +3,10 @@
 // unidad), premultiplicadas. Los cuadros se arman como en gdclone (render/object.rs): el recorte
 // del cuadro corre el ancla y los cuadros rotados en la hoja giran los ejes.
 
+// Unidades de textura: WebGL2 garantiza 16. Se usan 7 hojas, 3 del nivel (fondo y dos pisos) y 2
+// del menú.
+GD.UNIDADES = 16;
+
 GD.Render = class {
   constructor(canvas, datos, imagenes) {
     this.canvas = canvas;
@@ -13,7 +17,8 @@ GD.Render = class {
     this.texturas = [];
     this.tamTex = [];
     for (const img of imagenes) this.subir(img);
-    this.fondos = new Map();
+    this.fondos = new Map();        // rol → lugar de textura
+    this.imgRol = new Map();        // rol → la imagen que tiene subida
     this.programa();
     this.MAX = 12000;
     this.vb = new Float32Array(this.MAX * 4 * 9);
@@ -36,13 +41,24 @@ GD.Render = class {
     return this.texturas.length - 1;
   }
 
-  // fondo y piso: texturas sueltas que se repiten
-  textura(clave, img) {
-    if (this.fondos.has(clave)) return this.fondos.get(clave);
-    const i = this.subir(img);
+  // Fondo y piso: texturas sueltas que se repiten. Cada rol ('fondo', 'piso', 'piso2', los del
+  // menú) tiene un lugar fijo y se vuelve a subir cuando cambia la imagen: WebGL da pocas
+  // unidades de textura y los niveles usan siete fondos distintos.
+  textura(rol, img) {
     const gl = this.gl;
+    let i = this.fondos.get(rol);
+    if (i === undefined) {
+      i = this.subir(img);
+      this.fondos.set(rol, i);
+    } else if (this.imgRol.get(rol) !== img) {
+      gl.bindTexture(gl.TEXTURE_2D, this.texturas[i]);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      this.tamTex[i] = [img.width, img.height];
+    }
+    this.imgRol.set(rol, img);
+    gl.bindTexture(gl.TEXTURE_2D, this.texturas[i]);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-    this.fondos.set(clave, i);
     return i;
   }
 
@@ -52,10 +68,10 @@ GD.Render = class {
       in vec2 aP; in vec2 aU; in vec4 aC; in float aT;
       uniform vec2 uV; out vec2 vU; out vec4 vC; flat out int vT;
       void main() { gl_Position = vec4(aP / uV * 2.0 - 1.0, 0.0, 1.0); vU = aU; vC = aC; vT = int(aT + 0.5); }`;
-    const ramas = Array.from({ length: 12 }, (_, i) => `${i ? 'else ' : ''}if (vT == ${i}) t = texture(uT[${i}], vU);`).join('\n');
+    const ramas = Array.from({ length: GD.UNIDADES }, (_, i) => `${i ? 'else ' : ''}if (vT == ${i}) t = texture(uT[${i}], vU);`).join('\n');
     const fs = `#version 300 es
       precision mediump float;
-      uniform sampler2D uT[12]; uniform float uA;
+      uniform sampler2D uT[${GD.UNIDADES}]; uniform float uA;
       in vec2 vU; in vec4 vC; flat in int vT; out vec4 o;
       void main() {
         vec4 t = vec4(0.0);
@@ -76,7 +92,7 @@ GD.Render = class {
     gl.useProgram(p);
     this.uV = gl.getUniformLocation(p, 'uV');
     this.uA = gl.getUniformLocation(p, 'uA');
-    gl.uniform1iv(gl.getUniformLocation(p, 'uT'), Array.from({ length: 12 }, (_, i) => i));
+    gl.uniform1iv(gl.getUniformLocation(p, 'uT'), Array.from({ length: GD.UNIDADES }, (_, i) => i));
     this.vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
     gl.bufferData(gl.ARRAY_BUFFER, 12000 * 4 * 9 * 4, gl.DYNAMIC_DRAW);
@@ -114,7 +130,7 @@ GD.Render = class {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(this.prog);
     gl.uniform2f(this.uV, this.VW, this.VH);
-    for (let i = 0; i < this.texturas.length && i < 12; i++) {
+    for (let i = 0; i < this.texturas.length && i < GD.UNIDADES; i++) {
       gl.activeTexture(gl.TEXTURE0 + i);
       gl.bindTexture(gl.TEXTURE_2D, this.texturas[i]);
     }
@@ -188,7 +204,7 @@ GD.Render = class {
 
   tamCuadro(nombre) {
     const f = this.cuadros[nombre];
-    return f ? [f[7] / GD.ESCALA_HD, f[8] / GD.ESCALA_HD] : [0, 0];
+    return f ? [f[8] / GD.ESCALA_HD, f[9] / GD.ESCALA_HD] : [0, 0];      // el tamaño original (sw, sh)
   }
 
   // Texto con las fuentes bitmap del juego (bigFont, goldFont, chatFont).
@@ -211,6 +227,41 @@ GD.Render = class {
       pen += xa * k;
     }
     return ancho * k;
+  }
+
+  medirTexto(fuente, s, escala = 1) {
+    const F = this.datos.fuentes[fuente];
+    if (!F) return 0;
+    let ancho = 0;
+    for (const ch of s) { const c = F.chars[ch.charCodeAt(0)]; if (c) ancho += c[6]; }
+    return ancho * escala / GD.ESCALA_HD;
+  }
+
+  // Un cuadro estirado a un rectángulo sin deformar las esquinas (9 partes, como CCScale9Sprite
+  // en los cuadros del juego). `borde`: el lado de la esquina, en unidades. Sólo cuadros sin rotar
+  // en la hoja (los de interfaz que se juntan en la hoja "extra").
+  panel(nombre, x0, y0, x1, y1, color, borde = 10) {
+    const f = this.cuadros[nombre];
+    if (!f) return;
+    const [hoja, fx, fy, fw, fh] = f;
+    const b = Math.min(borde, (x1 - x0) / 2, (y1 - y0) / 2), bp = borde * GD.ESCALA_HD;
+    const xs = [x0, x0 + b, x1 - b, x1], ys = [y0, y0 + b, y1 - b, y1];
+    const us = [fx, fx + bp, fx + fw - bp, fx + fw], vs = [fy + fh, fy + fh - bp, fy + bp, fy];
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        this.quad([xs[i], xs[i + 1], xs[i], xs[i + 1]], [ys[j], ys[j], ys[j + 1], ys[j + 1]], hoja, us[i], vs[j + 1], us[i + 1], vs[j], color);
+      }
+    }
+  }
+
+  // Un cuadro (sin rotar en la hoja) estirado a un rectángulo, del que se dibuja sólo la parte
+  // izquierda `fraccion`: así llena GD la barra de progreso (recorta la textura, no la escala).
+  recorte(nombre, x0, y0, x1, y1, fraccion, color) {
+    const f = this.cuadros[nombre];
+    if (!f || fraccion <= 0) return;
+    const [hoja, fx, fy, fw, fh] = f;
+    const k = Math.min(1, fraccion), xf = x0 + (x1 - x0) * k;
+    this.quad([x0, xf, x0, xf], [y0, y0, y1, y1], hoja, fx, fy, fx + fw * k, fy + fh, color);
   }
 
   // Rectángulo liso (con el píxel blanco del centro de un cuadro sólido de la hoja)

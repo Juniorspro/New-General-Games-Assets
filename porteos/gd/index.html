@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Geometry Dash</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  #c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
+  /* Si la intro termina antes que la carga: negro y una barra finita, como en los otros ports. */
+  #carga { position: fixed; inset: 0; z-index: 5; display: none; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px;
+    padding-bottom: max(24px, 8vh); background: #000; color: #8d8d8d; font: 13px/1 'Courier New', monospace; letter-spacing: .12em; }
+  #carga.visible { display: flex; }
+  #estado.error { color: #ff8a80; font: 600 16px/1.4 system-ui, sans-serif; letter-spacing: 0; white-space: pre-wrap; text-align: center; padding: 0 16px; }
+  #barra { width: min(260px, 50vw); height: 3px; background: #222; }
+  #barra i { display: block; height: 100%; width: 0; background: #fff; transition: width .15s; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="carga"><small id="estado">Cargando…</small><div id="barra"><i></i></div></div>
+
+<script src="porteo-web.js"></script>
+<script src="porteo-intro.js"></script>
+<script src="src/base.js"></script>
+<script src="src/nivel.js"></script>
+<script src="src/colores.js"></script>
+<script src="src/triggers.js"></script>
+<script src="src/jugador.js"></script>
+<script src="src/juego.js"></script>
+<script src="src/render.js"></script>
+<script src="src/escena.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/partida.js"></script>
+<script src="src/pantallas.js"></script>
+<script src="src/app.js"></script>
+<script>
+'use strict';
+(function () {
+  var lienzo = document.getElementById('c');
+  var carga = document.getElementById('carga');
+  var estado = document.getElementById('estado');
+  var barra = document.querySelector('#barra i');
+  var app = null, listo = false, fallado = false;
+
+  function fallo(e) {
+    if (fallado) return;
+    fallado = true;
+    estado.className = 'error';
+    estado.textContent = 'No se pudo arrancar el juego:\n' + (e && e.message ? e.message : e);
+    barra.parentNode.style.display = 'none';
+    carga.classList.add('visible');
+  }
+  window.addEventListener('error', function (ev) { if (!listo) fallo(ev.error || ev.message); });
+
+  // botón atrás: primero pausa (o vuelve un menú); dos seguidos salen (web.js)
+  Porteo.web({ offline: false, orientacion: 'landscape', atras: function () { if (app) app.atras(); } });
+
+  // la intro de JXStudios tapa la carga; si termina antes, queda la barra finita
+  var intro = Porteo.intro({ aviso: {
+    es: 'Port no oficial, para uso personal, de «Geometry Dash» de RobTop Games. El juego, sus niveles, imágenes, música y sonidos son de sus autores.',
+    en: 'Unofficial personal-use port of "Geometry Dash" by RobTop Games. The game, its levels, images, music and sounds belong to their authors.',
+    pt: 'Port não oficial, para uso pessoal, de "Geometry Dash" da RobTop Games. O jogo, seus níveis, imagens, músicas e sons pertencem aos seus autores.'
+  } });
+  intro.then(function () { if (!listo) carga.classList.add('visible'); });
+
+  function imagen(ruta) {
+    return new Promise(function (ok, mal) {
+      var i = new Image();
+      i.onload = function () { ok(i); };
+      i.onerror = function () { mal(new Error('No se pudo leer ' + ruta)); };
+      i.src = ruta;
+    });
+  }
+
+  (async function () {
+    try {
+      if (!document.createElement('canvas').getContext('webgl2')) throw new Error('Este navegador no tiene WebGL 2. Probá con Chrome, Edge, Firefox o Safari actualizados.');
+      var r = await fetch('datos/datos.json');
+      if (!r.ok) throw new Error('No se pudo leer datos/datos.json (' + r.status + ')');
+      var datos = await r.json();
+      var hechas = 0;
+      var hojas = await Promise.all(datos.hojas.map(function (h) {
+        return imagen('datos/hojas/' + h + '.webp').then(function (i) {
+          hechas++;
+          barra.style.width = Math.round(hechas / datos.hojas.length * 90) + '%';
+          return i;
+        });
+      }));
+      app = new GD.App(lienzo, datos, hojas);
+      app.alFallar = fallo;
+      await app.preparar();
+      barra.style.width = '100%';
+      listo = true;
+      await intro;
+      carga.classList.remove('visible');
+      app.arrancar();
+      window.__gd = app;           // para las pruebas
+    } catch (e) {
+      fallo(e);
+    }
+  })();
+})();
+</script>
+</body>
+</html>

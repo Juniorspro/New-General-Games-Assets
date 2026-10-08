@@ -10,6 +10,7 @@ GD.Juego = class {
     this.nivel = nivel;
     this.colores = new GD.Colores(nivel.colores);
     this.jugador = new GD.Jugador(false);
+    this.jugador.alSaltar = () => this.emitir('salto');       // las estadísticas del final
     this.triggers = new GD.Triggers(this);
     // objetos que se mueven: van aparte, los demás quedan fijos en su sección
     const mueve = this.triggers.gruposQueSeMueven;
@@ -163,6 +164,7 @@ GD.Juego = class {
         j.toqueNuevo = false;
         j.orbe(o.sub, o);
         this.emitir('impulso', o);
+        this.emitir('salto');
         break;
       case 'moneda':
         if (!this.monedas.has(o)) { this.monedas.add(o); this.emitir('moneda', o); }

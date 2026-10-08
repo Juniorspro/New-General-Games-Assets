@@ -48,7 +48,10 @@ HOJAS = ["GJ_GameSheet-hd", "GJ_GameSheet02-hd", "GJ_GameSheet03-hd", "GJ_GameSh
          "GJ_GameSheetGlow-hd", "GJ_LaunchSheet-hd"]
 ICONOS = ["player_01", "ship_01", "player_ball_01", "bird_01", "dart_01", "robot_01", "spider_01", "swing_01"]
 FUENTES = ["bigFont", "goldFont", "chatFont"]
-SONIDOS = ["explode_11", "playSound_01", "quitSound_01", "endStart_02", "highscoreGet02"]
+# piezas de interfaz que el juego tiene sueltas (no en una hoja): van a la hoja "extra"
+SUELTAS = ["GJ_progressBar_001", "square02_001", "GJ_square01", "GJ_gradientBG", "GJ_button_01"]
+SONIDOS = ["explode_11", "playSound_01", "quitSound_01", "endStart_02", "highscoreGet02", "gold02", "reward01"]
+MUSICA_EXTRA = ["menuLoop", "StayInsideMe"]       # la del menú y la del modo práctica
 
 # ── qué hace cada objeto ────────────────────────────────────────────────────
 PORTALES = {10: "gravedad_normal", 11: "gravedad_invertida", 12: "cubo", 13: "nave", 47: "bola", 111: "ovni",
@@ -106,6 +109,21 @@ def clasificar(i, o):
     if hb["type"] == "Slope":
         return "rampa", None
     return "solido", None
+
+
+def color_de_fondo(kv):
+    """El color del canal 1000 (fondo) en la cabecera: kS38 (formato nuevo) o kS29 (viejo)."""
+    def campos(s):
+        p = s.split("_")
+        return dict(zip(p[0::2], p[1::2]))
+    for s in kv.get("kS38", "").split("|"):
+        c = campos(s)
+        if c.get("6") == "1000":
+            return [int(c.get("1", 0)), int(c.get("2", 0)), int(c.get("3", 0))]
+    if kv.get("kS29"):
+        c = campos(kv["kS29"])
+        return [int(c.get("1", 0)), int(c.get("2", 0)), int(c.get("3", 0))]
+    return [40, 125, 255]      # el de GD si el nivel no dice nada
 
 
 def leer_plist(ruta):
@@ -207,11 +225,17 @@ def main():
     for f in FUENTES:
         sueltas.append((f, Image.open(A / f"{f}-hd.png")))
         fuentes[f] = leer_fnt(A / f"{f}-hd.fnt")
+    for s in SUELTAS:
+        sueltas.append((s, Image.open(A / f"{s}-hd.png")))
     hoja_extra, pos = empaquetar(sueltas)
     for ic, cs in cuadros_extra.items():
         dx, dy = pos[ic]
         for k, v in cs.items():
             cuadros.setdefault(k, [len(hojas), v[0] + dx, v[1] + dy] + v[2:])
+    for s, im in sueltas:
+        if s in SUELTAS:
+            w, h = im.size
+            cuadros[f"{s}.png"] = [len(hojas), pos[s][0], pos[s][1], w, h, 0, 0.0, 0.0, w, h]
     for f in FUENTES:
         fuentes[f]["hoja"] = len(hojas)
         fuentes[f]["x"], fuentes[f]["y"] = pos[f]
@@ -250,14 +274,17 @@ def main():
     if sin_dibujo:
         sys.exit(f"objetos sin definición en object.json: {sin_dibujo}")
 
-    # 5. fondos y pisos que piden los niveles (kA6 / kA7; 0 es el 1)
+    # 5. fondos y pisos que piden los niveles (kA6 / kA7; 0 es el 1), y el color de fondo con
+    #    que arranca cada uno: el selector de niveles pinta cada página con él
     import base64, zlib
-    fondos, pisos = {1}, {1}
-    for t in textos.values():
+    fondos, pisos, portada = {1}, {1}, {}
+    for n, t in textos.items():
         cab = zlib.decompress(base64.urlsafe_b64decode(t + "=" * (-len(t) % 4)), 47).decode("utf-8", "replace").split(";")[0].split(",")
         kv = dict(zip(cab[0::2], cab[1::2]))
-        fondos.add(max(1, int(kv.get("kA6", 0) or 0)))
-        pisos.add(max(1, int(kv.get("kA7", 0) or 0)))
+        fondo, piso = max(1, int(kv.get("kA6", 0) or 0)), max(1, int(kv.get("kA7", 0) or 0))
+        fondos.add(fondo)
+        pisos.add(piso)
+        portada[n] = {"fondo": fondo, "piso": piso, "color": color_de_fondo(kv)}
     for f in sorted(fondos):
         webp(Image.open(A / f"game_bg_{f:02d}_001-hd.png").convert("RGBA"), S / "fondos" / f"fondo_{f}.webp", a.calidad)
     for p in sorted(pisos):
@@ -273,10 +300,11 @@ def main():
         if not destino.exists():
             subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(A / f"{cancion}.mp3"), "-c:a", "libopus",
                             "-b:a", f"{a.kbps}k", "-vbr", "on", str(destino)], check=True)
-    menu = S / "musica" / "menuLoop.ogg"
-    if not menu.exists():
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(A / "menuLoop.mp3"), "-c:a", "libopus",
-                        "-b:a", f"{a.kbps}k", "-vbr", "on", str(menu)], check=True)
+    for m in MUSICA_EXTRA:
+        destino = S / "musica" / f"{m}.ogg"
+        if not destino.exists():
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(A / f"{m}.mp3"), "-c:a", "libopus",
+                            "-b:a", f"{a.kbps}k", "-vbr", "on", str(destino)], check=True)
     for s in SONIDOS:
         (S / "sonidos" / f"{s}.ogg").write_bytes((A / f"{s}.ogg").read_bytes())
 
@@ -285,7 +313,7 @@ def main():
         "fondos": sorted(fondos), "pisos": sorted(pisos),
         "pisos2": sorted(p for p in pisos if (A / f"groundSquare_{p:02d}_2_001-hd.png").exists()),
         "niveles": [{"id": n, "nombre": META[n][0], "cancion": META[n][1], "dificultad": META[n][2],
-                     "estrellas": META[n][3]} for n in NIVELES],
+                     "estrellas": META[n][3], **portada[n]} for n in NIVELES],
     }
     (S / "datos.json").write_text(json.dumps(datos, separators=(",", ":")))
     faltan = {i: d["faltan"] for i, d in objetos.items() if "faltan" in d}

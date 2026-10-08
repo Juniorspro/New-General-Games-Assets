@@ -453,9 +453,11 @@ def main():
     html = re.sub(r'<script((?:\s+(?!src=)[a-z-]+(?:="[^"]*")?)*)(?:\s+src="([^"]+)")?[^>]*>(.*?)</script>',
                   script, html, flags=re.S)
 
-    # 4. el resto de los archivos, como bloques de datos; los --al-final, partidos y al final
+    # 4. el resto de los archivos, como bloques de datos; los --al-final, partidos y al final,
+    #    en el orden en que se pidieron: llega primero lo que se va a usar primero (la música
+    #    del primer nivel antes que la del último)
     al_final = [Path(x).as_posix() for x in a.al_final]
-    tarde, partes, crudo = [], [], 0
+    tarde, partes, crudo, demorados = [], [], 0, {}
     for p in sorted(d.rglob("*")):
         if not p.is_file():
             continue
@@ -466,7 +468,12 @@ def main():
         crudo += p.stat().st_size
         if rel not in al_final:
             bloques.append(bloque("porteo/archivo", datos, gz, ruta=rel, tipo=tipo(p)))
+        else:
+            demorados[rel] = (p, datos, gz)
+    for rel in al_final:
+        if rel not in demorados:
             continue
+        p, datos, gz = demorados[rel]
         tarde.append({"ruta": rel, "tipo": tipo(p), "total": p.stat().st_size, "partes": -(-len(datos) // PARTE)})
         for i in range(0, len(datos), PARTE):
             k = len(partes)

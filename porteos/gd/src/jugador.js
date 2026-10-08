@@ -145,6 +145,7 @@ GD.Jugador = class {
     const kGrav = (this.modo === 'bola' || this.modo === 'arana') ? 0.6 : this.modo === 'robot' ? 0.9 : 1;
     const puede = this.sosteniendo && (this.toqueNuevo || this.modo !== 'robot');
     if (this.enSuelo && puede) {
+      if (this.alSaltar) this.alSaltar();
       if (this.modo === 'arana') { this.pidioArana = true; this.toqueNuevo = false; this.sosteniendo = false; return; }
       this.impulsado = true;
       this.enSuelo = false;
