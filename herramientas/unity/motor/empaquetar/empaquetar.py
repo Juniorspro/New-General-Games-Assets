@@ -247,22 +247,37 @@ def comprimir(args):
 # parser la cambia por U+FFFD), 0x000D (se vuelve 0x000A), 0x003C ("<" podría cerrar el <script>)
 # y los sustitutos sueltos. Esas van como ESC + código: sustituto s → s − 0xD700; 0x0000 → 0x0900;
 # 0x000D → 0x0901; 0x003C → 0x0902; ESC → 0x0903. arranque.js (deco) hace lo inverso.
-CODIGOS = {0x0000: 0x0900, 0x000D: 0x0901, 0x003C: 0x0902}
-CANDIDATOS = [chr(c) for c in range(0xF8FF, 0xF8BF, -1)]
+def _utf16k():
+    """El codificador de utf16k.c, compilado una vez por corrida (ctypes)."""
+    global _UTF16K
+    if _UTF16K is None:
+        import ctypes
+        import subprocess
+        import tempfile
+        so = Path(tempfile.mkdtemp(prefix="utf16k-")) / "utf16k.so"
+        subprocess.run(["cc", "-O2", "-shared", "-fPIC", "-o", str(so), str(AQUI / "utf16k.c")], check=True)
+        lib = ctypes.CDLL(str(so))
+        lib.utf16k_codificar.restype = ctypes.c_size_t
+        lib.utf16k_codificar.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_void_p]
+        _UTF16K = lib
+    return _UTF16K
+
+
+_UTF16K = None
 
 
 def a_utf16(datos):
+    """Los bytes de un bloque como texto: dígitos en base 63485 (los caracteres UTF-16 que el HTML
+    deja pasar tal cual) con rANS de símbolos uniformes; ver utf16k.c y deco en arranque.js. Sin
+    escapes: 0.29% más que los bytes, en vez del 3.2% de escapar surrogates, NUL, CR y '<'."""
+    import ctypes
     if len(datos) % 2:
         datos += b"\0"
-    s = datos.decode("utf-16-le", "surrogatepass")
-    esc = min(CANDIDATOS, key=s.count)
-    tabla = dict(CODIGOS)
-    tabla[ord(esc)] = 0x0903
-
-    def cambiar(m):
-        c = ord(m.group())
-        return esc + chr(tabla[c] if c in tabla else c - 0xD700)
-    return re.sub("[\x00\r<" + esc + "\ud800-\udfff]", cambiar, s), ord(esc)
+    n = len(datos) // 2
+    entrada = (ctypes.c_uint16 * n).from_buffer_copy(datos)
+    salida = (ctypes.c_uint16 * (n + n // 64 + 8))()
+    m = _utf16k().utf16k_codificar(ctypes.addressof(entrada), n, ctypes.addressof(salida))
+    return bytes(memoryview(salida).cast("B")[:m * 2]).decode("utf-16-le")
 
 
 def main():
@@ -395,8 +410,8 @@ def main():
               f"<title>{a.titulo}</title>\n{estilo}\n</head>\n<body>\n<canvas id=\"lienzo\"></canvas>\n<div id=\"estado\">cargando…</div>\n",
               "<script>\n", arranque, "\n</script>\n"]
     for i, c in enumerate(comprimidos):
-        texto, esc = a_utf16(c)
-        partes.append(f'<script type="porteo/b" data-i="{i}" data-n="{len(c)}" data-e="{esc}">{texto}</script><script>P.b()')
+        texto = a_utf16(c)
+        partes.append(f'<script type="porteo/b" data-i="{i}" data-n="{len(c)}">{texto}</script><script>P.b()')
         if i == 0:
             partes.append(";P.arrancar()")
         partes.append("</script>\n")

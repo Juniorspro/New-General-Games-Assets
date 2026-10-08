@@ -1,8 +1,8 @@
 // porteo: el arranque del HTML único (lo arma empaquetar.py con este archivo). Todo el juego viene
 // en bloques <script type="porteo/b"> comprimidos con LZMA: el código (.NET y JS), los paquetes y los
 // recursos. Este arranque:
-//   - a medida que el navegador lee cada bloque, un trabajador pasa su texto UTF-16 a bytes (sigue
-//     comprimido: así ocupa entre la mitad y la décima parte);
+//   - a medida que el navegador lee cada bloque, un trabajador pasa su texto (dígitos en base 63485,
+//     ver utf16k.c) a bytes (siguen comprimidos: así ocupan entre la mitad y la décima parte);
 //   - descomprime un bloque cuando hace falta algo de adentro: antes, en los trabajadores (lo que
 //     el motor avisa que va a usar), o, si lo necesita ya, acá mismo;
 //   - guarda lo descomprimido hasta un tope de memoria; lo usado hace mucho se suelta (si se vuelve
@@ -33,17 +33,28 @@
 
   // ── lo que corre también en los trabajadores (va como texto: Function.toString) ──
 
-  // el texto UTF-16 de un bloque → sus bytes. Cada carácter son dos bytes del archivo tal cual;
-  // los que el HTML no deja pasar van como ESC + código (ver a_utf16 en empaquetar.py)
-  function deco(s, E, n) {
-    const u = new Uint16Array((n + 1) >> 1);
-    let j = 0;
-    for (let i = 0, L = s.length; i < L; i++) {
-      let c = s.charCodeAt(i);
-      if (c === E) { c = s.charCodeAt(++i); c = c < 0x900 ? c + 0xD700 : c === 0x900 ? 0 : c === 0x901 ? 13 : c === 0x902 ? 60 : E; }
-      u[j++] = c;
+  // el texto de un bloque → sus bytes. Cada carácter es un dígito en base 63485 (los caracteres
+  // UTF-16 que el HTML deja pasar tal cual: todos menos NUL, CR, '<' y los surrogates) y los bytes
+  // salen con rANS de símbolos uniformes de 16 bits (ver utf16k.c): sin escapes, 15.95 bits por
+  // carácter. Al terminar, el estado vuelve justo al inicial y se leyó todo el texto: si no, el
+  // bloque llegó cortado o de otro largo (un carácter cambiado no se nota acá: no hay redundancia)
+  function deco(s, n) {
+    const K = 63485, L = 4294967296;
+    let D = deco.digitos;
+    if (!D) {
+      D = deco.digitos = new Uint16Array(65536);
+      for (let c = 0, d = 0; c < 65536; c++) if (c !== 0 && c !== 13 && c !== 60 && (c < 0xD800 || c > 0xDFFF)) D[c] = d++;
     }
-    if (j !== u.length) throw new Error('bloque dañado (' + j + ' de ' + u.length + ')');
+    const u = new Uint16Array((n + 1) >> 1);
+    let i = 0, x = 0;
+    for (let k = 0; k < 4; k++) x = x * K + D[s.charCodeAt(i++)];
+    for (let j = 0, U = u.length; j < U; j++) {
+      const v = x % 65536;
+      u[j] = v;
+      x = (x - v) / 65536;
+      while (x < L) x = x * K + D[s.charCodeAt(i++)];
+    }
+    if (x !== L || i !== s.length) throw new Error('bloque cortado o de otro largo (' + i + ' de ' + s.length + ')');
     const b = new Uint8Array(u.buffer);
     if (new Uint8Array(new Uint16Array([1]).buffer)[0] !== 1) {   // procesador big-endian: al revés
       for (let k = 0; k < b.length; k += 2) { const t = b[k]; b[k] = b[k + 1]; b[k + 1] = t; }
@@ -171,7 +182,7 @@
       try {
         if (m.wasm) { x = new WebAssembly.Instance(new WebAssembly.Module(m.wasm), {}).exports; return; }
         if (m.texto !== undefined) {
-          const b = deco(m.texto, m.esc, m.n);
+          const b = deco(m.texto, m.n);
           postMessage({ i: m.i, comp: b }, [b.buffer]);
         } else {
           const d = lzma(x, m.comp, m.t, m.p[0], m.p[1], m.p[2]);
@@ -228,7 +239,7 @@
     el.remove();   // que el texto no quede ocupando memoria en la página
     const w = elegir();
     w.tareas++;
-    w.postMessage({ i, texto, esc: +el.dataset.e, n: +el.dataset.n });
+    w.postMessage({ i, texto, n: +el.dataset.n });
   };
 
   function recibir(w, m) {
