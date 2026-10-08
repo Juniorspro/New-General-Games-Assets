@@ -43,6 +43,8 @@ namespace Porteo.Render
         public static bool PerfilGpu;
         // para aislar problemas: "sin3d", "sinui", "sincielo", "sinefectos", "sinopacos", "sintransparentes"
         public static readonly HashSet<string> Apagado = new HashSet<string>();
+        // los objetos con estos nombres no se dibujan (?ocultar=ocean,Clouds)
+        public static readonly HashSet<string> Ocultos = new HashSet<string>();
         static readonly Dictionary<string, (double ms, int n)> perfil = new Dictionary<string, (double, int)>();
         static long perfilDesde;
 
@@ -259,6 +261,7 @@ namespace Porteo.Render
                     if (s < 0 || (r.lodMascara & (1 << s)) == 0) continue;
                 }
                 if (r.estaticoPrimera >= 0 ? sinEstaticos : soloEstaticos) continue;
+                if (Ocultos.Count > 0 && Ocultos.Contains(go.name)) continue;
                 var m = r.MallaParaDibujar();
                 if ((object)m == null || m.destruido) continue;
                 var b = r.bounds;

@@ -88,6 +88,7 @@ public static partial class Programa
     // la entrada: main.js ya traduce las teclas a KeyCode y las coordenadas a píxeles del lienzo
     // con el origen abajo a la izquierda (como Input.mousePosition)
     [JSExport] public static void PerfilGpu(bool si) => Porteo.Render.Dibujo.PerfilGpu = si;
+    [JSExport] public static void Ocultar(string nombre) => Porteo.Render.Dibujo.Ocultos.Add(nombre);
     [JSExport] public static void Apagar(string que)
     {
         if (que == "aniso") Porteo.Render.Gpu.SinAnisotropia = true;

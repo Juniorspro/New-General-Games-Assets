@@ -60,6 +60,31 @@ namespace UnityEngine
         // la posición local cambió desde afuera (RectTransform recalcula su anchoredPosition)
         internal virtual void PosLocalCambiada() { }
 
+        // La animación escribe posición, rotación y escala por separado y las aplica de una vez:
+        // un solo Ensuciar por hueso y nada si no cambió (la física y los renderers lo agradecen).
+        Vector3 animPos, animEsc;
+        Quaternion animRot;
+        byte animPend;
+
+        internal void PonerLocal(int que, Vector3 v, Quaternion q)
+        {
+            if (que == 0) { animPos = v; animPend |= 1; }
+            else if (que == 1) { animRot = q; animPend |= 2; }
+            else { animEsc = v; animPend |= 4; }
+        }
+
+        internal void AplicarLocal()
+        {
+            if (animPend == 0) return;
+            bool cambio = false, pos = false;
+            if ((animPend & 1) != 0 && (animPos.x != posLocal.x || animPos.y != posLocal.y || animPos.z != posLocal.z)) { posLocal = animPos; cambio = pos = true; }
+            if ((animPend & 2) != 0 && (animRot.x != rotLocal.x || animRot.y != rotLocal.y || animRot.z != rotLocal.z || animRot.w != rotLocal.w)) { rotLocal = animRot; cambio = true; }
+            if ((animPend & 4) != 0 && (animEsc.x != escLocal.x || animEsc.y != escLocal.y || animEsc.z != escLocal.z)) { escLocal = animEsc; cambio = true; }
+            animPend = 0;
+            if (pos) PosLocalCambiada();
+            if (cambio) Ensuciar();
+        }
+
         internal virtual void AlCambiar()
         {
             var cs = go?.componentes;

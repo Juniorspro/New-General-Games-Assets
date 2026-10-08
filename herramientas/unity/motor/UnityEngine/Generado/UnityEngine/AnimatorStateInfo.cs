@@ -13,9 +13,5 @@ namespace UnityEngine
         public float m_SpeedMultiplier;
         public int m_Tag;
         public int m_Loop;
-        public int fullPathHash { get { global::Porteo.Falta.Llamada("UnityEngine.AnimatorStateInfo::fullPathHash"); return default; } }
-        public int shortNameHash { get { global::Porteo.Falta.Llamada("UnityEngine.AnimatorStateInfo::shortNameHash"); return default; } }
-        public float normalizedTime { get { global::Porteo.Falta.Llamada("UnityEngine.AnimatorStateInfo::normalizedTime"); return default; } }
-        public bool IsName(string name) { global::Porteo.Falta.Llamada("UnityEngine.AnimatorStateInfo::IsName"); return default; }
     }
 }

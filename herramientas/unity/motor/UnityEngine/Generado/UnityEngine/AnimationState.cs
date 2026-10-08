@@ -2,9 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class AnimationState : global::UnityEngine.TrackedReference
+    public sealed partial class AnimationState
     {
-        public float normalizedTime { set { global::Porteo.Falta.Llamada("UnityEngine.AnimationState::normalizedTime="); } }
-        public float normalizedSpeed { set { global::Porteo.Falta.Llamada("UnityEngine.AnimationState::normalizedSpeed="); } }
     }
 }

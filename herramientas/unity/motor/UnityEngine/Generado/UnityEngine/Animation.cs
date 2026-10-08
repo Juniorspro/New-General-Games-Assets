@@ -2,11 +2,7 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public sealed partial class Animation : global::UnityEngine.Behaviour, global::System.Collections.IEnumerable
+    public sealed partial class Animation
     {
-        public global::UnityEngine.AnimationState this[string name] { get { global::Porteo.Falta.Llamada("UnityEngine.Animation::Item"); return default; } }
-        public void CrossFade(string animation) { global::Porteo.Falta.Llamada("UnityEngine.Animation::CrossFade"); }
-        public global::UnityEngine.AnimationState CrossFadeQueued(string animation) { global::Porteo.Falta.Llamada("UnityEngine.Animation::CrossFadeQueued"); return default; }
-        public global::System.Collections.IEnumerator GetEnumerator() { global::Porteo.Falta.Llamada("UnityEngine.Animation::GetEnumerator"); return default; }
     }
 }

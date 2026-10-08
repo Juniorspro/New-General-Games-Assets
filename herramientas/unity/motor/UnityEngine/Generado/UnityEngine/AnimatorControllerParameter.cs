@@ -4,6 +4,5 @@ namespace UnityEngine
 {
     public partial class AnimatorControllerParameter
     {
-        public int nameHash { get { global::Porteo.Falta.Llamada("UnityEngine.AnimatorControllerParameter::nameHash"); return default; } }
     }
 }

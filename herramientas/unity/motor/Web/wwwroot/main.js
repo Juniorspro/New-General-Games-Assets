@@ -77,6 +77,7 @@ exp.Iniciar(indice.escenas, 0, 96 * (window.devicePixelRatio || 1), movil);
 if (new URLSearchParams(location.search).has('perfil')) exp.PerfilGpu(true);
 // ?apagar=sin3d,sinui...: partes del dibujo apagadas, para aislar problemas
 for (const x of (new URLSearchParams(location.search).get('apagar') || '').split(',')) if (x) exp.Apagar(x);
+for (const x of (new URLSearchParams(location.search).get('ocultar') || '').split(',')) if (x) exp.Ocultar(x);
 // ?adelantar=N[&escena=X]: N segundos de juego sin dibujar al llegar a la escena (capturas de prueba)
 if (new URLSearchParams(location.search).has('adelantar'))
   exp.Adelantar(parseFloat(new URLSearchParams(location.search).get('adelantar')) || 0, new URLSearchParams(location.search).get('escena') || 'MainMenu');

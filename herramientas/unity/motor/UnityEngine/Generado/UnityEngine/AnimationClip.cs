@@ -4,6 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class AnimationClip
     {
-        public float length { get { global::Porteo.Falta.Llamada("UnityEngine.AnimationClip::length"); return default; } }
     }
 }

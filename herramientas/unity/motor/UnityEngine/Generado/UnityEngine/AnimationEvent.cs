@@ -4,7 +4,5 @@ namespace UnityEngine
 {
     public sealed partial class AnimationEvent
     {
-        public string stringParameter { get { global::Porteo.Falta.Llamada("UnityEngine.AnimationEvent::stringParameter"); return default; } }
-        public global::UnityEngine.Object objectReferenceParameter { get { global::Porteo.Falta.Llamada("UnityEngine.AnimationEvent::objectReferenceParameter"); return default; } }
     }
 }

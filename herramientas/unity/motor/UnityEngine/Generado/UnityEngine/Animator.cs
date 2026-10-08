@@ -4,24 +4,5 @@ namespace UnityEngine
 {
     public partial class Animator
     {
-        public bool isInitialized { get { global::Porteo.Falta.Llamada("UnityEngine.Animator::isInitialized"); return default; } }
-        public int layerCount { get { global::Porteo.Falta.Llamada("UnityEngine.Animator::layerCount"); return default; } }
-        public global::UnityEngine.AnimatorControllerParameter[] parameters { get { global::Porteo.Falta.Llamada("UnityEngine.Animator::parameters"); return default; } }
-        public float speed { set { global::Porteo.Falta.Llamada("UnityEngine.Animator::speed="); } }
-        public bool hasBoundPlayables { get { global::Porteo.Falta.Llamada("UnityEngine.Animator::hasBoundPlayables"); return default; } }
-        public float GetFloat(int id) { global::Porteo.Falta.Llamada("UnityEngine.Animator::GetFloat"); return default; }
-        public void SetFloat(int id, float value) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetFloat"); }
-        public bool GetBool(string name) { global::Porteo.Falta.Llamada("UnityEngine.Animator::GetBool"); return default; }
-        public bool GetBool(int id) { global::Porteo.Falta.Llamada("UnityEngine.Animator::GetBool"); return default; }
-        public void SetBool(string name, bool value) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetBool"); }
-        public void SetBool(int id, bool value) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetBool"); }
-        public void SetInteger(string name, int value) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetInteger"); }
-        public void SetInteger(int id, int value) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetInteger"); }
-        public void SetTrigger(string name) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetTrigger"); }
-        public void SetTrigger(int id) { global::Porteo.Falta.Llamada("UnityEngine.Animator::SetTrigger"); }
-        public void ResetTrigger(string name) { global::Porteo.Falta.Llamada("UnityEngine.Animator::ResetTrigger"); }
-        public global::UnityEngine.AnimatorStateInfo GetCurrentAnimatorStateInfo(int layerIndex) { global::Porteo.Falta.Llamada("UnityEngine.Animator::GetCurrentAnimatorStateInfo"); return default; }
-        public void Play(int stateNameHash, int layer, float normalizedTime) { global::Porteo.Falta.Llamada("UnityEngine.Animator::Play"); }
-        public void Rebind() { global::Porteo.Falta.Llamada("UnityEngine.Animator::Rebind"); }
     }
 }

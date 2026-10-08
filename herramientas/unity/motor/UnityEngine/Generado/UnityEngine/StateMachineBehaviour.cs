@@ -2,16 +2,9 @@
 #pragma warning disable
 namespace UnityEngine
 {
-    public abstract partial class StateMachineBehaviour : global::UnityEngine.ScriptableObject
+    public abstract partial class StateMachineBehaviour
     {
         protected StateMachineBehaviour() { }
-        public virtual void OnStateEnter(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex) { global::Porteo.Falta.Llamada("UnityEngine.StateMachineBehaviour::OnStateEnter"); }
-        public virtual void OnStateUpdate(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex) { global::Porteo.Falta.Llamada("UnityEngine.StateMachineBehaviour::OnStateUpdate"); }
-        public virtual void OnStateExit(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex) { global::Porteo.Falta.Llamada("UnityEngine.StateMachineBehaviour::OnStateExit"); }
-        public virtual void OnStateMove(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex) { global::Porteo.Falta.Llamada("UnityEngine.StateMachineBehaviour::OnStateMove"); }
-        public virtual void OnStateIK(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex) { global::Porteo.Falta.Llamada("UnityEngine.StateMachineBehaviour::OnStateIK"); }
-        public virtual void OnStateMachineEnter(global::UnityEngine.Animator animator, int stateMachinePathHash) { global::Porteo.Falta.Llamada("UnityEngine.StateMachineBehaviour::OnStateMachineEnter"); }
-        public virtual void OnStateMachineExit(global::UnityEngine.Animator animator, int stateMachinePathHash) { global::Porteo.Falta.Llamada("UnityEngine.StateMachineBehaviour::OnStateMachineExit"); }
         public virtual void OnStateEnter(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex, global::UnityEngine.Animations.AnimatorControllerPlayable controller) { global::Porteo.Falta.Llamada("UnityEngine.StateMachineBehaviour::OnStateEnter"); }
         public virtual void OnStateUpdate(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex, global::UnityEngine.Animations.AnimatorControllerPlayable controller) { global::Porteo.Falta.Llamada("UnityEngine.StateMachineBehaviour::OnStateUpdate"); }
         public virtual void OnStateExit(global::UnityEngine.Animator animator, global::UnityEngine.AnimatorStateInfo stateInfo, int layerIndex, global::UnityEngine.Animations.AnimatorControllerPlayable controller) { global::Porteo.Falta.Llamada("UnityEngine.StateMachineBehaviour::OnStateExit"); }

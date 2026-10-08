@@ -58,6 +58,7 @@ if (args.Contains("diag"))
         foreach (var r in UnityEngine.Object.FindObjectsOfType<Renderer>())
         {
             if (!r.enabled || !r.gameObject.activeInHierarchy || (cam.cullingMask & (1 << r.gameObject.layer)) == 0) continue;
+            if (args.Contains("transparentes") && !r.sharedMaterials.Any(m => m != null && m.renderQueue > 2500)) continue;
             var b = r.bounds;
             float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f; bool detras = false, alguno = false;
             for (int i = 0; i < 8; i++)
@@ -112,6 +113,32 @@ if (args.Contains("diag"))
         Console.WriteLine("mapa " + sb);
     }
     foreach (var kv in letras) Console.WriteLine($"mapa {kv.Value} = {kv.Key}");
+}
+if (args.Contains("diag"))
+{
+    int k = 0;
+    foreach (var a in UnityEngine.Object.FindObjectsOfType<Animator>())
+    {
+        if (k++ > 8) break;
+        var info = a.GetCurrentAnimatorStateInfo(0);
+        Transform hueso = a.transform;
+        foreach (var t in a.GetComponentsInChildren<Transform>()) if (t.name == "bone_slime" || t.name == "Spine01J") { hueso = t; break; }
+        Console.WriteLine($"animador {a.name} ctrl={(a.runtimeAnimatorController != null ? a.runtimeAnimatorController.name : "-")} init={a.isInitialized} estado={info.shortNameHash} t={info.normalizedTime:F2} largo={info.length:F2} hueso {hueso.name} rot={hueso.localRotation.eulerAngles} pos={hueso.localPosition}");
+    }
+}
+if (args.Contains("slime"))
+{
+    var go = UnityEngine.Object.FindObjectsOfType<Transform>().FirstOrDefault(t => t.name.StartsWith("slimePink"))?.gameObject;
+    Console.WriteLine("slime-go " + (go != null ? go.name : "ninguno"));
+    if (go != null)
+        foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+        {
+            Console.WriteLine($"slime-r {r.GetType().Name} {r.name} activo={r.gameObject.activeInHierarchy} hab={r.enabled}");
+            foreach (var m in r.sharedMaterials)
+                if (m != null) Console.WriteLine($"   mat {m.name} shader={m.shader?.name} cola={m.renderQueue} claves=[{string.Join(",", m.shaderKeywords)}]");
+            var b = new MaterialPropertyBlock(); r.GetPropertyBlock(b);
+            Console.WriteLine($"   bloque vacío={b.isEmpty}");
+        }
 }
 var faltan = Porteo.Falta.Vistos.ToList();
 Console.WriteLine($"porteo: {faltan.Count} miembros sin hacer usados:");
