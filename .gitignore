@@ -27,3 +27,6 @@ herramientas/unity/**/obj/
 
 # los datos del juego que saca exportar.py del APK: nunca al repo
 porteos/slime-rancher/web/datos
+
+# Geometry Dash: lo que saca armar-datos.py del APK (dibujos, niveles, música) es del juego
+porteos/gd/datos/
