@@ -27,6 +27,16 @@ python3 subir.py CARPETA --proyecto NOMBRE --clave ~/claves/NOMBRE.txt --verific
 - Pasan sin clave sólo `sw.js`, el manifest y los íconos (el navegador los puede pedir sin cookies
   para instalar la app; no tienen nada del juego).
 
+## Descargas (el APK, el HTML único)
+
+Pages no sirve archivos de más de 25 MiB. `descargas.py` parte los archivos grandes en pedazos de
+20 MB dentro del sitio (`descargas/`, detrás de la misma puerta) con una página que los baja, los une
+en el teléfono, comprueba el SHA-256 y los guarda con su nombre: el APK se baja con un toque.
+
+```sh
+python3 -I descargas.py SITIO juego.apk juego.html --titulo "Mi juego"   # antes de subir.py
+```
+
 ## Qué le pasa al teléfono de otro
 
 La página puede contar lo que pasa (`empaquetar.py --registro __registro`, ver

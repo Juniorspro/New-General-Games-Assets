@@ -85,7 +85,11 @@ namespace UnityEngine.Playables
 
         // ── propiedades ──
         public PlayState state => estado;
-        public DirectorWrapMode extrapolationMode { get => envolver; set => envolver = value; }
+        public DirectorWrapMode extrapolationMode
+        {
+            get => envolver;
+            set { envolver = value; if (raiz != null && !raiz.Destruido) raiz.Envolver = value; }
+        }
         public PlayableAsset playableAsset
         {
             get => asset;
@@ -137,9 +141,12 @@ namespace UnityEngine.Playables
             paused?.Invoke(this);
         }
 
+        // como Unity: sigue lo que está en pausa; un director parado (Stop) no vuelve a arrancar. En
+        // Bad Parenting, con cuadros lentos dos señales caen juntas: la del diálogo pausa, la del
+        // final para, y al terminar el diálogo su Resume volvía a empezar la escena entera
         public void Resume()
         {
-            if (grafo == null || grafo.Destruido) { Play(); return; }
+            if (grafo == null || grafo.Destruido) return;
             if (estado == PlayState.Playing) return;
             grafo.Reproducir();
             estado = PlayState.Playing;
@@ -195,6 +202,10 @@ namespace UnityEngine.Playables
             {
                 double d = asset.duration;
                 if (d > 0 && d < double.PositiveInfinity) raiz.Duracion = d;
+                // la raíz con el modo del director (como Unity): las señales (TimeNotificationBehaviour)
+                // lo copian de ella, y con el Loop de cualquier Playable la del final de una Timeline
+                // que termina (None) no se disparaba nunca: en Bad Parenting el jugador quedaba sin control
+                raiz.Envolver = envolver;
                 raiz.PonerTiempo(tiempo);
             }
             foreach (var s in g.Salidas.ToArray()) Enlazar(s);

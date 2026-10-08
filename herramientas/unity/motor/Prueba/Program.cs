@@ -59,6 +59,8 @@ if (args.Length > 1 && args[1] == "alcance")
 
 var reloj = Stopwatch.StartNew();
 Mundo.RelojSimulado = true;
+// "senales": cada señal de Timeline que se manda
+Porteo.Diagnostico.VerSenales = args.Contains("senales");
 Porteo.Motor.Iniciar(escenas, escena);
 Console.WriteLine($"porteo: arranque en {reloj.ElapsedMilliseconds} ms");
 reloj.Restart();
@@ -67,9 +69,39 @@ bool nueva = args.Contains("nueva");
 int desdeMenu = -1; bool disparada = false; int enMundo = 0;
 // "guion ARCHIVO.json": entrada simulada desde que está la partida (ver la clase Guion, al final)
 var guion = args.Contains("guion") ? new Guion(File.ReadAllText(args[Array.IndexOf(args, "guion") + 1])) : null;
+// "clics N[:HASTA]": un clic del mouse cada N cuadros (pasar diálogos, como tocar la pantalla)
+var clicsArg = args.Contains("clics") ? args[Array.IndexOf(args, "clics") + 1].Split(':') : null;
+int clicsCada = clicsArg != null ? int.Parse(clicsArg[0]) : 0;
+int clicsHasta = clicsArg != null && clicsArg.Length > 1 ? int.Parse(clicsArg[1]) : int.MaxValue;
+// "--diagcada N": los diagnósticos de --diag también cada N cuadros, no sólo al final
+int diagCada = args.Contains("--diagcada") ? int.Parse(args[Array.IndexOf(args, "--diagcada") + 1]) : 0;
+var diags = args.Contains("--diag") ? args[Array.IndexOf(args, "--diag") + 1].Split(';') : null;
+// "fps N": cuadros más largos (un teléfono lento: varias señales de Timeline en el mismo cuadro)
+double paso = args.Contains("fps") ? 1.0 / double.Parse(args[Array.IndexOf(args, "fps") + 1], System.Globalization.CultureInfo.InvariantCulture) : 1 / 60.0;
 for (int i = 0; i < cuadros; i++)
 {
-    Mundo.Cuadro(1 / 60.0);
+    Mundo.Cuadro(paso);
+    if (clicsCada > 0 && i <= clicsHasta)
+    {
+        if (i % clicsCada == 0) Entrada.BotonRaton(0, true);
+        else if (i % clicsCada == 1) Entrada.BotonRaton(0, false);
+    }
+    // "tecla CODIGO:DESDE:HASTA[,...]": una tecla (KeyCode) apretada entre esos cuadros;
+    // "mirar DX:DY:DESDE:HASTA": el mouse movido así cada cuadro (como mirar con el puntero trabado)
+    if (args.Contains("tecla"))
+        foreach (var t in args[Array.IndexOf(args, "tecla") + 1].Split(','))
+        {
+            var v = t.Split(':').Select(int.Parse).ToArray();
+            if (i == v[1]) Entrada.Tecla(v[0], true);
+            else if (i == v[2]) Entrada.Tecla(v[0], false);
+        }
+    if (args.Contains("mirar"))
+    {
+        var v = args[Array.IndexOf(args, "mirar") + 1].Split(':').Select(float.Parse).ToArray();
+        if (i >= v[2] && i < v[3]) Entrada.Mirar(v[0], v[1]);
+    }
+    if (diagCada > 0 && diags != null && i % diagCada == 0)
+        foreach (var c in diags) Console.WriteLine($"[cuadro {i} t={Time.time:F1}] " + Porteo.Diagnostico.Correr(c));
     if (!nueva) continue;
     var activa = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
     if (!disparada && activa == "MainMenu")

@@ -294,7 +294,12 @@ namespace Porteo
                     }
                     case 1:
                     {
-                        var d = (Vector2)(Entrada.raton - Entrada.ratonAntes) + Entrada.mirar;
+                        // con el puntero trabado sólo cuenta el movimiento relativo (como Unity): un
+                        // clic que lleva el ratón al centro (tocar en el teléfono) no es mirar, y el
+                        // salto desde donde estaba (el botón Play del menú) giraba la cámara de golpe
+                        var d = Puntero.Bloqueo == CursorLockMode.Locked
+                            ? Entrada.mirar
+                            : (Vector2)(Entrada.raton - Entrada.ratonAntes) + Entrada.mirar;
                         float v = e.Numero == 0 ? d.x : e.Numero == 1 ? d.y : Entrada.rueda.y;
                         v *= e.Sensibilidad * (e.Numero == 2 ? 1 : 0.1f);
                         if (e.Invertir) v = -v;

@@ -115,7 +115,7 @@ export function crearControlesPC(exp, lienzo, cfg = {}) {
     // un toque corto y quieto es un clic (usar lo que se mira, pasar el diálogo). Con la hora de
     // los eventos y no la de cuando se atienden: en un teléfono lento un cuadro largo los atrasa y
     // un toque normal parecía largo
-    if (e.type === 'pointerup' && e.timeStamp - m.t0 < 600 && Math.hypot(m.x - m.x0, m.y - m.y0) < 14) clic();
+    if (e.type === 'pointerup' && e.timeStamp - m.t0 < 800 && Math.hypot(m.x - m.x0, m.y - m.y0) < 14) clic();
   }
   capa.addEventListener('pointerup', fin);
   capa.addEventListener('pointercancel', fin);

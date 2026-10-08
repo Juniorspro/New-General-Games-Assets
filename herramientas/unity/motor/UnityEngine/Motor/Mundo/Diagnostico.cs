@@ -33,6 +33,9 @@ namespace Porteo
                     case "crear": return Crear(arg);
                     case "aspiradora": return Aspiradora();
                     case "tiempo": return $"tiempo: t={Time.time:F2} escala={Time.timeScale} cuadro={Time.frameCount} real={Time.realtimeSinceStartup:F1} cultura={System.Globalization.CultureInfo.CurrentCulture.Name}";
+                    case "directores": return Directores(arg);
+                    case "animadores": return Animadores(arg);
+                    case "textos": return Textos();
                     default: return "diagnóstico: no sé " + partes[0];
                 }
             }
@@ -408,6 +411,68 @@ namespace Porteo
         }
 
         public static string Ruta(Transform t) => t.parent == null ? t.name : Ruta(t.parent) + "/" + t.name;
+
+        // los Animator (los que empiezan con arg): con qué controlador, en qué clip y si los mueve una
+        // Timeline. Un Animator que sigue escribiendo la pose pisa lo que el juego pone a mano
+        public static string Animadores(string arg)
+        {
+            var sb = new StringBuilder("animadores:");
+            foreach (var a in UnityEngine.Object.FindObjectsOfType<Animator>())
+            {
+                if (arg.Length > 0 && !a.name.StartsWith(arg)) continue;
+                var clip = a.GetCurrentAnimatorClipInfo(0);
+                sb.Append($"\n   {Ruta(a.transform)} habilitado={a.enabled} controlador={a.runtimeAnimatorController?.name} " +
+                          $"clip={(clip.Length > 0 ? clip[0].clip?.name : "-")} raiz={a.applyRootMotion} timeline={a.hasBoundPlayables} pos={a.transform.position} rot={a.transform.eulerAngles}");
+            }
+            return sb.ToString();
+        }
+
+        // los textos que se ven (TextMeshPro y UI.Text, por reflexión): qué diálogo está en pantalla
+        public static string Textos()
+        {
+            var sb = new StringBuilder("textos:");
+            foreach (var c in UnityEngine.Object.FindObjectsOfType<Behaviour>())
+            {
+                var t = c.GetType();
+                if (!c.isActiveAndEnabled || !(t.Name.Contains("TextMeshPro") || t.Name == "Text")) continue;
+                var s = t.GetProperty("text")?.GetValue(c) as string;
+                if (string.IsNullOrWhiteSpace(s)) continue;
+                var limpio = new StringBuilder();   // sin las etiquetas de texto enriquecido
+                bool enEtiqueta = false;
+                foreach (var ch in s) { if (ch == '<') enEtiqueta = true; else if (ch == '>') enEtiqueta = false; else if (!enEtiqueta) limpio.Append(ch == '\n' ? ' ' : ch); }
+                s = limpio.ToString();
+                sb.Append($"\n   {Ruta(c.transform)}: \"{(s.Length > 70 ? s.Substring(0, 70) + "…" : s)}\"");
+            }
+            return sb.ToString();
+        }
+
+        // cada señal de Timeline a la consola (la prueba de consola: "senales")
+        public static bool VerSenales { get => Porteo.Playables.Grafo.VerAvisos; set => Porteo.Playables.Grafo.VerAvisos = value; }
+
+        // las Timeline que están corriendo: dónde van (una que no avanza deja al juego esperando) y,
+        // con "directores:marcas", las señales de cada pista (por reflexión: Timeline es del juego)
+        public static string Directores(string arg = "")
+        {
+            var sb = new StringBuilder("directores:");
+            foreach (var d in Porteo.Playables.Directores.activos)
+            {
+                sb.Append($"\n   {Ruta(d.transform)} asset={d.playableAsset?.name} estado={d.state} t={d.time:F3}/{d.duration:F3} envolver={d.extrapolationMode}");
+                if (arg != "marcas" || d.playableAsset == null) continue;
+                var pistas = d.playableAsset.GetType().GetMethod("GetOutputTracks")?.Invoke(d.playableAsset, null) as System.Collections.IEnumerable;
+                if (pistas == null) continue;
+                foreach (var p in pistas)
+                {
+                    var marcas = p.GetType().GetMethod("GetMarkers")?.Invoke(p, null) as System.Collections.IEnumerable;
+                    if (marcas == null) continue;
+                    foreach (var mk in marcas)
+                    {
+                        var t = mk.GetType().GetProperty("time")?.GetValue(mk);
+                        sb.Append($"\n      pista {(p as UnityEngine.Object)?.name}: {mk.GetType().Name} t={t}");
+                    }
+                }
+            }
+            return sb.ToString();
+        }
 
         static Transform Buscar(string nombre) =>
             Resources.FindObjectsOfTypeAll<Transform>().Where(t => t.gameObject.scene.IsValid())

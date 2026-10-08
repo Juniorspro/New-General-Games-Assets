@@ -257,7 +257,7 @@ namespace Porteo.Playables
             if (primeraVez)
             {
                 n.CuadroVisto = Cuadro;
-                bool corre = Reproduciendo && n.Reproduciendo;
+                bool corre = Reproduciendo && n.Reproduciendo, vuelta = false;
                 // el tiempo avanza en lo que está en reproducción (salvo que alguien lo haya puesto este cuadro)
                 if (corre && reproduccion && n.CuadroTiempoPuesto != Cuadro)
                 {
@@ -267,7 +267,9 @@ namespace Porteo.Playables
                     {
                         switch (n.Envolver)
                         {
-                            case DirectorWrapMode.Loop: if (n.Duracion > 0) n.Tiempo %= n.Duracion; break;
+                            // timeLooped: las señales de Timeline cuentan con eso para disparar las del
+                            // final de la vuelta y rearmar las del principio
+                            case DirectorWrapMode.Loop: if (n.Duracion > 0) { n.Tiempo %= n.Duracion; vuelta = true; } break;
                             case DirectorWrapMode.Hold: n.Tiempo = n.Duracion; n.Hecho = true; break;
                             default: n.Hecho = true; break;
                         }
@@ -280,6 +282,7 @@ namespace Porteo.Playables
                     info.m_EffectiveSpeed = (float)(n.Velocidad * velPadre);
                     if (n.Busqueda) info.m_Flags |= FrameData.Flags.SeekOccured;
                     if (corre) info.m_Flags |= FrameData.Flags.EffectivePlayStatePlaying;
+                    if (vuelta) info.m_Flags |= FrameData.Flags.Loop;
                     int estado = corre ? 1 : 0;
                     if (estado != n.Notificado)
                     {
@@ -324,7 +327,14 @@ namespace Porteo.Playables
         }
 
         // ── notificaciones ──
-        public void Avisar(Salida s, Playable origen, INotification n, object ctx) => avisos.Add((s, origen, n, ctx));
+        public void Avisar(Salida s, Playable origen, INotification n, object ctx)
+        {
+            avisos.Add((s, origen, n, ctx));
+            if (VerAvisos) Debug.Log($"porteo: aviso {n?.GetType().Name} {(n as Object)?.name} en t={origen.GetTime():F3} ({Director?.name} t={Director?.time:F3}) a {s.Receptores.Count} receptores");
+        }
+
+        // ?diag / prueba de consola: cada señal de Timeline en la consola
+        public static bool VerAvisos;
 
         void Entregar()
         {

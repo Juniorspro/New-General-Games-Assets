@@ -14,7 +14,8 @@ self.addEventListener('activate', (ev) => ev.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', (ev) => {
   const req = ev.request;
   const url = new URL(req.url);
-  if (req.method !== 'GET' || url.origin !== self.location.origin || url.pathname.includes('/b/')) return;
+  // los bloques y las descargas grandes (cloudflare/descargas.py) van directo: no son "la página"
+  if (req.method !== 'GET' || url.origin !== self.location.origin || url.pathname.includes('/b/') || url.pathname.includes('/descargas/')) return;
   // la página y lo suyo: de la red si hay (por si hay una versión nueva) y, sin red, lo guardado
   ev.respondWith(fetch(req).then((r) => {
     if (r.ok) { const copia = r.clone(); caches.open(PAGINA).then((c) => c.put(req, copia)); }
