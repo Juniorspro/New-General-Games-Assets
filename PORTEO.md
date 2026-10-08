@@ -523,7 +523,10 @@ créditos ni se tapa al autor.
 | cargar las animaciones de PvZ-Portable recién cuando se usan | el juego dibuja 137 `IMAGE_REANIM_*` directamente y una partida guardada puede restaurar cualquiera: el 1-5 se cerraba ("table index is out of bounds") | precargarlas todas como el original, de a una con el título en pantalla |
 | sacar Asyncify para achicar el wasm | los cuadros de diálogo de PvZ esperan con `emscripten_sleep` (`Dialog::WaitForResult`): sin Asyncify no andan | dejarlo (cuesta 2,4 MB de wasm y ~2 s con CPU ÷4) |
 | preguntarle al disco por cada nombre posible de una imagen | en Emscripten cada archivo que no existe es una excepción de JS: ~25 000 consultas, 1,2 s de la carga con CPU ÷4 | leer cada carpeta una vez y no preguntar por lo que no está (`PakInterface::PuedeAbrirse`) |
-| meter un binario en un `.html` con base64 | +33 % de tamaño, y leerlo es más lento | UTF-16 con BOM: dos bytes por carácter y sólo se escapa lo que el HTML no deja pasar (+3 %) |
+| meter un binario en un `.html` con base64 | +33 % de tamaño, y leerlo es más lento | UTF-8 de a 7 bits por carácter (+14 %): ASCII, y el 0, el 13 y el 60 como U+00C0 + valor (`un-archivo.py`) |
+| el `.html` único en UTF-16 con BOM (+3 %) | la plataforma donde se suben los juegos lo lee como UTF-8 y muestra el código como texto | UTF-8 de 7 bits: PvZ pesa 29,4 MB en vez de 24,8, y anda |
+| buscar los archivos del `.html` único con `new URL(ruta, document.baseURI)` | si la plataforma abre la página como `blob:`, `data:` o `about:blank`, falla con las rutas relativas: el juego se traba y el aviso sale en 13 px gris | reconocerlos por el final de la ruta (`un-archivo.py`); los errores, en letra grande |
+| subir un `.html` grande a una plataforma | si lo recorta por tamaño, el juego se queda cargando sin decir nada | el arranque cuenta las partes y lo dice en pantalla |
 | compilar el C# decompilado contra las DLL de Unity que trae el APK | vienen recortadas (*managed stripping*): faltan setters de atributos y miembros que el juego no usaba, y salen errores que en Unity no existen (22 en Slime Rancher) | compilar contra las DLL completas del editor de la misma versión (`herramientas/unity/verificar`) |
 | el recorte del build en el código del juego | saca la mitad de un par de operadores (`==` sin `!=`) o un constructor: el decompilado no compila | agregar la otra mitad como la negación de la que quedó (`porteos/slime-rancher/arreglar.py`) |
 | un port de Android de un juego de PC | quien lo porteó puede **reemplazar** el teclado y el mouse por controles de pantalla: en la web de PC no se puede jugar | buscar si la entrada original sigue en el código (en Slime Rancher, `SRInput` con todas sus teclas) y que el control táctil consulte también a la de PC |
@@ -650,10 +653,11 @@ Estrategia: PvZ-Portable (reimplementación LGPL en C++/SDL2/GLES2) → WebAssem
 Fidelidad: 1:1 — la lógica del juego y los datos originales; sin logros ni Zombatar,
            que no existían en 2009
 Tamaños: el juego instalado 26,9 MB (exe 3 + pak 23,9) → web 31,2 MB (pak 23,0 + motor 7,6 + carcasa)
-         · APK 25,6 MB · un archivo 24,8 MB (era 33,7) · zip 24,2 MB
+         · APK 25,6 MB · un archivo 29,4 MB en UTF-8 (24,8 en UTF-16, que la plataforma
+         mostraba como texto; 33,7 en base64) · zip 24,2 MB
 Memoria: 172 MB del módulo jugando el 1-1 (modo de poca memoria; el normal, 264)
 Carga (Chrome, CPU ÷4 como un teléfono): "click to start" a los 10,9 s (era 15,1);
-         el archivo único, 11,6 s (era 19,5)
+         el archivo único, 10,9 s (era 19,5; en UTF-16, 10,0 en la misma máquina)
 Pruebas: 39/39 (prueba.mjs: toques reales, intro, teclado propio, pantalla ancha,
          girado, sin red, un archivo) · recorrido 31/31 con la pantalla ancha
          (recorrido.mjs) · bailarín 6/6 (bailarin.mjs) · no se pudo probar en un teléfono real
@@ -681,8 +685,9 @@ Pruebas: 39/39 (prueba.mjs: toques reales, intro, teclado propio, pantalla ancha
     congelar la pantalla; se sacaron ~25 000 consultas al disco que no hacían
     falta (1,2 s con CPU ÷4) y la segunda decodificación de la música (1,5 s),
     con un resultado idéntico byte a byte;
-  - el archivo único va en UTF-16 y no en base64, con el pak al final y
-    descomprimido en otro hilo: 33,7 → 24,8 MB;
+  - el archivo único va en UTF-8 de a 7 bits y no en base64, con el pak al final y
+    descomprimido en otro hilo: 33,7 → 29,4 MB (en UTF-16 eran 24,8, pero la
+    plataforma lo mostraba como texto);
   - modo de poca memoria del motor (sonidos bajo demanda, sin copia en RAM de
     las texturas): 264 → 206 MB al medirlo (la versión de ahora: 172) y
     "click to start" 0,8 s antes;

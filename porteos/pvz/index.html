@@ -15,6 +15,9 @@
   #carga { position: fixed; inset: 0; z-index: 5; display: none; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px;
     padding-bottom: max(24px, 8vh); background: #000; color: #8d8d8d; font: 13px/1 'Courier New', monospace; letter-spacing: .12em; }
   #carga.visible { display: flex; }
+  /* "No se pudo arrancar" en 13 px gris no se leía en un teléfono, y es lo que se manda en una captura. */
+  #estado.error { color: #ff8a80; font: 600 16px/1.4 system-ui, sans-serif; letter-spacing: 0; white-space: pre-wrap;
+    text-align: center; padding: 0 16px; }
   #barra { width: min(260px, 50vw); height: 3px; background: #222; }
   #barra i { display: block; height: 100%; width: 0; background: #fff; transition: width .15s; }
   #fin { position: fixed; inset: 0; z-index: 6; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
@@ -110,6 +113,7 @@
   function fallo(e) {
     console.error(e);
     carga.classList.add('visible');
+    estado.className = 'error';
     progreso(null, 'No se pudo arrancar: ' + (e && e.message || e));
   }
 

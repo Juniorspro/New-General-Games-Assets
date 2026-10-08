@@ -8,12 +8,15 @@ Por qué hace falta y no alcanza con copiar la carpeta: abierto desde el disco
 los archivos de al lado. Casi todos los juegos cargan sus datos así.
 
 Cómo:
-  - El .html va en UTF-16 (con BOM, que manda por encima del charset que diga un
-    servidor). Así cada carácter lleva dos bytes del archivo tal cual y sólo se
-    escapan las unidades que el HTML no deja pasar (sustitutos sueltos, NUL, CR,
-    "<"): ~3% más que el archivo, contra el 33% del base64. Medido en Chrome con
-    PvZ (25 MB de datos): 27 MB de HTML en vez de 35, y la página se lee en 0,42 s
-    en vez de 0,68 s (CPU ÷4: 2,0 s en vez de 3,2 s). El texto del juego no cambia.
+  - El .html va en UTF-8 y los datos, de a 7 bits por carácter ASCII: 8/7 del
+    archivo más un 2 %, contra el 33 % del base64. Los tres valores que no pueden ir
+    sueltos dentro de un <script> van como U+00C0 + valor: el 0 (el parser lo cambia
+    por U+FFFD), el 13 (lo vuelve salto de línea) y el 60, "<" (podría cerrar el
+    script). Todo queda debajo de U+0100: el navegador guarda el texto con un byte
+    por carácter.
+    Antes iba en UTF-16 (~3 % más que el archivo), pero la plataforma donde se suben
+    los juegos lee el archivo como UTF-8 y mostraba el código como texto. PvZ (25 MB
+    de datos): UTF-16 26,0 MB, UTF-8 de 7 bits 29,4 MB, base64 33,7 MB.
   - CSS y <script src> se meten en el HTML; los url() del CSS, como data: URI.
   - El código y los datos viajan en bloques <script type="porteo/archivo">,
     con gzip cuando achica (DecompressionStream; el .wasm baja ~70%).
@@ -26,18 +29,27 @@ Cómo:
     compila su wasm; fetch() de esa ruta espera a que estén. El juego (o su
     carcasa) puede pedirlos sin copias y con progreso con
     window.__porteoArchivo(ruta, alAvanzar) → Promise<Uint8Array>.
+  - Cada archivo se reconoce por el final de la ruta que se pida, sin resolverla
+    contra la dirección de la página: una plataforma puede abrirla como blob:,
+    data: o about:blank, y ahí new URL falla con las rutas relativas.
+  - Si el HTML llega cortado (una plataforma que lo recorta, una descarga a medias),
+    lo dice en pantalla en vez de quedarse cargando.
 
 Límites conocidos: no cubre import() dinámico de módulos ES ni document.write;
 DecompressionStream pide Chrome 80+, Safari 16.4+, Firefox 113+.
 """
 import argparse
 import base64
-import codecs
 import gzip
 import json
 import mimetypes
 import re
 from pathlib import Path
+
+try:
+    import numpy as np   # sólo para que sea rápido: sin numpy da lo mismo, más lento
+except ImportError:
+    np = None
 
 NO_EMBEBER = {"sw.js", "manifest.webmanifest", "icono-192.png", "icono-512.png"}  # los genera pwa.py
 TIPOS = {".js": "text/javascript", ".mjs": "text/javascript", ".wasm": "application/wasm",
@@ -64,75 +76,113 @@ def comprimir(datos: bytes):
     return datos, False
 
 
-# ── bytes → texto UTF-16 ───────────────────────────────────────────────────
-# Cada dos bytes son una unidad de 16 bits que va como un carácter. No pasan intactas:
-# 0x0000 (el parser la cambia por U+FFFD), 0x000D (se vuelve 0x000A), 0x003C ("<" podría
-# cerrar el <script>) y los sustitutos sueltos (el decodificador UTF-16 los cambia por
-# U+FFFD; un par alto+bajo válido sí pasa). Esas van como ESC + código:
-#   sustituto s → s − 0xD700 (0x0100..0x08FF); 0x0000 → 0x0900; 0x000D → 0x0901;
-#   0x003C → 0x0902; ESC → 0x0903. El arranque (deco) hace lo inverso.
-CODIGOS = {0x0000: 0x0900, 0x000D: 0x0901, 0x003C: 0x0902}
-CANDIDATOS = [chr(c) for c in range(0xF8FF, 0xF8BF, -1)]  # uso privado: casi nunca están
+# ── bytes → texto de 7 bits ────────────────────────────────────────────────
+# Los bits del archivo, de a 7 y del más alto al más bajo, cada grupo un carácter ASCII
+# (el último se completa con ceros; data-n dice cuántos bytes son). 0, 13 y 60 no pasan
+# intactos por el parser: van como U+00C0 + valor (À, Í, ü). El arranque (deco) hace lo
+# inverso. Para el tamaño cuenta el UTF-8: el ASCII es un byte; esos tres, dos.
+ESCAPE = 0xC0
+PROHIBIDOS = (0, 13, 60)
+_ESCAPAR = {p: chr(ESCAPE + p) for p in PROHIBIDOS}
+_DESESCAPAR = bytes.maketrans(bytes(ESCAPE + p for p in PROHIBIDOS), bytes(PROHIBIDOS))
 
 
-def a_utf16(datos: bytes):
-    """bytes → (texto, ESC). Un número impar de bytes se completa con un 0 (data-n dice el largo)."""
-    if len(datos) % 2:
-        datos += b"\0"
-    # surrogatepass: un par válido queda como un carácter astral (y se escribe igual);
-    # los sustitutos sueltos quedan como tales, para escaparlos.
-    s = datos.decode("utf-16-le", "surrogatepass")
-    esc = min(CANDIDATOS, key=s.count)
-    tabla = dict(CODIGOS)
-    tabla[ord(esc)] = 0x0903
+def largo_texto(n: int):
+    """Cuántos caracteres ocupan n bytes."""
+    return -(-n * 8 // 7)
 
-    def cambiar(m):
-        c = ord(m.group())
-        return esc + chr(tabla[c] if c in tabla else c - 0xD700)
-    return re.sub("[\x00\r<" + esc + "\ud800-\udfff]", cambiar, s), ord(esc)
+
+def a_texto(datos: bytes):
+    if np is not None:
+        bits = np.unpackbits(np.frombuffer(datos, np.uint8))
+        bits = np.concatenate([bits, np.zeros(-len(bits) % 7, np.uint8)])
+        crudo = (np.packbits(bits.reshape(-1, 7), axis=1)[:, 0] >> 1).tobytes()
+    else:
+        relleno = datos + b"\0" * (-len(datos) % 7)
+        crudo = bytearray()
+        for i in range(0, len(relleno), 7):
+            v = int.from_bytes(relleno[i:i + 7], "big")
+            crudo += bytes((v >> d) & 127 for d in range(49, -1, -7))
+        crudo = bytes(crudo[:largo_texto(len(datos))])
+    return crudo.decode("ascii").translate(_ESCAPAR)
+
+
+def de_texto(texto: str, n: int):
+    """Lo mismo que deco() del arranque: para comprobar cada bloque antes de escribir."""
+    crudo = texto.encode("latin-1").translate(_DESESCAPAR)
+    if np is not None:
+        siete = np.unpackbits(np.frombuffer(crudo, np.uint8)[:, None], axis=1)[:, 1:]
+        return np.packbits(siete.ravel())[:n].tobytes()
+    crudo += b"\0" * (-len(crudo) % 8)
+    sal = bytearray()
+    for i in range(0, len(crudo), 8):
+        v = 0
+        for x in crudo[i:i + 8]:
+            v = v << 7 | x
+        sal += v.to_bytes(7, "big")
+    return bytes(sal[:n])
 
 
 def bloque(etiqueta: str, datos: bytes, gz: bool, **attrs):
-    texto, esc = a_utf16(datos)
+    texto = a_texto(datos)
+    if len(texto) != largo_texto(len(datos)) or de_texto(texto, len(datos)) != datos:
+        raise SystemExit(f"no vuelve igual: {etiqueta} {attrs}")
     extra = "".join(f' data-{k}="{v}"' for k, v in attrs.items())
-    return (f'<script type="{etiqueta}"{extra} data-gz="{1 if gz else 0}" data-n="{len(datos)}" '
-            f'data-e="{esc}">{texto}</script>')
+    return f'<script type="{etiqueta}"{extra} data-gz="{1 if gz else 0}" data-n="{len(datos)}">{texto}</script>'
 
 
 ARRANQUE = r"""<script>
 /* porteo:un-archivo — arranque. Ver herramientas/porteo/un-archivo.py */
 (function () {
   'use strict';
-  var A = {};
-  function clave(u) {
-    try { var h = new URL(u, document.baseURI).href; return h.split('#')[0].split('?')[0]; } catch (e) { return null; }
+  // Cada archivo va anotado con su ruta dentro de la carpeta del juego ('main.pak',
+  // 'datos/x.bin') y se lo reconoce por el final de lo que se pida. Sin new URL: si la
+  // página se abre como blob:, data: o about:blank, falla con las rutas relativas y no
+  // se encontraba nada (PvZ quedaba en "both async and sync fetching of the wasm failed").
+  var A = {}, P = {};
+  function anotar(ruta, a) {
+    var k = ruta.slice(ruta.lastIndexOf('/') + 1);
+    if (!A[ruta]) (P[k] = P[k] || []).push(ruta);
+    return A[ruta] = a;
   }
   function buscar(u) {
-    if (typeof u !== 'string' || /^(blob|data):/.test(u)) return null;
-    var k = clave(u);
-    return k && A[k] || null;
+    if (typeof u !== 'string') return null;
+    var s = u.split('#')[0].split('?')[0];
+    try { s = decodeURI(s); } catch (e) {}
+    var c = P[s.slice(s.lastIndexOf('/') + 1)] || [];
+    for (var i = 0; i < c.length; i++) {
+      if (s === c[i] || s.slice(-c[i].length - 1) === '/' + c[i]) return A[c[i]];
+    }
+    return null;
   }
-  // El texto UTF-16 de un bloque → sus bytes (un-archivo.py: a_utf16). También corre en el worker.
-  function deco(s, E, n) {
-    var u = new Uint16Array((n + 1) >> 1), j = 0, L = s.length;
+  // El texto de un bloque → sus bytes: 7 bits por carácter, y 0, 13 y 60 como U+00C0 +
+  // valor (un-archivo.py: a_texto). También corre en el worker.
+  function deco(s, n) {
+    var b = new Uint8Array(n), acc = 0, bits = 0, j = 0, L = s.length;
     for (var i = 0; i < L; i++) {
       var c = s.charCodeAt(i);
-      if (c === E) { c = s.charCodeAt(++i); c = c < 0x900 ? c + 0xD700 : c === 0x900 ? 0 : c === 0x901 ? 13 : c === 0x902 ? 60 : E; }
-      u[j++] = c;
+      if (c > 127) c -= 0xC0;
+      acc = (acc << 7 | c) & 0x7FFF; bits += 7;
+      if (bits >= 8) { bits -= 8; b[j++] = acc >> bits; }  // pasado el final, el Uint8Array no escribe
     }
-    if (j !== u.length) throw new Error('bloque dañado (' + j + ' de ' + u.length + ')');
-    var b = new Uint8Array(u.buffer);
-    if (new Uint8Array(new Uint16Array([1]).buffer)[0] !== 1) {  // procesador big-endian: los bytes al revés
-      for (var k = 0; k < b.length; k += 2) { var t = b[k]; b[k] = b[k + 1]; b[k + 1] = t; }
-    }
-    return b.subarray(0, n);
+    if (j !== n) throw new Error('bloque dañado (' + j + ' de ' + n + ' bytes)');
+    return b;
   }
+  // Que se lea en un teléfono: es lo que se manda en una captura.
+  function aviso(t) {
+    var p = document.createElement('pre');
+    p.style.cssText = 'position:fixed;inset:0;z-index:2147483647;margin:0;padding:20px;background:rgba(0,0,0,.88);' +
+      'color:#ff8a80;font:16px/1.45 system-ui,sans-serif;white-space:pre-wrap';
+    p.textContent = t;
+    (document.body || document.documentElement).appendChild(p);
+  }
+  window.__porteoAviso = aviso;
   function gunzip(u) {
     return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()
       .then(function (b) { return new Uint8Array(b); });
   }
   function abrir(el) {
-    var u = deco(el.textContent, +el.dataset.e, +el.dataset.n);
+    var u = deco(el.textContent, +el.dataset.n);
     el.textContent = '';  // que el texto no quede ocupando memoria dos veces
     return el.dataset.gz === '1' ? gunzip(u) : Promise.resolve(u);
   }
@@ -208,6 +258,15 @@ ARRANQUE = r"""<script>
     return ae.call(this, t, fn, o);
   };
 
+  // Si el HTML llega cortado (una plataforma que lo recorta por tamaño, una descarga a
+  // medias), las partes del final no están y el juego esperaría para siempre sin decir nada.
+  var esperadas = null, llegadas = 0;
+  ae.call(document, 'DOMContentLoaded', function () {
+    if (esperadas !== null && llegadas >= esperadas) return;
+    aviso('El archivo llegó cortado' + (esperadas ? ': llegaron ' + llegadas + ' de ' + esperadas + ' partes' : '') +
+          '. No se guardó o no se descargó entero: hay que volver a subirlo o a bajarlo.');
+  });
+
   // ---- los archivos que van al final (--al-final) ----
   // Cada parte la decodifica (y descomprime) un worker mientras el navegador sigue leyendo
   // la página; sin worker, se hace acá mismo con el mismo código. El resultado queda en un
@@ -230,7 +289,7 @@ ARRANQUE = r"""<script>
         }
       }
       var b;
-      try { b = deco(d.s, d.e, d.n); } catch (e) { self.postMessage({ ruta: d.ruta, error: String(e) }); return; }
+      try { b = deco(d.s, d.n); } catch (e) { self.postMessage({ ruta: d.ruta, error: String(e) }); return; }
       self.postMessage({ ruta: d.ruta, recibida: d.i });
       if (f.w) { f.w.write(b).catch(function () {}); if (d.fin) f.w.close().catch(function () {}); }
       else { poner(d.ruta, b); if (d.fin) terminar(d.ruta); }
@@ -269,7 +328,7 @@ ARRANQUE = r"""<script>
   }
   function recibir(d) {
     if (d.recibida != null) { delete pendientes[d.recibida]; return; }
-    var a = A[clave(d.ruta)];
+    var a = A[d.ruta];
     if (!a) return;
     if (d.error) { a.fallar(new Error(d.ruta + ': ' + d.error)); return; }
     if (d.van != null) { a.van = d.van; a.oyentes.forEach(function (f) { try { f(a.van, a.total); } catch (e) {} }); }
@@ -280,8 +339,9 @@ ARRANQUE = r"""<script>
   window.__porteoParte = function (i) {
     var el = document.querySelector('script[type="porteo/parte"][data-i="' + i + '"]');
     var m = { i: i, ruta: el.dataset.ruta, total: +el.dataset.total, gz: el.dataset.gz === '1', n: +el.dataset.n,
-              e: +el.dataset.e, fin: el.dataset.fin === '1', s: el.textContent };
+              fin: el.dataset.fin === '1', s: el.textContent };
     el.textContent = '';
+    llegadas++;
     enviar(m);
   };
 
@@ -295,15 +355,17 @@ ARRANQUE = r"""<script>
   };
 
   window.__porteoUnArchivo = function (tarde) {
+    esperadas = 0;
     (tarde || []).forEach(function (t) {
-      var a = A[clave(t.ruta)] = { tipo: t.tipo, total: t.total, van: 0, oyentes: [], datos: null };
+      esperadas += t.partes;
+      var a = anotar(t.ruta, { tipo: t.tipo, total: t.total, van: 0, oyentes: [], datos: null });
       a.listo = new Promise(function (ok, mal) { a.terminar = ok; a.fallar = mal; });
       a.listo.catch(function (e) { console.error(e); });
     });
     var bloques = document.querySelectorAll('script[type="porteo/archivo"]');
     return Promise.all(Array.prototype.map.call(bloques, function (el) {
       var ruta = el.dataset.ruta, t = el.dataset.tipo;
-      return abrir(el).then(function (u) { A[clave(ruta)] = { datos: u, tipo: t }; });
+      return abrir(el).then(function (u) { anotar(ruta, { datos: u, tipo: t }); });
     })).then(function () {
       // lo que ya estaba en el HTML con src="datos/..." o href (el ícono), antes de los parches
       document.querySelectorAll('[src],link[href]').forEach(function (el) {
@@ -366,7 +428,8 @@ def main():
         return "<style>\n" + re.sub(r"url\((['\"]?)([^'\")]+)\1\)", url, txt) + "\n</style>"
     html = re.sub(r'<link rel="stylesheet" href="([^"]+)">', css, html)
 
-    # 2. lo de PWA no tiene sentido abierto desde el disco; el charset lo dice el BOM
+    # 2. lo de PWA no tiene sentido abierto desde el disco; el charset va primero (abajo),
+    #    porque el navegador lo busca sólo en los primeros 1024 bytes
     html = re.sub(r"<!-- porteo:pwa -->.*?<!-- /porteo:pwa -->\n?", "", html, flags=re.S)
     html = re.sub(r"<meta charset=[^>]*>\n?", "", html, flags=re.I)
     bloques = []
@@ -404,7 +467,7 @@ def main():
         if rel not in al_final:
             bloques.append(bloque("porteo/archivo", datos, gz, ruta=rel, tipo=tipo(p)))
             continue
-        tarde.append({"ruta": rel, "tipo": tipo(p), "total": p.stat().st_size})
+        tarde.append({"ruta": rel, "tipo": tipo(p), "total": p.stat().st_size, "partes": -(-len(datos) // PARTE)})
         for i in range(0, len(datos), PARTE):
             k = len(partes)
             partes.append(bloque("porteo/parte", datos[i:i + PARTE], gz, i=k, ruta=rel, total=p.stat().st_size,
@@ -415,14 +478,12 @@ def main():
         raise SystemExit(f"--al-final: no están en {d}: {', '.join(sorted(faltan))}")
 
     final = ("\n".join(bloques) + "\n<script>window.__porteoUnArchivo(" + json.dumps(tarde) + ").catch(function(e){"
-             "document.body.insertAdjacentHTML('beforeend','<pre style=\"color:#f66;position:fixed;inset:0;"
-             "padding:20px;white-space:pre-wrap;z-index:99\">No se pudo abrir el juego: '+e+'</pre>');});</script>\n"
-             + "\n".join(partes) + "\n")
-    html = html.replace("<head>", "<head>\n" + ARRANQUE, 1)
+             "__porteoAviso('No se pudo abrir el juego: ' + e);});</script>\n" + "\n".join(partes) + "\n")
+    html = html.replace("<head>", '<head>\n<meta charset="utf-8">\n' + ARRANQUE, 1)
     html = html.replace("</body>", final + "</body>", 1)
 
     salida = a.salida or d.parent / f"{d.name}-en-un-archivo.html"
-    salida.write_bytes(codecs.BOM_UTF16_LE + html.encode("utf-16-le"))
+    salida.write_bytes(html.encode("utf-8"))
     tam = salida.stat().st_size
     print(f"{salida}: {tam:,} bytes ({tam / 1048576:.2f} MB) — {len(bloques)} bloques + {len(partes)} partes al final, "
           f"{crudo / 1048576:.2f} MB de archivos")

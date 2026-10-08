@@ -137,23 +137,27 @@ se hizo:
 
 ## El `.html` único
 
-`un-archivo.py --al-final main.pak`: **24,8 MB, antes 33,7**, porque antes era todo
-base64 (+33 %). Ahora:
+`un-archivo.py --al-final main.pak`: **29,4 MB**.
 
-- Va en **UTF-16**: cada carácter lleva dos bytes del archivo tal cual y sólo se
-  escapan los que el HTML no deja pasar. Son ~3 % más que el archivo y el
-  navegador lo lee más rápido que el base64.
+- Va en **UTF-8, de a 7 bits por carácter**. Iba en UTF-16 (24,8 MB: dos bytes del
+  archivo por carácter), pero la plataforma donde se suben los juegos lee el archivo
+  como UTF-8 y mostraba el código como texto. En base64 serían 33,7 MB.
 - El código y el wasm van con gzip.
 - `main.pak` va al final, partido en pedazos de 1 MB. Mientras el navegador
   todavía lee la página, el motor ya compila su wasm, y un worker decodifica y
   descomprime el pak en otro hilo. La carcasa lo toma sin copiarlo
   (`__porteoArchivo`, y `FS.writeFile` con `canOwn`).
-- Verificado: el `main.pak` y el wasm que arma la página son idénticos byte a
-  byte a los de la carpeta web.
-
-Comprimido en un `.zip` pesa casi lo mismo que antes (24,6 MB), porque el zip ya le
-sacaba al base64 lo que le sobraba. Lo que cambia es el `.html` ya descomprimido y lo
-que tarda en abrir.
+- Una plataforma puede abrir la página como `blob:`, `data:` o `about:blank`. Los
+  archivos se reconocen por el final de la ruta y no con `new URL`, que ahí falla: así
+  el juego quedaba en "both async and sync fetching of the wasm failed", escrito en
+  13 px gris.
+- Si el HTML llega cortado, lo dice en pantalla con cuántas partes llegaron. El "No
+  se pudo arrancar" de la carcasa sale en letra grande: es lo que se manda en una
+  captura.
+- Verificado: el `main.pak` y el wasm que arma la página son idénticos byte a byte a
+  los de la carpeta web, abierta del disco, en un iframe `srcdoc` con sandbox, como
+  `blob:` y con `document.write`. "click to start" con CPU ÷4: 10,9 s (mediana de
+  3; en UTF-16, 10,0 s en la misma máquina: son más caracteres para decodificar).
 
 ## Lo que se verificó con el bailarín
 
