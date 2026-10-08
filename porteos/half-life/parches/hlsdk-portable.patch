@@ -1,0 +1,47 @@
+diff --git a/cl_dll/ammo.cpp b/cl_dll/ammo.cpp
+index 341ab90..50619e5 100644
+--- a/cl_dll/ammo.cpp
++++ b/cl_dll/ammo.cpp
+@@ -435,6 +435,28 @@ void WeaponsResource::SelectSlot( int iSlot, int fAdvance, int iDirection )
+ 	WEAPON *p = NULL;
+ 	bool fastSwitch = CVAR_GET_FLOAT( "hud_fastswitch" ) != 0;
+ 
++#if __EMSCRIPTEN__
++	// porteo web: con el dedo no se confirma con el disparo. Cada toque del casillero pone en la mano
++	// la siguiente arma de ese casillero (o la primera, si la de la mano es de otro casillero)
++	if( fastSwitch )
++	{
++		WEAPON *mano = gHUD.m_Ammo.EnMano();
++
++		if( mano && mano->iSlot == iSlot )
++			p = GetNextActivePos( iSlot, mano->iSlotPos );
++		if( !p )
++			p = GetFirstPos( iSlot );
++		if( p && p != mano )
++		{
++			PlaySound( "common/wpn_select.wav", 1 );
++			ServerCmd( p->szName );
++			g_weaponselect = p->iId;
++		}
++		gpActiveSel = NULL;
++		return;
++	}
++#endif
++
+ 	if ( ( gpActiveSel == NULL ) || ( gpActiveSel == (WEAPON *) 1 ) || ( iSlot != gpActiveSel->iSlot ) )
+ 	{
+ 		PlaySound( "common/wpn_hudon.wav", 1 );
+diff --git a/cl_dll/hud.h b/cl_dll/hud.h
+index d712965..050c678 100644
+--- a/cl_dll/hud.h
++++ b/cl_dll/hud.h
+@@ -130,6 +130,9 @@ public:
+ 	void _cdecl UserCmd_Close( void );
+ 	void _cdecl UserCmd_NextWeapon( void );
+ 	void _cdecl UserCmd_PrevWeapon( void );
++#if __EMSCRIPTEN__
++	WEAPON *EnMano( void ) { return m_pWeapon; } // porteo web: el arma en la mano (ammo.cpp)
++#endif
+ 
+ private:
+ 	float m_fFade;

@@ -1,0 +1,342 @@
+diff --git a/engine/client/cl_custom.c b/engine/client/cl_custom.c
+index cd66d44..8058b50 100644
+--- a/engine/client/cl_custom.c
++++ b/engine/client/cl_custom.c
+@@ -60,6 +60,23 @@ qboolean CL_HasResourceFile( const resource_t *pResource, const char *filepath )
+ 		FS_AllowDirectPaths( false );
+ 	}
+ 
++#if XASH_EMSCRIPTEN
++	// porteo web: un sonido sin su .wav puede viajar en Opus (FS_LoadSound carga el .opus en su
++	// lugar) o llegar después, con un paquete que baja mientras se juega (las voces: S_LoadSound lo
++	// vuelve a buscar tras cada fs_rescan). Darlo por faltante lo apagaría durante todo el nivel
++	if( pResource->type == t_sound && !FS_FileExists( filepath, false ))
++	{
++		char opus[MAX_QPATH];
++
++		if( Host_IsLocalClient( ))
++			return true;
++
++		Q_strncpy( opus, filepath, sizeof( opus ));
++		COM_ReplaceExtension( opus, ".opus", sizeof( opus ));
++		return FS_FileExists( opus, false );
++	}
++#endif
++
+ 	return FS_FileExists( filepath, false );
+ }
+ 
+diff --git a/engine/client/sound/s_load.c b/engine/client/sound/s_load.c
+index 25e1e88..2d611a1 100644
+--- a/engine/client/sound/s_load.c
++++ b/engine/client/sound/s_load.c
+@@ -32,6 +32,13 @@ static qboolean s_registering = false;
+ #define SENTENCE_INDEX -99999 // unique sentence index
+ static string   s_sentenceImmediateName;	// keep dummy sentence name
+ 
++#if XASH_EMSCRIPTEN
++// porteo web: los datos llegan por partes (las voces, mientras se juega). Un sonido que no estaba
++// se recuerda con la vuelta de fs_rescan en la que faltó, y se vuelve a buscar después de otra.
++int porteo_fs_vuelta = 1;
++static int s_faltoEn[MAX_SFX];
++#endif
++
+ /*
+ =================
+ S_SoundList_f
+@@ -105,6 +112,18 @@ wavdata_t *S_LoadSound( sfx_t *sfx )
+ 
+ 	if( !sfx ) return NULL;
+ 
++#if XASH_EMSCRIPTEN
++	int *falto = ( sfx >= s_knownSfx && sfx < s_knownSfx + MAX_SFX ) ? &s_faltoEn[sfx - s_knownSfx] : NULL;
++
++	if( falto && *falto && *falto != porteo_fs_vuelta && sfx->cache )
++	{
++		// faltaba, y desde entonces se montaron paquetes nuevos: se vuelve a buscar
++		FS_FreeSound( sfx->cache );
++		sfx->cache = NULL;
++		*falto = 0;
++	}
++#endif
++
+ 	// see if still in memory
+ 	if( sfx->cache )
+ 		return sfx->cache;
+@@ -125,8 +144,19 @@ wavdata_t *S_LoadSound( sfx_t *sfx )
+ 			sc = FS_LoadSound( sfx->name, NULL, 0 );
+ 	}
+ 
++#if XASH_EMSCRIPTEN
++	if( !sc && falto )
++		*falto = porteo_fs_vuelta;
++#endif
+ 	if( !sc ) sc = S_CreateDefaultSound();
+ 
++#if XASH_EMSCRIPTEN
++	// porteo web: Opus siempre sale a 48 kHz; lo que se pasó a Opus era de 22 kHz o menos (la mitad
++	// de memoria que a 44 kHz, y nada que se oiga de menos)
++	if( sc->rate == 48000 )
++		Sound_Process( &sc, SOUND_22k, sc->width, sc->channels, SOUND_RESAMPLE );
++	else
++#endif
+ 	if( sc->rate < SOUND_11k ) // some bad sounds
+ 		Sound_Process( &sc, SOUND_11k, sc->width, sc->channels, SOUND_RESAMPLE );
+ 	else if( sc->rate > SOUND_11k && sc->rate < SOUND_22k ) // some bad sounds
+@@ -237,6 +267,9 @@ void S_FreeSound( sfx_t *sfx )
+ 	if( sfx->cache )
+ 		FS_FreeSound( sfx->cache );
+ 	memset( sfx, 0, sizeof( *sfx ));
++#if XASH_EMSCRIPTEN
++	s_faltoEn[sfx - s_knownSfx] = 0;
++#endif
+ }
+ 
+ /*
+diff --git a/engine/client/soundlib/snd_main.c b/engine/client/soundlib/snd_main.c
+index 5daf067..d187d41 100644
+--- a/engine/client/soundlib/snd_main.c
++++ b/engine/client/soundlib/snd_main.c
+@@ -82,10 +82,18 @@ wavdata_t *FS_LoadSound( const char *filename, const byte *buffer, size_t size )
+ 	if( filename[0] == '#' && buffer && size )
+ 		goto load_internal;
+ 
++#if XASH_EMSCRIPTEN
++	// porteo web: las voces y los sonidos largos viajan en Opus (una décima parte de los .wav).
++	// El juego los sigue pidiendo como .wav: si no está el .wav, vale el .opus del mismo nombre
++	const qboolean opus_por_wav = !anyformat && !Q_stricmp( ext, "wav" );
++#else
++	const qboolean opus_por_wav = false;
++#endif
++
+ 	// now try all the formats in the selected list
+ 	for( const loadwavfmt_t *format = sound.loadformats; format && format->ext; format++)
+ 	{
+-		if( anyformat || !Q_stricmp( ext, format->ext ))
++		if( anyformat || !Q_stricmp( ext, format->ext ) || ( opus_por_wav && !Q_stricmp( format->ext, "opus" )))
+ 		{
+ 			qboolean success = false;
+ 			fs_offset_t filesize = 0;
+diff --git a/engine/common/common.h b/engine/common/common.h
+index b724afb..2744255 100644
+--- a/engine/common/common.h
++++ b/engine/common/common.h
+@@ -600,7 +600,9 @@ void COM_LoadLevel( char const *pMapName, qboolean background );
+ #if XASH_EMSCRIPTEN
+ qboolean Porteo_MapaListo( const char *cmd, const char *mapa );
+ qboolean Porteo_MapaExiste( const char *mapa );
++qboolean Porteo_Necesita( const char *mapa, const char *comando );
+ void Porteo_ContarRadio( void );
++extern int porteo_fs_vuelta;
+ #endif
+ void COM_LoadGame( char const *pSaveFileName );
+ void COM_ChangeLevel( char const *pNewLevel, char const *pLandmarkName, qboolean background );
+diff --git a/engine/common/filesystem_engine.c b/engine/common/filesystem_engine.c
+index 9ed62eb..f20f0e5 100644
+--- a/engine/common/filesystem_engine.c
++++ b/engine/common/filesystem_engine.c
+@@ -99,6 +99,9 @@ static uint32_t FS_MountFlags( void )
+ void FS_Rescan_f( void )
+ {
+ 	g_fsapi.Rescan( FS_MountFlags(), ui_language.string );
++#if XASH_EMSCRIPTEN
++	porteo_fs_vuelta++; // porteo web: los sonidos que faltaban se vuelven a buscar (s_load.c)
++#endif
+ }
+ 
+ static void FS_LoadVFSConfig( const char *gamedir )
+diff --git a/engine/common/host.c b/engine/common/host.c
+index 1d819e5..689eff1 100644
+--- a/engine/common/host.c
++++ b/engine/common/host.c
+@@ -1193,6 +1193,29 @@ qboolean Porteo_MapaExiste( const char *mapa )
+ 	}, mapa ) != 0;
+ }
+ 
++/*
++=================
++Porteo_Necesita
++
++Porteo web (Half-Life): el mapa que se va a cargar con una partida nueva, una guardada o el paso
++al siguiente (con su landmark). Si todavía no se bajó, la página lo trae y vuelve a mandar el
++comando que lo carga.
++=================
++*/
++qboolean Porteo_Necesita( const char *mapa, const char *comando )
++{
++	return EM_ASM_INT({
++		return Module.porteoNecesita ? Module.porteoNecesita( UTF8ToString( $0 ), UTF8ToString( $1 )) : 1;
++	}, mapa, comando ) != 0;
++}
++
++// Si el nivel siguiente no se pudo bajar, el juego sale de la pausa en la que esperaba
++EMSCRIPTEN_KEEPALIVE void Porteo_Seguir( void )
++{
++	if( SV_Active() && sv.paused )
++		SV_TogglePause( NULL );
++}
++
+ static double host_web_oldtime;
+ 
+ static void Host_WebFrame( void )
+diff --git a/engine/platform/posix/lib_posix.c b/engine/platform/posix/lib_posix.c
+index 3698d2e..7977d30 100644
+--- a/engine/platform/posix/lib_posix.c
++++ b/engine/platform/posix/lib_posix.c
+@@ -31,6 +31,9 @@ GNU General Public License for more details.
+ #ifdef XASH_IRIX
+ #include "platform/irix/dladdr.h"
+ #endif
++#if XASH_EMSCRIPTEN
++#include <emscripten/emscripten.h>
++#endif
+ #include "common.h"
+ #include "library.h"
+ #include "filesystem.h"
+@@ -360,6 +363,41 @@ void *COM_FunctionFromName( void *hInstance, const char *pName )
+ 
+ const char *COM_NameForFunction( void *hInstance, void *function )
+ {
++#if XASH_EMSCRIPTEN
++	// porteo web: el dladdr() de Emscripten es un stub sin nombres, y sin nombres guardar la partida
++	// o pasar de nivel deja a las entidades sin sus funciones (trenes, puertas, disparadores).
++	// Un puntero a función es un índice de la tabla: se busca qué exportación de la biblioteca es.
++	// El mapa de función a nombre se arma una vez por biblioteca; si dos nombres son la misma
++	// función, gana el de C++ (_ZN), que es el que se sabe convertir. (Sin comas sueltas: EM_ASM
++	// es una macro y las tomaría como otro argumento)
++	static string name;
++
++	if( EM_ASM_INT({
++		var lib = LDSO.loadedLibsByHandle[$0];
++		if( !lib || !lib.exports || !$1 || $1 >= wasmTable.length ) return 0;
++		var f = wasmTable.get( $1 );
++		if( !f ) return 0;
++		if( !lib.porteoNombres )
++		{
++			var m = new Map();
++			for( var k in lib.exports )
++			{
++				var v = lib.exports[k];
++				if( typeof v != 'function' || v.stub ) continue;
++				var antes = m.get( v );
++				if( antes === undefined || ( !antes.startsWith( '_ZN' ) && k.startsWith( '_ZN' ))) m.set( v, k );
++			}
++			lib.porteoNombres = m;
++		}
++		var n = lib.porteoNombres.get( f );
++		if( !n ) return 0;
++		stringToUTF8( n, $2, $3 );
++		return 1;
++	}, hInstance, function, name, sizeof( name )))
++		return COM_GetPlatformNeutralName( name );
++
++	return NULL;
++#else
+ 	// NOTE: dladdr() is a glibc extension
+ 	Dl_info info = {0};
+ 	int ret = dladdr( (void*)function, &info );
+@@ -371,6 +409,7 @@ const char *COM_NameForFunction( void *hInstance, void *function )
+ #else
+ 	return NULL;
+ #endif
++#endif // XASH_EMSCRIPTEN
+ }
+ 
+ #endif // _WIN32
+diff --git a/engine/server/sv_cmds.c b/engine/server/sv_cmds.c
+index 6fdc02e..4c1dbcc 100644
+--- a/engine/server/sv_cmds.c
++++ b/engine/server/sv_cmds.c
+@@ -359,6 +359,12 @@ SV_NewGame_f
+ */
+ static void SV_NewGame_f( void )
+ {
++#if XASH_EMSCRIPTEN
++	if( Cmd_Argc() == 1 && !Porteo_Necesita( GI->startmap, "newgame" ))
++		return;
++	if( Cmd_Argc() == 2 && !Porteo_Necesita( Cmd_Argv( 1 ), va( "newgame %s", Cmd_Argv( 1 ))))
++		return;
++#endif
+ 	if( Cmd_Argc() == 1 )
+ 		COM_NewGame( GI->startmap );
+ 	else if( Cmd_Argc() == 2 )
+@@ -381,6 +387,11 @@ static void SV_HazardCourse_f( void )
+ 		return;
+ 	}
+ 
++#if XASH_EMSCRIPTEN
++	if( !Porteo_Necesita( GI->trainmap, "hazardcourse" ))
++		return;
++#endif
++
+ 	// special case for Gunman Chronicles: playing avi-file
+ 	if( FS_FileExists( va( "media/%s.avi", GI->trainmap ), false ))
+ 	{
+diff --git a/engine/server/sv_game.c b/engine/server/sv_game.c
+index 173acd5..d42ffcf 100644
+--- a/engine/server/sv_game.c
++++ b/engine/server/sv_game.c
+@@ -721,6 +721,14 @@ void SV_QueueChangeLevel( const char *level, const char *landname )
+ #if XASH_EMSCRIPTEN
+ 	if( COM_StringEmptyOrNULL( landname ) && !Porteo_MapaListo( "changelevel", mapname ))
+ 		return;
++	if( !COM_StringEmptyOrNULL( landname ) && !Porteo_Necesita( mapname, va( "changelevel2 %s %s", mapname, landname )))
++	{
++		// mientras se baja, el juego queda en pausa: si no, el jugador sigue dentro del cambio de
++		// nivel y el juego lo vuelve a tocar en cada cuadro, disparando otra vez lo que dispara
++		if( !sv.paused )
++			SV_TogglePause( NULL );
++		return;
++	}
+ #endif
+ 
+ 	if( !COM_StringEmptyOrNULL( landname ))
+diff --git a/engine/server/sv_save.c b/engine/server/sv_save.c
+index 54975d6..f711ba9 100644
+--- a/engine/server/sv_save.c
++++ b/engine/server/sv_save.c
+@@ -33,6 +33,10 @@ half-life implementation of saverestore system
+ #define SAVEGAME_VERSION		0x0071				// Version 0.71 GoldSrc compatible
+ #define CLIENT_SAVEGAME_VERSION	0x0067				// Version 0.67
+ 
++#if XASH_EMSCRIPTEN
++static string porteo_mapa; // porteo web: el mapa de la última partida leída por SV_GetSaveComment
++#endif
++
+ #define SAVE_HEAPSIZE		0x400000				// reserve 4Mb for now
+ #define SAVE_HASHSTRINGS		0xFFF				// 4095 unique strings
+ 
+@@ -2128,6 +2132,20 @@ qboolean SV_LoadGame( const char *pPath )
+ 	if( !FS_FileExists( pPath, true ))
+ 		return false;
+ 
++#if XASH_EMSCRIPTEN
++	{
++		// porteo web: los datos del mapa de la partida pueden no estar bajados todavía
++		char comentario[MAX_STRING];
++		string nombre;
++
++		porteo_mapa[0] = 0;
++		SV_GetSaveComment( pPath, comentario );
++		COM_FileBase( pPath, nombre, sizeof( nombre ));
++		if( porteo_mapa[0] && !Porteo_Necesita( porteo_mapa, va( "load %s", nombre )))
++			return true; // la página la baja y vuelve a mandar el comando
++	}
++#endif
++
+ 	// initialize game if needs
+ 	if( !SV_InitGame( false ))
+ 		return false;
+@@ -2437,6 +2455,12 @@ int GAME_EXPORT SV_GetSaveComment( const char *savename, char *comment )
+ 
+ 		// now check for map problems
+ 		flags = SV_MapIsValid( mapName, NULL );
++#if XASH_EMSCRIPTEN
++		// porteo web: un mapa que todavía no se bajó también vale (se baja al cargar la partida)
++		Q_strncpy( porteo_mapa, mapName, sizeof( porteo_mapa ));
++		if( !FBitSet( flags, MAP_IS_EXIST ) && Porteo_MapaExiste( mapName ))
++			flags = MAP_IS_EXIST;
++#endif
+ 
+ 		if( FBitSet( flags, MAP_INVALID_VERSION ))
+ 		{

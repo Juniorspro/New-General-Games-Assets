@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Half-Life</title>
+<!-- Abre el juego publicado (porteos/half-life: https://porteo-half-life.pages.dev). Pesa nada: el
+     juego se baja del sitio, queda guardado en el navegador y se actualiza solo. Sin JavaScript
+     (algunos visores de HTML del teléfono) entra igual con la redirección de abajo. -->
+<noscript>
+<meta http-equiv="refresh" content="0; url=https://porteo-half-life.pages.dev/">
+<style>.jugar { display: inline-block !important; }</style>
+</noscript>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body { box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 16px; color: #fff; font-family: system-ui, sans-serif; text-align: center; }
+  h1 { margin: 0; color: #ffa53c; font-size: 26px; letter-spacing: .02em; }
+  p { margin: 0; color: rgba(255, 255, 255, .75); font-size: 15px; overflow-wrap: anywhere; }
+  .rueda { width: 34px; height: 34px; border: 3px solid rgba(255, 165, 60, .25); border-top-color: #ffa53c;
+    border-radius: 50%; animation: gira .8s linear infinite; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+  .jugar { display: none; min-height: 48px; padding: 0 30px; border-radius: 99px; background: #ffa53c; color: #000;
+    font-size: 17px; font-weight: 700; line-height: 48px; text-decoration: none; }
+  .trabado .jugar { display: inline-block; }
+  .trabado .rueda, .trabado iframe { display: none; }
+  /* adentro de una plataforma: el juego ocupa todo */
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+</style>
+</head>
+<body>
+<h1>Half-Life</h1>
+<div class="rueda"></div>
+<p id="texto">Abriendo el juego…</p>
+<a class="jugar" href="https://porteo-half-life.pages.dev/" target="_blank" rel="noopener">Jugar</a>
+<script>
+(function () {
+  var JUEGO = 'https://porteo-half-life.pages.dev/';
+  var trabado = function () {
+    document.body.className = 'trabado';
+    document.getElementById('texto').textContent = '¿No se abre? Toca el botón (o abre porteo-half-life.pages.dev en el navegador).';
+  };
+  if (window.top === window) {
+    // Abierto directo: en la misma pestaña, como si se hubiera tocado el link (y con lo que ya
+    // estaba guardado de otras veces).
+    try { location.replace(JUEGO); } catch (_) {}
+    setTimeout(trabado, 6000);
+  } else {
+    // Adentro de una plataforma que muestra este archivo en un cuadro: el juego en un cuadro propio
+    // que ocupa todo. Si la plataforma no deja abrir otros sitios adentro, el botón.
+    var f = document.createElement('iframe');
+    f.allow = 'fullscreen; autoplay; screen-wake-lock; gamepad; accelerometer; gyroscope';
+    f.setAttribute('allowfullscreen', '');
+    f.addEventListener('load', function () { try { f.focus(); } catch (_) {} });
+    document.addEventListener('securitypolicyviolation', function (e) {
+      if (/^(frame|child)-src/.test(e.effectiveDirective || e.violatedDirective || '')) trabado();
+    });
+    f.src = JUEGO;
+    document.body.appendChild(f);
+  }
+  document.querySelector('.jugar').addEventListener('click', function (e) {
+    try { window.top.location.href = JUEGO; e.preventDefault(); } catch (_) { /* queda el enlace: pestaña nueva */ }
+  });
+})();
+</script>
+</body>
+</html>

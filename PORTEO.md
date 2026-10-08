@@ -591,6 +591,20 @@ créditos ni se tapa al autor.
 | pedirle a la versión nueva que pase (`skipWaiting`) apenas abre la página | Chrome la activa recién cuando el service worker viejo se duerme; lo que el navegador pide al terminar de cargar (el ícono, el manifiesto) lo despierta, y dormido otra vez tarda hasta 30 s (con DevTools enganchado, como en Playwright, 5 min). Si la página se cansa de esperar y arranca la vieja, la nueva pasa a mitad de partida | `web.js`: el paso se pide con la página ya cargada, y una vez pedido no se juega la vieja (si tarda, se recarga). Se vio en `prueba-pwa.mjs`: fallaba 1 de cada 2 |
 | probar actualizaciones con `python3 -m http.server` | compara fechas al segundo: dos versiones armadas en el mismo segundo le dan 304 al `sw.js` nuevo y la actualización "no anda" | servir con ETag por contenido, como Cloudflare (`prueba-pwa.mjs`) |
 | armar dos veces el mismo juego da bytes distintos | la fecha de cada archivo dentro de los zip (`.pk3`), y `__FILE__`/`__DATE__`/`__TIME__` en lo compilado: cada publicación les hace bajar todo de nuevo a los jugadores aunque no haya cambiado nada (CS: 170 MB) | zip con fecha fija (`ZipInfo` de 2000-01-01), gzip con `mtime=0`, `SOURCE_DATE_EPOCH` (la fecha del commit fijado), `-ffile-prefix-map`, y un `date` que da esa fecha para los scripts que la anotan solos (`appversion.sh` de ReGameDLL) (`porteos/cs16/portear.sh` y `armar-datos.py`); comprobarlo armando dos veces y comparando |
+| un nivel que se baja recién al pasar (Half-Life: `trigger_changelevel`) y el motor que espera sin más | el jugador sigue adentro del cambio de nivel: el juego lo vuelve a tocar en cada cuadro y dispara otra vez sus blancos (un `CFireAndDie` por cuadro, que después se disparan todos en el nivel nuevo) | poner el juego en pausa (`SV_TogglePause`) mientras se baja, y repetir el mismo `changelevel2` después; y bajar de fondo los niveles vecinos mientras se juega (`porteos/half-life`) |
+| relevar qué abre el motor con una partida de prueba en un nivel | todo lo de ese nivel queda marcado "de la partida" (común a todos): el `.bsp` y el cielo de c1a0 iban con lo de todas las partidas | clasificar primero por los niveles que lo abrieron; "de la partida" sólo lo que no abrió ningún nivel |
+| un `.mdl` que se abre recién al usarlo (los grupos de secuencias de la versión 25 aniversario: `scientist01.mdl`…) | el relevamiento no lo ve si esa animación no se usó; en otro nivel un científico la usa y el motor se cae: "LoadCacheFile: can't load models\scientist03.mdl" | leer la cabecera de cada modelo (`numseqgroups` y sus nombres, y el `T.mdl` si no trae texturas) y empaquetarlos siempre con él (`porteos/half-life/armar-datos.py`) |
+| relevar a 844×390 con `devicePixelRatio` 1 | el teléfono dibuja al doble o triple (SDL "high DPI"): con más de 1280×720 el cliente usa los íconos del HUD de `sprites/1280`, que no se habían visto: sin HUD | mandar `sprites/1280` con lo de las partidas, limitar el dibujo a 2 por píxel y a 2560 de ancho (la página redefine `devicePixelRatio`) |
+| `hud_fastswitch 1` en Half-Life | cambia de un toque sólo si el casillero tiene **una** arma; con dos (pistola y Magnum) abre la selección y espera un disparo para confirmar: con el dedo, "no cambia" | el cliente (parche de hlsdk) pone en la mano la siguiente arma del casillero a cada toque |
+| un `.wav` y su `.opus` en carpetas distintas | el motor busca primero el `.wav` en todas las carpetas: un `.wav` inglés le gana al `.opus` español del mismo nombre (y el juego habla en inglés) | un sonido y su par del otro idioma van los dos en Opus o los dos en `.wav` |
+| un sonido que falta cuando el juego lo pide (Xash3D) | queda guardado como silencio hasta el próximo nivel, aunque el paquete llegue un segundo después | el motor (parche) recuerda en qué `fs_rescan` faltó y lo vuelve a buscar después del siguiente |
+| la carpeta de un idioma de Xash3D (`valve_spanish`) en la carpeta de sólo lectura | no la monta: la busca sólo en la escribible (`/rwdir`) | escribir los paquetes del idioma en `/rwdir/valve_spanish` |
+| leer la consola de Xash3D en una prueba | sin `-console` (o `-dev`) `Con_Printf` no escribe nada: el registro sale vacío | la página agrega `-console` con `?consola` en la dirección |
+| funciones con visibilidad normal (`EXPORT` del SDK de Half-Life) en módulos de Emscripten | cada módulo las pide por nombre al cargador (`GOT.func`) y el cargador puede darle las de **otro** módulo con el mismo nombre: el servidor de Half-Life recibía las del cliente, vacías (`hl_baseentity.cpp`), y agarrar un arma o balas fallaba de a ratos | enlazar los módulos con `-Wl,-Bsymbolic` (cada uno usa las suyas) y contar los `GOT.func` que importa cada `.wasm` (`porteos/half-life/portear.sh`) |
+| guardar la partida con Emscripten (Xash3D) | el motor guarda las funciones de cada entidad por nombre con `dladdr()`, que en Emscripten es un stub: al cargar o volver a un nivel, trenes, puertas y disparadores quedaban quietos (y ninguna prueba lo veía: cargaba "bien") | buscar el nombre en las exportaciones del módulo por el lugar de la tabla de funciones (`LDSO.loadedLibsByHandle`, parche de `lib_posix.c`), y **probar que lo cargado se mueve** |
+| sonidos en otro formato que el que pide el juego (`.opus` por `.wav`) | el motor los carga, pero al entrar al nivel el cliente revisa que exista el `.wav` de cada sonido precargado y apaga el que no encuentra para todo el nivel ("Could not load sound") | que la revisión acepte el `.opus` y, jugando en el mismo navegador, no dé ningún sonido por faltante (parche de `cl_custom.c`) |
+| retener un pedido con `page.route` de Playwright | no ve lo que pide el service worker: el paquete pasaba igual y la prueba "fallaba" | esa prueba, en un contexto con `serviceWorkers: 'block'` |
+| `wrangler pages project create` (wrangler 4.148) | intenta crear el proyecto en Workers ("Delegating to the latest version of Cloudflare Pages"), falla y no crea nada | `--force` al crearlo (el Pages clásico, como los demás porteos) |
 
 ## 14. Registro de porteos
 
@@ -862,6 +876,66 @@ Pruebas: 65/65 (porteos/cs16/prueba.mjs, contra el sitio publicado) y 16/16 de l
   (3 KB, en el repo), que abre lo publicado: directo, o adentro de una plataforma que muestre
   el archivo en un cuadro (`blob:`, `srcdoc`, sandbox estricto), con "Jugar" si la bloquea.
 - **No va al repo** (§11): ni el juego ni el motor compilado; `entrega-*/` está en `.gitignore`.
+
+### Half-Life (las copias "Justhin" y "Half-Life", en español latino e inglés) — terminado (falta la prueba en un teléfono de verdad)
+
+```
+Origen: dos .rar por link de MediaFire: "Half_Life_1_(Justhin).rar" (275 MB, sha256 008616c3…9beba, en
+        inglés) y "Half-Life.rar" (289 MB, sha256 7c53c2ca…fdab44, con el doblaje y los textos en
+        español latino). Las dos, Half-Life de Steam con la actualización del 25 aniversario (RAR5)
+Motor: GoldSrc (valve/, hl.dll y client.dll de Windows)
+Estrategia: la misma base del porteo de CS ("sirve encima de cs", dijo el dueño): Xash3D FWGS con los
+            parches de CS + los de acá, y hlsdk-portable (la lógica de Half-Life) → WebAssembly
+Fidelidad: casi 1:1 — la campaña entera (103 niveles), el entrenamiento, las partidas guardadas, la
+           música y los dos idiomas de las copias del dueño (en español, las voces dobladas); el menú
+           es el de Xash3D sin lo que en un navegador no anda; sin multijugador (no hay UDP)
+Tamaños: copias de ~520 MB cada una → web 180 MB con los dos idiomas (al abrir ~6 MB por la red: el
+         motor con brotli y el menú; para la primera partida, 14 más mientras se mira el menú; cada
+         capítulo y cada nivel, de fondo mientras se juega el anterior) · zip 182 MB · APK 186 MB ·
+         un archivo 91 MB (con la llegada en tren, Materiales Anómalos y el entrenamiento)
+Publicado: todavía no — subirlo a una dirección pública es redistribuir el juego (§11): lo decide el
+           dueño. Listo para https://porteo-half-life.pages.dev (proyecto porteo-half-life ya creado)
+Pruebas: 75/75 (porteos/half-life/prueba.mjs, contra la entrega: la web servida acá, el APK y el
+         .html único)
+```
+
+- **Qué hizo falta** (detalle en [`porteos/half-life/LEEME.md`](porteos/half-life/LEEME.md)):
+  - unir las dos copias: la inglesa en `valve/` y lo que cambia en la española (1.108 archivos:
+    voces, frases enteras, textos, `.wad` con letras) en `valve_spanish/`, que Xash monta con
+    `-language spanish` (y sólo desde la carpeta escribible);
+  - los niveles cuando hacen falta: el motor le pregunta a la página antes de partida nueva,
+    entrenamiento, cargar partida y el paso con landmark (`Porteo_Necesita`), y el juego queda en
+    pausa mientras se baja (si no, el cambio de nivel se dispara en cada cuadro);
+  - lo compartido, por capítulo (el primero que lo usa); las texturas, en `.wad` por capítulo y por
+    nivel; las animaciones aparte (`scientist01.mdl`…) siempre con su modelo;
+  - las voces y los sonidos largos en Opus (97 → 30 MB), con `.opus` por `.wav` en el motor, y los
+    sonidos que faltaron se vuelven a buscar al llegar un paquete;
+  - el HUD de alta resolución (`sprites/1280`) y el dibujo limitado a 2 por píxel;
+  - el fondo del menú del 25 aniversario, de 17 MB a 0,6;
+  - el menú en español latino (`mainui_spanish.txt`, ~280 frases) y el idioma elegible desde el
+    menú principal;
+  - dos fallas que las pruebas no veían y salieron jugando con scripts: agarrar armas y balas
+    fallaba de a ratos (el servidor recibía funciones vacías del cliente: `-Wl,-Bsymbolic`), y al
+    cargar una partida todo quedaba quieto (`dladdr()` de Emscripten no da nombres: el motor los
+    busca en las exportaciones del módulo); y los sonidos en Opus, que el cliente apagaba al
+    entrar a cada nivel.
+- **Controles:** los de CS, con linterna, guardado y carga rápidos; un toque en un casillero pone en
+  la mano la siguiente arma (parche de hlsdk: el cambio rápido de Half-Life sólo andaba con una
+  arma por casillero).
+- **Probado** (`porteos/half-life/prueba.mjs`, 75/75): del menú a jugar sólo tocando, en español y
+  en inglés; cada control medido en el estado del juego; guardar y cargar (también después de
+  cerrar la página): lo cargado se sigue moviendo y ningún sonido queda apagado; el paso de nivel
+  con el siguiente sin bajar (pausa con el cartel, y sigue al llegar); parado, pantalla chica, 4G
+  (menú a los 10 s, jugando a los 27,7 s), sin internet, el `.html` único y el APK. Aparte, con
+  scripts: agarrar armas y balas (4 de 4, antes fallaba de a ratos) y el tren después de cargar.
+- **Problemas conocidos:** no se probó en un teléfono real ni en Safari; sin multijugador; los
+  botones del menú del juego quedan chicos en un teléfono; firmado con la clave de esta sesión (§7);
+  sin publicar (ver arriba).
+- **Rearmarlo:** `porteos/half-life/portear.sh Half_Life_1_\(Justhin\).rar Half-Life.rar [SALIDA]`
+  (unos minutos con Emscripten y los fuentes ya compilados). **Probarlo:** `node
+  porteos/half-life/prueba.mjs http://127.0.0.1:8861/half-life/ entrega-half-life/half-life.apk
+  file:///…/half-life.html`. **Publicarlo:** ver `porteos/half-life/LEEME.md`.
+- **No va al repo** (§11): ni el juego ni el motor compilado.
 
 ### FNaF 2 — port de otra sesión, analizado y corregido
 

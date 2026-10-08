@@ -1,0 +1,50 @@
+diff --git a/menus/Main.cpp b/menus/Main.cpp
+index 4d1a382..bc874a7 100644
+--- a/menus/Main.cpp
++++ b/menus/Main.cpp
+@@ -135,7 +135,9 @@ bool CMenuMain::KeyDown( int key )
+ 		}
+ 		else
+ 		{
++#ifndef __EMSCRIPTEN__
+ 			QuitDialogCb( );
++#endif // a browser tab can't be quit: back twice leaves the page instead
+ 		}
+ 		return true;
+ 	}
+@@ -369,6 +371,35 @@ void CMenuMain::VidInit( bool connected )
+ 	console.SetCoord( hoffset, yoffset );
+ 	yoffset -= ygap;
+ 
++#ifdef __EMSCRIPTEN__
++	// web port: without what can't work in a browser tab (quitting it, multiplayer without UDP,
++	// other games, the Previews web page); the rest moves down to fill the gaps
++	yoffset = previews_voffset + ygap;
++	saveRestore.SetCoord( hoffset, yoffset );
++	yoffset -= ygap;
++	configuration.SetCoord( hoffset, yoffset );
++	yoffset -= ygap;
++	if( bTrainMap )
++	{
++		hazardCourse.SetCoord( hoffset, yoffset );
++		yoffset -= ygap;
++	}
++	newGame.SetCoord( hoffset, yoffset );
++	yoffset -= ygap;
++	if( connected )
++	{
++		resumeGame.SetCoord( hoffset, yoffset );
++		yoffset -= ygap;
++	}
++	console.SetCoord( hoffset, yoffset );
++	multiPlayer.SetVisibility( false );
++	customGame.SetVisibility( false );
++	previews.SetVisibility( false );
++	quit.SetVisibility( false );
++	minimizeBtn.SetVisibility( false );
++	quitButton.SetVisibility( false );
++#endif
++
+ 	// now figure out what's visible
+ 	resumeGame.SetVisibility( connected );
+ 	disconnect.SetVisibility( connected && !single );
