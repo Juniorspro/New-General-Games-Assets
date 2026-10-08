@@ -26,6 +26,7 @@ namespace Porteo
                     case "punto": return Punto(arg);
                     case "rayo": return Rayo(arg);
                     case "rayomalla": return RayoMalla(arg);
+                    case "estatico": return Estatico(arg);
                     case "tiempo": return $"tiempo: t={Time.time:F2} escala={Time.timeScale} cuadro={Time.frameCount} real={Time.realtimeSinceStartup:F1} cultura={System.Globalization.CultureInfo.CurrentCulture.Name}";
                     default: return "diagnóstico: no sé " + partes[0];
                 }
@@ -199,6 +200,42 @@ namespace Porteo
                     if (dist < mejor) mejor = dist;
                 }
                 sb.Append($"\n   {Ruta(c.transform)} ({c.malla.name}, {pos.Length / 3} v, {tri.Length / 3} tri): {caras} cruces, el primero a {mejor:F2} m");
+            }
+            return sb.ToString();
+        }
+
+        // estatico:Tipo.Miembro[:Generico]: el valor de un estático en cada ensamblado que tenga ese
+        // tipo (dos copias de un tipo son dos singletons distintos). Con :Generico, el miembro es del
+        // tipo genérico cerrado con Tipo (por ej. estatico:SystemContext.Instance:SRSingleton`1)
+        public static string Estatico(string arg)
+        {
+            var partes = arg.Split(':');
+            var punto = partes[0].LastIndexOf('.');
+            string tipo = partes[0].Substring(0, punto), miembro = partes[0].Substring(punto + 1);
+            var sb = new StringBuilder("estatico " + arg + ":");
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                Type t;
+                try { t = asm.GetType(tipo); } catch { continue; }
+                if (t == null) continue;
+                var donde = t;
+                if (partes.Length > 1)
+                {
+                    var g = AppDomain.CurrentDomain.GetAssemblies().Select(a => { try { return a.GetType(partes[1]); } catch { return null; } }).FirstOrDefault(x => x != null);
+                    if (g == null) { sb.Append($"\n   no encuentro {partes[1]}"); continue; }
+                    donde = g.MakeGenericType(t);
+                }
+                const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.FlattenHierarchy;
+                object v;
+                try
+                {
+                    var pr = donde.GetProperty(miembro, F);
+                    v = pr != null ? pr.GetValue(null) : donde.GetField(miembro, F)?.GetValue(null);
+                }
+                catch (Exception e) { v = "error: " + (e.InnerException ?? e).Message; }
+                var uo = v as UnityEngine.Object;
+                var texto = v == null ? "null" : uo is null ? v.ToString() : $"{v.GetType().Name} \"{uo.name}\" destruido={uo.destruido} id={uo.GetInstanceID()}";
+                sb.Append($"\n   {asm.GetName().Name} ({asm.GetHashCode()}): {donde.Name}.{miembro} = {texto}");
             }
             return sb.ToString();
         }

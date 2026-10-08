@@ -232,7 +232,7 @@ namespace Porteo
             {
                 var mb = l[i];
                 mb.enColaStart = false;
-                if (mb.destruido || mb.iniciado || !mb.enLinea) continue;
+                if (mb.destruido || mb.iniciado || !mb.enLinea || Mundo.PorDestruirse(mb)) continue;
                 mb.iniciado = true;
                 var ts = mb.tipoScript;
                 if (ts.Start != null)

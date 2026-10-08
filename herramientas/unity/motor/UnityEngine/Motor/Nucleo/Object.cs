@@ -11,6 +11,10 @@ namespace UnityEngine
         internal int instanceID;
         internal string m_Name = "";
         internal bool destruido;
+        // Destroy(x) sin demora: se destruye al final del cuadro, pero desde ya no arranca (como en
+        // Unity, lo destruido en su Awake no recibe Start: el GameContext repetido del mundo se
+        // destruye en Awake y su Start, que espera lo que crea Awake, tiraba NullReference)
+        internal bool porDestruirse;
         internal HideFlags banderas;
         // de dónde salió (lo cargado de un archivo del juego; null en lo creado en tiempo de juego)
         internal Porteo.Datos.Archivo archivo;

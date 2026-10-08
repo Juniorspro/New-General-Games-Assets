@@ -218,7 +218,7 @@ namespace UnityEngine
             if (parent == padre) return;
             if (parent != null && parent.IsChildOf(this))
             {
-                Debug.LogError("Cannot set the parent of a GameObject to one of its children");
+                Debug.LogError("Cannot set the parent of a GameObject to one of its children", this);
                 return;
             }
             Vector3 pos = default, esc = default; Quaternion rot = default;

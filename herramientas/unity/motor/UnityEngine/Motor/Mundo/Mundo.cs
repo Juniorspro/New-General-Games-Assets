@@ -128,7 +128,17 @@ namespace Porteo
 
         public static void DestruirLuego(Object o, float t)
         {
+            if (t <= 0 && (object)o != null) o.porDestruirse = true;
             porDestruir.Add((o, Time.time + Math.Max(0f, t)));
+        }
+
+        // si ya está pedido destruirlo (él, su GameObject o uno de arriba)
+        internal static bool PorDestruirse(Component c)
+        {
+            if (c.porDestruirse) return true;
+            for (var t = c.go != null ? c.go.transform : null; t != null; t = t.parent)
+                if (t.gameObject.porDestruirse) return true;
+            return false;
         }
 
         internal static void ProcesarDestrucciones()
