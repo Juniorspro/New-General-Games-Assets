@@ -37,11 +37,24 @@
   // en el .html único los archivos vienen en la página (no hay red ni caché que valga)
   var unArchivo = typeof window.__porteoArchivo === 'function';
   var idioma = (navigator.language || 'es').slice(0, 2).toLowerCase();
+  // un teléfono con poca memoria (Chrome dice 1 GB o menos) o con una GPU vieja, sin WebGL 2 (?ligero
+  // lo fuerza, ?ligero=0 lo apaga): texturas 1x (ver porteo_despues.lua) y el lienzo con menos píxeles
+  var sinWebGL2 = (function () {
+    try {
+      var g = document.createElement('canvas').getContext('webgl2');
+      if (!g) return true;
+      var x = g.getExtension('WEBGL_lose_context');
+      if (x) x.loseContext();   // el de prueba no ocupa uno de los contextos que el navegador permite
+      return false;
+    } catch (e) { return true; }
+  })();
+  var ligero = /[?&]ligero(=1)?(&|$)/.test(location.search) ||
+    (!/[?&]ligero=0/.test(location.search) && (sinWebGL2 || (navigator.deviceMemory > 0 && navigator.deviceMemory <= 1)));
   var lienzo = document.getElementById('canvas');
 
   // el registro va a la puerta de Cloudflare, que lo acepta sólo con sesión: desde el .html único
   // (otra página, otro origen) no llegaría
-  if (T.registro && !unArchivo) Porteo.registro({ url: T.registro });
+  if (T.registro && !unArchivo) Porteo.registro({ url: T.registro, webgl1: true });
   // horizontal (en vertical se gira el juego 90°), pantalla completa al primer toque, sin que se
   // apague, y el botón atrás como Escape (en Balatro abre la pausa). Sin service worker: la caché es
   // la de abajo
@@ -91,12 +104,14 @@
     pt: ['Baixando o jogo…', 'Iniciando…', 'Não foi possível baixar o jogo. Verifique a conexão.'],
   }[idioma] || ['Downloading the game…', 'Starting…', 'Could not download the game. Check your connection.'];
 
-  // ---- la densidad del lienzo: hasta 2 píxeles por punto. SDL multiplica el tamaño CSS por
-  // devicePixelRatio, y en un teléfono de 3,25 eran 2775×1270 píxeles por cuadro con el CRT y el
-  // fondo en shader: mucho trabajo de GPU (y batería) para una diferencia que no se ve
+  // ---- la densidad del lienzo: hasta 2 píxeles por punto (1,5 en modo liviano). SDL multiplica el
+  // tamaño CSS por devicePixelRatio, y en un teléfono de 3,25 eran 2775×1270 píxeles por cuadro con el
+  // CRT y el fondo en shader: mucho trabajo de GPU (y batería) para una diferencia que no se ve. Los
+  // teléfonos de 1 GB tienen las GPU más flojas: ahí, menos píxeles
   (function () {
+    var tope = ligero ? 1.5 : 2;
     var d = Object.getOwnPropertyDescriptor(Window.prototype, 'devicePixelRatio') || Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
-    if (d && d.get) Object.defineProperty(window, 'devicePixelRatio', { configurable: true, get: function () { return Math.min(2, d.get.call(window)); } });
+    if (d && d.get) Object.defineProperty(window, 'devicePixelRatio', { configurable: true, get: function () { return Math.min(tope, d.get.call(window)); } });
   })();
 
   // ---- el sonido: el AudioContext lo crea el OpenAL de Emscripten; se lo pausa con la página oculta
@@ -229,8 +244,10 @@
     try { M.FS.mkdir('/porteo'); } catch (e) { /* ya estaba */ }
     M.FS.writeFile('/porteo/idioma.txt', navigator.language || 'en');
     if (/[?&]medir/.test(location.search)) M.FS.writeFile('/porteo/medir', '1');
+    if (ligero) M.FS.writeFile('/porteo/ligero', '1');
     M.FS.writeFile('/balatro.love', listos[1], { canOwn: true });
-    Porteo.anotar('arranca', Math.round(performance.now()) + ' ms' + (unArchivo ? ' · un archivo' : ''));
+    Porteo.anotar('arranca', Math.round(performance.now()) + ' ms' + (unArchivo ? ' · un archivo' : '') +
+      ' · memoria ' + (navigator.deviceMemory || '?') + ' GB' + (sinWebGL2 ? ' · sin WebGL 2' : '') + (ligero ? ' · liviano' : ''));
     carga.listo();
     M.callMain(['/balatro.love']);
     Porteo.arrancado();

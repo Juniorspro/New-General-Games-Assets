@@ -21,9 +21,12 @@ Respecto del APK (104 MB descomprimido):
   idiomas: porteo_despues.lua los saca de la lista.
 - El sonido en Vorbis mono (17,5 MB → 5,1 MB): la música y el ambiente a calidad -1 (32 kb/s), los
   efectos a 0. En el parlante de un teléfono no se nota.
-- Las texturas en 2x nada más (porteo_web.lua da la 2x cuando el juego pide una 1x) y recomprimidas
-  sin pérdida (optipng): los mismos píxeles en un 25% menos. Los logos de la presentación sí van en
-  1x, que es como el juego los pide.
+- Las texturas en 1x, sacadas de las 2x: todas las 2x son las 1x con cada píxel repetido en 2×2 (se
+  verifica: duplicada otra vez tiene que dar la 2x byte a byte), así que no se pierde nada, y
+  porteo_web.lua arma la 2x en la GPU cuando el juego la pide. Las 1x originales no van: en 18
+  colaboraciones son un dibujo anterior al de las 2x. Recomprimidas sin pérdida (optipng).
+- Los logos del arranque (1417×1417 y 1390×560, 14 MB de memoria de video) a la mitad: en pantalla
+  se ven más chicos que eso. porteo_texturas.lua le dice al juego de qué tamaño eran.
 - gamecontrollerdb.txt con un mapeo solo: todas sus líneas son para Windows, Mac, Linux, Android o
   iOS, y SDL las ignora en el navegador (ahí los mandos vienen ya mapeados).
 - Sin lo que es de Android y no del juego (dexopt/, info.txt).
@@ -53,6 +56,7 @@ FUENTES = {"m6x11plus.ttf"}
 SIN_FUENTE = {"ja", "ko", "zh_CN", "zh_TW", "ru"}
 # el juego los pide en 1x (con dpiscale 1); las 2x (2834×2834) no las usa
 LOGOS = {"playstack-logo.png", "localthunk-logo.png"}
+TEXTURAS = "resources/textures/"
 RENOMBRAR = {"main.lua": "balatro_main.lua", "conf.lua": "balatro_conf.lua"}
 SIN_COMPRIMIR = (".ogg", ".png", ".ogv")
 FECHA = (2026, 1, 1, 0, 0, 0)
@@ -71,9 +75,10 @@ def se_queda(ruta):
         return nombre in FUENTES
     if ruta.startswith("localization/"):
         return nombre[:-4] not in SIN_FUENTE
-    if ruta.startswith("resources/textures/1x/"):
+    # de las texturas, las 2x (que van como 1x) y los logos en 1x
+    if ruta.startswith(TEXTURAS + "1x/"):
         return nombre in LOGOS
-    if ruta.startswith("resources/textures/2x/"):
+    if ruta.startswith(TEXTURAS + "2x/"):
         return nombre not in LOGOS
     return True
 
@@ -103,13 +108,63 @@ def sonido(nombre, datos):
     return en_cache(datos, f"vorbis-mono-q{q}.ogg", hacer)
 
 
-def textura(datos):
+def optipng(ent, sal):
+    r = subprocess.run(["optipng", "-quiet", "-o2", "-strip", "all", "-out", str(sal), str(ent)],
+                       capture_output=True, text=True)
+    if r.returncode:
+        sys.exit("empaquetar: optipng falló: " + r.stderr[-800:])
+
+
+def crudo(png):
+    """Los píxeles RGBA de un PNG, tal cual (sin escalar, el decodificador de PNG de ffmpeg es exacto)."""
+    r = subprocess.run(["ffmpeg", "-v", "error", "-i", str(png), "-pix_fmt", "rgba", "-f", "rawvideo", "-"],
+                       capture_output=True)
+    if r.returncode:
+        sys.exit("empaquetar: ffmpeg falló: " + r.stderr.decode(errors="replace")[-800:])
+    return r.stdout
+
+
+def tamano(png_datos):
+    """Ancho y alto de un PNG (del encabezado IHDR)."""
+    return int.from_bytes(png_datos[16:20], "big"), int.from_bytes(png_datos[20:24], "big")
+
+
+def mitad_exacta(datos):
+    """Una textura 2x → la 1x de la que salió. Se verifica que cada bloque de 2×2 de la 2x sea un solo
+    color y se toma uno por bloque; con PIL o el escalado de ffmpeg no: los dos redondean el alfa."""
+    w, h = tamano(datos)
+
     def hacer(ent, sal):
-        r = subprocess.run(["optipng", "-quiet", "-o2", "-strip", "all", "-out", str(sal), str(ent)],
-                           capture_output=True, text=True)
+        px = memoryview(crudo(ent)).cast("I")   # un entero por píxel RGBA
+        if len(px) != w * h or w % 2 or h % 2:
+            sys.exit(f"empaquetar: textura 2x de {w}×{h} inesperada")
+        filas = []
+        for y in range(0, h, 2):
+            fila = px[y * w:(y + 1) * w]
+            if fila != px[(y + 1) * w:(y + 2) * w] or fila[0::2] != fila[1::2]:
+                sys.exit("empaquetar: una textura 2x no es una 1x repetida en 2×2; no se puede achicar sin perder")
+            filas.append(fila[0::2].tobytes())
+        chico = b"".join(filas)
+        m = sal.with_name("mitad.png")
+        r = subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{w // 2}x{h // 2}",
+                            "-i", "-", str(m)], input=chico, capture_output=True)
         if r.returncode:
-            sys.exit("empaquetar: optipng falló: " + r.stderr[-800:])
-    return en_cache(datos, "optipng-o2.png", hacer)
+            sys.exit("empaquetar: ffmpeg falló: " + r.stderr.decode(errors="replace")[-800:])
+        optipng(m, sal)
+        if crudo(sal) != chico:
+            sys.exit("empaquetar: la textura 1x no quedó igual al decodificarla")
+    return en_cache(datos, "mitad-exacta-2.png", hacer)
+
+
+def mitad_suave(datos):
+    """Un logo a la mitad (Lanczos: no son píxeles, son dibujos con bordes suaves)."""
+    w, h = tamano(datos)
+
+    def hacer(ent, sal):
+        m = sal.with_name("mitad.png")
+        ffmpeg("-i", str(ent), "-vf", f"scale={(w + 1) // 2}:{(h + 1) // 2}:flags=lanczos", "-pix_fmt", "rgba", str(m))
+        optipng(m, sal)
+    return en_cache(datos, "mitad-suave.png", hacer)
 
 
 def mandos(datos):
@@ -122,14 +177,19 @@ def mandos(datos):
     return ("# porteo: un mapeo solo (ver empaquetar.py)\n" + linea + ",\n").encode()
 
 
-def transformar(ruta, datos):
+def transformar(ruta, datos, achicadas):
+    """(ruta en el .love, datos) de un archivo del APK."""
     if ruta.startswith("resources/sounds/") and ruta.endswith(".ogg"):
-        return sonido(ruta.rsplit("/", 1)[1], datos)
-    if ruta.startswith("resources/textures/") and ruta.endswith(".png"):
-        return textura(datos)
+        return ruta, sonido(ruta.rsplit("/", 1)[1], datos)
+    if ruta.startswith(TEXTURAS + "2x/") and ruta.endswith(".png"):
+        return TEXTURAS + "1x/" + ruta[len(TEXTURAS + "2x/"):], mitad_exacta(datos)
+    if ruta.startswith(TEXTURAS + "1x/") and ruta.endswith(".png"):
+        chica = mitad_suave(datos)
+        achicadas[ruta] = (*tamano(datos), *tamano(chica))
+        return ruta, chica
     if ruta == "resources/gamecontrollerdb.txt":
-        return mandos(datos)
-    return datos
+        return ruta, mandos(datos)
+    return ruta, datos
 
 
 def ffmpeg(*args):
@@ -164,9 +224,14 @@ def main():
                 sys.exit(f"{apk}: no parece el APK de Balatro (falta assets/main.lua o game.lua)")
             quedan = [(n, n[len("assets/"):]) for n in nombres if se_queda(n[len("assets/"):])]
             # lo lento (ffmpeg, optipng) en paralelo
+            achicadas = {}
             with ThreadPoolExecutor(os.cpu_count() or 4) as ex:
-                datos = list(ex.map(lambda nr: transformar(nr[1], z.read(nr[0])), quedan))
-            for (n, ruta), d in zip(quedan, datos):
+                hechos = list(ex.map(lambda nr: transformar(nr[1], z.read(nr[0]), achicadas), quedan))
+            lua = "".join(f"\t['{r}'] = {{ {', '.join(map(str, v))} }},\n" for r, v in sorted(achicadas.items()))
+            hechos.append(("porteo_texturas.lua", (
+                "-- porteo: de empaquetar.py. Las imágenes que van achicadas: ancho y alto originales, ancho y alto\n"
+                "return { achicadas = {\n" + lua + "} }\n").encode()))
+            for ruta, d in sorted(hechos):
                 ruta = RENOMBRAR.get(ruta, ruta)
                 metodo = zipfile.ZIP_STORED if ruta.lower().endswith(SIN_COMPRIMIR) else zipfile.ZIP_DEFLATED
                 love.writestr(zipfile.ZipInfo(ruta, FECHA), d, compress_type=metodo, compresslevel=9)

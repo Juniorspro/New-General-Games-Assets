@@ -416,7 +416,13 @@ salto de Bus Stop: el primer intento dio "falla" y el salto andaba perfecto.)
 
 ## 10. La entrega
 
-**Lo que pidió el dueño (octubre de 2026): "sólo el HTML que abra la página, no APK".** Para los
+**Regla del dueño (octubre de 2026, textual): "solo darme el HTML; cuando son pesados dame el HTML
+corriendo la página y ya no me des otros archivos".** Se le manda **un solo HTML por juego**: el juego
+entero en un archivo (`un-archivo.py --texto`) si entra liviano (Balatro: menos de 10 MB, para
+Rezona), o el lanzador que abre la página si es pesado. Nada más: ni imágenes, ni zips, ni APK, ni
+variantes, ni los lanzadores de otros juegos (salvo que pida algo puntual, como una portada).
+
+**Lo que pidió antes: "sólo el HTML que abra la página, no APK".** Para los
 juegos con versión web privada (Cloudflare, `herramientas/porteo/cloudflare`) se le manda **el
 lanzador**: `abrir.html` de `empaquetar.py --sitio` con `FIJA` = la dirección y `#clave=…` (pesa
 unos KB, se abre con un toque y entra directo). **Sin APK** salvo que lo pida. Ese archivo lleva la
@@ -786,8 +792,10 @@ Origen: balatro mío xd juniors.apk (65,7 MB, sha256 56487be6…42cd), por link 
 Motor: LÖVE con Lua; el LÖVE es el de Playstack (love.platform: nube, logros) y LuaJIT
 Estrategia: LÖVE 11.4 compilado para la web acá + el Lua del juego tal cual + una capa del navegador
 Fidelidad: 1:1 (su Lua, sus shaders, su azar: una semilla da la misma partida que en el teléfono)
-Tamaños: APK 66 MB → web 8,4 MB en total con la música (motor 1,3 MB comprimido + juego 7,1 MB);
-        un solo .html de 9,9 MB, todo en texto ASCII (Rezona lo lee como texto), con la intro
+Tamaños: APK 66 MB → web 8 MB en total con la música (motor 1,3 MB comprimido + juego 6,7 MB);
+        un solo .html de 9,6 MB, todo en texto ASCII (Rezona lo lee como texto), con la intro
+Memoria: para teléfonos de 1 GB: sin la copia de los píxeles de las imágenes (wasm 128 → 48 MB),
+        texturas 1x y menos píxeles con poca memoria o sin WebGL 2 (texturas 121 → 32 MB)
 Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de Rezona (sitio y .html
         único); en el teléfono del dueño, 67 cuadros/s
 ```
@@ -800,7 +808,9 @@ Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de 
   - hilos con corrutinas;
   - la ventana del tamaño del lienzo;
   - un shader para WebGL;
-  - el motor sin lo que Balatro no usa (glslang, Box2D, LuaSocket, ENet): 4,5 → 3,3 MB.
+  - el motor sin lo que Balatro no usa (glslang, Box2D, LuaSocket, ENet): 4,5 → 3,3 MB;
+  - la memoria para teléfonos de 1 GB: las texturas viajan en 1x y la 2x (que es la 1x con cada
+    píxel repetido) se arma en la GPU; modo liviano con 1x y WebGL 1 (ver el LEEME).
 - **Lo que no se usa del APK** (o va más chico):
   - las fuentes CJK y la rusa (62 MB), con esos idiomas;
   - las texturas 1x (el juego recibe las 2x, recomprimidas sin pérdida);

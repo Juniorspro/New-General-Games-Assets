@@ -8,15 +8,16 @@ una capa chica que pone lo que la versión de Android tiene en su LÖVE propio y
 **Estado:** arranca, el menú, el tutorial, elegir ciega, repartir y jugar manos andan con toques,
 en vertical (girado 90°) y en horizontal, también adentro de otra página (Rezona). Guarda la
 partida y el perfil (IndexedDB). El sonido arranca con el primer toque. Empieza con la intro de
-JXStudios. Todo entra en 8,4 MB, música incluida, y también va como un solo .html de 9,9 MB. En el
-teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro).
+JXStudios. Todo entra en 8 MB, música incluida, y también va como un solo .html de 9,6 MB. En el
+teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro). Pensado también para
+teléfonos de 1 GB (ver "Memoria") y para GPU viejas con WebGL 1.
 
 ## Cómo es
 
 - **El motor.** LÖVE 11.4 de love.js (Davidobot, ramas emscripten) con un Emscripten de 2026
   ([`motor/parchar.py`](motor/parchar.py), [`motor/compilar.sh`](motor/compilar.sh)):
   - sin hilos: el juego corre adentro de otras páginas, donde no hay SharedArrayBuffer;
-  - WebGL 2: Balatro pide mipmaps en texturas que no son potencia de dos;
+  - WebGL 2 (y WebGL 1, ver "Memoria"): Balatro pide mipmaps en texturas que no son potencia de dos;
   - excepciones nativas de WebAssembly: con las emuladas, cada llamada a la API de LÖVE (un
     try/catch) pasaba por JavaScript;
   - texturas sin glTexStorage (como en Android) y las de las fuentes como LUMINANCE_ALPHA: con GLES 3
@@ -24,7 +25,9 @@ teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro).
   - sin MP3;
   - sin lo que Balatro no usa, para que todo entre en un .html de menos de 10 MB: glslang (LÖVE lo
     usa sólo para validar los shaders antes de pasárselos a WebGL, que los valida igual), Box2D
-    (love.physics), LuaSocket y ENet. El .wasm pasa de 4,5 MB a 3,3 (comprimido, de 1,67 a 1,33).
+    (love.physics), LuaSocket y ENet. El .wasm pasa de 4,5 MB a 3,3 (comprimido, de 1,67 a 1,33);
+  - las imágenes sin la copia de sus píxeles en la memoria del wasm (ver "Memoria"), y 48 MB de
+    memoria inicial (eran 128).
 - **El azar y `bit` de LuaJIT.** El Lua de la web es 5.1: su `math.randomseed` trunca a entero y
   Balatro siembra con fracciones (todas las semillas daban `srand(0)`, las mismas cartas siempre).
   [`motor/azar_luajit.c`](motor/azar_luajit.c) es el generador de LuaJIT 2.1 (Tausworthe 2^223) y
@@ -39,14 +42,17 @@ teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro).
     deja ceder (en Lua 5.1 no se puede hacer yield a través de un pcall de C);
   - la ventana siempre del tamaño del lienzo: el juego arrancaba en pantalla completa;
   - un shader con un `for` que WebGL no acepta;
-  - los efectos de sonido se decodifican una vez y se clonan;
-  - sólo texturas 2x: cuando el juego pide una 1x (con el suavizado de píxeles apagado) recibe la
-    2x con el doble de `dpiscale`, que mide lo mismo.
+  - los efectos de sonido se decodifican una vez y se clonan, y los largos (el ambiente y la intro)
+    se leen mientras suenan, como la música;
+  - las texturas: ver "Memoria";
+  - ya andando, no deja rehacer la ventana (en LÖVE eso destruye el contexto de WebGL y vuelve a
+    subir las texturas desde una copia que acá no se guarda).
 - **El arranque** ([`juego/porteo_despues.lua`](juego/porteo_despues.lua)):
   - un cartel de error que no cuelga la pestaña;
   - el idioma del navegador la primera vez;
   - fuera de la lista los idiomas sin fuente;
-  - la medición de cada cuadro, que va al registro.
+  - el modo liviano (texturas 1x) en teléfonos con poca memoria o sin WebGL 2;
+  - la medición de cada cuadro (y la memoria de texturas), que va al registro.
 - **La página** ([`pagina/index.html`](pagina/index.html)): la intro de JXStudios y después la
   pantalla de carga con el Joker, horizontal siempre (en vertical, girado), la caché, el registro y
   las partidas en IndexedDB, que se guardan cada 4 s y al esconderse la página. Como un solo .html
@@ -57,17 +63,19 @@ teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro).
 | qué | MB | |
 |---|---|---|
 | motor (love.js + love.wasm) | 3,5 | Cloudflare lo manda comprimido: 1,3 |
-| juego (`balatro.love`) | 7,1 | todo: código, imágenes, fuentes, efectos, ambiente y los cinco temas |
-| el .html único | 9,9 | lo mismo en un archivo (el motor con gzip), todo en texto ASCII (ver "En Rezona") |
+| juego (`balatro.love`) | 6,7 | todo: código, imágenes, fuentes, efectos, ambiente y los cinco temas |
+| el .html único | 9,6 | lo mismo en un archivo (el motor con gzip), todo en texto ASCII (ver "En Rezona") |
 
-`balatro.love` por dentro: música 3,7 MB, texturas 1,4, efectos 0,8, ambiente 0,6, código 0,3,
+`balatro.love` por dentro: música 3,7 MB, texturas 1,0, efectos 0,8, ambiente 0,6, código 0,3,
 textos 0,2. El APK pesa 66 MB (104 descomprimido). Fuera de la versión web, o más chico:
 
 - las fuentes china, japonesa, coreana, rusa y Go Noto (62 MB), con los textos de esos idiomas;
 - el sonido, en Vorbis mono: música y ambiente a calidad -1 (32 kb/s, corta en 13,9 kHz), efectos
   a 0 (48 kb/s). De 17,5 MB a 5,1. En el parlante de un teléfono no se nota;
-- las texturas 1x (1,7 MB: son las 2x a la mitad) y las 2x de los logos, que el juego no usa; el
-  resto, recomprimidas sin pérdida con optipng (los mismos píxeles, 25% menos);
+- las texturas van en 1x sacadas de las 2x (son las 1x con cada píxel repetido en 2×2: no se pierde
+  nada, ver "Memoria"), recomprimidas sin pérdida con optipng; las 1x originales no van (en 18
+  colaboraciones son un dibujo anterior), ni las 2x de los logos, que el juego no usa; los logos,
+  a la mitad;
 - `gamecontrollerdb.txt`: un mapeo solo (en el navegador SDL ignora los de cada sistema);
 - lo de Android (dexopt, info.txt).
 
@@ -82,6 +90,35 @@ textos 0,2. El APK pesa 66 MB (104 descomprimido). Fuera de la versión web, o m
   empezaba antes de que llegaran las partidas de IndexedDB. Ahora la página espera
   `Module.porteoPartidas`, y no se escribe nada en IndexedDB hasta que la carga inicial terminó:
   escribir antes borraba allá lo que todavía no estaba acá.
+
+## Memoria (teléfonos de 1 GB)
+
+Medido en Chromium (procesos de verdad, PSS) en el menú y jugando una mano:
+
+| | antes | ahora | modo liviano |
+|---|---|---|---|
+| memoria del wasm | 128 MB | 48 MB (usa 23–33) | 48 MB |
+| texturas en la GPU (LÖVE) | 121 MB | 111 MB | 25–32 MB |
+| renderizador + GPU | ~590 MB | ~500 MB | ~400 MB |
+
+- **La copia de los píxeles.** LÖVE guarda los píxeles de cada imagen en la memoria del wasm para
+  volver a subirlos si se recrea la ventana: 88 MB de los 128. Acá eso no pasa (el juego cambia el
+  modo de ventana al arrancar, antes de cargar imágenes, y `porteo_web.lua` no lo deja después), así
+  que `motor/parchar.py` los suelta apenas están en la GPU.
+- **Las texturas 2x.** Todas son las 1x con cada píxel repetido en 2×2 (el "suavizado de píxeles"
+  de Balatro dibuja las 2x con filtro lineal). Viajan en 1x (menos para bajar) y, cuando el juego
+  pide una 2x, `porteo_web.lua` la arma en la GPU: un lienzo del doble con la 1x dibujada sin filtro.
+  Comparadas con las 2x del APK (volcadas del juego andando): iguales byte a byte.
+- **Modo liviano.** Con 1 GB o menos (`navigator.deviceMemory`, Chrome) o sin WebGL 2, el juego usa
+  las 1x tal cual, como con el suavizado apagado (los píxeles nítidos): la cuarta parte de memoria
+  de video. El lienzo va con hasta 1,5 píxeles por punto en vez de 2 (las GPU de esos teléfonos son
+  las más flojas). `index.html?ligero` lo fuerza y `?ligero=0` lo apaga; el registro dice si se usó.
+- **WebGL 1** (GPU viejas, como las Mali-400 de muchos teléfonos de 1 GB): LÖVE no dejaba dibujar en
+  lienzos RGBA8 (WebGL 1 no anuncia `OES_rgb8_rgba8` aunque siempre lo permite) y reservaba mipmaps
+  en texturas que no son potencia de dos, cosa que WebGL 1 no hace. Ahora va sin mipmaps y en modo
+  liviano. Probado con Chromium sin WebGL 2: menú, partida y una mano jugada.
+- **El sonido largo.** El ambiente y los dos sonidos de la intro (de 23 a 38 s) se cargaban enteros;
+  ahora se leen mientras suenan.
 
 ## En Rezona
 

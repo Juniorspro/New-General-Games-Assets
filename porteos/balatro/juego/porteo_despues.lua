@@ -37,6 +37,23 @@ function love.errhand(msg)
 end
 love.errorhandler = love.errhand
 
+-- Teléfonos con poca memoria o GPU vieja (la página deja /porteo/ligero con 1 GB o menos o sin WebGL
+-- 2; acá también se mira que haya texturas de cualquier tamaño con mipmaps, que WebGL 1 no tiene):
+-- las texturas 1x, como con el "suavizado de píxeles" apagado. Ocupan la cuarta parte de memoria de
+-- video (26 MB y no 104) y no hay que armar las 2x en lienzos (ver "Imágenes" en porteo_web.lua).
+-- Siempre: si se elige suavizado en las opciones, sigue en 1x (las 2x no entrarían)
+do
+	local f = io.open('/porteo/ligero', 'r')
+	if f then f:close() end
+	if f or not love.graphics.getSupported().fullnpot then
+		local ajustes = Game.set_render_settings
+		function Game:set_render_settings(...)
+			self.SETTINGS.GRAPHICS.texture_scaling = 1
+			return ajustes(self, ...)
+		end
+	end
+end
+
 -- Medir: cuánto tarda por cuadro la lógica y el dibujo, cada 30 s (cada 5 si la página deja
 -- /porteo/medir). Va a la consola y la página lo manda al registro: así se ve qué frena en el
 -- teléfono del dueño, el Lua (sin JIT acá) o la GPU
@@ -51,15 +68,29 @@ do
 		actualizar(dt)
 		tu = tu + love.timer.getTime() - t
 	end
+	-- para las pruebas (sólo con ?medir): la página puede dejar un /porteo/orden.lua, que corre una vez
+	local function orden()
+		local f = io.open('/porteo/orden.lua', 'r')
+		if not f then return end
+		local s = f:read('*a')
+		f:close()
+		os.remove('/porteo/orden.lua')
+		local fn, err = loadstring(s, 'orden')
+		local ok, res = false, err
+		if fn then ok, res = pcall(fn) end
+		print('porteo: orden ' .. (ok and 'bien' or 'mal') .. ' ' .. tostring(res))
+	end
 	love.draw = function()
+		if cada == 5 then orden() end
 		local t = love.timer.getTime()
 		dibujar()
 		td = td + love.timer.getTime() - t
 		n = n + 1
 		local ahora = love.timer.getTime()
 		if ahora - desde >= cada then
-			print(string.format('porteo: %.1f cuadros/s · update %.2f ms · draw %.2f ms · memoria Lua %.1f MB',
-				n / (ahora - desde), 1000 * tu / n, 1000 * td / n, collectgarbage('count') / 1024))
+			print(string.format('porteo: %.1f cuadros/s · update %.2f ms · draw %.2f ms · memoria Lua %.1f MB · texturas %.1f MB',
+				n / (ahora - desde), 1000 * tu / n, 1000 * td / n, collectgarbage('count') / 1024,
+				love.graphics.getStats().texturememory / 1048576))
 			tu, td, n, desde = 0, 0, 0, ahora
 		end
 	end

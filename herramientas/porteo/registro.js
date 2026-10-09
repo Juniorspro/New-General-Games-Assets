@@ -8,6 +8,7 @@
  *     "wrangler pages deployment tail": así se ve qué le pasa a un teléfono que uno no tiene a mano.
  *
  *   Porteo.registro({ url: '__registro' });   // al principio de la página
+ *   Porteo.registro({ url: '…', webgl1: true }); // si el juego anda también con WebGL 1 (no avisa que falta el 2)
  *   Porteo.anotar('escena', 'MainMenu');      // un hito
  *   Porteo.arrancado();                       // el juego ya anda: los errores de ahí en más no paran todo
  *   Porteo.fallo('No se pudo bajar…', 'detalle');
@@ -120,7 +121,7 @@
     var d = equipo();
     anotar('equipo', d);
     mandar();
-    if (d.webgl2 === false) fallo(T[4]);
+    if (d.webgl2 === false && !(op && op.webgl1)) fallo(T[4]);
   };
 
   addEventListener('error', function (e) {

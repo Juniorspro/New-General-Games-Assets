@@ -27,9 +27,20 @@ local function modoWeb(_, _, op)
 	local w, h = love.graphics.getDimensions()
 	return w, h, op
 end
+-- Ya andando, no se rehace: en LÖVE cambiar el modo destruye la ventana y el contexto de WebGL y
+-- vuelve a subir las texturas desde sus píxeles en memoria, que acá no se guardan (ver "Imágenes"); y
+-- en el navegador no cambiaría nada (siempre el lienzo, siempre estas opciones). El juego cambia el
+-- modo al arrancar, antes de cargar sus imágenes (y en el teléfono no tiene opciones de video)
+local andando = false
 local actualizarModo, ponerModo = love.window.updateMode, love.window.setMode
-love.window.updateMode = function(w, h, op) return actualizarModo(modoWeb(w, h, op)) end
-love.window.setMode = function(w, h, op) return ponerModo(modoWeb(w, h, op)) end
+love.window.updateMode = function(w, h, op)
+	if andando then return true end
+	return actualizarModo(modoWeb(w, h, op))
+end
+love.window.setMode = function(w, h, op)
+	if andando then return true end
+	return ponerModo(modoWeb(w, h, op))
+end
 
 -- Los shaders van como GLSL ES 1.00 (WebGL 1), y WebGL hace cumplir lo que los drivers del teléfono
 -- dejan pasar: el índice de un for tiene que arrancar en una constante. El holográfico (el de
@@ -251,6 +262,7 @@ end
 -- un paso de los hilos por cuadro: el bucle del juego (love.run) bombea los eventos una vez por cuadro
 local bombear = love.event.pump
 love.event.pump = function(...)
+	andando = true   -- el bucle de cuadros: love.load ya terminó
 	bombear(...)
 	pasoHilos()
 end
@@ -261,9 +273,19 @@ end
 -- Sin el hilo de sonido (en Android va en el principal) el juego hace un Source nuevo cada vez que
 -- suena algo: los efectos "static" se decodificaban enteros (OGG a PCM) en cada toque. Acá se
 -- decodifica cada uno una vez y se clona (los clones comparten el audio ya decodificado).
+--
+-- El juego carga todos los sonidos al arrancar, y los que no son música enteros ("static"): con el
+-- ambiente (cuatro de 23 a 38 s) y los dos de la intro (29 y 24 s) eran 34 MB de audio decodificado
+-- para siempre. Esos van como la música ("stream", que el juego ya usa para el ambiente cuando lo
+-- vuelve a pedir): se decodifican mientras suenan. Suenan igual.
+local LARGOS = { ambientFire1 = true, ambientFire2 = true, ambientFire3 = true, ambientOrgan1 = true,
+	introPad1 = true, splash_buildup = true }
 local fuenteNueva = love.audio.newSource
 local estaticos = {}
 love.audio.newSource = function(a, tipo, ...)
+	if type(a) == 'string' and tipo == 'static' and LARGOS[a:match('([^/]+)%.ogg$') or ''] then
+		return fuenteNueva(a, 'stream', ...)
+	end
 	if type(a) == 'string' and tipo == 'static' then
 		local p = estaticos[a]
 		if not p then
@@ -278,22 +300,56 @@ end
 --||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 -- Imágenes
 --||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
--- La versión web trae las texturas en 2x nada más (las 1x son las mismas a la mitad: 1,7 MB que no
--- hacían falta). Si el juego pide una 1x (la opción "suavizado de píxeles" apagada), va la 2x con
--- el doble de dpiscale: mide lo mismo (los quads usan getDimensions, que ya divide por dpiscale) y,
--- con el filtro "nearest" que pone el juego en ese modo, se ve como la 1x.
+-- Las texturas 2x de Balatro son las 1x con cada píxel repetido en 2×2 (todas: empaquetar.py lo
+-- verifica). La versión web trae sólo las 1x, sacadas de las 2x (menos para bajar). Cuando el juego
+-- pide una 2x (con el "suavizado de píxeles", que viene prendido) se arma en la GPU: un lienzo del
+-- doble de píxeles con la 1x dibujada sin filtro, igual píxel por píxel a la 2x original, y sin copia
+-- en la memoria del wasm. En un teléfono con poca memoria (porteo_despues.lua) el juego usa las 1x
+-- tal cual, como con el suavizado apagado: la cuarta parte de memoria de video.
+-- Los logos del arranque vienen a la mitad; porteo_texturas.lua (de empaquetar.py) dice de qué
+-- tamaño eran, y el dpiscale los deja del mismo tamaño en pantalla.
+-- Con WebGL 1 (sin "fullnpot"), sin mipmaps: WebGL 1 no los hace en texturas que no son potencia de
+-- dos, y LÖVE igual reservaba los niveles ("Cannot create image (OpenGL error: invalid value)").
+local TEXTURAS = love.filesystem.getInfo('porteo_texturas.lua') and require('porteo_texturas') or { achicadas = {} }
 local imagenNueva = love.graphics.newImage
+
+local function doble(ruta, op)
+	local chica = imagenNueva(ruta)
+	chica:setFilter('nearest', 'nearest')
+	local w, h = chica:getPixelDimensions()
+	local escala = op.dpiscale or 1
+	local lienzo = love.graphics.newCanvas(2 * w / escala, 2 * h / escala,
+		{ dpiscale = escala, mipmaps = op.mipmaps and 'auto' or 'none' })
+	love.graphics.push('all')
+	love.graphics.setCanvas(lienzo)
+	love.graphics.clear(0, 0, 0, 0)
+	love.graphics.setBlendMode('replace', 'premultiplied')   -- los píxeles tal cual, alfa incluido
+	love.graphics.setShader()
+	love.graphics.setColor(1, 1, 1, 1)
+	love.graphics.origin()
+	love.graphics.draw(chica, 0, 0, 0, 2 / escala, 2 / escala)
+	love.graphics.pop()   -- acá se dibuja de verdad (y se arman los mipmaps)
+	chica:release()
+	return lienzo
+end
+
+local sinMipmaps = nil
 love.graphics.newImage = function(a, op, ...)
-	if type(a) == 'string' then
-		local nombre = a:match('^resources/textures/1x/(.+)$')
-		if nombre and not love.filesystem.getInfo(a) then
-			local o = {}
-			for k, v in pairs(op or {}) do o[k] = v end
-			o.dpiscale = (o.dpiscale or 1) * 2
-			return imagenNueva('resources/textures/2x/' .. nombre, o, ...)
-		end
+	if type(a) ~= 'string' then return imagenNueva(a, op, ...) end
+	local o = {}
+	for k, v in pairs(op or {}) do o[k] = v end
+	if sinMipmaps == nil then sinMipmaps = not love.graphics.getSupported().fullnpot end
+	if sinMipmaps then o.mipmaps = false end
+	local achicada = TEXTURAS.achicadas[a]
+	if achicada then
+		o.dpiscale = (o.dpiscale or 1) * achicada[3] / achicada[1]
+		return imagenNueva(a, o, ...)
 	end
-	return imagenNueva(a, op, ...)
+	local nombre = a:match('^resources/textures/2x/(.+)$')
+	if nombre and not love.filesystem.getInfo(a) then
+		return doble('resources/textures/1x/' .. nombre, o)
+	end
+	return imagenNueva(a, o, ...)
 end
 
 --||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
