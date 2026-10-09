@@ -43,8 +43,11 @@ var Gen = (function () {
   Gen.BIOMAS = BIOMAS;
   Gen.BI = BI;
 
-  function Gen(semilla) {
+  // tipo: 'infinito' (el de siempre) o 'plano' (el "Tipo de mundo: Plano" del juego: piedra base,
+  // dos de tierra y pasto, en llanura)
+  function Gen(semilla, tipo) {
     this.semilla = semilla | 0;
+    this.plano = tipo === 'plano';
     this.rCont = new R(semilla + 11);
     this.rEro = new R(semilla + 12);
     this.rPico = new R(semilla + 13);
@@ -62,6 +65,7 @@ var Gen = (function () {
 
   // la altura del terreno y el bioma de una columna (funciones puras de la posición)
   Gen.prototype.columna = function (x, z, sal) {
+    if (this.plano) { sal.alt = 3; sal.bioma = 1; sal.frio = false; return sal; }
     var c = this.rCont.oct2(x / 700, z / 700, 3, 0.5) * 1.3 + 0.12;
     var e = this.rEro.oct2(x / 450, z / 450, 2, 0.5);
     var pico = 1 - Math.abs(this.rPico.oct2(x / 260, z / 260, 3, 0.5));
@@ -108,6 +112,11 @@ var Gen = (function () {
   // Un trozo: 16x16x128. ids y meta por bloque, índice (y<<8)|(z<<4)|x
   // ------------------------------------------------------------------------------------------
   Gen.prototype.trozo = function (cx, cz, ids, meta, biomas) {
+    if (this.plano) {
+      ids.fill(0); meta.fill(0); biomas.fill(1);
+      for (var k = 0; k < 256; k++) { ids[k] = 7; ids[256 + k] = 3; ids[512 + k] = 3; ids[768 + k] = 2; }
+      return;
+    }
     var x0 = cx * 16, z0 = cz * 16, col = {}, alts = new Int16Array(256), frios = new Uint8Array(256);
     var x, z, y, i;
     for (z = 0; z < 16; z++) {

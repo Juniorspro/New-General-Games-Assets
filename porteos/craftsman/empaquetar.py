@@ -282,6 +282,8 @@ def cielo(apk, salida):
     luna = apk.imagen(env + "moon_phases.png")
     w, h = luna.width // 4, luna.height // 2
     luna.crop((0, 0, w, h)).save(salida / "luna.png", optimize=True)
+    # las nubes del juego de fábrica (planas): para jugar sin shaders
+    apk.imagen(env + "clouds.png").save(salida / "nubes.png", optimize=True)
     for i in range(10):
         apk.imagen(env + f"destroy_stage_{i}.png").save(salida / f"grieta{i}.png", optimize=True)
 
@@ -297,6 +299,9 @@ def interfaz(apk, salida):
     b = g + "newgui/buttons/border/"
     for origen, destino in (("base", "boton"), ("hover", "botonEncima"), ("basePress", "botonApretado")):
         apk.imagen(b + origen + ".png").save(salida / (destino + ".png"), optimize=True)
+    # las casillas de las opciones (las de common.toggle del juego)
+    for origen, destino in (("checkbox_unchecked", "casilla0"), ("checkbox_checked", "casilla1")):
+        apk.imagen(g + "newgui/buttons/checkbox/" + origen + ".png").save(salida / (destino + ".png"), optimize=True)
     # el panorama del menú (la cueva): 6 caras de 1000 px; a 512 en JPEG alcanza (se ve de fondo, oscuro)
     for i in range(6):
         im = apk.imagen(g + f"background/panorama_{i}.png").convert("RGB").resize((512, 512), Image.LANCZOS)

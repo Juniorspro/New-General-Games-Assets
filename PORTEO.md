@@ -851,7 +851,13 @@ Estado: creativo completo (mundos guardados, construir, agua y lava, inventario,
   - sacar la sombra del personaje del `renderchunk.fragment` (cinco capas, verificado);
   - decodificar los FSB5 (FADPCM) a un solo Opus;
   - la física de Minecraft, los toques de MCPE (con salto automático) y el agua que corre;
-  - una llamada de dibujo por capa y columna, resolución automática.
+  - una llamada de dibujo por capa y columna, resolución automática;
+  - para los teléfonos flojos: 60 cuadros como máximo (en 90/120 Hz dibujaba el doble), el hilo del
+    mundo dormido cuando no hay nada que hacer (daba vueltas sin parar), la precisión de los shaders
+    como el juego (mediump) y un modo sin shaders (los materiales del MCPE de fábrica) que se elige al
+    empezar;
+  - los controles, el anillo de romper y las opciones como MCPE 1.0 (hud_screen.json, ui_common.json
+    y los textos options.* del APK).
 - **Rearmarlo:** `porteos/craftsman/portear.sh Craftsman_PTGI.apk SALIDA` (deja
   `SALIDA/Craftsman-PTGI.html`).
 

@@ -3,11 +3,14 @@
 «Craftsman PTGI» de Tito Crack 6000 (Craftsman, que es Minecraft PE 0.16 rebautizado, con los
 shaders que les hizo Tito) jugable en el navegador del teléfono, en un solo `.html` de 2,3 MB.
 
-**Estado:** modo creativo completo para construir: menú con el panorama de la cueva, mundos
-guardados (crear con nombre y semilla, abrir, borrar), mundo infinito con biomas, cuevas, minerales y
-árboles, día y noche, agua y lava que corren, poner y romper con toques como MCPE 0.16, inventario
-creativo de cuatro pestañas, el bloque en la mano, partículas, sonidos del juego, opciones. Siempre
-acostado: con el teléfono parado el juego se gira 90° solo (también adentro de Rezona). La
+**Estado:** modo creativo completo para construir: la primera vez se elige jugar con o sin los
+shaders de Tito (sobre el menú difuminado; después se cambia en Opciones > Gráficos), menú con el
+panorama de la cueva, mundos guardados (crear con nombre, semilla, tipo infinito o plano y "siempre
+de día", abrir, borrar), mundo infinito con biomas, cuevas, minerales y árboles, día y noche, agua y
+lava que corren, los controles táctiles de MCPE 1.0 (cruceta con agacharse en el medio, saltar
+aparte, el anillo que se llena al romper), inventario creativo de cuatro pestañas, el bloque en la
+mano, partículas, sonidos del juego y las opciones del juego (Juego, Controles, Gráficos, Sonido).
+Siempre acostado: con el teléfono parado se gira 90° solo (también adentro de Rezona). La
 supervivencia (vida, hambre, herramientas, fabricar) y los bichos todavía no.
 
 ## Cómo es
@@ -57,13 +60,17 @@ motor es nuestro ([`juego/`](juego), JavaScript y WebGL) y del APK se usa todo l
 - [`principal.js`](juego/principal.js): carga, menús, mundos en IndexedDB (los trozos tocados,
   comprimidos: 2 a 6 KB cada uno), el bucle y los toques.
 
-### Controles (como MCPE 0.16)
+### Controles (como MCPE 1.0)
 
-Cruceta abajo a la izquierda (doble toque adelante corre; el botón redondo agacha), saltar en el
-medio (doble toque: volar; volando, subir y bajar). Arrastrar mira. Tocar un bloque pone el elegido
-(o abre la puerta); mantener el dedo quieto rompe (uno cada 0,25 s, como el creativo del juego).
-La barra rápida elige; "…" abre el inventario. En la computadora: mouse (clic para bloquear el
-puntero), WASD, espacio, shift, ctrl, rueda, 1-9, E y Esc.
+Cruceta abajo a la izquierda (doble toque adelante corre) con agacharse en el medio (el botón
+redondo: se prende y se apaga); saltar aparte, grande, abajo a la derecha (doble toque: volar;
+volando, subir y bajar van ahí). Arrastrar mira. Tocar un bloque pone el elegido (o abre la
+puerta); mantener el dedo quieto rompe: aparece el anillo del juego ("progress indicator"), se llena
+y rompe, y se vuelve a llenar para el siguiente (uno cada 0,25 s, como el creativo). La barra rápida
+elige; "…" abre el inventario. En Opciones > Controles, como en el juego: sensibilidad, invertir el
+eje Y, para zurdos, saltar automáticamente, intercambiar salto y agacharse, controles divididos
+(se apunta con la mira del centro), tamaño de botón y vibrar al romper. En la computadora: mouse
+(clic para bloquear el puntero), WASD, espacio, shift, ctrl, rueda, 1-9, E y Esc.
 
 Lo que en el APK hace Android lo hace [`herramientas/porteo/web.js`](../../herramientas/porteo/web.js),
 como en Balatro y PvZ: con el teléfono parado gira el juego 90° (para el lado al que se gire el
@@ -71,15 +78,30 @@ teléfono, por el acelerómetro) y traduce los toques; al primer toque pide pant
 la pantalla acostada; el botón atrás pausa (en los menús vuelve una pantalla; dos seguidos salen) y
 la pantalla no se apaga mientras se juega.
 
-### Rendimiento
+### Rendimiento (para que ande en teléfonos de 1,2 GHz)
 
-- Resolución automática: si no llega a ~45 cuadros por segundo baja los píxeles (hasta la mitad) y
-  si sobra los vuelve a subir; si bajar no mejora (un teléfono que limita a 30 para ahorrar batería),
-  vuelve atrás y no insiste. También se puede fijar en Opciones, junto con la distancia (6 en el
-  teléfono), las nubes y el brillo.
-- El mundo se genera, se ilumina y se malla en otro hilo, lo más cercano primero.
-- El agua se actualiza cada 0,25 s y sólo rehace las mallas que toca.
-- El sonido se decodifica a 22 kHz (la mitad de memoria que a 48).
+- **60 cuadros por segundo como máximo** (o 30, en Opciones), como el juego: en las pantallas de 90
+  y 120 Hz se dibujaba en cada refresco, el doble de trabajo.
+- **El hilo del mundo duerme** cuando no tiene nada que hacer (antes daba vueltas sin parar y tenía
+  un núcleo ocupado: calor y menos CPU para el juego); se despierta al moverse o poner un bloque, y
+  cada 50 ms sólo si hay agua corriendo.
+- **La precisión de los shaders como la pone el juego** (ShaderProgramOGL): `precision mediump float`
+  y POS3/POS4/MAT4 en la más alta que tenga el teléfono. Con todo en highp (lo de antes) cada píxel
+  se calculaba en 32 bits; en las GPU de teléfono mediump va al doble.
+- **Sin shaders**: los materiales del MCPE de fábrica (textura × color × luz, niebla, cielo de dos
+  colores, nubes planas de clouds.png). Si un teléfono no compila los de Tito, entra este modo solo.
+- Resolución automática: según la velocidad elegida baja los píxeles (hasta 35 %) y si sobra los
+  sube; si bajar no mejora (un teléfono que limita a 30 para ahorrar batería), vuelve atrás. En un
+  teléfono flojo (pocos núcleos o poca memoria, o una GPU vieja) arranca con menos píxeles,
+  distancia 4 y las hojas opacas del juego.
+- Las opciones del juego que alivianan: gráficos sofisticados (el FANCY de Tito), hojas llamativas
+  (sin ellas, las hojas son opacas: las texturas .opaque del paquete), iluminación suave, cielos
+  hermosos, nubes, partículas.
+- En los menús el panorama se dibuja con pocos píxeles y el navegador lo estira suavizado: el fondo
+  difuminado del juego casi sin costo.
+- El mundo se genera, se ilumina y se malla en otro hilo, lo más cercano primero; el agua se
+  actualiza cada 0,25 s y sólo rehace las mallas que toca; el sonido se decodifica a 22 kHz.
+- Medido con la CPU frenada 6 veces: el JavaScript de cada cuadro tarda ~2 ms.
 
 ## Cómo se arma
 

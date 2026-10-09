@@ -15,6 +15,14 @@
   var centro = { cx: 0, cz: 0 };
   var guardados = new Map();  // bloques de trozos guardados (llegan de la página) por clave
   var pendientes = [];        // bloques puestos por el jugador, por aplicar
+  // los ajustes de gráficos del juego que cambian las mallas: "Iluminación suave" (oclusión y luz
+  // promediada en las esquinas) y "Hojas llamativas" (sin ellas, las hojas son opacas: las texturas
+  // .opaque del paquete, en la capa opaca y tapando a sus vecinas, mucho menos para dibujar)
+  var suave = true, hojasLlamativas = true;
+  function aplicarHojas() {
+    var op = hojasLlamativas ? 0 : 1, capa = hojasLlamativas ? 1 : 0;
+    OPACO[18] = OPACO[161] = op; CAPA[18] = CAPA[161] = capa;
+  }
 
   function clave(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
   function trozo(cx, cz) { return trozos.get(clave(cx, cz)); }
@@ -271,6 +279,7 @@
     var V = VEC[f], ln = li + V.n, cara = CUBO[f];
     var b0 = lblk[ln], s0 = lsky[ln];
     for (var k = 0; k < 4; k++) {
+      if (!suave) { aoE[k] = 1; blE[k] = b0; skE[k] = s0; continue; }
       var e = V.esq[k], c1 = ln + e[0], c2 = ln + e[1], cc = c1 + e[1];
       var o1 = OPACO[lid[c1]], o2 = OPACO[lid[c2]], oc = (o1 && o2) ? 1 : OPACO[lid[cc]];
       aoE[k] = (1 + (o1 ? 0.2 : 1) + (o2 ? 0.2 : 1) + (oc ? 0.2 : 1)) * 0.25;
@@ -391,7 +400,11 @@
           if (forma === F.cubo || forma === F.tronco) {
             // texturas y variantes según el bloque
             var hojas = id === 18 || id === 161;
-            if (hojas) variante = m & 3;
+            if (hojas) {
+              variante = m & 3;
+              // sin hojas llamativas: la variante opaca (la segunda mitad de la lista de texturas)
+              if (!hojasLlamativas) variante += TEXCARA[id][0] ? TEXCARA[id][0].length >> 1 : 0;
+            }
             if (id === 2) variante = Gen.BIOMAS[lbio[lz * LW + lx]][3];
             for (f = 0; f < 6; f++) {
               var vec = lid[li + VEC[f].n];
@@ -773,8 +786,24 @@
   }
 
   var avisado = false;
+  // el bucle de trabajo duerme cuando no hay nada que hacer: antes se volvía a llamar enseguida para
+  // siempre y tenía un núcleo del teléfono ocupado al 100 % (calor, batería y menos CPU para el juego).
+  // Se despierta con cada mensaje (el jugador se movió, puso un bloque) y, si hay agua corriendo, cada
+  // 50 ms (un paso del juego)
+  var programado = null, programadoEn = 0;
+  function programar(ms) {
+    var cuando = Date.now() + ms;
+    if (programado !== null) {
+      if (programadoEn <= cuando) return;
+      clearTimeout(programado);
+    }
+    programadoEn = cuando;
+    programado = setTimeout(function () { programado = null; unPaso(); }, ms);
+  }
+  var vueltas = 0;
   function unPaso() {
-    var t0 = Date.now();
+    var t0 = Date.now(), sinTrabajo = false;
+    vueltas++;
     liquidos();
     while (Date.now() - t0 < 12) {
       // 1. lo que puso el jugador
@@ -791,6 +820,7 @@
       });
       if (!mejor) {
         if (!avisado) { avisado = true; postMessage({ t: 'listo' }); }
+        sinTrabajo = true;
         break;
       }
       if (que === 1) generar(mejor);
@@ -807,7 +837,9 @@
         mejor.mallaHecha |= 1 << sy;
       }
     }
-    setTimeout(unPaso, 0);
+    // se cortó por tiempo (queda trabajo) o llegó algo mientras tanto: sigue ya; si no, duerme
+    if (!sinTrabajo || pendientes.length) programar(0);
+    else if (agenda.size && !pausa) programar(50);
   }
 
   // un bloque cambiado: los datos, la luz de los trozos que alcanza y las mallas que toca
@@ -857,19 +889,36 @@
     if (d.t === 'ini') {
       C.armarBloques(d.bloques);
       OPACO = C.OPACO; FRENA = C.FRENA; LUZ = C.LUZ; FORMA = C.FORMA; CAPA = C.CAPA;
-      uv = d.uv; gen = new Gen(d.semilla); dist = d.dist || 6;
+      uv = d.uv; gen = new Gen(d.semilla, d.tipo); dist = d.dist || 6;
+      if (d.suave !== undefined) suave = !!d.suave;
+      if (d.hojas !== undefined) hojasLlamativas = !!d.hojas;
       prepararTexturas();
+      aplicarHojas();
       centro = { cx: d.cx | 0, cz: d.cz | 0, sy: d.sy || 4 };
       planificar();
-      setTimeout(unPaso, 0);
+      programar(0);
     } else if (d.t === 'centro') {
       centro = { cx: d.cx, cz: d.cz, sy: d.sy };
       if (d.dist) dist = d.dist;
       planificar();
+      programar(0);
     } else if (d.t === 'poner') {
       pendientes.push(d);
+      programar(0);
     } else if (d.t === 'pausa') {
       pausa = !!d.v;
+      if (!pausa) { ultimoLiq = Date.now(); programar(0); }
+    } else if (d.t === 'graficos') {
+      // cambiaron los ajustes: todas las mallas de nuevo (lo más cercano primero, como siempre)
+      if (d.suave !== undefined) suave = !!d.suave;
+      if (d.hojas !== undefined) hojasLlamativas = !!d.hojas;
+      if (OPACO) {
+        aplicarHojas();
+        trozos.forEach(function (t) { if (t.luzOk) t.malla = 0xFF; });
+        programar(0);
+      }
+    } else if (d.t === 'diag') {
+      postMessage({ t: 'diag', vueltas: vueltas, agenda: agenda.size, trozos: trozos.size });
     } else if (d.t === 'luz') {
       // la luz donde está el jugador (para la mano y las partículas): cielo << 4 | bloques
       var tl = trozo(d.x >> 4, d.z >> 4), v = -1;

@@ -23,6 +23,13 @@ var GL = (function () {
       }
     }
     GL.aniso = gl.getExtension('EXT_texture_filter_anisotropic');
+    var f = gl.getShaderPrecisionFormat && gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
+    GL.altaEnFragmentos = !!(f && f.precision > 0);
+    // el nombre de la GPU (para elegir de entrada menos píxeles en las flojas)
+    try {
+      var di = gl.getExtension('WEBGL_debug_renderer_info');
+      GL.gpu = di ? String(gl.getParameter(di.UNMASKED_RENDERER_WEBGL)) : String(gl.getParameter(gl.RENDERER));
+    } catch (e) { GL.gpu = ''; }
     GL.gl = gl;
     return gl;
   };
@@ -42,9 +49,13 @@ var GL = (function () {
   }
 
   function cabecera(defines) {
+    // como el juego (ShaderProgramOGL): "precision mediump float" en las dos etapas y POS3/POS4/MAT4 en
+    // la precisión más alta que tenga el teléfono. Con highp en todo (lo que había) cada fragmento se
+    // calculaba en 32 bits: en las GPU de los teléfonos, mediump va al doble de velocidad
+    var p = GL.altaEnFragmentos ? 'highp' : 'mediump';
     var h = (GL.v2 ? '#version 300 es\n' : '#version 100\n') +
-      'precision highp float;\n' +
-      '#define POS4 highp vec4\n#define POS3 highp vec3\n#define MAT4 highp mat4\n#define MAT3 highp mat3\n';
+      'precision mediump float;\n' +
+      '#define POS4 ' + p + ' vec4\n#define POS3 ' + p + ' vec3\n#define MAT4 ' + p + ' mat4\n#define MAT3 ' + p + ' mat3\n';
     for (var i = 0; i < defines.length; i++) h += '#define ' + defines[i] + '\n';
     return h;
   }
@@ -87,11 +98,12 @@ var GL = (function () {
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imagen);
-    var f = filtro === 'lineal' ? gl.LINEAR : gl.NEAREST;
+    var f = filtro === 'lineal' || filtro === 'suave' ? gl.LINEAR : gl.NEAREST;
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
     if (mip) {
       gl.generateMipmap(gl.TEXTURE_2D);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
+      // 'suave': trilineal (el panorama dibujado chico para el fondo difuminado)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filtro === 'suave' ? gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST_MIPMAP_LINEAR);
       if (GL.v2) gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, mip);
     } else gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f);
     var w = repetir ? gl.REPEAT : gl.CLAMP_TO_EDGE;

@@ -20,18 +20,88 @@
   // ------------------------------------------------------------------------------------------
   // Opciones (en este navegador)
   // ------------------------------------------------------------------------------------------
+  // un teléfono flojo (pocos núcleos o poca memoria; la GPU se mira al arrancar WebGL): se empieza con
+  // menos distancia y menos píxeles, y la resolución automática sube si sobra
+  var debil = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 2;
   var OPC = 'craftsman.opciones';
-  var opciones = { dist: telefono ? 6 : 8, brillo: 0.5, volumen: 0.8, sens: 1, fov: 70, fps: false, resolucion: 0, nubes: true };
+  // las opciones del juego (MCPE 1.0) y las del port. shaders: null hasta que se elige al empezar
+  var opciones = {
+    shaders: null, dist: telefono ? (debil ? 4 : 6) : 8, fov: 70, brillo: 0.5, sofisticados: true, hojas: !debil, suave: true,
+    cielos: true, nubes: true, particulas: true, balanceo: true, ocultarInterfaz: false, resolucion: 0, limite: 60, fps: false,
+    sens: 1, invertirY: false, zurdo: false, autoSalto: true, intercambiar: false, dividido: false, tamBoton: 1, vibrar: true,
+    volumen: 0.8
+  };
   try { Object.assign(opciones, JSON.parse(localStorage.getItem(OPC) || '{}')); } catch (e) { /* sin almacenamiento */ }
   function guardarOpciones() { try { localStorage.setItem(OPC, JSON.stringify(opciones)); } catch (e) { /* nada */ } }
-  function aplicarOpciones() {
+  // cambio: la opción que cambió (sin nada: todas)
+  function aplicarOpciones(cambio) {
     mundo.dist = opciones.dist;
     mundo.nubes = opciones.nubes;
+    mundo.cielosHermosos = opciones.cielos;
     Render.brillo = opciones.brillo;
-    cam.fov = opciones.fov * Math.PI / 180;
     I.juego.mostrarFps = opciones.fps;
+    I.opc = opciones;
+    J.autoSalto = opciones.autoSalto;
     Sonido.volumen(opciones.volumen);
-    if (trab && jugando) trab.postMessage({ t: 'centro', cx: ultimoCentro[0], cz: ultimoCentro[1], sy: ultimoCentro[2], dist: opciones.dist });
+    if (Render.listo && opciones.shaders !== null && (!cambio || cambio === 'shaders' || cambio === 'sofisticados')) {
+      var con = Render.usarShaders(opciones.shaders, opciones.sofisticados);
+      if (opciones.shaders && !con) { opciones.shaders = false; avisar('Este teléfono no puede con los shaders'); }
+    }
+    if (trab && jugando) {
+      if (!cambio || cambio === 'dist') trab.postMessage({ t: 'centro', cx: ultimoCentro[0], cz: ultimoCentro[1], sy: ultimoCentro[2], dist: opciones.dist });
+      if (cambio === 'suave' || cambio === 'hojas') trab.postMessage({ t: 'graficos', suave: opciones.suave, hojas: opciones.hojas });
+    }
+    I.sucio();
+  }
+  function avisar(texto) { I.juego.mensaje = texto; I.juego.mensajeHasta = performance.now() + 2500; I.sucio(); }
+
+  // las filas de Opciones, con los nombres del juego (options.*); "Siempre de día" es del mundo abierto
+  function armarAjustes() {
+    var T = function (k, d) { return I.t(k, d); };
+    var pct = function (k) { return function () { return Math.round(opciones[k] * 100) + '%'; }; };
+    var cas = function (k, texto) { return { tipo: 'casilla', k: k, texto: texto, valor: function () { return opciones[k]; } }; };
+    var des = function (k, texto, min, max, paso, fmt) {
+      return { tipo: 'deslizador', k: k, texto: texto, min: min, max: max, paso: paso, valor: function () { return opciones[k]; }, textoValor: fmt };
+    };
+    var ele = function (k, texto, valores, nombres) {
+      return { tipo: 'eleccion', k: k, texto: texto, valores: valores, valor: function () { return opciones[k]; },
+        textoValor: function () { var i = valores.indexOf(opciones[k]); return nombres[i < 0 ? 0 : i]; } };
+    };
+    var juego = [cas('fps', 'Mostrar cuadros por segundo')];
+    if (partida) juego.unshift({ tipo: 'casilla', k: 'siempreDia', mundo: true, texto: T('createWorldScreen.alwaysDay', 'Siempre de día'),
+      valor: function () { return !!(partida && partida.siempreDia); } });
+    I.ajustes = [
+      { nombre: T('options.category.game', 'Juego'), filas: juego },
+      { nombre: T('options.category.input', 'Controles'), filas: [
+        des('sens', T('options.sensitivity', 'Sensibilidad'), 0.25, 2, 0.05, pct('sens')),
+        cas('invertirY', T('options.invertYAxis', 'Invertir eje Y')),
+        cas('zurdo', T('options.lefthanded', 'Para zurdos')),
+        cas('autoSalto', T('options.autojump', 'Saltar automáticamente')),
+        cas('intercambiar', T('options.swapJumpAndSneak', 'Intercambiar salto y agacharse')),
+        cas('dividido', T('options.usetouchpad', 'Controles divididos')),
+        des('tamBoton', T('options.buttonSize', 'Tamaño de botón'), 0.6, 1.6, 0.05, pct('tamBoton')),
+        cas('vibrar', T('options.destroyvibration', 'Destruir bloque (vibrar)'))
+      ] },
+      { nombre: T('options.category.graphics', 'Gráficos'), filas: [
+        cas('shaders', 'Shaders de Tito'),
+        des('dist', T('options.renderDistance', 'Visibilidad'), 2, 12, 1, function () { return opciones.dist + ' trozos'; }),
+        des('fov', T('options.fov', 'Campo de visión'), 60, 110, 1, function () { return String(opciones.fov); }),
+        des('brillo', T('options.gamma', 'Brillo'), 0, 1, 0.01, pct('brillo')),
+        cas('sofisticados', T('options.graphics', 'Gráficos sofisticados')),
+        cas('hojas', T('options.transparentleaves', 'Hojas llamativas')),
+        cas('suave', T('options.ao', 'Iluminación suave')),
+        cas('cielos', T('options.fancyskies', 'Cielos hermosos')),
+        cas('nubes', T('options.renderClouds', 'Nubes')),
+        cas('particulas', T('options.particles', 'Partículas')),
+        cas('balanceo', T('options.viewBobbing', 'Balanceo')),
+        cas('ocultarInterfaz', T('options.hidegui', 'Ocultar interfaz de juego')),
+        ele('resolucion', 'Resolución', [0, 0.5, 0.75, 1], ['Automática', '50%', '75%', '100%']),
+        ele('limite', T('options.framerateLimit', 'Velocidad de fotograma máxima'), [30, 60], ['30', '60'])
+      ] },
+      { nombre: T('options.category.audio', 'Sonido'), filas: [
+        des('volumen', T('options.sound', 'Volumen de sonido'), 0, 1, 0.01, pct('volumen'))
+      ] }
+    ];
   }
 
   // ------------------------------------------------------------------------------------------
@@ -114,14 +184,17 @@
     });
   }
   function ajustarTamano() {
-    var base = Math.min(window.devicePixelRatio || 1, 2) * (opciones.resolucion || escalaAuto);
+    // en los menús el panorama se dibuja con pocos píxeles y el navegador lo estira suavizado: queda
+    // difuminado, como el del juego (y casi no cuesta)
+    var menu = !jugando || I.pantalla === 'cargando';
+    var base = menu ? 0.2 : Math.min(window.devicePixelRatio || 1, debil ? 1.5 : 2) * (opciones.resolucion || escalaAuto);
     var w = Math.max(1, Math.round(lienzo.clientWidth * base)), h = Math.max(1, Math.round(lienzo.clientHeight * base));
     if (lienzo.width !== w || lienzo.height !== h) { lienzo.width = w; lienzo.height = h; }
   }
 
   async function arrancar() {
     // primero la interfaz (pesa poco) para mostrar la carga
-    var chicas = ['fuente', 'gui', 'iconos', 'boton', 'botonEncima', 'botonApretado', 'icono'];
+    var chicas = ['fuente', 'gui', 'iconos', 'boton', 'botonEncima', 'botonApretado', 'icono', 'casilla0', 'casilla1'];
     var lista = await Promise.all(chicas.map(function (n) { return cargarImagen('datos/' + n + '.png'); }));
     chicas.forEach(function (n, i) { imgs[n] = lista[i]; });
     I.iniciar(hud, imgs, {});
@@ -135,7 +208,7 @@
     var sonido = fetch('datos/sonidos.ogg').then(function (r) { return r.arrayBuffer(); });
     imgs.terreno = await cargarImagen('datos/terreno.webp');
     I.cargandoParte = 0.6; I.sucio();
-    var otras = ['sol', 'luna'];
+    var otras = ['sol', 'luna', 'nubes'];
     for (var i = 0; i < otras.length; i++) imgs[otras[i]] = await cargarImagen('datos/' + otras[i] + '.png');
     imgs.grietas = [];
     for (i = 0; i < 10; i++) imgs.grietas.push(await cargarImagen('datos/grieta' + i + '.png'));
@@ -145,8 +218,11 @@
 
     C.armarBloques(datos.bloques);
     ajustarTamano();
-    Render.iniciar(lienzo, datos, imgs);
+    // los shaders de Tito se compilan recién cuando se eligen (en un teléfono flojo tardan)
+    Render.iniciar(lienzo, datos, imgs, { shaders: opciones.shaders === true, sofisticados: opciones.sofisticados });
     Render.panorama(pano);
+    if (/Mali-(4|T6|T7)|Adreno \(TM\) [1-4]\d\d|PowerVR (SGX|Rogue G)|Vivante|VideoCore|GC\d{3,4}/i.test(GL.gpu || '')) debil = true;
+    if (debil) escalaAuto = 0.6;
     var creativo = O.creativo();
     I.prepararIconos(creativo, datos);
     I.ponerInventario(creativo);
@@ -157,9 +233,11 @@
     sonido.then(function (b) { return Sonido.iniciar(b, datos.sonidos); }).then(aplicarOpciones).catch(function () { /* sin sonido */ });
     aplicarOpciones();
     I.cargandoParte = undefined;
-    I.ir('titulo');
+    // la primera vez: con o sin shaders (sobre el menú difuminado)
+    I.ir(opciones.shaders === null ? 'shaders' : 'titulo');
     window.prueba = { cam: cam, mundo: mundo, render: Render, jugador: J, partida: function () { return partida; }, abrir: abrirMundo, crear: crearMundo, cuenta: cuenta,
-      rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, listo: true };
+      rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, ms: function () { return msCuadro; },
+      diag: null, pedirDiag: function () { if (trab) trab.postMessage({ t: 'diag' }); }, listo: true };
   }
 
   function refrescarMundos() {
@@ -187,7 +265,8 @@
     var m = {
       id: 'm' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), nombre: (n.nombre || 'Mi mundo').slice(0, 32),
       semilla: typeof n.semilla === 'number' ? n.semilla : semillaDe(n.semilla), creativo: true, creado: Date.now(), jugado: Date.now(),
-      tiempo: 1000, jugador: null, barra: O.barraInicial(), elegido: 0
+      tiempo: 1000, jugador: null, barra: O.barraInicial(), elegido: 0, tipo: n.tipo === 'plano' ? 'plano' : 'infinito',
+      siempreDia: !!n.siempreDia
     };
     return BD.guardarMundo(m).then(function () { return abrirMundo(m); });
   }
@@ -225,7 +304,7 @@
         J.ubicar(p.x, p.y, p.z); J.yaw = p.yaw; J.pitch = p.pitch; J.volando = !!p.volando && m.creativo;
         esperandoSuelo = false;
       } else {
-        var lugar = lugarDeAparicion(m.semilla);
+        var lugar = m.tipo === 'plano' ? [0, 3, 0] : lugarDeAparicion(m.semilla);
         J.ubicar(lugar[0] + 0.5, lugar[1] + 1, lugar[2] + 0.5); J.yaw = 0; J.pitch = 0; J.volando = false;
         esperandoSuelo = true;
       }
@@ -233,8 +312,8 @@
       I.juego.elegido = m.elegido || 0;
       I.juego.creativo = m.creativo; I.juego.volando = J.volando;
       ultimoCentro = [Math.floor(J.x / 16), Math.floor(J.z / 16), Math.floor((J.y + 1.62) / 16)];
-      trab.postMessage({ t: 'ini', bloques: datos.bloques, uv: datos.atlas.uv, semilla: m.semilla, dist: opciones.dist,
-        cx: ultimoCentro[0], cz: ultimoCentro[1], sy: ultimoCentro[2] });
+      trab.postMessage({ t: 'ini', bloques: datos.bloques, uv: datos.atlas.uv, semilla: m.semilla, dist: opciones.dist, tipo: m.tipo,
+        suave: opciones.suave, hojas: opciones.hojas, cx: ultimoCentro[0], cz: ultimoCentro[1], sy: ultimoCentro[2] });
       J.camara(1, cam);
       jugando = true;
       estabaPausado = false;
@@ -263,6 +342,7 @@
   function alMensaje(e) {
     var d = e.data;
     if (d.t === 'luz') { if (d.v >= 0) Render.luzJugador = d.v; return; }
+    if (d.t === 'diag') { window.prueba.diag = d; return; }
     if (d.t === 'malla') { Render.malla(d); columnas.add(d.cx + ',' + d.cz); }
     else if (d.t === 'trozo') Mundo.recibir(d);
     else if (d.t === 'bloques') Mundo.aplicar(d.lista);
@@ -415,23 +495,37 @@
       }
     }
     sonar(O.sonidoRomper(id), h.x, h.y, h.z);
-    Render.romper(h.x, h.y, h.z, id, m);
+    if (opciones.particulas) Render.romper(h.x, h.y, h.z, id, m);
+    if (opciones.vibrar && navigator.vibrate) { try { navigator.vibrate(15); } catch (e) { /* nada */ } }
     golpe();
     cuenta.rotos++;
   }
 
   // romper en creativo: al instante y, con el dedo quieto, uno cada 0,25 s (como el juego)
-  var proximoRomper = 0;
+  var proximoRomper = 0, hayObjetivo = false;
+  // el anillo del dedo: se llena en los 0,3 s de mantener (aparece pasados 0,12 para no molestar en
+  // los toques) y, rompiendo, se vuelve a llenar en los 0,25 s hasta el bloque siguiente
+  function anillo(t) {
+    var d = I.pantalla === 'juego' ? I.dedoMundo() : null, a = null;
+    if (d) {
+      if (!d.rompiendo) { var q = t - d.t0; if (q > 120) a = { x: d.x, y: d.y, p: q / 300 }; }
+      else if (hayObjetivo) a = { x: d.x, y: d.y, p: proximoRomper ? 1 - Math.max(0, proximoRomper - t) / 250 : 0 };
+    }
+    var antes = I.juego.anillo;
+    I.juego.anillo = a;
+    if (!a !== !antes) I.sucio();
+  }
   function interactuar(ahora) {
     var c = I.control;
     if (c.toque) {
       var t = c.toque; c.toque = null;
       if (I.pantalla === 'juego') poner(t[0], t[1]);
     }
-    mundo.apuntado = null; mundo.rompiendo = 0;
+    mundo.apuntado = null; mundo.rompiendo = 0; hayObjetivo = false;
     if (c.rompiendo && I.pantalla === 'juego') {
       var h = tocarBloque(c.rompiendo[0], c.rompiendo[1], false);
       if (h) {
+        hayObjetivo = true;
         mundo.apuntado = h;
         if (ahora >= proximoRomper) { romper(h); proximoRomper = ahora + 250; mundo.apuntado = null; }
       }
@@ -464,7 +558,7 @@
     J.paso();
     Render.pasoParticulas();
     if (trab && ++pasosLuz % 5 === 0) trab.postMessage({ t: 'luz', x: Math.floor(cam.x), y: Math.floor(cam.y), z: Math.floor(cam.z) });
-    if (partida) partida.tiempo += 1;
+    if (partida) { if (partida.siempreDia) partida.tiempo = 6000; else partida.tiempo += 1; }
     if (I.juego.volando !== J.volando) { I.juego.volando = J.volando; I.sucio(); }
     // los pasos suenan cada 1,7 bloques caminados (como el juego), no agachado
     if (J.enPiso && !J.agachado && J.caminado * 0.6 > proximoPaso) {
@@ -501,12 +595,23 @@
       antesDeBajar = 0;
       return;
     }
-    if (ema > 22 && escalaAuto > 0.5 && ahora - intentoFallido > 30000) { antesDeBajar = ema; escalaAuto = Math.max(0.5, escalaAuto * 0.85); }
-    else if (ema < 15 && escalaAuto < 1) escalaAuto = Math.min(1, escalaAuto / 0.9);
+    // la meta es la velocidad elegida (60 o 30 cuadros): si no llega, menos píxeles
+    var meta = 1000 / (opciones.limite || 60);
+    if (ema > meta * 1.35 && escalaAuto > 0.35 && ahora - intentoFallido > 30000) { antesDeBajar = ema; escalaAuto = Math.max(0.35, escalaAuto * 0.85); }
+    else if (ema < meta * 0.92 && escalaAuto < 1) escalaAuto = Math.min(1, escalaAuto / 0.9);
   }
 
+  // el tope de cuadros por segundo: el navegador llama a cada refresco de la pantalla (90 o 120 por
+  // segundo en muchos teléfonos nuevos) y dibujar todos era el doble de trabajo que el juego, que
+  // dibuja a 60. Se dibuja cuando llega la hora del cuadro siguiente (con 2 ms de margen), así en 90 Hz
+  // salen 60 parejos alternando uno y dos refrescos
+  var siguiente = 0;
   function cuadro(t) {
     requestAnimationFrame(cuadro);
+    var intervalo = 1000 / (opciones.limite || 60);
+    if (t < siguiente - 2) return;
+    siguiente = Math.max(siguiente + intervalo, t + intervalo - 4);
+    t0cuadro = performance.now();
     var dt = Math.min(0.25, Math.max(0, (t - ultimo) / 1000) || 0);
     ultimo = t;
     cuadros++;
@@ -529,7 +634,7 @@
     if (c.mirarX || c.mirarY) {
       var k = (I.conMouse ? 0.0025 : 0.0055) * opciones.sens;
       J.yaw += c.mirarX * k;
-      J.pitch = Math.max(-Math.PI / 2 + 0.001, Math.min(Math.PI / 2 - 0.001, J.pitch + c.mirarY * k));
+      J.pitch = Math.max(-Math.PI / 2 + 0.001, Math.min(Math.PI / 2 - 0.001, J.pitch + c.mirarY * k * (opciones.invertirY ? -1 : 1)));
       c.mirarX = c.mirarY = 0;
     }
     if (c.rueda) {
@@ -555,7 +660,7 @@
     J.camara(alfa, cam);
     // el bamboleo al caminar (el de la cámara y la mano, como el juego)
     var andando = J.enPiso && !J.volando && (Math.abs(J.x - J.px) + Math.abs(J.z - J.pz)) > 0.01;
-    bamboleo += ((andando ? 1 : 0) - bamboleo) * Math.min(1, dt * 8);
+    bamboleo += ((andando && opciones.balanceo ? 1 : 0) - bamboleo) * Math.min(1, dt * 8);
     var fase = (caminadoAntes + (J.caminado - caminadoAntes) * alfa) * 0.6 * Math.PI, ab = bamboleo * 0.06;
     var bx = Math.sin(fase) * ab * 0.5, by = -Math.abs(Math.cos(fase)) * ab;
     cam.x += Math.cos(cam.yaw) * bx; cam.z += Math.sin(cam.yaw) * bx; cam.y += by;
@@ -566,6 +671,7 @@
     Sonido.oyente(cam.x, cam.y, cam.z);
     I.revisarToques();
     interactuar(t);
+    anillo(t);
     mundo.reloj = t / 1000;
     mundo.tiempo = partida.tiempo + alfa;
     var ojo = Mundo.bloque(Math.floor(cam.x), Math.floor(cam.y), Math.floor(cam.z));
@@ -581,9 +687,12 @@
     if (g >= 1) { g = 0; golpeDesde = -1; }
     estadoMano.item = it; estadoMano.golpe = g; estadoMano.equipo = equipo;
     estadoMano.bamboleo[0] = Math.sin(fase) * ab * 0.4; estadoMano.bamboleo[1] = -Math.abs(Math.cos(fase)) * ab * 0.6;
-    if (I.pantalla === 'juego' || I.pantalla === 'inventario') Render.dibujarMano(estadoMano);
+    if ((I.pantalla === 'juego' || I.pantalla === 'inventario') && !opciones.ocultarInterfaz) Render.dibujarMano(estadoMano);
     I.dibujar();
+    // cuánto tarda la parte de JavaScript de un cuadro (para medir; lo muestra el contador de cuadros)
+    msCuadro += (performance.now() - t0cuadro - msCuadro) * 0.05;
   }
+  var msCuadro = 0, t0cuadro = 0;
 
   // un mundo nuevo: el jugador va arriba de lo más alto que haya en su columna (puede ser un árbol)
   function buscarSuelo() {
@@ -643,13 +752,32 @@
     inp.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') inp.blur(); });
     inp.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
   }
-  function ciclo(lista, v) { var i = lista.indexOf(v); return lista[(i + 1) % lista.length]; }
 
   Object.assign(I.acciones, {
     jugar: function () { refrescarMundos().then(function () { I.ir('mundos'); }); },
-    opciones: function () { I.enJuego = false; I.opciones = opciones; I.ir('opciones'); },
+    opciones: function () { I.enJuego = false; I.opciones = opciones; armarAjustes(); I.ir('opciones'); },
+    shadersSi: function () { opciones.shaders = true; guardarOpciones(); aplicarOpciones('shaders'); I.ir('titulo'); },
+    shadersNo: function () { opciones.shaders = false; guardarOpciones(); aplicarOpciones('shaders'); I.ir('titulo'); },
+    // una fila de Opciones: casilla (prender/apagar) o elección (la siguiente)
+    ajuste: function (f) {
+      if (f.mundo) {
+        if (partida) { partida[f.k] = !partida[f.k]; guardar(); }
+      } else if (f.tipo === 'casilla') opciones[f.k] = !opciones[f.k];
+      else if (f.tipo === 'eleccion') { var i = f.valores.indexOf(opciones[f.k]); opciones[f.k] = f.valores[(i + 1) % f.valores.length]; }
+      Sonido.tocar('random.click', 0.5, 1);
+      guardarOpciones();
+      aplicarOpciones(f.k);
+    },
+    // un deslizador se aplica mientras se mueve; la distancia (que rehace el mundo), al soltar
+    deslizar: function (f, valor) { opciones[f.k] = valor; if (f.k !== 'dist') aplicarOpciones(f.k); else I.sucio(); },
+    soltarDeslizador: function (f) { guardarOpciones(); aplicarOpciones(f.k); },
+    tipoMundo: function () { I.nuevo.tipo = I.nuevo.tipo === 'plano' ? 'infinito' : 'plano'; I.sucio(); },
+    siempreDia: function () { I.nuevo.siempreDia = !I.nuevo.siempreDia; Sonido.tocar('random.click', 0.5, 1); I.sucio(); },
     titulo: function () { I.ir('titulo'); },
-    crear: function () { I.nuevo = { nombre: 'Mi mundo', semilla: '', creativo: true }; I.ir('crear'); },
+    crear: function () {
+      I.nuevo = { nombre: I.t('createWorldScreen.defaultName', 'Mi mundo'), semilla: '', creativo: true, tipo: 'infinito', siempreDia: false };
+      I.ir('crear');
+    },
     nombre: function (b) { editarTexto(b, I.nuevo.nombre, function (v) { I.nuevo.nombre = v || 'Mi mundo'; }); },
     semilla: function (b) { editarTexto(b, I.nuevo.semilla, function (v) { I.nuevo.semilla = v; }); },
     modo: function () { /* por ahora sólo creativo */ },
@@ -671,21 +799,13 @@
       guardar();
     },
     seguir: function () { I.ir('juego'); },
-    opcionesJuego: function () { I.enJuego = true; I.opciones = opciones; I.ir('opciones'); },
+    opcionesJuego: function () { I.enJuego = true; I.opciones = opciones; armarAjustes(); I.ir('opciones'); },
     salir: function () {
       // el bucle deja el mundo ya (muestra el panorama) mientras se guarda
       jugando = false;
       I.cargandoTexto = 'Guardando…'; I.cargandoParte = undefined; I.ir('cargando');
       cerrarMundo().then(function () { I.ir('titulo'); });
     },
-    dist: function () { opciones.dist = ciclo([4, 5, 6, 8, 10, 12], opciones.dist); aplicarOpciones(); I.sucio(); },
-    brillo: function () { opciones.brillo = ciclo([0, 0.25, 0.5, 0.75, 1], opciones.brillo); aplicarOpciones(); I.sucio(); },
-    volumen: function () { opciones.volumen = ciclo([0, 0.25, 0.5, 0.75, 1], opciones.volumen); aplicarOpciones(); I.sucio(); },
-    sens: function () { opciones.sens = ciclo([0.5, 0.75, 1, 1.25, 1.5, 2], opciones.sens); I.sucio(); },
-    fov: function () { opciones.fov = ciclo([60, 70, 80, 90], opciones.fov); aplicarOpciones(); I.sucio(); },
-    verFps: function () { opciones.fps = !opciones.fps; aplicarOpciones(); I.sucio(); },
-    resolucion: function () { opciones.resolucion = ciclo([0, 0.5, 0.75, 1], opciones.resolucion); I.sucio(); },
-    nubes: function () { opciones.nubes = !opciones.nubes; aplicarOpciones(); I.sucio(); },
     listoOpciones: function () { guardarOpciones(); aplicarOpciones(); I.ir(I.enJuego ? 'pausa' : 'titulo'); },
     inventario: function () { if (I.pantalla === 'juego') { I.soltarTodo(); I.ir('inventario'); if (document.pointerLockElement) document.exitPointerLock(); } },
     cerrarInv: function () { I.ir('juego'); },
@@ -714,7 +834,7 @@
   });
   // el sonido de los botones de los menús
   var accionesConClic = ['jugar', 'opciones', 'titulo', 'crear', 'mundos', 'crearYa', 'abrir', 'borrar', 'seguir', 'opcionesJuego', 'salir',
-    'dist', 'brillo', 'volumen', 'sens', 'fov', 'verFps', 'resolucion', 'nubes', 'listoOpciones', 'preguntaSi', 'preguntaNo', 'tab', 'cerrarInv'];
+    'listoOpciones', 'preguntaSi', 'preguntaNo', 'tab', 'cerrarInv', 'seccion', 'shadersSi', 'shadersNo', 'tipoMundo', 'nombre', 'semilla'];
   accionesConClic.forEach(function (n) {
     var f = I.acciones[n];
     if (!f) return;

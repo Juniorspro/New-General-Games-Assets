@@ -12,17 +12,104 @@ var Render = (function () {
   var planos = new Float32Array(24);
   R.stats = { columnas: 0, dibujadas: 0, quads: 0, llamadas: 0 };
 
-  R.iniciar = function (lienzo, datos, imagenes) {
+  // ------------------------------------------------------------------------------------------
+  // Los materiales. Con shaders: los de Tito (renderchunk, sky, cloud...) con los "defines" de cada
+  // material del juego; "Gráficos sofisticados" es su define FANCY. Sin shaders: los del MCPE de fábrica
+  // (textura x color x mapa de luz, con niebla; cielo de dos colores; nubes planas de clouds.png): mucho
+  // más livianos, para los teléfonos flojos. Se compilan al elegirlos y quedan guardados.
+  // ------------------------------------------------------------------------------------------
+  var FABRICA = {
+    'chunk.v': '#if __VERSION__ >= 300\n#define attribute in\n#define varying out\n#endif\n' +
+      'attribute POS4 POSITION; attribute vec4 COLOR; attribute vec2 TEXCOORD_0; attribute vec2 TEXCOORD_1;\n' +
+      'uniform MAT4 WORLDVIEW; uniform MAT4 PROJ; uniform POS4 CHUNK_ORIGIN_AND_SCALE;\n' +
+      'uniform vec4 FOG_COLOR; uniform vec2 FOG_CONTROL; uniform float RENDER_DISTANCE;\n' +
+      'varying vec2 uv0; varying vec2 uv1; varying vec4 color; varying vec4 fogColor;\n' +
+      'void main() {\n' +
+      '  POS4 worldPos = vec4(POSITION.xyz * CHUNK_ORIGIN_AND_SCALE.w + CHUNK_ORIGIN_AND_SCALE.xyz, 1.0);\n' +
+      '  gl_Position = PROJ * (WORLDVIEW * worldPos);\n' +
+      '  uv0 = TEXCOORD_0; uv1 = TEXCOORD_1; color = COLOR;\n' +
+      '  float len = length(worldPos.xyz) / RENDER_DISTANCE;\n' +
+      '  fogColor.rgb = FOG_COLOR.rgb;\n' +
+      '  fogColor.a = clamp((len - FOG_CONTROL.x) / (FOG_CONTROL.y - FOG_CONTROL.x), 0.0, 1.0);\n' +
+      '}',
+    'chunk.f': '#if __VERSION__ >= 300\n#define varying in\n#define texture2D texture\nout vec4 FragColor;\n#define gl_FragColor FragColor\n#endif\n' +
+      'uniform sampler2D TEXTURE_0; uniform sampler2D TEXTURE_1;\n' +
+      'varying vec2 uv0; varying vec2 uv1; varying vec4 color; varying vec4 fogColor;\n' +
+      'void main() {\n' +
+      '  vec4 diffuse = texture2D(TEXTURE_0, uv0);\n' +
+      '#ifdef ALPHA_TEST\n  if (diffuse.a < 0.5) discard;\n#endif\n' +
+      '#ifdef BLEND\n  diffuse.a *= color.a;\n#endif\n' +
+      '  diffuse = diffuse * texture2D(TEXTURE_1, uv1);\n' +
+      '#if !defined(ALPHA_TEST) && !defined(BLEND)\n  diffuse.a = color.a;\n#endif\n' +
+      '  diffuse.rgb *= color.rgb;\n' +
+      '  diffuse.rgb = mix(diffuse.rgb, fogColor.rgb, fogColor.a);\n' +
+      '  gl_FragColor = diffuse;\n' +
+      '}',
+    'cielo.v': '#if __VERSION__ >= 300\n#define attribute in\n#define varying out\n#endif\n' +
+      'attribute POS4 POSITION; attribute vec4 COLOR; uniform MAT4 WORLDVIEWPROJ; uniform vec4 CURRENT_COLOR; uniform vec4 FOG_COLOR;\n' +
+      'varying vec4 color;\n' +
+      'void main() { gl_Position = WORLDVIEWPROJ * POSITION; color = mix(CURRENT_COLOR, FOG_COLOR, COLOR.r); }',
+    'color.f': '#if __VERSION__ >= 300\n#define varying in\nout vec4 FragColor;\n#define gl_FragColor FragColor\n#endif\n' +
+      'varying vec4 color; void main() { gl_FragColor = color; }',
+    // las nubes planas del juego de fábrica: clouds.png, cada píxel 12 bloques, corriéndose con el tiempo
+    'nubes.v': '#if __VERSION__ >= 300\n#define attribute in\n#define varying out\n#endif\n' +
+      'attribute POS4 POSITION; uniform MAT4 WORLDVIEWPROJ; uniform MAT4 WORLD; uniform highp float TIME; uniform vec4 FOG_COLOR;\n' +
+      'uniform float RENDER_DISTANCE; varying vec2 uv; varying float niebla;\n' +
+      'void main() { gl_Position = WORLDVIEWPROJ * POSITION; POS4 p = WORLD * POSITION;\n' +
+      '  uv = (POSITION.xz + vec2(TIME * 0.6, 0.0)) / 3072.0;\n' +
+      '  niebla = clamp(length(p.xz) / (RENDER_DISTANCE * 2.5), 0.0, 1.0); }',
+    'nubes.f': '#if __VERSION__ >= 300\n#define varying in\n#define texture2D texture\nout vec4 FragColor;\n#define gl_FragColor FragColor\n#endif\n' +
+      'uniform sampler2D TEXTURE_0; uniform vec4 CURRENT_COLOR; uniform vec4 FOG_COLOR; varying vec2 uv; varying float niebla;\n' +
+      'void main() { vec4 c = texture2D(TEXTURE_0, uv); if (c.a < 0.5) discard;\n' +
+      '  gl_FragColor = vec4(mix(CURRENT_COLOR.rgb, FOG_COLOR.rgb, niebla), CURRENT_COLOR.a * (1.0 - niebla)); }'
+  };
+  var S = null, cache = {};
+  R.conShaders = true; R.sofisticados = true; R.shadersFallaron = false;
+  function mat(clave, f) { if (!cache[clave]) cache[clave] = f(); return cache[clave]; }
+  function armarMateriales() {
+    var con = R.conShaders && !R.shadersFallaron;
+    if (con) {
+      try {
+        var base = ['LOW_PRECISION', 'TEXEL_AA', 'ATLAS_TEXTURE', 'FOG'].concat(R.sofisticados ? ['FANCY'] : []), k = R.sofisticados ? 'T+' : 'T-';
+        M.opaco = mat(k + 'opaco', function () { return GL.material(S, 'renderchunk.vertex', 'renderchunk.fragment', base); });
+        M.recorte = mat(k + 'recorte', function () { return GL.material(S, 'renderchunk.vertex', 'renderchunk.fragment', base.concat(['ALPHA_TEST'])); });
+        M.agua = mat(k + 'agua', function () { return GL.material(S, 'renderchunk.vertex', 'renderchunk.fragment', base.concat(['BLEND', 'NEAR_WATER'])); });
+        M.mezcla = mat(k + 'mezcla', function () { return GL.material(S, 'renderchunk.vertex', 'renderchunk.fragment', base.concat(['BLEND'])); });
+        M.cielo = mat('Tcielo', function () { return GL.material(S, 'sky.vertex', 'color.fragment', []); });
+        M.nubes = mat(k + 'nubes', function () { return GL.material(S, 'cloud.vertex', 'color.fragment', R.sofisticados ? ['FANCY'] : []); });
+        M.nubesPlanas = false;
+        return;
+      } catch (e) {
+        // un teléfono que no compila los de Tito (p. ej. sin highp en los fragmentos): sin shaders
+        console.error('shaders de Tito: ' + (e && e.message || e));
+        R.shadersFallaron = true;
+      }
+    }
+    var F = FABRICA, prog = function (d) { return function () { return GL.material(F, 'chunk.v', 'chunk.f', d); }; };
+    M.opaco = mat('Fopaco', prog(['FOG']));
+    M.recorte = mat('Frecorte', prog(['FOG', 'ALPHA_TEST']));
+    M.agua = mat('Fagua', prog(['FOG', 'BLEND']));
+    M.mezcla = M.agua;
+    M.cielo = mat('Fcielo', function () { return GL.material(F, 'cielo.v', 'color.f', []); });
+    M.nubes = mat('Fnubes', function () { return GL.material(F, 'nubes.v', 'nubes.f', []); });
+    M.nubesPlanas = true;
+  }
+  R.usarShaders = function (con, sofisticados) {
+    R.conShaders = !!con;
+    if (sofisticados !== undefined) R.sofisticados = !!sofisticados;
+    armarMateriales();
+    actual = null;
+    return R.conShaders && !R.shadersFallaron;
+  };
+
+  R.iniciar = function (lienzo, datos, imagenes, op) {
     gl = GL.iniciar(lienzo);
     if (!gl) throw new Error('sin WebGL');
-    var S = datos.shaders;
-    var base = ['LOW_PRECISION', 'TEXEL_AA', 'ATLAS_TEXTURE', 'FANCY', 'FOG'];
-    M.opaco = GL.material(S, 'renderchunk.vertex', 'renderchunk.fragment', base);
-    M.recorte = GL.material(S, 'renderchunk.vertex', 'renderchunk.fragment', base.concat(['ALPHA_TEST']));
-    M.agua = GL.material(S, 'renderchunk.vertex', 'renderchunk.fragment', base.concat(['BLEND', 'NEAR_WATER']));
-    M.mezcla = GL.material(S, 'renderchunk.vertex', 'renderchunk.fragment', base.concat(['BLEND']));
-    M.cielo = GL.material(S, 'sky.vertex', 'color.fragment', []);
-    M.nubes = GL.material(S, 'cloud.vertex', 'color.fragment', ['FANCY']);
+    S = datos.shaders;
+    op = op || {};
+    R.conShaders = op.shaders !== false;
+    R.sofisticados = op.sofisticados !== false;
+    armarMateriales();
     M.solLuna = GL.material(S, 'uv.vertex', 'texture_ccolor.fragment', []);
     M.estrellas = GL.material(S, 'color.vertex', 'stars.fragment', []);
     M.linea = GL.programa(
@@ -38,6 +125,7 @@ var Render = (function () {
     R.texSol = GL.textura(imagenes.sol, 'cerca', 0);
     R.texLuna = GL.textura(imagenes.luna, 'cerca', 0);
     R.grietas = imagenes.grietas.map(function (im) { return GL.textura(im, 'cerca', 0, true); });
+    R.texNubes = imagenes.nubes ? GL.textura(imagenes.nubes, 'cerca', 0, true) : null;
     armarIndices(16384);
     armarCielo();
     armarEstrellas();
@@ -326,7 +414,10 @@ var Render = (function () {
     var f = 1 - Math.pow(0.25 + 0.75 * mundo.dist / 32, 0.25);
     for (var k = 0; k < 3; k++) niebla[k] += (cielo[k] - niebla[k]) * f;
     // el atardecer: mirando hacia el sol, la niebla se tiñe
-    var atard = colorAtardecer(ang);
+    // "Cielos hermosos" apagado (como el juego): el cielo de un solo color, sin atardecer ni estrellas
+    var hermosos = mundo.cielosHermosos !== false;
+    if (!hermosos) cielo = niebla.slice();
+    var atard = hermosos ? colorAtardecer(ang) : null;
     if (atard) {
       var dirSol = Math.sin(ang * Math.PI * 2) > 0 ? -1 : 1;
       var mira = -Math.sin(cam.yaw) * dirSol * Math.cos(cam.pitch);
@@ -363,6 +454,7 @@ var Render = (function () {
     var estrellasB = (1 - (Math.cos(ang * Math.PI * 2) * 2 + 0.25));
     estrellasB = Math.min(1, Math.max(0, estrellasB));
     estrellasB = estrellasB * estrellasB * 0.5 * (1 - lluvia);
+    if (!hermosos) estrellasB = 0;
     gl.enable(gl.BLEND);
     var rot = GL.mat4();
     GL.mult(rot, vp, rotacionSol(ang));
@@ -442,6 +534,7 @@ var Render = (function () {
     var cn = [0.9 + 0.1 * luzCielo, 0.9 + 0.1 * luzCielo, 0.85 + 0.15 * luzCielo];
     gl.uniform4f(M.nubes.u.CURRENT_COLOR, cn[0] * luzCielo, cn[1] * luzCielo, cn[2] * luzCielo, 0.8);
     comunes(M.nubes);
+    if (M.nubesPlanas && R.texNubes) gl.bindTexture(gl.TEXTURE_2D, R.texNubes);
     gl.disable(gl.CULL_FACE);
     gl.depthMask(false);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -450,6 +543,7 @@ var Render = (function () {
     gl.enable(gl.CULL_FACE);
     gl.disable(gl.BLEND);
     gl.bindVertexArray(null);
+    gl.bindTexture(gl.TEXTURE_2D, atlas);
     R.stats.quads = quads; R.stats.llamadas = llamadas;
 
     function capa(mat, lista, c, mezcla) {
@@ -581,7 +675,7 @@ var Render = (function () {
       gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 24, 0);
       gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 24, 16);
     });
-    pano = { prog: prog, b: b, tex: imagenes.map(function (im) { return GL.textura(im, 'lineal', 0); }) };
+    pano = { prog: prog, b: b, tex: imagenes.map(function (im) { return GL.textura(im, 'suave', 9); }) };
   };
   R.dibujarPanorama = function (yaw, pitch) {
     if (!pano) return;

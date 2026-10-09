@@ -224,48 +224,69 @@ var Interfaz = (function () {
   var crucetaBotones = [];
   function dibujarJuego() {
     var j = I.juego, ahora = performance.now();
-    // barra rápida, abajo al medio
-    var bw = 182 * E, bx = Math.round((W - bw) / 2), by = H - 22 * E - 2;
+    // barra rápida, abajo al medio ("Ocultar interfaz de juego" la saca, como el juego)
+    var bw = 182 * E, bx = Math.round((W - bw) / 2), by = H - 22 * E - 2, oculta = I.opc && I.opc.ocultarInterfaz;
+    if (oculta) ctx.globalAlpha = 0;
     sprite('barra', bx, by);
     for (var i = 0; i < 9; i++) {
       var it = j.barra[i];
       if (it) icono(it.id, it.m, bx + (3 + i * 20) * E, by + 3 * E, 16 * E);
     }
+    if (oculta) ctx.globalAlpha = 0;
     sprite('elegida', bx - E + j.elegido * 20 * E, by - E);
+    if (oculta) ctx.globalAlpha = 0;
     I.botones.push({ x: bx, y: by, w: bw, h: 22 * E, accion: 'barra', bx: bx });
     // "..." el inventario, a la derecha de la barra
     var tx = bx + bw + 2 * E, tw = 22 * E;
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(tx, by, tw, 22 * E);
     sprite('tres', tx + (tw - 29 * E * 0.6) / 2, by + 9 * E, E * 0.6);
     I.botones.push({ x: tx, y: by, w: tw, h: 22 * E, accion: 'inventario' });
+    ctx.globalAlpha = 1;
     // pausa, arriba a la derecha
     var pw = 18 * E;
     sprite('pausa', W - pw - 4 * E, 4 * E);
     I.botones.push({ x: W - pw - 6 * E, y: 0, w: pw + 6 * E, h: pw + 8 * E, accion: 'pausa' });
-    // la cruceta, abajo a la izquierda (como el juego: 26 de celda)
-    var c = 26 * E * 0.95, cx = 8 * E, cy = H - 3 * c - 8 * E;
+    // los controles táctiles como MCPE 1.0: la cruceta abajo a un costado con agacharse (el botón
+    // redondo: se prende y se apaga) en el medio, y saltar aparte, grande, abajo del otro costado;
+    // volando, subir y bajar van ahí. "Para zurdos" los da vuelta, "Intercambiar salto y agacharse"
+    // cambia esos dos de lugar y "Tamaño de botón" los agranda o achica
+    var o = I.opc || {}, c = 26 * E * 0.95 * (o.tamBoton || 1), m = 8 * E;
+    var cx = o.zurdo ? W - 3 * c - m : m, cy = H - 3 * c - m;
+    var gc = c * 1.3, gx = o.zurdo ? m : W - gc - m, gy = H - gc - m;
     crucetaBotones = [
-      { n: 'arriba', x: cx + c, y: cy, s: 'arriba' }, { n: 'izq', x: cx, y: cy + c, s: 'izq' },
-      { n: 'der', x: cx + 2 * c, y: cy + c, s: 'der' }, { n: 'abajo', x: cx + c, y: cy + 2 * c, s: 'abajo' }
+      { n: 'arriba', x: cx + c, y: cy, w: c, h: c, s: 'arriba' }, { n: 'izq', x: cx, y: cy + c, w: c, h: c, s: 'izq' },
+      { n: 'der', x: cx + 2 * c, y: cy + c, w: c, h: c, s: 'der' }, { n: 'abajo', x: cx + c, y: cy + 2 * c, w: c, h: c, s: 'abajo' }
     ];
-    if (j.volando) {
-      crucetaBotones.push({ n: 'subir', x: cx + c, y: cy + c - c * 0.5, s: 'volarArriba', mitad: true });
-      crucetaBotones.push({ n: 'bajar', x: cx + c, y: cy + c + c * 0.5, s: 'volarAbajo', mitad: true });
-    } else crucetaBotones.push({ n: 'saltar', x: cx + c, y: cy + c, s: 'saltar' });
     if (pulsados.arriba && !j.volando) {
-      crucetaBotones.push({ n: 'arribaIzq', x: cx, y: cy, s: 'arribaIzq' });
-      crucetaBotones.push({ n: 'arribaDer', x: cx + 2 * c, y: cy, s: 'arribaDer' });
+      crucetaBotones.push({ n: 'arribaIzq', x: cx, y: cy, w: c, h: c, s: 'arribaIzq' });
+      crucetaBotones.push({ n: 'arribaDer', x: cx + 2 * c, y: cy, w: c, h: c, s: 'arribaDer' });
     }
-    // agacharse: se prende y se apaga con un toque (como el botón redondo del juego)
-    if (!j.volando) crucetaBotones.push({ n: 'agachar', x: cx + 2 * c, y: cy + 2 * c, s: 'agachar', alterna: true });
+    var medio = { x: cx + c, y: cy + c, w: c, h: c }, grande = { x: gx, y: gy, w: gc, h: gc };
+    if (j.volando) {
+      crucetaBotones.push({ n: 'subir', x: gx, y: gy - gc - 2 * E, w: gc, h: gc, s: 'volarArriba' });
+      crucetaBotones.push({ n: 'bajar', x: gx, y: gy, w: gc, h: gc, s: 'volarAbajo' });
+    } else {
+      var bs = o.intercambiar ? medio : grande, ba = o.intercambiar ? grande : medio;
+      crucetaBotones.push({ n: 'saltar', x: bs.x, y: bs.y, w: bs.w, h: bs.h, s: 'saltar' });
+      crucetaBotones.push({ n: 'agachar', x: ba.x, y: ba.y, w: ba.w, h: ba.h, s: 'agachar', alterna: true });
+    }
     for (i = 0; i < crucetaBotones.length; i++) {
-      var b = crucetaBotones[i], esc = E * 0.95;
-      if (b.mitad) {
-        var s = S[b.s];
-        ctx.globalAlpha = pulsados[b.n] ? 1 : 0.7;
-        ctx.drawImage(img.gui, s[0], s[1], s[2], s[3], Math.round(b.x + c * 0.15), Math.round(b.y + c * 0.15), Math.round(c * 0.7), Math.round(c * 0.7));
-        ctx.globalAlpha = 1;
-      } else sprite(b.s, b.x, b.y, esc, (b.alterna ? I.control.agacharTactil : pulsados[b.n]) ? 1 : 0.7);
+      var b = crucetaBotones[i], s = S[b.s], on = b.alterna ? I.control.agacharTactil : pulsados[b.n];
+      ctx.globalAlpha = on ? 1 : 0.7;
+      ctx.drawImage(img.gui, s[0], s[1], s[2], s[3], Math.round(b.x), Math.round(b.y), Math.round(b.w), Math.round(b.h));
+      ctx.globalAlpha = 1;
+    }
+    // el anillo de romper (el "progress indicator" del juego): en el dedo, se llena mientras se
+    // mantiene y se vuelve a llenar con cada bloque
+    if (j.anillo) {
+      var a = j.anillo, r = 13 * E;
+      ctx.lineWidth = Math.max(2, 2 * E);
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.arc(a.x, a.y, r + E, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.beginPath(); ctx.arc(a.x, a.y, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.beginPath(); ctx.arc(a.x, a.y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, Math.min(1, a.p))); ctx.stroke();
     }
     // vida y hambre (supervivencia)
     if (!j.creativo && img.iconos) {
@@ -286,8 +307,8 @@ var Interfaz = (function () {
     }
     if (ahora < j.mensajeHasta && j.mensaje) I.texto(j.mensaje, W / 2, H * 0.3, '#ffffff', E, 'centro');
     if (j.mostrarFps) I.texto(j.fps + ' fps', 4 * E, 4 * E, '#ffffff', E);
-    // la mira, sólo con mouse
-    if (I.conMouse) {
+    // la mira: con mouse o con "Controles divididos" (se apunta con el centro, como el juego)
+    if (I.conMouse || (I.opc && I.opc.dividido)) {
       ctx.fillStyle = 'rgba(255,255,255,0.8)';
       ctx.fillRect(W / 2 - 5 * E, H / 2 - E / 2, 10 * E, E); ctx.fillRect(W / 2 - E / 2, H / 2 - 5 * E, E, 10 * E);
     }
@@ -346,18 +367,46 @@ var Interfaz = (function () {
     }
     botonDe(px + 6 * E, py + ph - 26 * E, 80 * E, bh, I.t('gui.back', 'Volver'), 'titulo');
   }
+  // crear un mundo: los campos de la pantalla del juego (createWorldScreen.*)
+  function filaCasilla(x, y, w, texto, on, accion) {
+    var bh = 20 * E;
+    I.botones.push({ x: x, y: y, w: w, h: bh, accion: accion });
+    I.texto(texto, x + 2 * E, y + 6 * E, '#ffffff', E);
+    casilla(x + w - 18 * E, y + 3 * E, on);
+  }
+  function casilla(x, y, on) {
+    var im = on ? img.casilla1 : img.casilla0;
+    if (im) ctx.drawImage(im, Math.round(x), Math.round(y), 16 * E, 13 * E);
+    else { ctx.fillStyle = on ? '#e0e0e0' : '#404040'; ctx.fillRect(x, y, 16 * E, 13 * E); }
+  }
   function dibujarCrear() {
-    var pw = Math.min(W - 16 * E, 240 * E), px = (W - pw) / 2, py = 10 * E, ph = H - 20 * E, bh = 20 * E;
+    var pw = Math.min(W - 16 * E, 260 * E), px = (W - pw) / 2, py = 6 * E, ph = H - 12 * E, bh = 20 * E, n = I.nuevo;
     panel(px, py, pw, ph);
-    I.texto(I.t('selectWorld.create', 'Crear un mundo nuevo'), W / 2, py + 6 * E, '#ffffff', E, 'centro');
-    var y = py + 22 * E;
-    I.texto('Nombre', px + 8 * E, y, '#a0a0a0', E); y += 10 * E;
-    botonDe(px + 6 * E, y, pw - 12 * E, bh, I.nuevo.nombre, 'nombre'); y += bh + 6 * E;
-    I.texto('Semilla (opcional)', px + 8 * E, y, '#a0a0a0', E); y += 10 * E;
-    botonDe(px + 6 * E, y, pw - 12 * E, bh, I.nuevo.semilla || 'al azar', 'semilla'); y += bh + 6 * E;
-    botonDe(px + 6 * E, y, pw - 12 * E, bh, I.t('selectWorld.gameMode', 'Modo de juego') + ': ' + I.t('selectWorld.gameMode.creative', 'Creativo'), 'modo');
-    botonDe(px + 6 * E, py + ph - 26 * E, (pw - 18 * E) / 2, bh, I.t('gui.cancel', 'Cancelar'), 'mundos');
-    botonDe(px + pw / 2 + 3 * E, py + ph - 26 * E, (pw - 18 * E) / 2, bh, 'Crear', 'crearYa');
+    I.texto(I.t('createWorldScreen.header.local', 'Crear un mundo'), W / 2, py + 5 * E, '#ffffff', E, 'centro');
+    var y = py + 18 * E, iz = px + 6 * E, an = pw - 12 * E, mitad = (an - 4 * E) / 2;
+    I.texto(I.t('createWorldScreen.levelName', 'Nombre'), iz + 2 * E, y, '#a0a0a0', E);
+    I.texto(I.t('createWorldScreen.levelSeed', 'Semilla'), iz + mitad + 6 * E, y, '#a0a0a0', E); y += 9 * E;
+    botonDe(iz, y, mitad, bh, n.nombre, 'nombre');
+    botonDe(iz + mitad + 4 * E, y, mitad, bh, n.semilla || 'al azar', 'semilla'); y += bh + 5 * E;
+    botonDe(iz, y, an, bh, I.t('createWorldScreen.gameMode', 'Modo de juego') + ': ' + I.t('createWorldScreen.gameMode.creative', 'Creativo'), 'modo'); y += bh + 4 * E;
+    botonDe(iz, y, an, bh, I.t('createWorldScreen.worldType', 'Tipo de mundo') + ': ' + (n.tipo === 'plano' ? 'Plano' : 'Infinito'), 'tipoMundo'); y += bh + 4 * E;
+    filaCasilla(iz, y, an, I.t('createWorldScreen.alwaysDay', 'Siempre de día'), n.siempreDia, 'siempreDia');
+    botonDe(iz, py + ph - 24 * E, mitad, bh, I.t('gui.cancel', 'Cancelar'), 'mundos');
+    botonDe(iz + mitad + 4 * E, py + ph - 24 * E, mitad, bh, I.t('createWorldScreen.action.local', 'Crear mundo'), 'crearYa');
+  }
+  // la primera vez: con o sin los shaders de Tito (sobre el menú difuminado)
+  function dibujarShaders() {
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, W, H);
+    var pw = Math.min(W - 16 * E, 300 * E), ph = Math.min(H - 12 * E, 120 * E), px = (W - pw) / 2, py = (H - ph) / 2, bh = 26 * E;
+    panel(px, py, pw, ph);
+    I.texto('Shaders de Tito Crack 6000', W / 2, py + 8 * E, '#ffff55', E, 'centro');
+    I.texto('¿Querés jugar con los shaders?', W / 2, py + 22 * E, '#ffffff', E, 'centro');
+    var bw = (pw - 18 * E) / 2, by = py + 38 * E;
+    botonDe(px + 6 * E, by, bw, bh, 'Sí, con shaders', 'shadersSi');
+    botonDe(px + 12 * E + bw, by, bw, bh, 'No, sin shaders', 'shadersNo');
+    I.texto('Agua, cielo y luz de Tito', px + 6 * E + bw / 2, by + bh + 5 * E, '#a0a0a0', E, 'centro');
+    I.texto('Más rápido (normal)', px + 12 * E + bw * 1.5, by + bh + 5 * E, '#a0a0a0', E, 'centro');
+    I.texto('Se cambia en Opciones > Gráficos', W / 2, py + ph - 12 * E, '#808080', E, 'centro');
   }
   function dibujarPausa() {
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, W, H);
@@ -367,22 +416,62 @@ var Interfaz = (function () {
     botonDe(x, y, bw, bh, I.t('menu.options', 'Opciones'), 'opcionesJuego'); y += bh + 4 * E;
     botonDe(x, y, bw, bh, 'Guardar y salir', 'salir');
   }
+  // ------------------------------------------------------------------------------------------
+  // Opciones, como las del juego (MCPE 1.0): las secciones Juego, Controles, Gráficos y Sonido a la
+  // izquierda y sus casillas y deslizadores a la derecha, con los nombres del juego (options.*). Las
+  // filas las arma principal.js en I.ajustes: { nombre, filas: [{ tipo: 'casilla' | 'deslizador' |
+  // 'eleccion', k, texto, min, max, paso, valor() / texto del valor }] }
+  // ------------------------------------------------------------------------------------------
+  I.ajustes = [];
+  var ajSeccion = 0, ajScroll = 0;
+  I.acciones.seccion = function (b) { ajSeccion = b.i; ajScroll = 0; sucio = true; };
   function dibujarOpciones() {
-    var o = I.opciones;
-    if (I.enJuego) { ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, W, H); }
-    var pw = Math.min(W - 16 * E, 260 * E), px = (W - pw) / 2, py = 8 * E, ph = H - 16 * E, bh = 20 * E;
-    if (!I.enJuego) panel(px, py, pw, ph);
-    I.texto(I.t('menu.options', 'Opciones'), W / 2, py + 6 * E, '#ffffff', E, 'centro');
-    var y = py + 20 * E, half = (pw - 18 * E) / 2;
-    botonDe(px + 6 * E, y, half, bh, 'Distancia: ' + o.dist, 'dist');
-    botonDe(px + 12 * E + half, y, half, bh, 'Brillo: ' + Math.round(o.brillo * 100) + '%', 'brillo'); y += bh + 4 * E;
-    botonDe(px + 6 * E, y, half, bh, 'Sonido: ' + Math.round(o.volumen * 100) + '%', 'volumen');
-    botonDe(px + 12 * E + half, y, half, bh, 'Sensibilidad: ' + Math.round(o.sens * 100) + '%', 'sens'); y += bh + 4 * E;
-    botonDe(px + 6 * E, y, half, bh, 'Campo de visión: ' + o.fov, 'fov');
-    botonDe(px + 12 * E + half, y, half, bh, 'Cuadros: ' + (o.fps ? 'sí' : 'no'), 'verFps'); y += bh + 4 * E;
-    botonDe(px + 6 * E, y, half, bh, 'Resolución: ' + (o.resolucion ? Math.round(o.resolucion * 100) + '%' : 'auto'), 'resolucion');
-    botonDe(px + 12 * E + half, y, half, bh, 'Nubes: ' + (o.nubes ? 'sí' : 'no'), 'nubes');
-    botonDe(px + 6 * E, py + ph - 26 * E, 80 * E, bh, I.t('gui.done', 'Listo'), 'listoOpciones');
+    ctx.fillStyle = I.enJuego ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, W, H);
+    var bh = 20 * E, top = 4 * E;
+    I.texto(I.t('options.title', 'Opciones'), W / 2, top + 6 * E, '#ffffff', E, 'centro');
+    botonDe(W - 26 * E, top, 22 * E, 18 * E, 'X', 'listoOpciones');
+    var secs = I.ajustes, lw = Math.min(100 * E, Math.floor(W * 0.3)), lx = 6 * E, ly = top + 24 * E;
+    if (ajSeccion >= secs.length) ajSeccion = 0;
+    for (var i = 0; i < secs.length; i++) {
+      var b = { x: lx, y: ly + i * (bh + 3 * E), w: lw, h: bh, accion: 'seccion', i: i };
+      I.botones.push(b);
+      boton(b.x, b.y, b.w, b.h, secs[i].nombre, i === ajSeccion ? 2 : 0, i === ajSeccion ? '#ffffff' : null);
+    }
+    var px = lx + lw + 6 * E, pw = W - px - 6 * E, py = ly, ph = H - py - 6 * E, fh = 24 * E;
+    panel(px, py, pw, ph);
+    var filas = secs[ajSeccion] ? secs[ajSeccion].filas : [], alto = filas.length * fh + 8 * E;
+    var maxScroll = Math.max(0, alto - ph);
+    ajScroll = Math.max(0, Math.min(ajScroll, maxScroll));
+    ctx.save();
+    ctx.beginPath(); ctx.rect(px, py + E, pw, ph - 2 * E); ctx.clip();
+    for (i = 0; i < filas.length; i++) {
+      var f = filas[i], y = py + 4 * E + i * fh - ajScroll;
+      if (y + fh < py || y > py + ph) continue;
+      var vt = f.textoValor ? f.textoValor() : '';
+      if (f.tipo === 'casilla') {
+        I.texto(f.texto, px + 8 * E, y + 8 * E, '#ffffff', E);
+        casilla(px + pw - 26 * E, y + 5 * E, !!f.valor());
+        I.botones.push({ x: px, y: y, w: pw, h: fh, accion: 'ajuste', fila: f, enLista: true });
+      } else if (f.tipo === 'deslizador') {
+        I.texto(f.texto + ': ' + vt, px + 8 * E, y + 8 * E, '#ffffff', E);
+        var x0 = px + Math.round(pw * 0.55), x1 = px + pw - 12 * E, v = (f.valor() - f.min) / (f.max - f.min);
+        v = Math.max(0, Math.min(1, v));
+        ctx.fillStyle = 'rgb(64,64,64)'; ctx.fillRect(x0, y + 10 * E, x1 - x0, 4 * E);
+        ctx.fillStyle = 'rgb(128,128,128)'; ctx.fillRect(x0, y + 10 * E, (x1 - x0) * v, 4 * E);
+        // la perilla: el botón de borde del juego (slider_button_layout), 10x16
+        var kx = x0 + (x1 - x0) * v - 5 * E;
+        boton(kx, y + 4 * E, 10 * E, 16 * E, '', 0);
+        I.botones.push({ x: x0 - 6 * E, y: y, w: x1 - x0 + 12 * E, h: fh, accion: 'deslizar', fila: f, x0: x0, x1: x1, enLista: true });
+      } else {
+        I.texto(f.texto, px + 8 * E, y + 8 * E, '#ffffff', E);
+        var ew = Math.min(90 * E, pw * 0.42);
+        boton(px + pw - ew - 8 * E, y + 2 * E, ew, bh, vt, 0);
+        I.botones.push({ x: px, y: y, w: pw, h: fh, accion: 'ajuste', fila: f, enLista: true });
+      }
+    }
+    ctx.restore();
+    // la lista se corre arrastrando (lo tocable de cada fila se resuelve al soltar sin arrastrar)
+    I.botones.push({ x: px, y: py, w: pw, h: ph, accion: 'listaAjustes', max: maxScroll, debajo: true });
   }
   function dibujarInventario() {
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, W, H);
@@ -451,7 +540,7 @@ var Interfaz = (function () {
   var ultimoFps = -1, ultimoMouse = false, animando = false;
   function hayQueDibujarJuego() {
     var j = I.juego, ahora = performance.now();
-    var anima = ahora < j.nombreHasta + 100 || ahora < j.mensajeHasta + 100;
+    var anima = ahora < j.nombreHasta + 100 || ahora < j.mensajeHasta + 100 || !!j.anillo;
     var r = anima || animando || (j.mostrarFps && j.fps !== ultimoFps) || I.conMouse !== ultimoMouse;
     animando = anima;
     return r;
@@ -473,6 +562,7 @@ var Interfaz = (function () {
       case 'inventario': dibujarInventario(); break;
       case 'cargando': dibujarCargando(); break;
       case 'pregunta': dibujarPregunta(); break;
+      case 'shaders': dibujarShaders(); break;
     }
   };
   I.ir = function (p) { I.pantalla = p; apretado = null; sucio = true; };
@@ -487,14 +577,27 @@ var Interfaz = (function () {
   var dedos = new Map();      // pointerId → estado del dedo
   function dentro(b, x, y) { return x >= b.x && y >= b.y && x < b.x + b.w && y < b.y + b.h; }
   function botonEn(x, y) {
-    for (var i = I.botones.length - 1; i >= 0; i--) if (dentro(I.botones[i], x, y)) return i;
+    for (var i = I.botones.length - 1; i >= 0; i--) if (dentro(I.botones[i], x, y) && !I.botones[i].debajo) return i;
+    for (i = I.botones.length - 1; i >= 0; i--) if (dentro(I.botones[i], x, y)) return i;
     return -1;
   }
+  function buscar(x, y, accion) {
+    for (var i = I.botones.length - 1; i >= 0; i--) if (I.botones[i].accion === accion && dentro(I.botones[i], x, y)) return I.botones[i];
+    return null;
+  }
+  // un deslizador de las opciones: el valor según dónde está el dedo, redondeado al paso
+  function moverDeslizador(b, x) {
+    var f = b.fila, v = Math.max(0, Math.min(1, (x - b.x0) / (b.x1 - b.x0)));
+    var valor = f.min + v * (f.max - f.min);
+    valor = Math.round(valor / f.paso) * f.paso;
+    valor = Math.max(f.min, Math.min(f.max, +valor.toFixed(4)));
+    if (valor !== f.valor() && I.acciones.deslizar) I.acciones.deslizar(f, valor);
+    sucio = true;
+  }
   function crucetaEn(x, y) {
-    var c = 26 * E * 0.95;
     for (var i = crucetaBotones.length - 1; i >= 0; i--) {
-      var b = crucetaBotones[i], m = b.mitad ? c * 0.15 : 0;
-      if (x >= b.x + m && y >= b.y + m && x < b.x + c - m && y < b.y + c - m) return b.n;
+      var b = crucetaBotones[i];
+      if (x >= b.x && y >= b.y && x < b.x + b.w && y < b.y + b.h) return b.n;
     }
     return null;
   }
@@ -564,6 +667,16 @@ var Interfaz = (function () {
         dedos.set(e.pointerId, { tipo: 'mundo', x0: x, y0: y, x: x, y: y, t0: e.timeStamp || performance.now(), movio: false });
         return;
       }
+      if (I.pantalla === 'opciones') {
+        var desl = buscar(x, y, 'deslizar');
+        if (desl) { dedos.set(e.pointerId, { tipo: 'deslizador', b: desl }); moverDeslizador(desl, x); return; }
+        var lista = buscar(x, y, 'listaAjustes');
+        if (lista) {
+          var fb = buscar(x, y, 'ajuste');
+          dedos.set(e.pointerId, { tipo: 'listaAj', y0: y, s0: ajScroll, b: lista, fila: fb && fb.fila, movio: false });
+          return;
+        }
+      }
       var i2 = botonEn(x, y);
       if (I.pantalla === 'inventario') {
         if (i2 >= 0 && I.botones[i2].accion === 'rejilla') {
@@ -591,7 +704,12 @@ var Interfaz = (function () {
         d.x = x; d.y = y;
         if (!d.movio && Math.hypot(x - d.x0, y - d.y0) > 12 * dpr) d.movio = true;
         if (d.movio) { I.control.mirarX += dx / dpr; I.control.mirarY += dy / dpr; }
-        if (d.rompiendo) I.control.rompiendo = [x / W, y / H];
+        if (d.rompiendo) I.control.rompiendo = (I.opc && I.opc.dividido) ? [0.5, 0.5] : [x / W, y / H];
+      } else if (d.tipo === 'deslizador') {
+        moverDeslizador(d.b, x);
+      } else if (d.tipo === 'listaAj') {
+        if (Math.abs(y - d.y0) > 6 * dpr) d.movio = true;
+        if (d.movio) { ajScroll = Math.max(0, Math.min(d.b.max, d.s0 - (y - d.y0))); sucio = true; }
       } else if (d.tipo === 'rejilla') {
         var lado = d.b.lado;
         if (Math.abs(y - d.y0) > 6 * dpr) d.movio = true;
@@ -607,12 +725,16 @@ var Interfaz = (function () {
       if (d.tipo === 'cruceta') { pulsados[d.b] = false; actualizarCruceta(); sucio = true; }
       else if (d.tipo === 'mundo') {
         if (d.rompiendo) I.control.rompiendo = null;
-        else if (!d.movio && (e.timeStamp || performance.now()) - d.t0 < 400) I.control.toque = [x / W, y / H];
+        else if (!d.movio && (e.timeStamp || performance.now()) - d.t0 < 400) I.control.toque = (I.opc && I.opc.dividido) ? [0.5, 0.5] : [x / W, y / H];
       } else if (d.tipo === 'menu') {
         apretado = null; sucio = true;
         if (dentro(d.b, x, y) && I.acciones[d.b.accion]) I.acciones[d.b.accion](d.b);
       } else if (d.tipo === 'rejilla') {
         if (!d.movio && d.item && I.acciones.item) I.acciones.item({ item: d.item });
+      } else if (d.tipo === 'listaAj') {
+        if (!d.movio && d.fila && I.acciones.ajuste) { I.acciones.ajuste(d.fila); sucio = true; }
+      } else if (d.tipo === 'deslizador') {
+        if (I.acciones.soltarDeslizador) I.acciones.soltarDeslizador(d.b.fila);
       }
     }
     objetivo.addEventListener('pointerup', soltar);
@@ -631,6 +753,7 @@ var Interfaz = (function () {
     objetivo.addEventListener('wheel', function (e) {
       if (I.pantalla === 'juego') I.control.rueda += Math.sign(e.deltaY);
       else if (I.pantalla === 'inventario') { invScroll += Math.sign(e.deltaY); sucio = true; }
+      else if (I.pantalla === 'opciones') { ajScroll += Math.sign(e.deltaY) * 24 * E; sucio = true; }
     }, { passive: true });
     addEventListener('keydown', function (e) {
       teclas[e.code] = true;
@@ -661,9 +784,15 @@ var Interfaz = (function () {
       var quieto = ahora - d.t0;
       if (d.tipo === 'mundo' && !d.movio && !d.rompiendo && ((quieto > 300 && hueco < 150) || quieto > 900)) {
         d.rompiendo = true;
-        I.control.rompiendo = [d.x / W, d.y / H];
+        I.control.rompiendo = (I.opc && I.opc.dividido) ? [0.5, 0.5] : [d.x / W, d.y / H];
       }
     });
+  };
+  // el dedo que está sobre el mundo (quieto o rompiendo), para el anillo
+  I.dedoMundo = function () {
+    var r = null;
+    dedos.forEach(function (d) { if (!r && d.tipo === 'mundo' && (!d.movio || d.rompiendo)) r = d; });
+    return r;
   };
   I.soltarTodo = function () {
     dedos.clear(); for (var k in pulsados) pulsados[k] = false;
