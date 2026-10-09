@@ -20,8 +20,9 @@ Respecto del APK:
   nuestros) los cargan después de la capa del navegador (porteo_web.lua).
 - Sin las fuentes chinas, japonesa, coreana ni las Go Noto: 61 MB de los 104 del APK, para cuatro
   idiomas (porteo_despues.lua los saca de la lista).
-- La música y el ambiente (15,6 MB) no van adentro: van silencios con el mismo nombre y los de
-  verdad bajan por detrás (ver "Sonido" en porteo_web.lua). Así el menú aparece con 7 MB.
+- De la música va adentro sólo el tema del menú (music1); los otros cuatro y el ambiente (12,7 MB)
+  van como silencios con el mismo nombre y los de verdad bajan por detrás y entran sin cortar lo
+  que suena (ver "Sonido" en porteo_web.lua). Así el menú aparece, con música, con 10 MB.
 - Sin lo que es de Android y no del juego (dexopt/, info.txt).
 """
 import argparse
@@ -42,12 +43,17 @@ SIN_COMPRIMIR = (".ogg", ".png", ".ogv")
 FECHA = (2026, 1, 1, 0, 0, 0)
 
 
+# el tema del menú (y de casi toda la partida) va adentro: sin él, la primera vez no sonaba música
+# hasta que bajaban los 15 MB
+TEMPRANO = {"music1.ogg"}
+
+
 def tarde(ruta):
     """La música y el ambiente: lo que no se espera para arrancar."""
     if not ruta.startswith("resources/sounds/"):
         return False
     nombre = ruta.rsplit("/", 1)[1]
-    return nombre.startswith("music") or nombre.startswith("ambient")
+    return nombre not in TEMPRANO and (nombre.startswith("music") or nombre.startswith("ambient"))
 
 
 def se_queda(ruta):
@@ -82,8 +88,10 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix="balatro-") as tmp:
         tmp = Path(tmp)
+        # más largo que los temas (173,6 s): el juego vuelve a arrancar toda la música cuando un tema
+        # termina, y un silencio más corto la cortaba a cada rato
         silencio = tmp / "silencio.ogg"
-        ffmpeg("-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono", "-t", "20", "-c:a", "libvorbis", "-q:a", "0", str(silencio))
+        ffmpeg("-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono", "-t", "180", "-c:a", "libvorbis", "-q:a", "0", str(silencio))
         archivos = {}
         tardios = []
         juego = tmp / "balatro.love"

@@ -773,7 +773,7 @@ Origen: balatro mío xd juniors.apk (65,7 MB, sha256 56487be6…42cd), por link 
 Motor: LÖVE con Lua; el LÖVE es el de Playstack (love.platform: nube, logros) y LuaJIT
 Estrategia: LÖVE 11.4 compilado para la web acá + el Lua del juego tal cual + una capa del navegador
 Fidelidad: 1:1 (su Lua, sus shaders, su azar: una semilla da la misma partida que en el teléfono)
-Tamaños: APK 66 MB → web 11,7 MB para arrancar + 15,6 MB de música que baja después
+Tamaños: APK 66 MB → web 14,8 MB para arrancar (con el tema del menú) + 12,7 MB de música después
 Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de Rezona; falta medirlo
         en el teléfono del dueño (el registro manda el costo de cada cuadro)
 ```

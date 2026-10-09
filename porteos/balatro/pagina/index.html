@@ -113,10 +113,12 @@
     } catch (e) { cache = null; }
   }
 
-  async function traer(url, alAvanzar) {
-    if (cache) {
+  // enCache: lo que va a la caché de la página; la música no (queda en IndexedDB, con las partidas)
+  async function traer(url, alAvanzar, enCache) {
+    if (enCache === false) enCache = null; else enCache = cache;
+    if (enCache) {
       try {
-        var r = await conTiempo(cache.match(url), 4000, null);
+        var r = await conTiempo(enCache.match(url), 4000, null);
         if (r) { var d = new Uint8Array(await r.arrayBuffer()); if (alAvanzar) alAvanzar(d.length); return d; }
       } catch (e) { /* de la red */ }
     }
@@ -124,7 +126,7 @@
     for (var intento = 0; intento < 4; intento++) {
       try {
         var datos = await bajar(url, alAvanzar);
-        if (cache) cache.put(url, new Response(datos)).catch(function () {});
+        if (enCache) enCache.put(url, new Response(datos)).catch(function () {});
         return datos;
       } catch (e) {
         ultimo = e;
@@ -135,21 +137,31 @@
     throw ultimo;
   }
 
+  // una descarga que no recibe nada en 15 s se corta (y traer la reintenta): en el teléfono del dueño
+  // la música no terminaba nunca de bajar y no había forma de saber por qué
   async function bajar(url, alAvanzar) {
-    var r = await fetch(url, { cache: 'no-cache' });
-    if (!r.ok) throw new Error(url + ': ' + r.status);
-    var total = +r.headers.get('content-length') || 0;
-    if (!r.body || !total) { var d = new Uint8Array(await r.arrayBuffer()); if (alAvanzar) alAvanzar(d.length); return d; }
-    var lector = r.body.getReader(), datos = new Uint8Array(total), van = 0;
-    for (;;) {
-      var p = await lector.read();
-      if (p.done) break;
-      if (van + p.value.length > datos.length) { var mas = new Uint8Array(van + p.value.length); mas.set(datos.subarray(0, van)); datos = mas; }
-      datos.set(p.value, van);
-      van += p.value.length;
-      if (alAvanzar) alAvanzar(van);
-    }
-    return van === datos.length ? datos : datos.subarray(0, van);
+    var control = window.AbortController ? new AbortController() : null, ultimo = Date.now();
+    var vigia = setInterval(function () {
+      if (control && Date.now() - ultimo > 15000) { Porteo.anotar('frenado', url); control.abort(); }
+    }, 2000);
+    try {
+      var r = await fetch(url, { cache: 'no-cache', signal: control ? control.signal : undefined });
+      if (!r.ok) throw new Error(url + ': ' + r.status);
+      var total = +r.headers.get('content-length') || 0;
+      if (!r.body || !total) { var d = new Uint8Array(await r.arrayBuffer()); if (alAvanzar) alAvanzar(d.length); return d; }
+      var lector = r.body.getReader(), datos = new Uint8Array(total), van = 0;
+      for (;;) {
+        var p = await lector.read();
+        if (p.done) break;
+        ultimo = Date.now();
+        if (van + p.value.length > datos.length) { var mas = new Uint8Array(van + p.value.length); mas.set(datos.subarray(0, van)); datos = mas; }
+        datos.set(p.value, van);
+        van += p.value.length;
+        if (alAvanzar) alAvanzar(van);
+      }
+      if (van < total) throw new Error(url + ': cortado en ' + van + ' de ' + total);
+      return van === datos.length ? datos : datos.subarray(0, van);
+    } finally { clearInterval(vigia); }
   }
 
   function cargarScript(src) {
@@ -191,32 +203,41 @@
       printErr: function (t) { console.warn(t); },
     });
     window.porteoModulo = M;
+    // las partidas y la música de otras veces, de IndexedDB, antes de arrancar (ver persistencia.js)
+    if (M.porteoPartidas) await M.porteoPartidas;
     try { M.FS.mkdir('/porteo'); } catch (e) { /* ya estaba */ }
     M.FS.writeFile('/porteo/idioma.txt', navigator.language || 'en');
     if (/[?&]medir/.test(location.search)) M.FS.writeFile('/porteo/medir', '1');
     M.FS.writeFile('/porteo/tarde.txt', T.tarde.map(function (t) { return t.ruta; }).join('\n'));
     M.FS.writeFile('/balatro.love', listos[1], { canOwn: true });
-    // la música de una visita anterior ya está en la carpeta de guardado (IndexedDB)
+    // la música de una visita anterior ya está en la carpeta de guardado (IndexedDB). Lo que está se
+    // anota en /porteo/llegados.txt, y cada uno que llega se agrega: el juego lo pone en su lugar
     var faltan = T.tarde.filter(function (t) { return !existe(M, GUARDADO + '/' + t.ruta, t.bytes); });
+    var llegados = T.tarde.filter(function (t) { return faltan.indexOf(t) < 0; }).map(function (t) { return t.ruta; });
     M.FS.mkdirTree(GUARDADO + '/resources/sounds');
-    if (!faltan.length) M.FS.writeFile('/porteo/tarde-listo', '1');
+    M.FS.writeFile('/porteo/llegados.txt', llegados.join('\n'));
     Porteo.anotar('arranca', Math.round(performance.now()) + ' ms · faltan ' + faltan.length);
     carga.listo();
     M.callMain(['/balatro.love']);
     Porteo.arrancado();
-    // lo que no se esperó: de a uno, sin apuro
-    for (var i = 0; i < faltan.length; i++) {
-      var t = faltan[i];
-      try {
-        var d = await traer(t.url);
-        M.FS.writeFile(GUARDADO + '/' + t.ruta, d, { canOwn: true });
-      } catch (e) { Porteo.anotar('tarde', t.ruta + ': ' + (e && e.message || e)); return; }
+    // lo que no se esperó: los temas primero, de a tres a la vez, y cada uno a IndexedDB apenas llega
+    // (si la página se cierra, la vez siguiente ya está)
+    var cola = faltan.slice().sort(function (a, b) { return /\/music/.test(b.ruta) - /\/music/.test(a.ruta); });
+    var desde = performance.now();
+    async function obrero() {
+      for (var t = cola.shift(); t; t = cola.shift()) {
+        try {
+          var d = await traer(t.url, null, false);
+          M.FS.writeFile(GUARDADO + '/' + t.ruta, d, { canOwn: true });
+          llegados.push(t.ruta);
+          M.FS.writeFile('/porteo/llegados.txt', llegados.join('\n'));
+          if (M.porteoGuardar) M.porteoGuardar();
+          Porteo.anotar('tarde', t.ruta.split('/').pop() + ' · ' + Math.round(performance.now() - desde) + ' ms');
+        } catch (e) { Porteo.anotar('tarde', t.ruta + ': ' + (e && e.message || e)); }
+      }
     }
-    if (faltan.length) {
-      M.FS.writeFile('/porteo/tarde-listo', '1');
-      Porteo.anotar('tarde', 'listo · ' + Math.round(performance.now()) + ' ms');
-      if (M.porteoGuardar) M.porteoGuardar();
-    }
+    await Promise.all([obrero(), obrero(), obrero()]);
+    if (faltan.length) Porteo.anotar('tarde', (llegados.length === T.tarde.length ? 'listo' : 'incompleto') + ' · ' + Math.round(performance.now() - desde) + ' ms');
   }
 
   arrancar().catch(function (e) {

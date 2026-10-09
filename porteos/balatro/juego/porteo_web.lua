@@ -265,23 +265,27 @@ end
 -- suena algo: los efectos "static" se decodificaban enteros (OGG a PCM) en cada toque. Acá se
 -- decodifica cada uno una vez y se clona (los clones comparten el audio ya decodificado).
 --
--- La música y el ambiente (15,6 MB) no se esperan: el .love trae silencios con el mismo nombre y la
--- página baja los de verdad por detrás a la carpeta de guardado, que LÖVE mira antes que el .love.
--- La lista de esos archivos va en /porteo/tarde.txt; cuando están todos la página deja
--- /porteo/tarde-listo, y entonces se cortan los silencios que estén sonando: el juego ve la música
--- parada y la vuelve a arrancar (RESTART_MUSIC), ya con los archivos de verdad y todas juntas.
+-- De la música, el .love trae de verdad sólo el tema del menú (music1); los otros cuatro y el
+-- ambiente son silencios con el mismo nombre, y la página baja los de verdad por detrás a la carpeta
+-- de guardado, que LÖVE mira antes que el .love. La lista va en /porteo/tarde.txt y la página anota
+-- en /porteo/llegados.txt cada uno que llega. Los cinco temas son capas de la misma canción que
+-- suenan juntas (el juego sube el volumen de la que corresponde): al llegar uno, el silencio que
+-- suena en su lugar se cambia por el de verdad en el mismo segundo que la música que se oye, sin
+-- cortarla. El ambiente se corta y el juego lo vuelve a arrancar cuando lo necesita.
 local fuenteNueva = love.audio.newSource
 local estaticos = {}
-local tarde, provisorias, tardeListo = {}, {}, false
+local tarde, faltan = {}, 0
+local provisorias, esProvisoria, cambiados = {}, {}, {}
 do
 	local f = io.open('/porteo/tarde.txt', 'r')
 	if f then
 		for linea in f:lines() do
-			if linea ~= '' then tarde[linea] = true end
+			if linea ~= '' then
+				tarde[linea] = true
+				faltan = faltan + 1
+			end
 		end
 		f:close()
-	else
-		tardeListo = true
 	end
 end
 
@@ -295,26 +299,78 @@ love.audio.newSource = function(a, tipo, ...)
 		return p:clone()
 	end
 	local s = fuenteNueva(a, tipo, ...)
-	if not tardeListo and type(a) == 'string' and tarde[a] then
+	if type(a) == 'string' and tarde[a] and not cambiados[a] then
 		local real = love.filesystem.getRealDirectory(a)
-		if real and real:sub(-5) == '.love' then provisorias[#provisorias + 1] = s end
+		if real and real:sub(-5) == '.love' then
+			provisorias[a] = provisorias[a] or {}
+			table.insert(provisorias[a], s)
+			esProvisoria[s] = true
+		end
 	end
 	return s
 end
 
-local cuadros = 0
-function mirarTarde()
-	if tardeListo then return end
-	cuadros = cuadros + 1
-	if cuadros % 60 ~= 0 then return end
-	local f = io.open('/porteo/tarde-listo', 'r')
-	if not f then return end
-	f:close()
-	tardeListo = true
-	for _, s in ipairs(provisorias) do
-		if s:isPlaying() then s:stop() end
+-- en qué segundo va la música que se oye: la de cualquier tema de verdad que esté sonando
+local function segundoDeLaMusica()
+	if type(SOURCES) ~= 'table' then return nil end
+	for codigo, lista in pairs(SOURCES) do
+		if type(codigo) == 'string' and codigo:find('^music') then
+			for _, e in ipairs(lista) do
+				if e.sound and not esProvisoria[e.sound] and e.sound:isPlaying() then return e.sound:tell() end
+			end
+		end
 	end
-	provisorias = {}
+	return nil
+end
+
+local function cambiar(ruta)
+	cambiados[ruta] = true
+	local lista = provisorias[ruta] or {}
+	provisorias[ruta] = nil
+	local codigo = ruta:match('([^/]+)%.ogg$')
+	local tema = codigo and codigo:find('^music')
+	for _, viejo in ipairs(lista) do
+		esProvisoria[viejo] = nil
+		if viejo:isPlaying() then
+			if tema then
+				local ok, nuevo = pcall(fuenteNueva, ruta, 'stream')
+				if ok then
+					nuevo:setVolume(viejo:getVolume())
+					nuevo:setPitch(viejo:getPitch())
+					nuevo:setLooping(viejo:isLooping())
+					pcall(nuevo.seek, nuevo, segundoDeLaMusica() or viejo:tell())
+					nuevo:play()
+					-- la misma entrada en la tabla del juego, con el sonido de verdad: el juego le sigue
+					-- manejando el volumen
+					for _, e in ipairs(type(SOURCES) == 'table' and SOURCES[codigo] or {}) do
+						if e.sound == viejo then e.sound = nuevo end
+					end
+				end
+			end
+			viejo:stop()
+		end
+	end
+	print('porteo: sonido ' .. ruta .. ' ya está')
+end
+
+-- lo que llegó: la página agrega una línea por archivo
+local cuadros, leidas = 0, 0
+function mirarTarde()
+	if faltan <= 0 then return end
+	cuadros = cuadros + 1
+	if cuadros % 30 ~= 0 then return end
+	local f = io.open('/porteo/llegados.txt', 'r')
+	if not f then return end
+	local n = 0
+	for linea in f:lines() do
+		n = n + 1
+		if n > leidas and tarde[linea] and not cambiados[linea] then
+			cambiar(linea)
+			faltan = faltan - 1
+		end
+	end
+	f:close()
+	leidas = math.max(leidas, n)
 end
 
 --||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||

@@ -50,16 +50,27 @@ teléfono de verdad (rendimiento: ver "Lo que falta").
 | qué | MB | cuándo |
 |---|---|---|
 | motor (love.js + love.wasm) | 4,8 | al abrir (Cloudflare lo comprime) |
-| juego (`balatro.love`: código, imágenes, efectos, fuentes) | 6,9 | al abrir |
-| música y ambiente (9 OGG) | 15,6 | después de arrancar, por detrás; quedan en IndexedDB |
+| juego (`balatro.love`: código, imágenes, efectos, fuentes y el tema del menú) | 10,0 | al abrir |
+| los otros 4 temas y el ambiente (8 OGG) | 12,7 | después de arrancar, de a tres; quedan en IndexedDB |
 
 El APK pesa 66 MB (104 descomprimido). Fuera de la versión web:
 
 - las fuentes china, japonesa, coreana y Go Noto: 61 MB, para cuatro idiomas que salen de la lista;
 - lo de Android (dexopt, info.txt).
 
-Mientras baja la música suenan silencios con el mismo nombre. Cuando llega la de verdad se cortan, y
-el juego la vuelve a arrancar desde los archivos nuevos, los cinco temas juntos.
+Los cinco temas son capas de la misma canción que suenan juntas (el juego sube el volumen de la que
+corresponde: menú, tienda, sobres, jefe). El del menú viene adentro. Mientras bajan los otros suenan
+silencios con el mismo nombre, y cada uno que llega reemplaza a su silencio en el mismo segundo de la
+música que se oye, sin cortarla. Una descarga que no recibe nada en 15 s se corta y se reintenta.
+
+**Primera versión, con dos errores que se vieron en el teléfono del dueño:**
+
+- Toda la música bajaba por detrás, de a un archivo, sin vigilar si se frenaba. El registro mostró
+  que nunca terminaba, y no sonaba ningún tema.
+- Con Emscripten 6, el `--post-js` corre después de que el módulo ya arrancó, así que el juego
+  empezaba antes de que llegaran las partidas de IndexedDB. Ahora la página espera
+  `Module.porteoPartidas`, y no se escribe nada en IndexedDB hasta que la carga inicial terminó:
+  escribir antes borraba allá lo que todavía no estaba acá.
 
 ## Armarlo
 
