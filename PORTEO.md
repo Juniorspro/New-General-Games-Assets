@@ -176,7 +176,7 @@ anda en cada etapa** en vez de esperar al final.
 | DOS | **js-dos** + `tactil.js` | 1:1 (emulado) |
 | ROM o Java ME del dueño | emulador web (EmulatorJS / freej2me-web) + controles | 1:1 (emulado) |
 | **Unity Android Mono** (el C# viene en `Managed/`) | AssetRipper reconstruye el proyecto con los scripts decompilados y se compila para WebGL con **la misma versión de Unity** (necesita una licencia activada: la del dueño). Antes, medir con `analizar-apk.py`: audio decodificado, tamaño de las escenas y formato de las texturas dicen si entra en una pestaña de teléfono | 1:1 si entra en memoria |
-| **Unity Android sin proyecto** (IL2CPP) | no se puede pasar el binario a web. Se extraen los assets (AssetRipper/AssetStudio: modelos, texturas, audio, escenas) y se **rearma la lógica** en three.js. Si hay un build de PC Mono, las DLL se descompilan con ILSpy y la lógica se traduce leyendo el original | lo más cercano posible |
+| **Unity Android sin proyecto** (IL2CPP) | no se puede pasar el binario a web. Se extraen los assets (AssetRipper/AssetStudio/UnityPy: modelos, texturas, audio, escenas) y se **rearma la lógica** en three.js (3D) o en HTML/CSS (2D, con las medidas de las escenas de UGUI: `porteos/truco/`). Si hay un build de PC Mono, las DLL se descompilan con ILSpy y la lógica se traduce leyendo el original | lo más cercano posible |
 | **juego de PC en C++ con una reimplementación abierta** (PvZ → PvZ-Portable, Half-Life/CS 1.6 → Xash3D FWGS + cs16-client, y las hay de muchos clásicos: OpenTTD, devilutionX, OpenRCT2…) | se compila la reimplementación a WebAssembly con Emscripten y corre con los **datos originales del dueño**. Si espera otra versión de los datos, se parchea el motor (no se inventan datos). Recetas: `porteos/pvz/`, `porteos/cs16/` (motor con módulos `.so`, datos de cientos de MB que se bajan por partes) | 1:1 (la lógica es la del juego; los datos, los del dueño) |
 | GameMaker / libGDX / Unreal sin fuente | igual: se extraen los assets y se rehace la lógica en HTML5 | lo más cercano posible |
 | código fuente de cualquier motor | se exporta a web desde el motor si se puede instalar acá; si no (Unity y Unreal necesitan editor con licencia), se rearma | según el caso |
@@ -266,7 +266,9 @@ archivo (la moneda también), así anda igual en el `.html` único.
   lo pasa (Half-Life pregunta el idioma antes de la intro y se lo pasa).
 - El juego arranca por detrás al mismo tiempo, no al terminar.
 
-**`herramientas/porteo/web.js`** — lo que hacía la parte nativa (§6).
+**`herramientas/porteo/web.js`** — lo que hacía la parte nativa (§6). Un juego con pantallas
+(menú → submenú → partida) le pasa su propio `atras` y devuelve `true` cuando hizo algo (cerró una
+ventana, volvió una pantalla): ese atrás no cuenta para el "atrás otra vez para salir".
 
 **Versiones nuevas** (`pwa.py` + `Porteo.actualizar()` de `web.js`). La página
 que se abre sale de lo que guardó el service worker, así que el que ya jugó
@@ -606,6 +608,14 @@ créditos ni se tapa al autor.
 | sonidos en otro formato que el que pide el juego (`.opus` por `.wav`) | el motor los carga, pero al entrar al nivel el cliente revisa que exista el `.wav` de cada sonido precargado y apaga el que no encuentra para todo el nivel ("Could not load sound") | que la revisión acepte el `.opus` y, jugando en el mismo navegador, no dé ningún sonido por faltante (parche de `cl_custom.c`) |
 | retener un pedido con `page.route` de Playwright | no ve lo que pide el service worker: el paquete pasaba igual y la prueba "fallaba" | esa prueba, en un contexto con `serviceWorkers: 'block'` |
 | preguntar algo al empezar (el idioma) después de la intro | si la respuesta va en el arranque del motor (`-language`), el motor no puede cargar por detrás de la intro: se arranca recién al contestar, y la intro ya no tapa la carga | preguntar **antes** de la intro y bajar mientras tanto lo que no depende de la respuesta (y lo de la opción marcada); la intro sale en el idioma elegido (`Porteo.intro({ idioma })`). En Half-Life, en 4G: jugando a los 22,8 s en vez de 27,7 |
+| UnityPy (1.25): la caché de texturas de los sprites | guarda cada textura por su `path_id` **sin el archivo**: dos sprites de `resources.assets` con texturas en archivos distintos y el mismo `path_id` se llevan la misma imagen (31 caras de Cuyo salían vacías y 10 íconos, cambiados) | reemplazar `SpriteHelper.get_image` por una con clave (archivo, `path_id`) (`porteos/truco/armar-datos.py`) y mirar lo que sale |
+| UnityPy sin numpy | los sprites recortados de un atlas se arman en Python puro: minutos | `pip install numpy` en el entorno |
+| Pillow WebP `method=6` con transparencia | 25 veces más lento (1 s por carta) por menos de 1 % de tamaño | `method=5` |
+| `border-image` con un sprite semitransparente | al escalar a tamaños con decimales, Chromium deja una rayita en cada corte de las 9 partes | si el sprite es un rectángulo liso con puntas redondeadas, `border-radius` |
+| `overflow: hidden` en la pantalla del juego | `scrollIntoView` (el `tap()` de Playwright, un foco) la corre y queda corrida | `overflow: clip` |
+| `page.waitForFunction` de Playwright con una función `async` | no espera la promesa: es "verdadera" enseguida (la prueba de sin red se desconectaba antes de que el service worker terminara) | un bucle adentro de `page.evaluate` |
+| la versión de un archivo y las `url()` puestas en un `style` | `un-archivo.py` atiende `fetch`, `<img>` y `<audio>`, no eso: fondos sin imagen | pedir esos archivos por `fetch` y usarlos como `blob:` |
+| la capa de carga que se desvanece | mientras baja la opacidad, se come los primeros toques | `pointer-events: none` apenas empieza a irse |
 | `wrangler pages project create` (wrangler 4.148) | intenta crear el proyecto en Workers ("Delegating to the latest version of Cloudflare Pages"), falla y no crea nada | `--force` al crearlo (el Pages clásico, como los demás porteos) |
 
 ## 14. Registro de porteos
@@ -941,6 +951,51 @@ Pruebas: 79/79 (porteos/half-life/prueba.mjs, contra el sitio publicado, el APK 
   porteos/half-life/prueba.mjs http://127.0.0.1:8861/half-life/ entrega-half-life/half-life.apk
   file:///…/half-life.html`. **Publicarlo:** ver `porteos/half-life/LEEME.md`.
 - **No va al repo** (§11): ni el juego ni el motor compilado.
+
+### Truco (Blyts, el de Google Play) — terminado (falta la prueba en un teléfono de verdad)
+
+```
+Origen: "Truco_Blytscom.blyts.trucolite.activitiesv6.0.352.apk" por MediaFire (134 MB, sha256
+        f20e334c…62a55e9): el de Google Play, firmado por Blyts. El juego es gratis
+Motor: Unity 6000.2.10f1 con IL2CPP (libil2cpp.so + global-metadata.dat; los datos en
+       assets/bin/Data/data.unity3d)
+Estrategia: IL2CPP no se puede pasar a la web: se sacan del APK los datos (cartas, mesas, caras,
+            voces, música, sprites, letras, textos y personajes) y se rearman las reglas, la
+            computadora y las pantallas en HTML/CSS con las medidas de sus escenas
+Fidelidad: adaptación lo más cercana posible — se ve como el original (sus imágenes, letras,
+           medidas y textos), suena como el original (sus 12 voces y su música), los personajes
+           hablan con sus frases y juegan con su personalidad; sin lo que necesita servidor
+           (online, torneos, ranking, chat, tienda)
+Tamaños: APK original 134 MB → web 23 MB (todo: 6 mazos, 202 caras, 561 tomas de voz, 4 temas) ·
+         zip 23 MB · APK 22 MB · un archivo 25 MB
+Pruebas: 45/45 de la lista §9 (porteos/truco/prueba.mjs), 46/46 de las reglas, 9/9 de la computadora
+```
+
+- **Qué hizo falta** (detalle en [`porteos/truco/LEEME.md`](porteos/truco/LEEME.md)):
+  - leer las escenas de UGUI sin typetrees (los componentes en el orden en que Unity 6 / ugui 2.0
+    los serializa) para tener anclas, tamaños, letras, colores y bordes de 9 partes de cada cosa;
+  - los textos del juego estaban en `assets/lang_es.json` (1.837: menús, reglas y unas 500 frases
+    de los personajes) y los personajes en `players_es` (mentiroso, pescador, estilo, voz);
+  - las reglas (`truco.js`) y una computadora que ve sólo lo que vería un jugador y reparte al azar
+    lo que no ve (`truco-ia.js`), con los umbrales que el original dejó en sus registros de
+    depuración (los literales de `global-metadata.dat`);
+  - tres trampas de la extracción (§13): la caché de texturas de UnityPy, numpy, y WebP `method=6`.
+- **Controles:** tocar una carta (o arrastrarla para arriba) la tira; las barras de cantos del
+  original (Truco/Retruco/Vale cuatro, Envido → Real/Falta, Flor → Contraflor/al resto, Mazo,
+  Quiero/No quiero; en parejas, Cantá/Callado); atrás del teléfono o Escape.
+- **Probado** (`porteos/truco/prueba.mjs`, 45/45): la intro y el menú; del menú a jugar sólo
+  tocando; cada control medido en el motor de reglas (tirar tocando y arrastrando, truco, envido
+  con su ventana, quiero, mazo, los palitos); un partido entero y la revancha; atrás y pausa con la
+  página oculta; ajustes, anotador, Gira y un partido a medias después de recargar; parado, chico,
+  acostado (girado 90°) y en una compu; sin internet; 2 contra 2 y 3 contra 3 (con el compañero
+  preguntando); el `.html` único y el APK.
+- **Problemas conocidos:** no se probó en un teléfono real ni en Safari; los números de la Gira
+  (puntos para destrabar regiones, cuánto vale una mentira) estaban en el código nativo y son
+  nuestros; firmado con la clave de esta sesión (§7).
+- **Rearmarlo:** `porteos/truco/portear.sh Truco_Blytscom…apk [SALIDA]` (~1 minuto). **Probarlo:**
+  `node porteos/truco/prueba.mjs http://127.0.0.1:8872/truco/ entrega-truco/truco.apk
+  file:///…/truco.html`.
+- **No va al repo** (§11): nada del juego; sólo la receta, las reglas, la computadora y las pantallas.
 
 ### FNaF 2 — port de otra sesión, analizado y corregido
 

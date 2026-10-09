@@ -7,7 +7,8 @@
  *
  *   Porteo.web({
  *     orientacion: 'landscape',          // o 'portrait', o null (libre)
- *     atras: function () { ... },        // default: manda Escape, como el APK
+ *     atras: function () { ... },        // default: manda Escape, como el APK; si devuelve true
+ *                                        // (el juego volvió una pantalla), ese atrás no cuenta para salir
  *     girar: true,                       // false = cartel de "girá el teléfono" en vez de girar
  *     alGirarMal: function () { ... },   // sólo con el cartel: p. ej. pausar
  *     despierto: true,                   // Wake Lock: que no se apague jugando
@@ -192,8 +193,10 @@
     window.porteoAtras = function () {
       var ahora = Date.now();
       if (ahora - ultimo < 2000) return 'salir';
+      // un juego con pantallas (menú → submenú → partida) devuelve true cuando el atrás hizo algo
+      // (cerró una ventana, volvió una pantalla): ese no cuenta para salir ni avisa
+      if (atras() === true) { ultimo = 0; return true; }
       ultimo = ahora;
-      atras();
       aviso(texto(cfg.textoSalir, 'Atrás otra vez para salir'));
       return true;
     };
