@@ -1,0 +1,607 @@
+{
+ "tom-fur-default": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_default"
+ },
+ "tom-fur-ginger": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_domestic"
+ },
+ "tom-fur-white": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_white"
+ },
+ "tom-fur-tiger": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_tiger"
+ },
+ "tom-fur-flower-power": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_paint"
+ },
+ "tom-fur-skeleton": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_skeleton"
+ },
+ "tom-fur-black": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_panther"
+ },
+ "tom-fur-bw": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_blackwhite"
+ },
+ "tom-fur-bodybuilder": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_muscle"
+ },
+ "tom-fur-starlight": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_sparkle"
+ },
+ "tom-fur-golden": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_gold"
+ },
+ "tom-fur-jello": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_jello"
+ },
+ "tom-fur-puma": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_puma"
+ },
+ "tom-fur-frankenstein": {
+  "tipo": "PrefabTextureWithHat",
+  "piel": "tom_body_frankenstein",
+  "sombrero": "Addons/headFrankenstein/headFrankenstein_001"
+ },
+ "tom-fur-snowman": {
+  "tipo": "PrefabTextureWithHat",
+  "piel": "tom_body_snowman",
+  "sombrero": "Addons/headSnowman/headSnowman_001"
+ },
+ "tom-fur-tribal": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_tribal"
+ },
+ "tom-fur-siamese": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_siamese"
+ },
+ "tom-fur-leopard": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_cheetah"
+ },
+ "tom-fur-rainbow": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_colorful"
+ },
+ "tom-fur-tiger-white": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_whitetiger"
+ },
+ "tom-fur-diamond": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_diamond"
+ },
+ "tom-fur-zombie": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_tomz"
+ },
+ "tom-fur-maneki-neko": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_manekineko"
+ },
+ "tom-fur-alien-blue": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_avatar"
+ },
+ "tom-fur-cyber": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_trom"
+ },
+ "tom-fur-robot": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_robot"
+ },
+ "tom-fur-mud": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_mud"
+ },
+ "tom-fur-military": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_army"
+ },
+ "tom-fur-pink": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_girly"
+ },
+ "tom-fur-mummy": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_mummy"
+ },
+ "tom-fur-dragon": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_dragon"
+ },
+ "tom-cloth-suit-sailor": {
+  "tipo": "PrefabClothTextureWithHat",
+  "piel": "tom_body_sailor",
+  "sombrero": "Addons/hatSailor/hatSailor_001"
+ },
+ "tom-cloth-droid": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_android"
+ },
+ "tom-fur-pajamas": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_pijama"
+ },
+ "tom-cloth-lazy-sunday": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_shorts"
+ },
+ "tom-cloth-hank": {
+  "tipo": "Prefab",
+  "piel": "tom_body_hank"
+ },
+ "tom-cloth-party-onesie": {
+  "tipo": "PrefabClothTextureWithHat",
+  "piel": "tom_body_onesie",
+  "sombrero": "Addons/onesie/onesiePajama"
+ },
+ "tom-cloth-mars-uniform": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_mars"
+ },
+ "tom-cloth-hiphop-outfit": {
+  "tipo": "PrefabClothTextureWithHat",
+  "piel": "tom_body_hiphop",
+  "sombrero": "Addons/hatHipHop/hatHipHop_001"
+ },
+ "tom-cloth-warmup-onesie": {
+  "tipo": "PrefabClothTextureWithHat",
+  "piel": "tom_body_onesiefestive",
+  "sombrero": "Addons/onesie/onesieFestivePajama"
+ },
+ "tom-cloth-romantic-suit": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_suitlove"
+ },
+ "tom-cloth-aloha": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_summer"
+ },
+ "tom-fur-jumpsuit": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_jumpsuit"
+ },
+ "tom-fur-football-uniform": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_soccer"
+ },
+ "tom-cloth-arty": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_artsy"
+ },
+ "tom-fur-bling": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_bling"
+ },
+ "tom-fur-mecha": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_mecha"
+ },
+ "tom-cloth-karate-gi": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_karate"
+ },
+ "tom-fur-suit": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_suit"
+ },
+ "tom-cloth-bad-boy": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_badboy"
+ },
+ "tom-cloth-white-suit": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_suitwhite"
+ },
+ "tom-cloth-pilot-uniform": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_pilot_cn"
+ },
+ "tom-cloth-spacesuit": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_astronaut"
+ },
+ "tom-fur-superhero": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_superhero"
+ },
+ "tom-cloth-aviator": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_oldpilot"
+ },
+ "tom-cloth-explorer": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_adventurer"
+ },
+ "tom-cloth-captain": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_captain"
+ },
+ "tom-cloth-cowboy-outfit": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_cowboy"
+ },
+ "tom-cloth-policeman": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_police"
+ },
+ "tom-cloth-colorsplash": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_colorsplash"
+ },
+ "tom-cloth-yachting-outfit": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_yachting"
+ },
+ "tom-cloth-fireman-uniform": {
+  "tipo": "PrefabClothTextureWithHat",
+  "piel": "tom_body_fireman",
+  "sombrero": "Addons/hatFireman/hatFireman_001"
+ },
+ "tom-cloth-sports-fan-outfit": {
+  "tipo": "PrefabClothTextureWithHat",
+  "piel": "tom_body_soccer02",
+  "sombrero": "Addons/hatSoccer/hatSoccer_001"
+ },
+ "tom-cloth-pirate-outfit": {
+  "tipo": "PrefabClothTextureWithHat",
+  "piel": "tom_body_pirate",
+  "sombrero": "Addons/hatPirate_003/hatPirate_003"
+ },
+ "tom-cloth-golden-dragon": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_emperor"
+ },
+ "tom-cloth-dragonboat": {
+  "tipo": "PrefabTexture",
+  "piel": "tom_body_dragonboat"
+ },
+ "tom-eyes-green": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_default"
+ },
+ "tom-eyes-blue": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_blue"
+ },
+ "tom-eyes-red": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_red"
+ },
+ "tom-eyes-orange": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_orange"
+ },
+ "tom-eyes-brown": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_brown"
+ },
+ "tom-eyes-yellow": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_yellow"
+ },
+ "tom-eyes-silver": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_silver"
+ },
+ "tom-eyes-gold": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_gold"
+ },
+ "tom-eyes-zombie": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_undead"
+ },
+ "tom-eyes-maneki-neko": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_manekineko"
+ },
+ "tom-eyes-alien-green": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_lightgreen"
+ },
+ "tom-eyes-cyber": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_trom"
+ },
+ "tom-eyes-robot": {
+  "tipo": "Texture",
+  "ojos": "tom_eyes_robot"
+ },
+ "tom-headwear-hat-teddybear": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatTeddybear/hatTeddybear_001"
+ },
+ "tom-headwear-hair-afro": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hairAfro/hairAfro_001"
+ },
+ "tom-headwear-hat-santa": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatSanta/hatSanta_001"
+ },
+ "tom-headwear-mohawk-blue": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hairMohawk/hairMohawk_003"
+ },
+ "tom-headwear-mohawk-green": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hairMohawk/hairMohawk_004"
+ },
+ "tom-headwear-mohawk-red": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hairMohawk/hairMohawk_001"
+ },
+ "tom-headwear-mohawk-yellow": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hairMohawk/hairMohawk_002"
+ },
+ "tom-headwear-octopuss-blue": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatOctopus/hatOctopus_002"
+ },
+ "tom-headwear-octopuss-red": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatOctopus/hatOctopus_001"
+ },
+ "tom-headwear-hair-girly-blond": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hairGirl/hairGirl_003"
+ },
+ "tom-headwear-hair-girly-blue": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hairGirl/hairGirl_002"
+ },
+ "tom-headwear-hair-girly-pink": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hairGirl/hairGirl_001"
+ },
+ "tom-headwear-hat-tree": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatChristmasTree/hatChristmasTree_001"
+ },
+ "tom-headwear-head-pumpkin": {
+  "tipo": "Prefab",
+  "adorno": "Addons/headPumpkin/headPumpkin_001"
+ },
+ "tom-headwear-cap-woollen-orange-blue": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatBasic/hatBasic_003"
+ },
+ "tom-headwear-cap-woollen-orange-green": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatBasic/hatBasic_001"
+ },
+ "tom-headwear-cap-woollen-yellow-blue": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatBasic/hatBasic_002"
+ },
+ "tom-headwear-hat-antlers": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatAntlers/hatAntlers_001"
+ },
+ "tom-headwear-ufo": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatUfo/hatUfo_001"
+ },
+ "tom-headwear-helmet-viking": {
+  "tipo": "Prefab",
+  "adorno": "Addons/helmetViking/helmetViking_001"
+ },
+ "tom-headwear-helmet-mecha": {
+  "tipo": "Prefab",
+  "adorno": "Addons/helmetOptimusPrime/helmetOptimusPrime_001"
+ },
+ "tom-headwear-mane-lion": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hairLion/hairLion_001"
+ },
+ "tom-headwear-bag-paper": {
+  "tipo": "Prefab",
+  "adorno": "Addons/paperbag/paperbag_001"
+ },
+ "tom-headwear-crown-royal": {
+  "tipo": "Prefab",
+  "adorno": "Addons/crownImperial/crownImperial_001"
+ },
+ "tom-headwear-bag-paper-funny": {
+  "tipo": "Prefab",
+  "adorno": "Addons/paperbag/paperbag_003"
+ },
+ "tom-headwear-bag-paper-crazy": {
+  "tipo": "Prefab",
+  "adorno": "Addons/paperbag/paperbag_002"
+ },
+ "tom-headwear-hat-cowboy-white": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatCowboy/hatCowboy_002"
+ },
+ "tom-headwear-hat-cowboy-brown": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatCowboy/hatCowboy_001"
+ },
+ "tom-headwear-hair-emo-dark": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hairBieber/hairBieber_001"
+ },
+ "tom-headwear-hair-emo-light": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hairBieber/hairBieber_002"
+ },
+ "tom-headwear-hat-pirate-leather": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatPirate/hatPirate_001"
+ },
+ "tom-headwear-hat-pirate-skull": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatPirate/hatPirate_002"
+ },
+ "tom-headwear-hat-wizard-brown": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatWizard/hatWizard_002"
+ },
+ "tom-headwear-hat-wizard-starry": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatWizard/hatWizard_001"
+ },
+ "tom-headwear-cap-police": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatPolice/hatPolice_001"
+ },
+ "tom-headwear-jester-hat": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatJester/hatJester_001"
+ },
+ "tom-headwear-ninja-blue": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatNinja/hatNinja_001"
+ },
+ "tom-headwear-ninja-red": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatNinja/hatNinja_002"
+ },
+ "tom-headwear-helmet-knight": {
+  "tipo": "Prefab",
+  "adorno": "Addons/helmetKnight/helmetKnight_001"
+ },
+ "tom-headwear-fedora-blue": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatFedora/hatFedora_001"
+ },
+ "tom-headwear-fedora-green": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatFedora/hatFedora_002"
+ },
+ "tom-headwear-helmet-knight-dark": {
+  "tipo": "Prefab",
+  "adorno": "Addons/helmetKnight/helmetKnight_002"
+ },
+ "tom-headwear-fedora-white": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatFedora/hatFedora_003"
+ },
+ "tom-headwear-coil-tesla": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatTesla/hatTesla_001"
+ },
+ "tom-headwear-butterflies": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatButterflies/hatButterflies_001"
+ },
+ "tom-headwear-helmet-dragon": {
+  "tipo": "Prefab",
+  "adorno": "Addons/maskDragon/maskDragon_001"
+ },
+ "tom-headwear-helmet-spacesuit": {
+  "tipo": "Prefab",
+  "adorno": "Addons/helmetAstronaut/helmetAstronaut_001"
+ },
+ "tom-headwear-helmet-veteran": {
+  "tipo": "Prefab",
+  "adorno": "Addons/helmetWar/helmetWar_001"
+ },
+ "tom-headwear-cap-aviator": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatOldPilot/hatOldPilot_001"
+ },
+ "tom-headwear-hat-explorer": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatAdventurer/hatAdventurer_001"
+ },
+ "tom-headwear-cap-captain": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatCaptain/hatCaptain_001"
+ },
+ "tom-headwear-cap-yachting": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatYachting/hatYachting_001"
+ },
+ "tom-headwear-fidget-spinner-hat": {
+  "tipo": "Prefab",
+  "adorno": "Addons/hatSpinner/hatSpinner"
+ },
+ "tom-headwear-hat-dragonboat": {
+  "tipo": "Prefab",
+  "adorno": "Addons/dragonBoat/helmetDragonBoat"
+ },
+ "tom-eyewear-glasses-nerdy": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesNerdy/glassesNerdy_001"
+ },
+ "tom-eyewear-mask-zorro-black": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesZorro/glassesZorro_001"
+ },
+ "tom-eyewear-mask-zorro-red": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesZorro/glassesZorro_002"
+ },
+ "tom-eyewear-sunglasses-heart-blue": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesHeart/glassesHeart_002"
+ },
+ "tom-eyewear-sunglasses-heart-pink": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesHeart/glassesHeart_001"
+ },
+ "tom-eyewear-monocle-royal": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesMonocle/glassesMonocle_001"
+ },
+ "tom-eyewear-sunglasses-blue": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesIbiza/glassesIbiza_001"
+ },
+ "tom-eyewear-sunglasses-yellow": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesIbiza/glassesIbiza_002"
+ },
+ "tom-eyewear-sunglasses-black": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesIbiza/glassesIbiza_003"
+ },
+ "tom-eyewear-glasses-hypnotic": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesPsycho/glassesPsycho_001"
+ },
+ "tom-eyewear-sunglasses-party": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesRayBan/glassesRayBan_004"
+ },
+ "tom-eyewear-sunglasses-pilot": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesRayBan/glassesRayBan_002"
+ },
+ "tom-eyewear-visor-black": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesSciFi/glassesSciFi_002"
+ },
+ "tom-eyewear-visor-blue": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesSciFi/glassesSciFi_001"
+ },
+ "tom-eyewear-sunglasses-policeman": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesPolice/glassesPolice_001"
+ },
+ "tom-eyewear-yachting": {
+  "tipo": "Prefab",
+  "adorno": "Addons/glassesYachting/glassesYachting_001"
+ }
+}

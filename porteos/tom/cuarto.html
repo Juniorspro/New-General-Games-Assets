@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tom: cuarto</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font: 13px system-ui, sans-serif; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #info { position: fixed; left: 8px; top: 8px; background: #fffc; padding: 4px 8px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<canvas id="lienzo"></canvas>
+<div id="info"></div>
+<script type="module">
+import * as THREE from './vendor/three.module.min.js';
+import { Unity } from './unity3.js';
+import { Cuarto, INICIAL, CUARTO_DE } from './casa.js';
+import { Animaciones, Reproductor } from './anim.js';
+import { cargarTom, vestir, Retarget } from './tom.js';
+
+const q = new URLSearchParams(location.search);
+const DATOS = q.get('datos') || 'datos/';
+const cuartoCat = q.get('cuarto') || 'living';          // living | kitchen | bathroom | bedroom
+const lienzo = document.getElementById('lienzo');
+const ren = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true });
+ren.outputColorSpace = THREE.LinearSRGBColorSpace;
+ren.setPixelRatio(Math.min(devicePixelRatio, 2));
+const escena = new THREE.Scene();
+
+const [shaders, indice, bin, pieles, retarget, ropero] = await Promise.all([
+  fetch(DATOS + 'casa/shaders.json').then((r) => r.json()),
+  fetch(DATOS + 'tom/anim.json').then((r) => r.json()),
+  fetch(DATOS + 'tom/anim.bin').then((r) => r.arrayBuffer()),
+  fetch(DATOS + 'tom/pieles.json').then((r) => r.json()),
+  fetch(DATOS + 'tom/retarget.json').then((r) => r.json()),
+  fetch('ropero.json').then((r) => r.json()),
+]);
+const u = new Unity(THREE, shaders, DATOS + 'casa/tex/');
+const cuarto = await new Cuarto(u, DATOS + 'casa/').cargar(CUARTO_DE[cuartoCat]);
+escena.add(cuarto.raiz);
+for (const item of INICIAL[cuartoCat]) await cuarto.poner(item);
+const cam = cuarto.camara(1);
+
+const tam = q.get('tam') || 's';
+const tom = await cargarTom(DATOS + 'tom/', tam);
+vestir(tom, DATOS + 'tom/pieles/', pieles, ropero, { fur: q.get('fur') || 'tom-fur-default', cloth: q.get('cloth') });
+tom.raiz.position.copy(cuarto.corrimientoTom);
+tom.raiz.traverse((o) => { if (o.isMesh) o.renderOrder = 2500; });   // después del cuarto, como CAM_Tom
+escena.add(tom.raiz);
+const anims = new Animaciones(indice, bin);
+const rep = new Reproductor(anims, tom.raiz);
+const rt = new Retarget(tom.raiz, retarget[tam]);
+rep.despues = (c, tn, dt) => rt.aplicar(c, tn, dt);
+rep.play(q.get('clip') || (tam === 's' ? 'breathingS' : 'breathingL'), { bucle: true });
+const fijo = q.has('t') ? parseFloat(q.get('t')) : null;
+if (fijo !== null) rep.update(fijo);
+
+function medir() {
+  const w = innerWidth, h = innerHeight;
+  ren.setSize(w, h, false);
+  cam.aspect = w / h;
+  cam.updateProjectionMatrix();
+}
+addEventListener('resize', medir);
+medir();
+const reloj = new THREE.Clock();
+let t = 0;
+function cuadro() {
+  const dt = Math.min(reloj.getDelta(), 0.1);
+  t += dt;
+  if (fijo === null) rep.update(dt);
+  u.actualizar(t, dt, lienzo.width, lienzo.height, cam);
+  ren.render(escena, cam);
+  requestAnimationFrame(cuadro);
+}
+cuadro();
+window.estado = { escena, cam, cuarto, tom, u };
+window.listo = true;
+</script>
+</body>
+</html>

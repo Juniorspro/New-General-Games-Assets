@@ -1,0 +1,1198 @@
+{
+ "living-chair-homey-red": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_Basic/Chair_Basic_003"
+ },
+ "living-chair-homey-green": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_Basic/Chair_Basic_002"
+ },
+ "living-chair-xmas": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_Christ/Chair_Christ_001"
+ },
+ "living-chair-sporty-bean-bag": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_Sport/Chair_Sport_001"
+ },
+ "living-chair-galactic": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_SciFi/Chair_SciFi_001"
+ },
+ "living-chair-spooky": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_Halloween/Chair_Halloween_001"
+ },
+ "living-chair-cutesy": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_Girly/Chair_Girly_002"
+ },
+ "living-chair-royal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_Imperial/Chair_Imperial_001"
+ },
+ "living-chair-galactic-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_SciFi/Chair_SciFi_002"
+ },
+ "living-chair-spooky-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_Halloween/Chair_Halloween_002"
+ },
+ "living-chair-cutesy-super": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_Girly/Chair_Girly_001"
+ },
+ "living-chair-modern-armchair": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_Design/Chair_Design_001"
+ },
+ "living-chair-homey-summer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Chair/Chair_Summer/Chair_Summer_001"
+ },
+ "living-gadget-homey-orange-tv": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_Basic/Gadget_Basic_003"
+ },
+ "living-gadget-homey-violet-tv": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_Basic/Gadget_Basic_002"
+ },
+ "living-gadget-xmas-tree": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_Christ/Gadget_Christ_001"
+ },
+ "living-gadget-sporty-goal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_Sport/Gadget_Sport_001"
+ },
+ "living-gadget-galactic-armour": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_SciFi/Gadget_SciFi_001"
+ },
+ "living-gadget-spooky-tree": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_Halloween/Gadget_Halloween_001"
+ },
+ "living-gadget-cutesy-dollhouse": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_Girly/Gadget_Girly_002"
+ },
+ "living-gadget-royal-chest": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_Imperial/Gadget_Imperial_001"
+ },
+ "living-gadget-galactic-armour-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_SciFi/Gadget_SciFi_002"
+ },
+ "living-gadget-spooky-tree-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_Halloween/Gadget_Halloween_002"
+ },
+ "living-gadget-cutesy-dollhouse-super": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_Girly/Gadget_Girly_001"
+ },
+ "living-gadget-modern-tv-set": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_Design/Gadget_Design_001"
+ },
+ "living-gadget-summer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Gadget/Gadget_Summer/Gadget_Summer_001"
+ },
+ "living-picture-homey-red-portrait": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_Basic/Picture_Basic_003"
+ },
+ "living-picture-homey-violet-portrait": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_Basic/Picture_Basic_002"
+ },
+ "living-picture-xmas-wreath": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_Christ/Picture_Christ_001"
+ },
+ "living-picture-sporty-frame": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_Sport/Picture_Sport_001"
+ },
+ "living-picture-galactic-poster": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_SciFi/Picture_SciFi_001"
+ },
+ "living-picture-spooky-mural": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_Halloween/Picture_Halloween_001"
+ },
+ "living-picture-cutesy-mirror": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_Girly/Picture_Girly_002"
+ },
+ "living-picture-royal-portrait": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_Imperial/Picture_Imperial_001"
+ },
+ "living-picture-galactic-poster-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_SciFi/Picture_SciFi_002"
+ },
+ "living-picture-spooky-mural-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_Halloween/Picture_Halloween_002"
+ },
+ "living-picture-cutesy-mirror-super": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_Girly/Picture_Girly_001"
+ },
+ "living-picture-modern-shelves": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_Design/Picture_Design_001"
+ },
+ "living-picture-summer-portrait": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Picture/Picture_Summer/Picture_Summer_001"
+ },
+ "living-carpet-homey-green": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_Basic/Rug_Basic_003"
+ },
+ "living-carpet-homey-violet": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_Basic/Rug_Basic_002"
+ },
+ "living-carpet-xmas": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_Christ/Rug_Christ_001"
+ },
+ "living-carpet-sporty-soccer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_Sport/Rug_Sport_001"
+ },
+ "living-carpet-galactic": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_SciFi/Rug_SciFi_002"
+ },
+ "living-carpet-scary": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_Halloween/Rug_Halloween_001"
+ },
+ "living-carpet-cutesy": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_Girly/Rug_Girly_002"
+ },
+ "living-carpet-royal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_Imperial/Rug_Imperial_001"
+ },
+ "living-carpet-galactic-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_SciFi/Rug_SciFi_001"
+ },
+ "living-carpet-scary-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_Halloween/Rug_Halloween_002"
+ },
+ "living-carpet-cutesy-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_Girly/Rug_Girly_001"
+ },
+ "living-carpet-modern": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_Design/Rug_Design_001"
+ },
+ "living-carpet-summer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Livingroom/Elements/Rug/Rug_Summer/Rug_Summer_001"
+ },
+ "living-wall-homey-diamond": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_basic_003_TEX"
+ },
+ "living-wall-homey-stripes": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_basic_002_TEX"
+ },
+ "living-wall-xmas": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_christmas_001_TEX"
+ },
+ "living-wall-sporty-blue": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_sport_001_TEX"
+ },
+ "living-wall-galactic-tiles": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_scifi_001_TEX"
+ },
+ "living-wall-spooky-curves": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_haloween_001_TEX"
+ },
+ "living-wall-cutesy-hearts": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_girly_001_TEX"
+ },
+ "living-wall-royal": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_imperial_001_TEX"
+ },
+ "living-wall-galactic-smooth": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_scifi_002_TEX"
+ },
+ "living-wall-spooky-skulls": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_haloween_002_TEX"
+ },
+ "living-wall-cutesy-flowers": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_girly_002_TEX"
+ },
+ "living-wall-modern": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_designer_001_TEX"
+ },
+ "living-wall-summer": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_summer_001_TEX"
+ },
+ "living-wall-blue-squares": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_001_TEX"
+ },
+ "living-wall-blue-skies": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_004_TEX"
+ },
+ "living-wall-turquoise": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_007_TEX"
+ },
+ "living-wall-spots": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_005_TEX"
+ },
+ "living-wall-hearts": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_005a_TEX"
+ },
+ "living-wall-bamboo": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_009_TEX"
+ },
+ "living-wall-firefly": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_012_TEX"
+ },
+ "living-wall-tropic": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_011_TEX"
+ },
+ "living-wall-brick": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_008_TEX"
+ },
+ "living-wall-sunny": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_002_TEX"
+ },
+ "living-floor-homey-square": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_basic_003_TEX"
+ },
+ "living-floor-homey-tiled": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_basic_002_TEX"
+ },
+ "living-floor-xmas": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_christmas_001_TEX"
+ },
+ "living-floor-sporty-grass": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_sport_001_TEX"
+ },
+ "living-floor-galactic-yellow": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_scifi_001_TEX"
+ },
+ "living-floor-spooky-rocky": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_haloween_001_TEX"
+ },
+ "living-floor-cutesy-wooden": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_girly_002_TEX"
+ },
+ "living-floor-royal-hardwood": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_imperial_001_TEX"
+ },
+ "living-floor-galactic-blue": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_scifi_002_TEX"
+ },
+ "living-floor-spooky-rotten": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_haloween_002_TEX"
+ },
+ "living-floor-cutesy-diamond": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_girly_001_TEX"
+ },
+ "living-floor-modern-hardwood": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_designer_001_TEX"
+ },
+ "living-floor-summer": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Floor/FLOOR_summer_001_TEX"
+ },
+ "kitchen-fridge-homey-orange": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_Basic/Fridge_Basic_003"
+ },
+ "kitchen-fridge-homey-green": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_Basic/Fridge_Basic_002"
+ },
+ "kitchen-fridge-xmas": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_Christ/Fridge_Christ_001"
+ },
+ "kitchen-fridge-sporty": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_Sport/Fridge_Sport_001"
+ },
+ "kitchen-fridge-galactic": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_SciFi/Fridge_SciFi_001"
+ },
+ "kitchen-fridge-spooky": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_Halloween/Fridge_Halloween_001"
+ },
+ "kitchen-fridge-cutesy": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_Girly/Fridge_Girly_002"
+ },
+ "kitchen-fridge-royal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_Imperial/Fridge_Imperial_001"
+ },
+ "kitchen-fridge-galactic-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_SciFi/Fridge_SciFi_002"
+ },
+ "kitchen-fridge-spooky-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_Halloween/Fridge_Halloween_002"
+ },
+ "kitchen-fridge-cutesy-super": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_Girly/Fridge_Girly_001"
+ },
+ "kitchen-fridge-modern": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_Design/Fridge_Design_001"
+ },
+ "kitchen-fridge-summer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Fridge/Fridge_Summer/Fridge_Summer_001"
+ },
+ "kitchen-table-homey-orange": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_basic_003_TEX"
+ },
+ "kitchen-table-homey-green": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_basic_002_TEX"
+ },
+ "kitchen-table-xmas": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_christmas_002_TEX"
+ },
+ "kitchen-table-sporty-30-yard": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_sport_001_TEX"
+ },
+ "kitchen-table-galactic": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_scifi_001_TEX"
+ },
+ "kitchen-table-spooky": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_haloween_001_TEX"
+ },
+ "kitchen-table-cutesy": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_girly_002_TEX"
+ },
+ "kitchen-table-royal": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_imperial_001_TEX"
+ },
+ "kitchen-table-galactic-premium": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_scifi_002_TEX"
+ },
+ "kitchen-table-spooky-extra": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_haloween_002_TEX"
+ },
+ "kitchen-table-cutesy-super": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_girly_001_TEX"
+ },
+ "kitchen-table-modern": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_designer_001_TEX"
+ },
+ "kitchen-table-summer": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Kitchen/Elements/Table/CLOTH_summer_001_TEX"
+ },
+ "kitchen-window-homey-orange": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_Basic/Window_Basic_003"
+ },
+ "kitchen-window-homey-violet": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_Basic/Window_Basic_002"
+ },
+ "kitchen-window-xmas": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_Christ/Window_Christ_001"
+ },
+ "kitchen-window-sporty-stadium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_Sport/Window_Sport_001"
+ },
+ "kitchen-window-galactic": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_SciFi/Window_SciFi_001"
+ },
+ "kitchen-window-spooky": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_Halloween/Window_Halloween_001"
+ },
+ "kitchen-window-cutesy": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_Girly/Window_Girly_002"
+ },
+ "kitchen-window-royal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_Imperial/Window_Imperial_001"
+ },
+ "kitchen-window-galactic-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_SciFi/Window_SciFi_002"
+ },
+ "kitchen-window-spooky-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_Halloween/Window_Halloween_002"
+ },
+ "kitchen-window-cutesy-super": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_Girly/Window_Girly_001"
+ },
+ "kitchen-window-modern": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_Design/Window_Design_001"
+ },
+ "kitchen-window-summer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Kitchen/Elements/Window/Window_Summer/Window_Summer_001"
+ },
+ "kitchen-wall-homey-diamond": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_basic_003_TEX"
+ },
+ "kitchen-wall-homey-stripes": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_basic_002_TEX"
+ },
+ "kitchen-wall-xmas": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_christmas_001_TEX"
+ },
+ "kitchen-wall-sporty-blue": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_sport_001_TEX"
+ },
+ "kitchen-wall-galactic-tiles": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_scifi_001_TEX"
+ },
+ "kitchen-wall-spooky-curves": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_haloween_001_TEX"
+ },
+ "kitchen-wall-cutesy-hearts": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_girly_001_TEX"
+ },
+ "kitchen-wall-royal": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_imperial_001_TEX"
+ },
+ "kitchen-wall-galactic-smooth": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_scifi_002_TEX"
+ },
+ "kitchen-wall-spooky-skulls": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_haloween_002_TEX"
+ },
+ "kitchen-wall-cutesy-flowers": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_girly_002_TEX"
+ },
+ "kitchen-wall-modern": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_designer_001_TEX"
+ },
+ "kitchen-wall-summer": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_summer_001_TEX"
+ },
+ "kitchen-wall-blue-squares": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_001_TEX"
+ },
+ "kitchen-wall-blue-skies": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_004_TEX"
+ },
+ "kitchen-wall-turquoise": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_007_TEX"
+ },
+ "kitchen-wall-spots": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_005_TEX"
+ },
+ "kitchen-wall-hearts": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_005a_TEX"
+ },
+ "kitchen-wall-bamboo": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_009_TEX"
+ },
+ "kitchen-wall-firefly": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_012_TEX"
+ },
+ "kitchen-wall-tropic": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_011_TEX"
+ },
+ "kitchen-wall-brick": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_008_TEX"
+ },
+ "kitchen-wall-sunny": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_002_TEX"
+ },
+ "bathroom-toilet-homey-green": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_Basic/WC_Basic_003"
+ },
+ "bathroom-toilet-homey-red": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_Basic/WC_Basic_002"
+ },
+ "bathroom-toilet-xmas": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_Christ/WC_Christ_001"
+ },
+ "bathroom-toilet-sporty-poop-a-hoop": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_Sport/WC_Sport_001"
+ },
+ "bathroom-toilet-galactic": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_SciFi/WC_SciFi_001"
+ },
+ "bathroom-toilet-spooky": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_Halloween/WC_Halloween_001"
+ },
+ "bathroom-toilet-cutesy": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_Girly/WC_Girly_002"
+ },
+ "bathroom-toilet-royal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_Imperial/WC_Imperial_001"
+ },
+ "bathroom-toilet-galactic-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_SciFi/WC_SciFi_002"
+ },
+ "bathroom-toilet-spooky-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_Halloween/WC_Halloween_002"
+ },
+ "bathroom-toilet-cutesy-super": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_Girly/WC_Girly_001"
+ },
+ "bathroom-toilet-modern": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_Design/WC_Design_001"
+ },
+ "bathroom-toilet-summer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/WC/WC_Summer/WC_Summer_001"
+ },
+ "bathroom-door-homey-green": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_Basic/Doors_Basic_003"
+ },
+ "bathroom-door-homey-red": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_Basic/Doors_Basic_002"
+ },
+ "bathroom-door-xmas": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_Christ/Doors_Christ_001"
+ },
+ "bathroom-door-sporty-scoreboard": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_Sport/Doors_Sport_001"
+ },
+ "bathroom-door-galactic": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_SciFi/Doors_SciFi_001"
+ },
+ "bathroom-door-spooky": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_Halloween/Doors_Halloween_001"
+ },
+ "bathroom-door-cutesy": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_Girly/Doors_Girly_002"
+ },
+ "bathroom-door-royal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_Imperial/Doors_Imperial_001"
+ },
+ "bathroom-door-galactic-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_SciFi/Doors_SciFi_002"
+ },
+ "bathroom-door-spooky-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_Halloween/Doors_Halloween_002"
+ },
+ "bathroom-door-cutesy-super": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_Girly/Doors_Girly_001"
+ },
+ "bathroom-door-modern": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_Design/Doors_Design_001"
+ },
+ "bathroom-door-summer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/Doors/Doors_Summer/Doors_Summer_001"
+ },
+ "bathroom-carpet-homey-violet": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_Basic/ToiletRug_Basic_003"
+ },
+ "bathroom-carpet-homey-red": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_Basic/ToiletRug_Basic_002"
+ },
+ "bathroom-carpet-xmas": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_Christ/ToiletRug_Christ_001"
+ },
+ "bathroom-carpet-sporty-basketball": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_Sport/ToiletRug_Sport_001"
+ },
+ "bathroom-carpet-galactic": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_SciFi/ToiletRug_SciFi_001"
+ },
+ "bathroom-carpet-spooky": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_Halloween/ToiletRug_Halloween_001"
+ },
+ "bathroom-carpet-cutesy": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_Girly/ToiletRug_Girly_002"
+ },
+ "bathroom-carpet-royal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_Imperial/ToiletRug_Imperial_001"
+ },
+ "bathroom-carpet-galactic-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_SciFi/ToiletRug_SciFi_002"
+ },
+ "bathroom-carpet-spooky-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_Halloween/ToiletRug_Halloween_002"
+ },
+ "bathroom-carpet-cutesy-super": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_Girly/ToiletRug_Girly_001"
+ },
+ "bathroom-carpet-modern": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_Design/ToiletRug_Design_001"
+ },
+ "bathroom-carpet-summer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Toilet/Elements/ToiletRug/ToiletRug_Summer/ToiletRug_Summer_001"
+ },
+ "bathroom-tiles-homey-green": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_basic_003_TEX"
+ },
+ "bathroom-tiles-homey-orange": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_basic_002_TEX"
+ },
+ "bathroom-tiles-xmas": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_christmas_001_TEX"
+ },
+ "bathroom-tiles-sporty-basketball": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_sport_001_TEX"
+ },
+ "bathroom-tiles-galactic": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_scifi_001_TEX"
+ },
+ "bathroom-tiles-spooky": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_haloween_002_TEX"
+ },
+ "bathroom-tiles-cutesy": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_girly_002_TEX"
+ },
+ "bathroom-tiles-royal": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_imperial_001_TEX"
+ },
+ "bathroom-tiles-galactic-premium": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_scifi_002_TEX"
+ },
+ "bathroom-tiles-spooky-extra": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_haloween_001_TEX"
+ },
+ "bathroom-tiles-cutesy-super": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_girly_001_TEX"
+ },
+ "bathroom-tiles-modern": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_designer_001_TEX"
+ },
+ "bathroom-tiles-summer": {
+  "tipo": "Texture",
+  "recurso": "Rooms/Toilet/Elements/Tiles/TILES_summer_001_TEX"
+ },
+ "bathroom-wall-homey-stripes": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_basic_003_TEX"
+ },
+ "bathroom-wall-homey-diamond": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_basic_001_TEX"
+ },
+ "bathroom-wall-xmas": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_christmas_001_TEX"
+ },
+ "bathroom-wall-sporty-blue": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_sport_001_TEX"
+ },
+ "bathroom-wall-galactic-tiles": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_scifi_001_TEX"
+ },
+ "bathroom-wall-spooky-curves": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_haloween_001_TEX"
+ },
+ "bathroom-wall-cutesy-hearts": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_girly_001_TEX"
+ },
+ "bathroom-wall-royal": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_imperial_001_TEX"
+ },
+ "bathroom-wall-galactic-smooth": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_scifi_002_TEX"
+ },
+ "bathroom-wall-spooky-skulls": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_haloween_002_TEX"
+ },
+ "bathroom-wall-cutesy-flowers": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_girly_002_TEX"
+ },
+ "bathroom-wall-modern": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_designer_001_TEX"
+ },
+ "bathroom-wall-summer": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_summer_001_TEX"
+ },
+ "bathroom-wall-blue-squares": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_001_TEX"
+ },
+ "bathroom-wall-blue-skies": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_004_TEX"
+ },
+ "bathroom-wall-turquoise": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_007_TEX"
+ },
+ "bathroom-wall-spots": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_005_TEX"
+ },
+ "bathroom-wall-hearts": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_005a_TEX"
+ },
+ "bathroom-wall-bamboo": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_009_TEX"
+ },
+ "bathroom-wall-firefly": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_012_TEX"
+ },
+ "bathroom-wall-tropic": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_011_TEX"
+ },
+ "bathroom-wall-brick": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_008_TEX"
+ },
+ "bathroom-wall-sunny": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_002_TEX"
+ },
+ "bedroom-bed-homey-orange": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_Basic/BedFrame_Basic_003"
+ },
+ "bedroom-bed-homey-green": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_Basic/BedFrame_Basic_002"
+ },
+ "bedroom-bed-xmas": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_Christ/BedFrame_Christ_001"
+ },
+ "bedroom-bed-sporty-race-car": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_Sport/BedFrame_Sport_001"
+ },
+ "bedroom-bed-galactic": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_SciFi/BedFrame_SciFi_001"
+ },
+ "bedroom-bed-spooky": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_Halloween/BedFrame_Halloween_001"
+ },
+ "bedroom-bed-cutesy": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_Girly/BedFrame_Girly_002"
+ },
+ "bedroom-bed-royal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_Imperial/BedFrame_Imperial_001"
+ },
+ "bedroom-bed-galactic-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_SciFi/BedFrame_SciFi_002"
+ },
+ "bedroom-bed-spooky-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_Halloween/BedFrame_Halloween_002"
+ },
+ "bedroom-bed-cutesy-super": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_Girly/BedFrame_Girly_001"
+ },
+ "bedroom-bed-modern": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_Design/BedFrame_Design_001"
+ },
+ "bedroom-bed-summer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/BedFrame/BedFrame_Summer/BedFrame_Summer_001"
+ },
+ "bedroom-bedding-homey-orange": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_Basic_003"
+ },
+ "bedroom-bedding-homey-green": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_Basic_002"
+ },
+ "bedroom-bedding-xmas": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_Christ_001"
+ },
+ "bedroom-bedding-sporty-chequered": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_Sport_001"
+ },
+ "bedroom-bedding-galactic": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_SciFi_001"
+ },
+ "bedroom-bedding-spooky": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_Halloween_001"
+ },
+ "bedroom-bedding-cutesy": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_Girly_002"
+ },
+ "bedroom-bedding-royal": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_Imperial_001"
+ },
+ "bedroom-bedding-galactic-premium": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_SciFi_002"
+ },
+ "bedroom-bedding-spooky-extra": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_Halloween_002"
+ },
+ "bedroom-bedding-cutesy-super": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_Girly_001"
+ },
+ "bedroom-bedding-modern": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_Design_001"
+ },
+ "bedroom-bedding-summer": {
+  "tipo": "PrefabTexture",
+  "recurso": "Rooms/Bedroom/Bedspread/Bedspread_Summer_001"
+ },
+ "bedroom-lamp-homey-spotty": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_Basic/Lamp_Basic_003"
+ },
+ "bedroom-lamp-homey-minimal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_Basic/Lamp_Basic_001"
+ },
+ "bedroom-lamp-xmas": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_Christ/Lamp_Christ_001"
+ },
+ "bedroom-lamp-sporty-championship": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_Sport/Lamp_Sport_001"
+ },
+ "bedroom-lamp-spooky": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_Halloween/Lamp_Halloween_001"
+ },
+ "bedroom-lamp-cutesy": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_Girly/Lamp_Girly_002"
+ },
+ "bedroom-lamp-royal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_Imperial/Lamp_Imperial_001"
+ },
+ "bedroom-lamp-galactic-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_SciFi/Lamp_SciFi_002"
+ },
+ "bedroom-lamp-spooky-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_Halloween/Lamp_Halloween_002"
+ },
+ "bedroom-lamp-cutesy-super": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_Girly/Lamp_Girly_001"
+ },
+ "bedroom-lamp-modern": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_Design/Lamp_Design_001"
+ },
+ "bedroom-lamp-summer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Lamp/Lamp_Summer/Lamp_Summer_001"
+ },
+ "bedroom-picture-homey-violet": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_Basic/Picture_Basic_003"
+ },
+ "bedroom-picture-homey-green": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_Basic/Picture_Basic_002"
+ },
+ "bedroom-picture-xmas": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_Christ/Picture_Christ_001"
+ },
+ "bedroom-picture-sporty-trophy-stand": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_Sport/Picture_Sport_001"
+ },
+ "bedroom-picture-galactic": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_SciFi/Picture_SciFi_001"
+ },
+ "bedroom-picture-spooky": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_Halloween/Picture_Halloween_001"
+ },
+ "bedroom-picture-cutesy": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_Girly/Picture_Girly_002"
+ },
+ "bedroom-picture-royal": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_Imperial/Picture_Imperial_001"
+ },
+ "bedroom-picture-galactic-premium": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_SciFi/Picture_SciFi_002"
+ },
+ "bedroom-picture-spooky-extra": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_Halloween/Picture_Halloween_002"
+ },
+ "bedroom-picture-cutesy-super": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_Girly/Picture_Girly_001"
+ },
+ "bedroom-picture-modern-art": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_Design/Picture_Design_001"
+ },
+ "bedroom-picture-summer": {
+  "tipo": "Prefab",
+  "recurso": "Rooms/Bedroom/Elements/Picture/Picture_Summer/Picture_Summer_002"
+ },
+ "bedroom-wall-homey-diamond": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_basic_003_TEX"
+ },
+ "bedroom-wall-homey-stripes": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_basic_002_TEX"
+ },
+ "bedroom-wall-xmas": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_christmas_001_TEX"
+ },
+ "bedroom-wall-sporty-blue": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_sport_001_TEX"
+ },
+ "bedroom-wall-galactic-tiles": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_scifi_001_TEX"
+ },
+ "bedroom-wall-spooky-curves": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_haloween_001_TEX"
+ },
+ "bedroom-wall-cutesy-hearts": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_girly_001_TEX"
+ },
+ "bedroom-wall-royal": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_imperial_001_TEX"
+ },
+ "bedroom-wall-galactic-smooth": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_scifi_002_TEX"
+ },
+ "bedroom-wall-spooky-skulls": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_haloween_002_TEX"
+ },
+ "bedroom-wall-cutesy-flowers": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_girly_002_TEX"
+ },
+ "bedroom-wall-modern": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_designer_001_TEX"
+ },
+ "bedroom-wall-summer": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_summer_001_TEX"
+ },
+ "bedroom-wall-blue-squares": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_001_TEX"
+ },
+ "bedroom-wall-blue-skies": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_004_TEX"
+ },
+ "bedroom-wall-turquoise": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_007_TEX"
+ },
+ "bedroom-wall-spots": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_005_TEX"
+ },
+ "bedroom-wall-hearts": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_005a_TEX"
+ },
+ "bedroom-wall-bamboo": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_009_TEX"
+ },
+ "bedroom-wall-firefly": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_012_TEX"
+ },
+ "bedroom-wall-tropic": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_011_TEX"
+ },
+ "bedroom-wall-brick": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_008_TEX"
+ },
+ "bedroom-wall-sunny": {
+  "tipo": "Texture",
+  "recurso": "Rooms/AllRoomItems/Wallpaper/WALL_new_002_TEX"
+ }
+}
