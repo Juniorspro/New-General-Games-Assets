@@ -24,6 +24,8 @@ Si algo falla, corta sin subir el juego.
 El token necesita "Cloudflare Pages: Edit" en la cuenta. wrangler: npm install wrangler@4.
 """
 import argparse
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -47,6 +49,8 @@ ALFABETO = "23456789abcdefghjkmnpqrstuvwxyz"
 NO_SUBIR = {"abrir.html", "COMO-SUBIRLO.txt", "_headers", "_worker.js", "_routes.json"}
 # lo mismo que LIBRES en _worker.js
 LIBRES = ["/sw.js", "/manifest.webmanifest", "/icono-192.png", "/icono-512.png"]
+# la sesión en la ruta, como la da el worker a la puerta en un cuadro (SESION en _worker.js)
+SESION_RE = r"/__s/\d{1,12}\.[0-9a-f]{64}/"
 RUTAS = {"version": 1, "include": ["/*"], "exclude": []}   # todo pasa por el worker
 COMPATIBILIDAD = "2026-09-01"
 ESPERA = 300   # segundos que puede tardar una subida en verse en la dirección del proyecto
@@ -116,10 +120,12 @@ class _SinSeguir(urllib.request.HTTPRedirectHandler):
 _abridor = urllib.request.build_opener(_SinSeguir)
 
 
-def pedir(url, metodo="GET", cookie=None, formulario=None):
+def pedir(url, metodo="GET", cookie=None, formulario=None, aceptar=None):
     cab = {"User-Agent": "porteo-subir/1", "Cache-Control": "no-cache"}
     if cookie:
         cab["Cookie"] = cookie
+    if aceptar:
+        cab["Accept"] = aceptar
     cuerpo = None
     if formulario is not None:
         cuerpo = urllib.parse.urlencode(formulario).encode()
@@ -137,12 +143,12 @@ def pedir(url, metodo="GET", cookie=None, formulario=None):
             time.sleep(2 ** intento)
 
 
-def pedir_firme(url, metodo="GET", cookie=None, formulario=None):
+def pedir_firme(url, metodo="GET", cookie=None, formulario=None, aceptar=None):
     """pedir, pero con paciencia para lo que no es una respuesta de la subida: recién subida, algún
     nodo de Cloudflare todavía no la tiene y contesta 404 o 5xx unos segundos. Nada de eso deja ver
     el juego (eso sería un 200), así que se reintenta; si sigue, queda la última respuesta."""
     for intento in range(6):
-        e, cab, cuerpo = pedir(url, metodo, cookie, formulario)
+        e, cab, cuerpo = pedir(url, metodo, cookie, formulario, aceptar)
         if e not in (0, 404) and e < 500:
             break
         time.sleep(3)
@@ -158,6 +164,33 @@ def entrar(base, clave):
     e, cab, _ = pedir_firme(base + "/__entrar", "POST", formulario={"clave": legible(clave).upper()})
     m = re.match(r"(porteo=\d+\.[0-9a-f]{64})", cab.get("Set-Cookie", "") if e == 303 else "")
     return (m.group(1), cab.get("Set-Cookie", "")) if m else (None, "")
+
+
+def entrar_en_ruta(base, clave, formulario=False):
+    """Como entra la puerta adentro de un cuadro: la sesión en la ruta ("/__s/<vence>.<firma>"), sin
+    cookie. Con formulario=True, como el formulario de reserva (redirección en vez de JSON)."""
+    datos = {"clave": legible(clave).upper(), "ruta": "1"}
+    if formulario:
+        e, cab, _ = pedir_firme(base + "/__entrar", "POST", formulario=datos)
+        ruta = cab.get("Location", "") if e == 303 else ""
+    else:
+        e, cab, cuerpo = pedir_firme(base + "/__entrar", "POST", formulario=datos, aceptar="application/json")
+        try:
+            ruta = json.loads(cuerpo).get("ruta", "") if e == 200 else ""
+        except ValueError:
+            ruta = ""
+    return (ruta[:-1], cab) if re.fullmatch(SESION_RE, ruta) else (None, cab)
+
+
+def firma(clave, vence):
+    """La de la sesión, como la hace el worker: para probar una vencida con la firma buena."""
+    return hmac.new(clave.encode(), f"sesion|{vence}".encode(), hashlib.sha256).hexdigest()
+
+
+def enmarcable(cab):
+    """Que la respuesta se pueda mostrar en un cuadro (Rezona, los visores de HTML del teléfono)."""
+    csp = cab.get("Content-Security-Policy", "") or ""
+    return not cab.get("X-Frame-Options") and "frame-ancestors" not in csp
 
 
 def disfrazadas(ruta):
@@ -222,9 +255,51 @@ def verificar(base, clave, privados, libres=()):
         e, _, _ = pedir_firme(base + ruta)
         if e != 200:
             fallas.append(f"sin clave, {ruta} (libre) dio {e}")
+    # 7. adentro de un cuadro: la sesión en la ruta. Sin una firma buena y vigente, sólo la puerta
+    vence = int(time.time()) + 3600
+    for falsa in (f"/__s/{vence}.{'0' * 64}", f"/__s/1.{'a' * 64}", "/__s/x", "/__s",
+                  f"/__s/{int(time.time()) - 60}.{firma(clave, int(time.time()) - 60)}"):
+        for v in (falsa + una, falsa + "/"):
+            e, cab, cuerpo = pedir_firme(base + v)
+            if not es_puerta(e, cuerpo):
+                fallas.append(f"con la ruta inventada o vencida {v[:30]}… dio {e}")
+    e, cab, cuerpo = pedir_firme(base + "/__entrar", "POST", formulario={"clave": "no-es-esta", "ruta": "1"},
+                                 aceptar="application/json")
+    if e != 401 or b"/__s/" in cuerpo or cab.get("Set-Cookie"):
+        fallas.append(f"con una clave mala, en un cuadro dio {e}")
+    prefijo, _ = entrar_en_ruta(base, clave)
+    reserva, _ = entrar_en_ruta(base, clave, formulario=True)
+    if not prefijo or not reserva:
+        fallas.append("con la clave buena, en un cuadro no dio la ruta" + ("" if prefijo else " (JSON)") + ("" if reserva else " (formulario)"))
+    else:
+        for ruta, contenido in privados.items():
+            e, cab, cuerpo = pedir_firme(base + prefijo + ruta)
+            if contenido is None:
+                if e in (0, 401) or e >= 500:
+                    fallas.append(f"en un cuadro, {ruta} dio {e}")
+                elif 300 <= e < 400 and not cab.get("Location", "").startswith(prefijo + "/"):
+                    fallas.append(f"en un cuadro, {ruta} redirige fuera de la sesión: {cab.get('Location')}")
+            elif e != 200 or cuerpo != contenido:
+                fallas.append(f"en un cuadro, {ruta} dio {e} ({len(cuerpo)} bytes, esperaba {len(contenido)})")
+            elif not enmarcable(cab):
+                fallas.append(f"en un cuadro, {ruta} no se deja mostrar en un cuadro")
+        adulterada = prefijo[:-1] + ("1" if prefijo[-1] == "0" else "0")
+        e, _, cuerpo = pedir_firme(base + adulterada + una)
+        if not es_puerta(e, cuerpo):
+            fallas.append(f"con la ruta adulterada dio {e}")
+        e, cab, _ = pedir_firme(base + prefijo)
+        if e != 308 or cab.get("Location") != prefijo + "/":
+            fallas.append(f"la ruta de la sesión sin la barra dio {e} → {cab.get('Location')}")
+        for ruta in libres:
+            e, _, _ = pedir_firme(base + prefijo + ruta)
+            if e != 200:
+                fallas.append(f"en un cuadro, {ruta} (libre) dio {e}")
+    e, cab, _ = pedir_firme(base + una)
+    if not enmarcable(cab):
+        fallas.append("la puerta no se deja mostrar en un cuadro (X-Frame-Options o frame-ancestors)")
     if fallas:
         morir(f"la puerta de {base} no está bien:\n  " + "\n  ".join(fallas))
-    log(f"{base}: sin clave no sale nada; con la clave sí ({len(privados)} rutas)")
+    log(f"{base}: sin clave no sale nada; con la clave sí, también en un cuadro ({len(privados)} rutas)")
     return cookie
 
 

@@ -21,6 +21,8 @@
   button { margin-top: 14px; padding: 12px 20px; border: 0; border-radius: 10px; background: var(--acento); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
   a { color: var(--acento); }
   [hidden] { display: none !important; }
+  /* adentro de otra página: el juego ocupa todo */
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
 </style>
 </head>
 <body>
@@ -34,6 +36,7 @@
     <button type="submit">Guardar y abrir</button>
   </form>
   <p id="cambiar" hidden><a href="#cambiar">Cambiar la dirección</a></p>
+  <p id="afuera" hidden>Esta página no deja abrir el juego adentro. <a id="jugar" href="#" target="_blank" rel="noopener">Abrirlo aparte</a></p>
 </main>
 <script>
   // si la dirección se pone acá, abre directo en cualquier navegador (para el dueño, con la clave:
@@ -50,7 +53,30 @@
     let u = base.replace(/index\.html?$/i, '');
     if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
     if (!u.endsWith('/')) u += '/';
-    location.replace(u + (resto.length ? '#' + resto.join('#') : ''));
+    const destino = u + (resto.length ? '#' + resto.join('#') : '');
+    if (window.top === window) { location.replace(destino); return; }
+    // adentro de otra página (Rezona, los visores de HTML del teléfono muestran el archivo en un
+    // cuadro): el juego en un cuadro propio que ocupa todo, como hace el de Half-Life. Ir con
+    // location.replace llevaba el cuadro de la plataforma al juego, y ahí algunas no dejan; la puerta
+    // de Cloudflare entra igual en un cuadro (la sesión va en la dirección). Si la plataforma no deja
+    // abrir otros sitios adentro, el enlace para abrirlo aparte
+    const jugar = document.getElementById('jugar');
+    jugar.href = destino;
+    jugar.addEventListener('click', (ev) => {
+      try { window.top.location.href = destino; ev.preventDefault(); } catch (e) { /* queda el enlace: pestaña nueva */ }
+    });
+    document.addEventListener('securitypolicyviolation', (ev) => {
+      if (/^(frame|child)-src/.test(ev.effectiveDirective || ev.violatedDirective || '')) {
+        document.querySelectorAll('iframe').forEach((f) => f.remove());
+        document.getElementById('afuera').hidden = false;
+      }
+    });
+    const f = document.createElement('iframe');
+    f.allow = 'fullscreen; autoplay; screen-wake-lock; gamepad; accelerometer; gyroscope';
+    f.setAttribute('allowfullscreen', '');
+    f.addEventListener('load', () => { try { f.focus(); } catch (e) { /* sin foco */ } });
+    f.src = destino;
+    document.body.appendChild(f);
   }
   function pedir() {
     document.getElementById('abriendo').hidden = true;

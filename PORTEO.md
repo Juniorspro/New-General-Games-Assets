@@ -422,6 +422,12 @@ lanzador**: `abrir.html` de `empaquetar.py --sitio` con `FIJA` = la dirección y
 unos KB, se abre con un toque y entra directo). **Sin APK** salvo que lo pida. Ese archivo lleva la
 clave: se le manda a él y **nunca va al repo**. Lo de abajo queda para cuando pida otra cosa.
 
+El dueño pone ese HTML en **Rezona**, que lo muestra en un cuadro: ahí el lanzador abre el juego en
+un cuadro propio que ocupa todo (como el de Half-Life), y la puerta de Cloudflare entra igual (la
+sesión va en la dirección, ver `herramientas/porteo/cloudflare/LEEME.md`). Se prueba así: una página
+de otro sitio con el lanzador en un `<iframe>` (también con `sandbox` sin `allow-same-origin`) tiene
+que llegar al menú.
+
 Al terminar cada porteo se entrega, **como archivos** (no sólo una ruta):
 
 1. **HTML5** — carpeta lista para subir, pasada por **`pwa.py`**

@@ -26,6 +26,13 @@ python3 subir.py CARPETA --proyecto NOMBRE --clave ~/claves/NOMBRE.txt --verific
   cookies inventadas o adulteradas; después de subirlo, lo mismo con la página y bloques reales.
 - Pasan sin clave sólo `sw.js`, el manifest y los íconos (el navegador los puede pedir sin cookies
   para instalar la app; no tienen nada del juego).
+- **Adentro de otra página** (Rezona y los visores de HTML del teléfono muestran el archivo en un
+  cuadro; el lanzador abre ahí el juego en un cuadro propio) la cookie no sirve: no viaja a un
+  cuadro de otro sitio, y el WebView de Android ni la guarda. Ahí la puerta entra con un `fetch` y
+  la sesión va en la ruta, `/__s/<vence>.<firma>/` (la misma firma que la cookie): como todo lo de la
+  página es relativo, cuelga solo de esa ruta. Por eso la puerta no manda `X-Frame-Options` (con eso
+  Rezona mostraba `ERR_BLOCKED_BY_RESPONSE`): sin la clave, en un cuadro también se ve sólo la
+  puerta. `subir.py` verifica también esto (rutas inventadas, vencidas o adulteradas no entran).
 
 ## Descargas (el APK, el HTML único)
 

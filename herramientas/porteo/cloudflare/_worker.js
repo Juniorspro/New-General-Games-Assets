@@ -10,9 +10,17 @@
 //
 // Pasan sin clave sólo el service worker, el manifest y los íconos: para instalar la app el
 // navegador los puede pedir sin cookies, y no tienen nada del juego.
+//
+// Adentro de otra página (Rezona y los visores de HTML muestran el archivo en un cuadro, y el
+// lanzador abre el juego en un cuadro propio) la cookie no sirve: los navegadores no mandan una
+// SameSite=Lax a un cuadro de otro sitio, y el WebView de Android ni guarda cookies de terceros. Ahí
+// la sesión va en la ruta, /__s/<vence>.<firma>/… (la misma firma que la cookie): las direcciones de
+// la página son relativas, así que todo lo que pide cuelga solo de esa ruta. Por eso tampoco va
+// X-Frame-Options: sin la clave, en un cuadro también se ve sólo la puerta.
 const COOKIE = 'porteo';
 const DURA = 365 * 24 * 3600;   // un año: instalada, la app arranca sin red y no vuelve a pedir la clave
 const ENTRAR = '/__entrar';
+const SESION = '/__s/';
 // lo que cuenta la página (qué teléfono, si hay WebGL 2, hasta dónde llegó, los errores): va a los
 // registros del worker ("wrangler pages deployment tail", que con muchos pedidos juntos se saltea
 // algunos) y, si el proyecto tiene un KV atado como REGISTRO, también ahí (14 días; lo lee
@@ -41,10 +49,14 @@ function iguales(a, b) {
 // la clave se escribe como sea: con guiones, espacios o mayúsculas
 const normal = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
 
+async function firmaValida(clave, vence, firma) {
+  if (Number(vence) * 1000 < Date.now()) return false;
+  return iguales(firma, await firmar(clave, 'sesion|' + vence));
+}
+
 async function sesionValida(req, clave) {
   const m = /(?:^|;\s*)porteo=(\d{1,12})\.([0-9a-f]{64})(?:;|$)/.exec(req.headers.get('Cookie') || '');
-  if (!m || Number(m[1]) * 1000 < Date.now()) return false;
-  return iguales(m[2], await firmar(clave, 'sesion|' + m[1]));
+  return !!m && firmaValida(clave, m[1], m[2]);
 }
 
 const PAGINA = `<!doctype html>
@@ -75,19 +87,37 @@ const PAGINA = `<!doctype html>
   <p>Poné la clave para entrar. Queda guardada en este navegador.</p>
   <form method="post" action="${ENTRAR}">
     <input name="clave" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" aria-label="Clave" required autofocus>
+    <input name="ruta" type="hidden" value="">
     <button type="submit">Entrar</button>
-    <!--ERROR-->
+    <p class="error" role="alert" id="error" hidden>Esa no es la clave.</p>
   </form>
 </main>
 <script>
-  // el enlace con la clave después del # (no viaja al servidor ni queda en sus registros): entra solo
-  var m = /[#&]clave=([^&]+)/.exec(location.hash);
-  if (m) {
-    history.replaceState(null, '', location.pathname + location.search);
+  (function () {
     var f = document.querySelector('form');
-    f.clave.value = decodeURIComponent(m[1]);
-    f.submit();
-  }
+    // adentro de otra página la cookie no viaja: la sesión va en la dirección (ver SESION)
+    var enCuadro = window.top !== window;
+    function entrar() {
+      if (!enCuadro) { f.submit(); return; }
+      var cuerpo = new URLSearchParams({ clave: f.clave.value, ruta: '1' });
+      fetch('${ENTRAR}', { method: 'POST', body: cuerpo, headers: { Accept: 'application/json' }, credentials: 'omit' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (j.ruta) location.replace(j.ruta);
+          else document.getElementById('error').hidden = false;
+        })
+        // sin fetch (o sin poder leer la respuesta): el formulario, que con ruta=1 vuelve a la ruta
+        .catch(function () { f.ruta.value = '1'; f.submit(); });
+    }
+    f.addEventListener('submit', function (e) { e.preventDefault(); entrar(); });
+    // el enlace con la clave después del # (no viaja al servidor ni queda en sus registros): entra solo
+    var m = /[#&]clave=([^&]+)/.exec(location.hash);
+    if (m) {
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* queda en la barra */ }
+      f.clave.value = decodeURIComponent(m[1]);
+      entrar();
+    }
+  })();
 </script>
 </body>
 </html>
@@ -97,13 +127,22 @@ const CERRADO = {
   'Content-Type': 'text/html; charset=utf-8',
   'Cache-Control': 'no-store',
   'X-Robots-Tag': 'noindex, nofollow',
-  'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer',
 };
 
 function pagina(error) {
-  const html = error ? PAGINA.replace('<!--ERROR-->', '<p class="error" role="alert">Esa no es la clave.</p>') : PAGINA;
+  const html = error ? PAGINA.replace('id="error" hidden', 'id="error"') : PAGINA;
   return new Response(html, { status: 401, headers: CERRADO });
+}
+
+// la respuesta de la entrada desde un cuadro (la lee el fetch de la puerta). Con
+// Access-Control-Allow-Origin por si el cuadro no tiene origen propio (un sandbox sin
+// allow-same-origin): sin la clave no dice nada que no diga ya la puerta
+function json(estado, datos) {
+  return new Response(JSON.stringify(datos), {
+    status: estado,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' },
+  });
 }
 
 export default {
@@ -114,26 +153,45 @@ export default {
       return new Response('Falta configurar la clave (CLAVE) del proyecto.', { status: 503, headers: CERRADO });
     }
     const url = new URL(req.url);
+    // la sesión en la ruta (en un cuadro): se valida y se saca, y lo de después es lo pedido
+    let ruta = url.pathname, prefijo = '';
+    if (ruta.startsWith(SESION)) {
+      const s = /^\/__s\/(\d{1,12})\.([0-9a-f]{64})(\/.*)?$/.exec(ruta);
+      if (!s || !(await firmaValida(clave, s[1], s[2]))) return pagina(false);
+      prefijo = SESION + s[1] + '.' + s[2];
+      // sin la barra, lo relativo de la página no colgaría de la sesión
+      if (!s[3]) return new Response(null, { status: 308, headers: { Location: prefijo + '/' + url.search, 'Cache-Control': 'no-store' } });
+      ruta = s[3];
+    }
 
-    if (url.pathname === ENTRAR) {
-      if (req.method !== 'POST') return new Response(null, { status: 303, headers: { Location: '/', 'Cache-Control': 'no-store' } });
-      let intento = '';
-      try { intento = (await req.formData()).get('clave'); } catch (e) { /* sin formulario: clave vacía */ }
+    if (ruta === ENTRAR) {
+      if (req.method !== 'POST') return new Response(null, { status: 303, headers: { Location: prefijo + '/', 'Cache-Control': 'no-store' } });
+      let datos = null;
+      try { datos = await req.formData(); } catch (e) { /* sin formulario: clave vacía */ }
+      const intento = datos ? datos.get('clave') : '';
+      const enRuta = !!datos && datos.get('ruta') === '1';
+      const comoJson = (req.headers.get('Accept') || '').includes('application/json');
       // se comparan las firmas y no las claves: mismo largo siempre
       if (iguales(await firmar(clave, 'clave|' + normal(intento)), await firmar(clave, 'clave|' + clave))) {
         const vence = Math.floor(Date.now() / 1000) + DURA;
-        const cookie = `${COOKIE}=${vence}.${await firmar(clave, 'sesion|' + vence)}; Path=/; Max-Age=${DURA}; HttpOnly; Secure; SameSite=Lax`;
+        const firma = await firmar(clave, 'sesion|' + vence);
+        if (enRuta) {
+          const destino = SESION + vence + '.' + firma + '/';
+          if (comoJson) return json(200, { ruta: destino });
+          return new Response(null, { status: 303, headers: { Location: destino, 'Cache-Control': 'no-store' } });
+        }
+        const cookie = `${COOKIE}=${vence}.${firma}; Path=/; Max-Age=${DURA}; HttpOnly; Secure; SameSite=Lax`;
         return new Response(null, { status: 303, headers: { Location: '/', 'Set-Cookie': cookie, 'Cache-Control': 'no-store' } });
       }
       // probar claves de a montones, no
       await new Promise((ok) => setTimeout(ok, 700));
-      return pagina(true);
+      return comoJson ? json(401, { error: 'clave' }) : pagina(true);
     }
 
-    const libre = LIBRES.has(url.pathname);
-    if (!libre && !(await sesionValida(req, clave))) return pagina(false);
+    const libre = LIBRES.has(ruta);
+    if (!libre && !prefijo && !(await sesionValida(req, clave))) return pagina(false);
 
-    if (url.pathname === REGISTRO) {
+    if (ruta === REGISTRO) {
       if (req.method === 'POST') {
         const texto = (await req.text()).slice(0, 16384);
         console.log('porteo-registro ' + texto);
@@ -147,13 +205,23 @@ export default {
       return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
     }
 
-    const r = await env.ASSETS.fetch(req);
+    const r = await env.ASSETS.fetch(prefijo ? new Request(new URL(ruta + url.search, url.origin), req) : req);
     const h = new Headers(r.headers);
     h.set('X-Robots-Tag', 'noindex, nofollow');
     // los bloques llevan el hash en el nombre: no cambian nunca. "private": que no los guarde
     // ningún caché compartido, sólo el navegador de quien tiene la clave
-    if (url.pathname.startsWith('/b/') && r.status === 200) h.set('Cache-Control', 'private, max-age=31536000, immutable');
+    if (ruta.startsWith('/b/') && r.status === 200) h.set('Cache-Control', 'private, max-age=31536000, immutable');
     else h.set('Cache-Control', libre ? 'no-cache' : 'private, no-cache');
+    if (prefijo) {
+      // las redirecciones de Pages (/index.html → /) vuelven a la sesión, y la dirección (que la
+      // lleva) no sale en el Referer hacia otros sitios
+      const destino = h.get('Location');
+      if (destino) {
+        const d = new URL(destino, url.origin + ruta);
+        if (d.origin === url.origin) h.set('Location', prefijo + d.pathname + d.search + d.hash);
+      }
+      h.set('Referrer-Policy', 'same-origin');
+    }
     return new Response(r.body, { status: r.status, statusText: r.statusText, headers: h });
   },
 };

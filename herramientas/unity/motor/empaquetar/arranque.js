@@ -754,7 +754,10 @@
 
   if (T.web) {
     // la página guardada para arrancar sin red, y que el navegador no borre lo bajado si le falta lugar
-    if ('serviceWorker' in navigator && isSecureContext && !enApk) navigator.serviceWorker.register('sw.js').catch((e) => console.warn('porteo: sin service worker', e));
+    // (en un cuadro con sandbox y sin origen propio, leer navigator.serviceWorker ya tira error)
+    try {
+      if ('serviceWorker' in navigator && isSecureContext && !enApk) navigator.serviceWorker.register('sw.js').catch((e) => console.warn('porteo: sin service worker', e));
+    } catch (e) { console.warn('porteo: sin service worker', e); }
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     abrirCache().then(() => {
       // lo primero y solo, con todo el ancho: el código (con él arranca .NET mientras baja lo
