@@ -102,22 +102,22 @@ def imagenes(z, web, gen):
 
 
 def sonidos(z, web):
+    """Los efectos (sound/N.wav) en Opus. Los MP3 del APK (BGM1, BGM2, MENU) no van: el juego no tiene
+    música; SoundClip::loadBgm no se llama nunca y SoundClip::play no toca un clip de música."""
     os.makedirs(os.path.join(web, 'datos', 'sonido'), exist_ok=True)
     lista = []
     with tempfile.TemporaryDirectory() as tmp:
         for n in sorted(z.namelist()):
-            if not n.startswith('assets/sound/'):
+            if not n.startswith('assets/sound/') or not n.lower().endswith('.wav'):
                 continue
             base = os.path.basename(n)
             src = os.path.join(tmp, base)
             open(src, 'wb').write(z.read(n))
-            musica = base.lower().endswith('.mp3')
             dst = os.path.join(web, 'datos', 'sonido', os.path.splitext(base)[0] + '.ogg')
-            br = '96k' if musica else '48k'
             subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src, '-map_metadata', '-1', '-fflags', '+bitexact',
-                            '-flags:a', '+bitexact', '-c:a', 'libopus', '-b:a', br, '-vbr', 'on',
+                            '-flags:a', '+bitexact', '-c:a', 'libopus', '-b:a', '48k', '-vbr', 'on',
                             '-application', 'audio', dst], check=True)
-            lista.append(dict(ruta='sound/' + base, archivo='sonido/' + os.path.basename(dst), musica=musica))
+            lista.append(dict(ruta='sound/' + base, archivo='sonido/' + os.path.basename(dst)))
     return lista
 
 

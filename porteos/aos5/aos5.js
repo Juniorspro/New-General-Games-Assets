@@ -59,15 +59,14 @@
     glifo: function (f, cp, tam) { return Letras.glifo(cp, tam); },
   };
 
-  // ───────────────────────────── sonido
+  // ───────────────────────────── sonido (sólo efectos: el juego no tiene música)
   var Sonido = (function () {
-    var ctx = null, buffers = {}, cargando = {}, fuentes = {}, sigId = 1, musica = null, musicaRuta = null;
+    var ctx = null, buffers = {}, cargando = {}, fuentes = {}, sigId = 1;
     var silencio = false;
     function archivo(r) {
-      var b = r.replace(/^.*sound\//, '').replace(/\.(wav|mp3|ogg)$/i, '');
+      var b = r.replace(/^.*sound\//, '').replace(/\.(wav|ogg)$/i, '');
       return 'datos/sonido/' + b + '.ogg';
     }
-    function esMusica(r) { return /\.mp3$/i.test(r); }
     function contexto() {
       if (!ctx) {
         var C = window.AudioContext || window.webkitAudioContext;
@@ -77,7 +76,7 @@
       return ctx;
     }
     function cargar(r) {
-      if (esMusica(r) || buffers[r] || cargando[r]) return cargando[r];
+      if (buffers[r] || cargando[r]) return cargando[r];
       var c = contexto();
       if (!c) return null;
       cargando[r] = fetch(archivo(r)).then(function (x) { return x.arrayBuffer(); })
@@ -88,16 +87,6 @@
     }
     function tocar(r, bucle, vol) {
       var id = sigId++;
-      if (esMusica(r)) {
-        if (!musica) { musica = new Audio(); musica.preload = 'auto'; }
-        if (musicaRuta !== r) { musica.src = archivo(r); musicaRuta = r; }
-        musica.loop = !!bucle;
-        musica.volume = Math.max(0, Math.min(1, vol));
-        musica.currentTime = 0;
-        if (!silencio) { var pr = musica.play(); if (pr && pr.catch) pr.catch(function () {}); }
-        fuentes[id] = { musica: true };
-        return id;
-      }
       var c = contexto();
       if (!c || silencio) return id;
       var arrancar = function (b) {
@@ -110,38 +99,29 @@
         s.connect(g).connect(c.destination);
         s.onended = function () { delete fuentes[id]; };
         s.start();
-        fuentes[id] = { s: s };
+        fuentes[id] = s;
       };
       if (buffers[r]) arrancar(buffers[r]);
       else { var p = cargar(r); if (p) p.then(arrancar); }
       return id;
     }
     function parar(id) {
-      var f = fuentes[id];
-      if (!f) return;
-      if (f.musica) { if (musica) musica.pause(); }
-      else try { f.s.stop(); } catch (e) {}
+      var s = fuentes[id];
+      if (!s) return;
+      try { s.stop(); } catch (e) {}
       delete fuentes[id];
     }
     function todo(q) {
-      if (q === 0) {
-        Object.keys(fuentes).forEach(function (id) { parar(+id); });
-        if (musica) musica.pause();
-      } else if (q === 1) pausar(true);
-      else pausar(false);
+      if (q === 0) Object.keys(fuentes).forEach(function (id) { parar(+id); });
+      else pausar(q === 1);
     }
     function pausar(si) {
       silencio = si;
       if (ctx) { try { si ? ctx.suspend() : ctx.resume(); } catch (e) {} }
-      if (musica && musicaRuta) {
-        if (si) musica.pause();
-        else if (musica.loop) { var pr = musica.play(); if (pr && pr.catch) pr.catch(function () {}); }
-      }
     }
     function desbloquear() {
       var c = contexto();
       if (c && c.state === 'suspended' && !silencio) c.resume();
-      if (musica && musica.paused && musica.loop && !silencio) { var pr = musica.play(); if (pr && pr.catch) pr.catch(function () {}); }
     }
     return { tocar: tocar, parar: parar, todo: todo, cargar: cargar, pausar: pausar, desbloquear: desbloquear };
   })();
