@@ -569,8 +569,97 @@ def shaders(usados, ruta):
     print(f'  shaders: {len(out)}', file=sys.stderr)
 
 
+# --------------------------------------------------------------------------- interfaz
+# escenas con interfaz (sus raíces con Canvas); los prefabs de ui/ y gui/ de Resources van todos
+ESCENAS_UI = {'principal': 'level2', 'living': 'level3', 'cocina': 'level4', 'dormitorio': 'level6',
+              'ropero': 'level7', 'bano': 'level9', 'tienda': 'level12', 'ajustes': 'level23',
+              'nivel': 'level31', 'arbol': 'level32', 'cumple': 'level28', 'viajes': 'level34'}
+
+
+def _canvas_raices(f):
+    out = []
+    for t in _raices(f):
+        def tiene_canvas(tr):
+            if _tiene(tr.m_GameObject.read(), 'Canvas'):
+                return True
+            return any(tiene_canvas(h.read()) for h in tr.m_Children)
+        if hasattr(t, 'm_AnchorMin') or tiene_canvas(t):
+            out.append(t)
+    return out
+
+
+def interfaz(d, salida):
+    """Las pantallas (Unity UI) a JSON para ui.js, con sus sprites, texturas y fuentes."""
+    from ui import ExportadorUI
+    from animui import ExportadorAnim
+    base = os.path.join(salida, 'ui')
+    ex = ExportadorUI(d.b, os.path.join(base, 'sprites'), os.path.join(base, 'fuentes'), d.clase)
+    ex.anim = an = ExportadorAnim(d.b, sprite=ex.sprite, generador=d.env.typetree_generator)
+    for nombre, nivel in ESCENAS_UI.items():
+        f = d.b.files[nivel]
+        arboles = [ex.arbol(t) for t in _canvas_raices(f)]
+        escribir(os.path.join(base, 'escenas', nombre + '.json'),
+                 json.dumps(arboles, ensure_ascii=False, separators=(',', ':')).encode())
+    n = 0
+    for ruta in sorted(d.contenedor):
+        if not ruta.startswith(('ui/', 'gui/')):
+            continue
+        o = d.recurso(ruta, 'GameObject')
+        if o is None:
+            continue
+        go = o.read()
+        t = [c.component.read() for c in go.m_Component if c.component.deref().type.name in ('Transform', 'RectTransform')][0]
+        escribir(os.path.join(base, 'prefabs', ruta + '.json'),
+                 json.dumps(ex.arbol(t), ensure_ascii=False, separators=(',', ':')).encode())
+        n += 1
+    ex.guardar_indices(base)
+    an.guardar(base)
+    total = sum(os.path.getsize(os.path.join(r, x)) for r, _, fs in os.walk(base) for x in fs)
+    print(f'  interfaz: {len(ESCENAS_UI)} escenas, {n} prefabs, {len(ex.info_sprites)} sprites,'
+          f' {len(ex.fuentes)} fuentes, {len(an.controladores)} animators, {len(an.clips)} clips,'
+          f' {total // 1024} KB {ex.avisos[:4]} {an.avisos[:6]} ({len(an.avisos)} avisos de animación)', file=sys.stderr)
+
+
+def datos_juego(d, salida):
+    """Textos (es, en), catálogo, comida, minijuegos y la máquina de estados del baño."""
+    base = os.path.join(salida, 'datos')
+    idiomas = {}
+    catalogo = comida = None
+    minijuegos = {}
+    for pid, o in d.res.objects.items():
+        if o.type.name != 'MonoBehaviour':
+            continue
+        c = d.clase(o)
+        if c == 'LocalizationAsset':
+            x = o.read_typetree()
+            idiomas[x['m_Name']] = x['_values']
+        elif c == 'MttAddOnAsset':
+            catalogo = o.read_typetree()['Items']
+        elif c == 'FoodData':
+            comida = o.read_typetree()['Foods']
+        elif c == 'MiniGameData':
+            x = o.read_typetree()
+            minijuegos[x['m_Name']] = {k: v for k, v in x.items() if not k.startswith('m_') and k != 'sprite'}
+            minijuegos[x['m_Name']]['icono'] = x['sprite']['PrefabPath']
+    claves = idiomas['key']
+    textos = {c: {'es': idiomas['es'][i], 'en': idiomas['en'][i]} for i, c in enumerate(claves)}
+    escribir(os.path.join(base, 'textos.json'), json.dumps(textos, ensure_ascii=False, separators=(',', ':')).encode())
+    escribir(os.path.join(base, 'catalogo.json'), json.dumps(catalogo, ensure_ascii=False, separators=(',', ':')).encode())
+    # comida: el sprite de cada una (como sprite de la interfaz) y su corrimiento
+    from ui import ExportadorUI
+    ex = ExportadorUI(d.b, os.path.join(salida, 'ui', 'sprites'), os.path.join(salida, 'ui', 'fuentes'), d.clase)
+    cm = {}
+    for x in comida:
+        s = ex.ref(d.res, x['Sprite']) if isinstance(x['Sprite'], dict) else None
+        cm[x['Id']] = {'sprite': s and s.get('sprite'), 'ofs': [x['Offset']['x'], x['Offset']['y']]}
+    escribir(os.path.join(base, 'comida.json'), json.dumps(cm, ensure_ascii=False, separators=(',', ':')).encode())
+    escribir(os.path.join(base, 'minijuegos.json'), json.dumps(minijuegos, ensure_ascii=False, indent=0).encode())
+    print(f'  textos {len(textos)}, catálogo {len(catalogo)}, comida {len(cm)}, minijuegos {len(minijuegos)}',
+          file=sys.stderr)
+
+
 # --------------------------------------------------------------------------- principal
-PARTES = {'tom': tom, 'anim': animaciones, 'casa': casa}
+PARTES = {'tom': tom, 'anim': animaciones, 'casa': casa, 'ui': interfaz, 'datos': datos_juego}
 
 
 def main():

@@ -91,6 +91,8 @@ Después: §4 (estrategia) → §5 (táctil) → §8 (optimizar) → §9 (probar
    camino y se sigue.
 7. **No se entrega una explicación de cómo hacerlo. Se entrega hecho.**
 8. **"Anda" sin una prueba al lado no vale.** Ver §9.
+9. **Sin agentes ni subagentes** (ni workflows): gastan créditos. Todo el trabajo,
+   incluido leer el código del juego, se hace en la sesión principal.
 
 ## 2. El objetivo
 

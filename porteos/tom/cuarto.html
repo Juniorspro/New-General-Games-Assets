@@ -8,17 +8,23 @@
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font: 13px system-ui, sans-serif; }
   canvas { display: block; width: 100%; height: 100%; }
   #info { position: fixed; left: 8px; top: 8px; background: #fffc; padding: 4px 8px; border-radius: 6px; }
+  #ui { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+  #ui .u { pointer-events: auto; }
+  .u { position: absolute; }
 </style>
 </head>
 <body>
 <canvas id="lienzo"></canvas>
-<div id="info"></div>
+<div id="ui"></div>
 <script type="module">
 import * as THREE from './vendor/three.module.min.js';
 import { Unity } from './unity3.js';
 import { Cuarto, INICIAL, CUARTO_DE } from './casa.js';
 import { Animaciones, Reproductor } from './anim.js';
 import { cargarTom, vestir, Retarget } from './tom.js';
+import { UI, cargarFuentes } from './ui.js';
+import { Animadores } from './animui.js';
+import { Hud, registrarMateriales } from './hud.js';
 
 const q = new URLSearchParams(location.search);
 const DATOS = q.get('datos') || 'datos/';
@@ -71,12 +77,36 @@ function cuadro() {
   const dt = Math.min(reloj.getDelta(), 0.1);
   t += dt;
   if (fijo === null) rep.update(dt);
+  if (window.estado && window.estado.hud) window.estado.hud.cuadro(dt);
+  if (window.estado && window.estado.ui) window.estado.ui.cuadro(dt);
   u.actualizar(t, dt, lienzo.width, lienzo.height, cam);
   ren.render(escena, cam);
   requestAnimationFrame(cuadro);
 }
 cuadro();
-window.estado = { escena, cam, cuarto, tom, u };
+// la interfaz principal encima
+const [sprites, fuentes, textos, principal, controladores, clips] = await Promise.all([
+  fetch(DATOS + 'ui/sprites.json').then((r) => r.json()),
+  fetch(DATOS + 'ui/fuentes.json').then((r) => r.json()),
+  fetch(DATOS + 'datos/textos.json').then((r) => r.json()),
+  fetch(DATOS + 'ui/escenas/principal.json').then((r) => r.json()),
+  fetch(DATOS + 'ui/controladores.json').then((r) => r.json()),
+  fetch(DATOS + 'ui/clips.json').then((r) => r.json()),
+]);
+await cargarFuentes(DATOS + 'ui/', fuentes);
+const ui = new UI(document.getElementById('ui'), DATOS + 'ui/', sprites, textos, 'es');
+registrarMateriales(ui);
+ui.animadores = new Animadores(ui, controladores, clips);
+let pant = null, hud = null;
+if (q.get('ui') !== '0') {
+  pant = ui.armar(principal);
+  hud = new Hud(ui, pant);
+  hud.cuarto(cuartoCat);
+  const med = (q.get('medidores') || '80,25,60,10').split(',').map(Number);
+  ['living', 'kitchen', 'bathroom', 'bedroom'].forEach((k, i) => hud.medidores[k] && hud.medidores[k].ponerProgreso(med[i], false));
+}
+addEventListener('resize', () => ui.layout());
+window.estado = { escena, cam, cuarto, tom, u, ui, pant, hud };
 window.listo = true;
 </script>
 </body>
