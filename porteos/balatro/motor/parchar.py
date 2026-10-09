@@ -18,6 +18,14 @@ Qué cambia y por qué:
   no cambia de modo y porteo_web.lua no lo deja). Las de Balatro eran 88 MB de los 128.
 - WebGL 1 (los teléfonos viejos, muchos de 1 GB, no tienen WebGL 2): LÖVE no deja dibujar en un lienzo
   RGBA8 si GLES 2 no anuncia OES_rgb8_rgba8, y WebGL 1 no la anuncia aunque siempre lo permite.
+- Sin glGetError al crear búferes de vértices: Balatro crea y cambia textos en cada cuadro (los
+  números que se animan), cada texto nuevo es un búfer, y LÖVE preguntaba dos veces por errores. En
+  WebGL getError espera a que la GPU termine todo lo pendiente: era la mitad del trabajo del hilo
+  de la página jugando (perfil de Chrome), y en el teléfono, cuadros de 30 a 40 ms.
+- Los vértices de lo que se dibuja en tandas, en un búfer de la GPU (glBufferSubData) y no en la
+  memoria del programa: así lo hace LÖVE en GLES (Android) porque ahí es lo más rápido, pero WebGL no
+  tiene vértices en la memoria del programa y Emscripten lo imitaba subiendo cada atributo por
+  separado en cada llamada de dibujo.
 - Sin lo que Balatro no usa, para que el .wasm pese menos (el juego entero tiene que entrar en un
   .html de menos de 10 MB): glslang (LÖVE lo usa sólo para validar los shaders antes de dárselos a
   WebGL, que los valida igual y da el mismo error), love.physics (Box2D), LuaSocket y ENet.
@@ -65,7 +73,8 @@ ENLACE = [
     # dos, y WebGL 1 no los hace ("Cannot create image")
     "-sMAX_WEBGL_VERSION=2",
     "-sMIN_WEBGL_VERSION=1",
-    "-sFULL_ES3=1",
+    # sin FULL_ES3: era para los vértices en la memoria del programa, que WebGL no tiene y Emscripten
+    # imitaba; con los búferes de vertices() no hace falta, y la imitación revisaba cada llamada de dibujo
     "-sGL_ENABLE_GET_PROC_ADDRESS=1",
     "-sINVOKE_RUN=0",
     "-sALLOW_MEMORY_GROWTH=1",
@@ -167,6 +176,23 @@ def webgl1(mega):
             "\t\t\treturn GLAD_VERSION_1_0 || GLAD_ES_VERSION_3_0 || GLAD_OES_rgb8_rgba8 || GLAD_ARM_rgba8 || LOVE_WEBGL;")
 
 
+def rendimiento(mega):
+    b = mega / "libs/love/src/modules/graphics/opengl/Buffer.cpp"
+    cambiar(b, "\twhile (glGetError() != GL_NO_ERROR)\n\t\t/* Clear the error buffer. */;\n\n\t// Copy the old buffer",
+            "#ifndef LOVE_EMSCRIPTEN\n\twhile (glGetError() != GL_NO_ERROR)\n\t\t/* Clear the error buffer. */;\n#endif\n\n"
+            "\t// Copy the old buffer")
+    cambiar(b, "\treturn (glGetError() == GL_NO_ERROR);\n}\n\nvoid Buffer::unload()",
+            "#ifdef LOVE_EMSCRIPTEN\n\t// porteo: sin preguntar (ver parchar.py); si no hubiera memoria, WebGL lo avisa en la consola\n"
+            "\treturn true;\n#else\n\treturn (glGetError() == GL_NO_ERROR);\n#endif\n}\n\nvoid Buffer::unload()")
+
+
+def vertices(mega):
+    s = mega / "libs/love/src/modules/graphics/opengl/StreamBuffer.cpp"
+    cambiar(s, "love::graphics::StreamBuffer *CreateStreamBuffer(BufferType mode, size_t size)\n{\n",
+            "love::graphics::StreamBuffer *CreateStreamBuffer(BufferType mode, size_t size)\n{\n"
+            "#ifdef LOVE_EMSCRIPTEN\n\t// porteo: ver parchar.py\n\treturn new StreamBufferSubDataOrphan(mode, size);\n#endif\n")
+
+
 def main():
     mega = Path(sys.argv[1])
     if not (mega / "libs/love/CMakeLists.txt").is_file():
@@ -176,6 +202,8 @@ def main():
     sin_lo_que_no_usa(mega)
     memoria(mega)
     webgl1(mega)
+    rendimiento(mega)
+    vertices(mega)
     print("parchar: listo")
 
 

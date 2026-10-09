@@ -795,7 +795,9 @@ Fidelidad: 1:1 (su Lua, sus shaders, su azar: una semilla da la misma partida qu
 Tamaños: APK 66 MB → web 8 MB en total con la música (motor 1,3 MB comprimido + juego 6,7 MB);
         un solo .html de 9,6 MB, todo en texto ASCII (Rezona lo lee como texto), con la intro
 Memoria: para teléfonos de 1 GB: sin la copia de los píxeles de las imágenes (wasm 128 → 48 MB),
-        texturas 1x y menos píxeles con poca memoria o sin WebGL 2 (texturas 121 → 32 MB)
+        modo liviano en todos: texturas 1x y menos píxeles (texturas 121 → 32 MB)
+Fluidez: sin las esperas a la GPU de cada texto nuevo (lógica 12–18 → 5 ms por cuadro), vértices
+        en búferes de la GPU, 60 cuadros/s como máximo y 30 parejos si el teléfono no llega
 Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de Rezona (sitio y .html
         único); en el teléfono del dueño, 67 cuadros/s
 ```
@@ -810,7 +812,9 @@ Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de 
   - un shader para WebGL;
   - el motor sin lo que Balatro no usa (glslang, Box2D, LuaSocket, ENet): 4,5 → 3,3 MB;
   - la memoria para teléfonos de 1 GB: las texturas viajan en 1x y la 2x (que es la 1x con cada
-    píxel repetido) se arma en la GPU; modo liviano con 1x y WebGL 1 (ver el LEEME).
+    píxel repetido) se arma en la GPU; modo liviano con 1x y WebGL 1 (ver el LEEME);
+  - la fluidez: LÖVE llamaba a `glGetError` por cada texto nuevo (en WebGL espera a la GPU) y
+    pasaba los vértices desde la memoria del programa, que Emscripten imitaba (ver el LEEME).
 - **Lo que no se usa del APK** (o va más chico):
   - las fuentes CJK y la rusa (62 MB), con esos idiomas;
   - las texturas 1x (el juego recibe las 2x, recomprimidas sin pérdida);

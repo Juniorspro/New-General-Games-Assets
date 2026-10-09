@@ -2,6 +2,14 @@
 -- LÖVE propio (love.platform: guardado en la nube, logros) y de LuaJIT (jit, hilos de verdad), con lo
 -- que hay en el LÖVE para la web (Lua 5.1, sin hilos). Se carga antes que el main.lua del juego.
 
+-- El juego escribe "LONG DT" en la consola cada cuadro de más de 50 ms: en un teléfono lento, decenas
+-- por segundo, cada una por todo el camino de la salida estándar de Emscripten hasta console.log
+local imprimir = print
+print = function(s, ...)
+	if type(s) == 'string' and s:sub(1, 7) == 'LONG DT' then return end
+	return imprimir(s, ...)
+end
+
 -- LuaJIT: el juego apaga el JIT en ARM (jit.off) y nada más
 jit = jit or { arch = 'wasm32', os = 'Web', version = 'Lua 5.1 (porteo)', status = function() return false end,
 	off = function() end, on = function() end, flush = function() end }

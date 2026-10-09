@@ -9,8 +9,8 @@ una capa chica que pone lo que la versión de Android tiene en su LÖVE propio y
 en vertical (girado 90°) y en horizontal, también adentro de otra página (Rezona). Guarda la
 partida y el perfil (IndexedDB). El sonido arranca con el primer toque. Empieza con la intro de
 JXStudios. Todo entra en 8 MB, música incluida, y también va como un solo .html de 9,6 MB. En el
-teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro). Pensado también para
-teléfonos de 1 GB (ver "Memoria") y para GPU viejas con WebGL 1.
+teléfono del dueño: 67 cuadros/s en el menú; jugando se trababa, y la causa estaba en el motor (ver
+"Rendimiento"). Pensado también para teléfonos de 1 GB (ver "Memoria") y para GPU viejas con WebGL 1.
 
 ## Cómo es
 
@@ -27,7 +27,8 @@ teléfonos de 1 GB (ver "Memoria") y para GPU viejas con WebGL 1.
     usa sólo para validar los shaders antes de pasárselos a WebGL, que los valida igual), Box2D
     (love.physics), LuaSocket y ENet. El .wasm pasa de 4,5 MB a 3,3 (comprimido, de 1,67 a 1,33);
   - las imágenes sin la copia de sus píxeles en la memoria del wasm (ver "Memoria"), y 48 MB de
-    memoria inicial (eran 128).
+    memoria inicial (eran 128);
+  - sin las esperas a la GPU y con los vértices en búferes de la GPU (ver "Rendimiento").
 - **El azar y `bit` de LuaJIT.** El Lua de la web es 5.1: su `math.randomseed` trunca a entero y
   Balatro siembra con fracciones (todas las semillas daban `srand(0)`, las mismas cartas siempre).
   [`motor/azar_luajit.c`](motor/azar_luajit.c) es el generador de LuaJIT 2.1 (Tausworthe 2^223) y
@@ -109,16 +110,40 @@ Medido en Chromium (procesos de verdad, PSS) en el menú y jugando una mano:
   de Balatro dibuja las 2x con filtro lineal). Viajan en 1x (menos para bajar) y, cuando el juego
   pide una 2x, `porteo_web.lua` la arma en la GPU: un lienzo del doble con la 1x dibujada sin filtro.
   Comparadas con las 2x del APK (volcadas del juego andando): iguales byte a byte.
-- **Modo liviano.** Con 1 GB o menos (`navigator.deviceMemory`, Chrome) o sin WebGL 2, el juego usa
-  las 1x tal cual, como con el suavizado apagado (los píxeles nítidos): la cuarta parte de memoria
-  de video. El lienzo va con hasta 1,5 píxeles por punto en vez de 2 (las GPU de esos teléfonos son
-  las más flojas). `index.html?ligero` lo fuerza y `?ligero=0` lo apaga; el registro dice si se usó.
+- **Modo liviano, en todos** (lo pidió el dueño). El juego usa las 1x tal cual, como con el suavizado
+  apagado (los píxeles nítidos): la cuarta parte de memoria de video. El lienzo va con hasta 1,5
+  píxeles por punto en vez de 2. `index.html?ligero=0` lo apaga (para comparar); sin WebGL 2 no se
+  puede apagar.
 - **WebGL 1** (GPU viejas, como las Mali-400 de muchos teléfonos de 1 GB): LÖVE no dejaba dibujar en
   lienzos RGBA8 (WebGL 1 no anuncia `OES_rgb8_rgba8` aunque siempre lo permite) y reservaba mipmaps
   en texturas que no son potencia de dos, cosa que WebGL 1 no hace. Ahora va sin mipmaps y en modo
   liviano. Probado con Chromium sin WebGL 2: menú, partida y una mano jugada.
 - **El sonido largo.** El ambiente y los dos sonidos de la intro (de 23 a 38 s) se cargaban enteros;
   ahora se leen mientras suenan.
+
+## Rendimiento
+
+El registro de un teléfono con Adreno 610 jugando: 16 a 20 ms de lógica y 13 a 23 ms de dibujo por
+cuadro, unos 25 cuadros/s; el dueño, en un Poco X8 Pro, "se súper lagueaba". Con el perfil de CPU de
+Chrome (jugando una mano) y uno del Lua del juego:
+
+- **Las esperas a la GPU.** La mitad de todo el trabajo del hilo de la página era `getError`: Balatro
+  crea y cambia textos en cada cuadro (los números que se animan), cada texto nuevo es un búfer de
+  vértices, y LÖVE preguntaba dos veces si hubo error. En WebGL eso espera a que la GPU termine todo
+  lo pendiente. Sin esas preguntas (`motor/parchar.py`, `rendimiento()`), la lógica por cuadro bajó de
+  12–18 ms a unos 5 en la misma mano.
+- **Los vértices.** En GLES (Android) LÖVE pasa los vértices desde la memoria del programa; WebGL no
+  puede, y Emscripten lo imitaba subiendo cada atributo por separado en cada llamada de dibujo. Ahora
+  van a un búfer de la GPU (`vertices()`) y el motor se compila sin esa imitación (`FULL_ES3`): la
+  parte de WebGL de cada cuadro, a la mitad.
+- **60 por segundo como máximo** (como el juego en el teléfono): en pantallas de 120 Hz el navegador
+  pedía un cuadro cada 8 ms, el juego no llegaba y salían desparejos (el Poco daba 67/s en el menú).
+  Y un teléfono que no llega a 60 (más de 15 ms de trabajo por cuadro) va parejo a 30, en vez de
+  alternar; vuelve a 60 cuando le sobra (menos de 11 ms). Lo mide la página (`porteoCuadros`).
+- El juego escribía "LONG DT" en la consola en cada cuadro lento; ya no.
+- Lo que queda es el Lua del juego (mover cartas, la interfaz, ver qué toca el dedo), sin JIT: el
+  Lua 5.1 de la web es 2 a 3 veces más lento que el LuaJIT del teléfono. Compilar Lua en un solo
+  archivo (para que la búsqueda en tablas, lo más caro, se meta en el intérprete) no cambió nada.
 
 ## En Rezona
 

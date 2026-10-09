@@ -37,8 +37,9 @@
   // en el .html único los archivos vienen en la página (no hay red ni caché que valga)
   var unArchivo = typeof window.__porteoArchivo === 'function';
   var idioma = (navigator.language || 'es').slice(0, 2).toLowerCase();
-  // un teléfono con poca memoria (Chrome dice 1 GB o menos) o con una GPU vieja, sin WebGL 2 (?ligero
-  // lo fuerza, ?ligero=0 lo apaga): texturas 1x (ver porteo_despues.lua) y el lienzo con menos píxeles
+  // Modo liviano en todos los teléfonos (lo pidió el dueño: hasta en un Poco X8 Pro se trababa):
+  // texturas 1x (ver porteo_despues.lua) y el lienzo con menos píxeles. ?ligero=0 lo apaga, para
+  // comparar. Sin WebGL 2 es obligatorio igual (porteo_despues.lua lo mira por su cuenta)
   var sinWebGL2 = (function () {
     try {
       var g = document.createElement('canvas').getContext('webgl2');
@@ -48,8 +49,7 @@
       return false;
     } catch (e) { return true; }
   })();
-  var ligero = /[?&]ligero(=1)?(&|$)/.test(location.search) ||
-    (!/[?&]ligero=0/.test(location.search) && (sinWebGL2 || (navigator.deviceMemory > 0 && navigator.deviceMemory <= 1)));
+  var ligero = sinWebGL2 || !/[?&]ligero=0/.test(location.search);
   var lienzo = document.getElementById('canvas');
 
   // el registro va a la puerta de Cloudflare, que lo acepta sólo con sesión: desde el .html único
@@ -112,6 +112,28 @@
     var tope = ligero ? 1.5 : 2;
     var d = Object.getOwnPropertyDescriptor(Window.prototype, 'devicePixelRatio') || Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
     if (d && d.get) Object.defineProperty(window, 'devicePixelRatio', { configurable: true, get: function () { return Math.min(tope, d.get.call(window)); } });
+  })();
+
+  // ---- 60 cuadros por segundo como máximo, como el juego en el teléfono (G.FPS_CAP = 60: lo cumple
+  // durmiendo, y acá dormir no frena nada). En pantallas de 90 o 120 Hz el navegador pide un cuadro cada
+  // 8 a 11 ms, el juego no llega y salen desparejos: el Poco X8 Pro del dueño daba 67 por segundo en el
+  // menú y tirones jugando. Se saltea el pedido si no pasaron ~16 ms desde el último cuadro. Y un
+  // teléfono que no llega a 60 (más de 15 ms de trabajo por cuadro, en promedio) va parejo a 30 en vez
+  // de alternar 60 y 30, que se ve a los tirones; vuelve a 60 cuando le sobra (menos de 11 ms)
+  var cuadros = window.porteoCuadros = { paso: 1000 / 60, trabajo: 8 };
+  (function () {
+    var raf = window.requestAnimationFrame.bind(window), ultimo = -1e9;
+    window.requestAnimationFrame = function (cb) {
+      return raf(function cuadro(t) {
+        if (t - ultimo < cuadros.paso - 3) return raf(cuadro);
+        ultimo = t;
+        var t0 = performance.now();
+        cb(t);
+        cuadros.trabajo = 0.95 * cuadros.trabajo + 0.05 * (performance.now() - t0);
+        if (cuadros.paso < 20 && cuadros.trabajo > 15) { cuadros.paso = 1000 / 30; Porteo.anotar('cuadros', '30 por segundo'); }
+        else if (cuadros.paso > 20 && cuadros.trabajo < 11) { cuadros.paso = 1000 / 60; Porteo.anotar('cuadros', '60 por segundo'); }
+      });
+    };
   })();
 
   // ---- el sonido: el AudioContext lo crea el OpenAL de Emscripten; se lo pausa con la página oculta
@@ -229,6 +251,9 @@
       canvas: lienzo,
       wasmBinary: listos[0],
       print: function (t) {
+        // el juego avisa cada cuadro que tarda más de 50 ms ("LONG DT"): en un teléfono lento, decenas
+        // por segundo a la consola, que también cuesta
+        if (/^LONG DT/.test(t)) return;
         console.log(t);
         if (/^porteo: error:/.test(t)) Porteo.anotar('error', t);
         else if (/^porteo:/.test(t)) Porteo.anotar('juego', t);
