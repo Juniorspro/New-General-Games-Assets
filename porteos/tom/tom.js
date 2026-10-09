@@ -296,3 +296,65 @@ export class Retarget {
     this.nodo.position.add(this.activo);
   }
 }
+
+// Las zonas que se tocan (los Collider del prefab, pegados a los huesos: retarget.json → zonas). Como
+// Physics.Raycast: el colisionador más cercano que corta el rayo.
+const EJES = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)];
+export class Zonas {
+  constructor(raiz, zonas) {
+    this.lista = [];
+    for (const z of zonas || []) {
+      let hueso = null;
+      raiz.traverse((o) => { if (!hueso && o.name === z.hueso) hueso = o; });
+      if (!hueso) continue;
+      // Unity → glTF: x espejado
+      const c = z.center ? new THREE.Vector3(-z.center[0], z.center[1], z.center[2]) : new THREE.Vector3();
+      this.lista.push({ ...z, nodo: hueso, c });
+    }
+    this.p = new THREE.Vector3(); this.a = new THREE.Vector3(); this.b = new THREE.Vector3();
+    this.s = new THREE.Vector3(); this.q = new THREE.Quaternion();
+  }
+
+  // La zona tocada por un THREE.Ray (en coordenadas del mundo), o null.
+  tocar(rayo) {
+    let mejor = null, dmin = Infinity;
+    for (const z of this.lista) {
+      z.nodo.updateWorldMatrix(true, false);
+      const m = z.nodo.matrixWorld;
+      m.decompose(this.a, this.q, this.s);
+      const esc = Math.max(Math.abs(this.s.x), Math.abs(this.s.y), Math.abs(this.s.z));
+      let d = null;
+      if (z.tipo === 'SphereCollider') {
+        this.p.copy(z.c).applyMatrix4(m);
+        d = this.esfera(rayo, this.p, z.radius * esc);
+      } else if (z.tipo === 'CapsuleCollider') {
+        const r = z.radius * esc;
+        const medio = Math.max(0, z.height / 2 - z.radius);
+        const eje = EJES[z.direction ?? 1];
+        this.a.copy(eje).multiplyScalar(medio).add(z.c).applyMatrix4(m);
+        this.b.copy(eje).multiplyScalar(-medio).add(z.c).applyMatrix4(m);
+        d = this.capsula(rayo, this.a, this.b, r);
+      }
+      if (d !== null && d < dmin) { dmin = d; mejor = z; }
+    }
+    if (!mejor) return null;
+    return { zona: mejor.hueso, distancia: dmin, punto: rayo.at(dmin, new THREE.Vector3()) };
+  }
+
+  esfera(rayo, c, r) {
+    const oc = rayo.origin.clone().sub(c);
+    const b = oc.dot(rayo.direction), cc = oc.lengthSq() - r * r, h = b * b - cc;
+    if (h < 0) return null;
+    const t = -b - Math.sqrt(h);
+    return t >= 0 ? t : (-b + Math.sqrt(h) >= 0 ? 0 : null);
+  }
+
+  capsula(rayo, a, b, r) {
+    // distancia entre el rayo y el segmento ab; si es menor que r, el corte más cercano
+    const p = new THREE.Vector3(), s = new THREE.Vector3();
+    const dist2 = rayo.distanceSqToSegment(a, b, p, s);
+    if (dist2 > r * r) return null;
+    const t1 = this.esfera(rayo, s, r);
+    return t1 !== null ? t1 : rayo.origin.distanceTo(p);
+  }
+}

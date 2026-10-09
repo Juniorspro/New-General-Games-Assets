@@ -56,6 +56,11 @@ def abrir(apk, tmp):
                 z.extract(n, tmp)
     data = os.path.join(tmp, 'assets', 'bin', 'Data')
     env = UnityPy.load(os.path.join(data, 'data.unity3d'))
+    # el audio está aparte, al lado del paquete (resources.resource, sharedassets45.resource)
+    from UnityPy.streams import EndianBinaryReader
+    for n in sorted(os.listdir(data)):
+        if n.endswith(('.resource', '.resS')):
+            env.register_cab(n, EndianBinaryReader(open(os.path.join(data, n), 'rb').read()))
     g = TypeTreeGenerator(VERSION_UNITY)
     g.load_il2cpp(open(os.path.join(tmp, 'lib', 'arm64-v8a', 'libil2cpp.so'), 'rb').read(),
                   open(os.path.join(data, 'Managed', 'Metadata', 'global-metadata.dat'), 'rb').read())
@@ -306,6 +311,30 @@ def retarget(d, salida):
             cs = d.componentes(go, clase)
             if cs:
                 info[clase] = limpio(cs[0])
+        # las zonas que se tocan: los Collider pegados a los huesos (cabeza, panza, piernas, pies, cola)
+        zonas = []
+
+        def colisionadores(tr):
+            g = tr.m_GameObject.read()
+            for c in g.m_Component:
+                o = c.component.deref()
+                if not o.type.name.endswith('Collider'):
+                    continue
+                x = o.read()
+                z = {'hueso': g.m_Name, 'tipo': o.type.name, 'capa': g.m_Layer}
+                for a in ('m_Center', 'm_Size'):
+                    v = getattr(x, a, None)
+                    if v is not None:
+                        z[a[2:].lower()] = [round(v.x, 4), round(v.y, 4), round(v.z, 4)]
+                for a in ('m_Radius', 'm_Height', 'm_Direction'):
+                    v = getattr(x, a, None)
+                    if v is not None:
+                        z[a[2:].lower()] = round(v, 4) if isinstance(v, float) else v
+                zonas.append(z)
+            for h in tr.m_Children:
+                colisionadores(h.read())
+        colisionadores(t)
+        info['zonas'] = zonas
         out[k] = info
     escribir(os.path.join(salida, 'tom', 'retarget.json'), json.dumps(out, ensure_ascii=False, indent=1).encode())
 
@@ -658,8 +687,119 @@ def datos_juego(d, salida):
           file=sys.stderr)
 
 
+# --------------------------------------------------------------------------- sonido
+# Opus mono: casi todo viene a 16 kHz (voces y efectos), la música a 22 kHz
+KBPS_16K, KBPS_22K = 20, 28
+
+
+def _a_opus(wav, ruta, kbps):
+    import subprocess
+    os.makedirs(os.path.dirname(ruta), exist_ok=True)
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', 'pipe:0', '-map_metadata', '-1', '-fflags', '+bitexact',
+                    '-flags:a', '+bitexact', '-ac', '1', '-c:a', 'libopus', '-b:a', f'{kbps}k',
+                    '-application', 'audio', '-f', 'ogg', ruta], input=wav, check=True)
+
+
+def _evento(x, clip_de):
+    """Un AudioEventData (Outfit7.Audio): cómo se toca cada evento de sonido."""
+    clips = []
+    for ad in x['audioDefinitions']:
+        n = clip_de(ad['clipReference']['PrefabPath'])
+        c = {'clip': n}
+        for k, k2, defecto in (('volume', 'vol', 1), ('pitch', 'pitch', 1), ('leadInLength', 'in', 0), ('leadOutLength', 'out', 0)):
+            if round(ad[k], 4) != defecto:
+                c[k2] = round(ad[k], 4)
+        clips.append(c)
+    # playMode 0 Sequential, 1 RandomNoRepeat; loopMode 0 OneShot, 1 LoopSingle, 2 LoopCycle; priority 0..3
+    e = {'modo': x['playMode'], 'bucle': x['loopMode'], 'prio': x['priority'], 'clips': clips}
+    if round(x['volume'], 4) != 1:
+        e['vol'] = round(x['volume'], 4)
+    if round(x['pitch'], 4) != 1:
+        e['pitch'] = round(x['pitch'], 4)
+    f = x['fadeInOut']
+    if f['FadeInTime'] or f['FadeOutTime']:
+        e['fundido'] = [round(f['FadeInTime'], 4), round(f['FadeOutTime'], 4)]
+    s = x.get('sourceData') or {}
+    if s.get('spatialBlend') or s.get('panStereo'):
+        e['fuente'] = {'espacial': round(s.get('spatialBlend', 0), 3), 'pan': round(s.get('panStereo', 0), 3)}
+    if not x.get('stopOnSceneChange', 1):
+        e['siguePorEscena'] = 1
+    return e
+
+
+def sonido(d, salida):
+    """Los 622 AudioClip a Opus y los eventos de sonido (AudioEventData) con su tabla por animación."""
+    import concurrent.futures
+    base = os.path.join(salida, 'sonido')
+    nombres = {}          # (archivo, path_id) del clip → nombre del .ogg
+    usados = set()
+
+    def nombre_clip(o):
+        k = (o.assets_file.name, o.path_id)
+        if k not in nombres:
+            n = o.read().m_Name
+            i = 1
+            while (n if i == 1 else f'{n}~{i}') in usados:
+                i += 1
+            n = n if i == 1 else f'{n}~{i}'
+            usados.add(n)
+            nombres[k] = n
+        return nombres[k]
+
+    def clip_de(ruta):
+        o = d.recurso(ruta, 'AudioClip')
+        return nombre_clip(o) if o is not None else None
+
+    eventos, por_animacion, avisos = {}, {}, []
+    nombre_evento = {}
+    for f in d.b.files.values():
+        for o in (getattr(f, 'objects', {}) or {}).values():
+            if o.type.name != 'MonoBehaviour':
+                continue
+            c = d.clase(o)
+            if c == 'AudioEventData':
+                x = o.read_typetree()
+                n = x['m_Name']
+                if n in eventos:
+                    n = f'{n}~{o.path_id}'
+                eventos[n] = _evento(x, clip_de)
+                nombre_evento[(o.assets_file.name, o.path_id)] = n
+                if any(cl['clip'] is None for cl in eventos[n]['clips']):
+                    avisos.append(n)
+            elif c == 'AnimationAudioData':
+                por_animacion, f_aad = o.read_typetree(), o.assets_file
+    # AnimationAudioData: campo (PokeHeadFall, ChewFoodLoop…) → evento
+    tabla = {}
+    for k, v in por_animacion.items():
+        if isinstance(v, dict) and set(v) == {'m_FileID', 'm_PathID'} and v['m_PathID']:
+            f = f_aad if not v['m_FileID'] else d.b.files[f_aad.externals[v['m_FileID'] - 1].name]
+            tabla[k] = nombre_evento.get((f.name, v['m_PathID']))
+    # todos los clips (también los que se cargan por ruta desde el código, como la música)
+    trabajos = []
+    rutas = {}
+    for ruta, ps in d.contenedor.items():
+        for p in ps:
+            o = p.deref()
+            if o is not None and o.type.name == 'AudioClip':
+                rutas[nombre_clip(o)] = ruta
+    for f in d.b.files.values():
+        for o in (getattr(f, 'objects', {}) or {}).values():
+            if o.type.name == 'AudioClip':
+                a = o.read()
+                wav = next(iter(a.samples.values()))
+                kbps = KBPS_16K if a.m_Frequency <= 16000 else KBPS_22K
+                trabajos.append((wav, os.path.join(base, 'clips', nombre_clip(o) + '.ogg'), kbps))
+    with concurrent.futures.ThreadPoolExecutor(os.cpu_count() or 4) as ex:
+        list(ex.map(lambda t: _a_opus(*t), trabajos))
+    escribir(os.path.join(base, 'eventos.json'), json.dumps(
+        {'eventos': eventos, 'animacion': tabla, 'rutas': rutas}, ensure_ascii=False, separators=(',', ':')).encode())
+    total = sum(os.path.getsize(os.path.join(base, 'clips', x)) for x in os.listdir(os.path.join(base, 'clips')))
+    print(f'  sonido: {len(trabajos)} clips ({total // 1024} KB), {len(eventos)} eventos, {len(tabla)} de animación'
+          f'{", sin clip: " + str(avisos[:5]) if avisos else ""}', file=sys.stderr)
+
+
 # --------------------------------------------------------------------------- principal
-PARTES = {'tom': tom, 'anim': animaciones, 'casa': casa, 'ui': interfaz, 'datos': datos_juego}
+PARTES = {'tom': tom, 'retarget': retarget, 'anim': animaciones, 'casa': casa, 'ui': interfaz, 'datos': datos_juego, 'sonido': sonido}
 
 
 def main():

@@ -9,7 +9,7 @@
   canvas { display: block; width: 100%; height: 100%; }
   #info { position: fixed; left: 8px; top: 8px; background: #fffc; padding: 4px 8px; border-radius: 6px; }
   #ui { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
-  #ui .u { pointer-events: auto; }
+  #ui .u { pointer-events: none; }
   .u { position: absolute; }
 </style>
 </head>
@@ -21,7 +21,8 @@ import * as THREE from './vendor/three.module.min.js';
 import { Unity } from './unity3.js';
 import { Cuarto, INICIAL, CUARTO_DE } from './casa.js';
 import { Animaciones, Reproductor } from './anim.js';
-import { cargarTom, vestir, Retarget } from './tom.js';
+import { cargarTom, vestir, Retarget, Zonas } from './tom.js';
+import { Sonido } from './sonido.js';
 import { UI, cargarFuentes } from './ui.js';
 import { Animadores } from './animui.js';
 import { Hud, registrarMateriales } from './hud.js';
@@ -59,6 +60,20 @@ const anims = new Animaciones(indice, bin);
 const rep = new Reproductor(anims, tom.raiz);
 const rt = new Retarget(tom.raiz, retarget[tam]);
 rep.despues = (c, tn, dt) => rt.aplicar(c, tn, dt);
+const zonas = new Zonas(tom.raiz, retarget[tam].zonas);
+const sonido = new Sonido(DATOS + 'sonido/', await fetch(DATOS + 'sonido/eventos.json').then((r) => r.json()));
+// prueba de toques: la zona tocada y un sonido de esa zona (la lógica del juego va en juego.js)
+const PRUEBA = { c_head_00_skn: 'PokeHeadFall', c_root_01_skn: 'PokeBelly', c_tail_05_skn: tam === 's' ? 'PokeTailS' : 'PokeTailL',
+  l_foot_00_skn: 'PokeLeg', r_foot_00_skn: 'PokeLeg', l_lowLeg_00_skn: 'PokeLegStandLeftML', r_lowLeg_00_skn: 'PokeLegStandRightML' };
+const rayc = new THREE.Raycaster();
+lienzo.addEventListener('pointerdown', (e) => {
+  sonido.desbloquear();
+  const r = lienzo.getBoundingClientRect();
+  rayc.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cam);
+  const t = zonas.tocar(rayc.ray);
+  window.ultimoToque = t && t.zona;
+  if (t) sonido.tocar(sonido.deAnimacion(PRUEBA[t.zona]));
+});
 rep.play(q.get('clip') || (tam === 's' ? 'breathingS' : 'breathingL'), { bucle: true });
 const fijo = q.has('t') ? parseFloat(q.get('t')) : null;
 if (fijo !== null) rep.update(fijo);
@@ -106,7 +121,7 @@ if (q.get('ui') !== '0') {
   ['living', 'kitchen', 'bathroom', 'bedroom'].forEach((k, i) => hud.medidores[k] && hud.medidores[k].ponerProgreso(med[i], false));
 }
 addEventListener('resize', () => ui.layout());
-window.estado = { escena, cam, cuarto, tom, u, ui, pant, hud };
+window.estado = { escena, cam, cuarto, tom, u, ui, pant, hud, zonas, sonido };
 window.listo = true;
 </script>
 </body>

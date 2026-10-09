@@ -86,6 +86,13 @@ export class UI {
       }
       if (n.boton) this.tocable(n);
     }
+    for (const r of p.raices) this.receptores(r);
+    for (const n of p.porId.values()) {
+      if (!n.zonaTactil || n.zonaTactil.off) continue;
+      let b = n.padre;
+      while (b && !b.boton) b = b.padre;
+      if (b) n.el.style.pointerEvents = 'auto';    // fuera de un botón, el toque pasa a la escena 3D
+    }
     return p;
   }
 
@@ -123,7 +130,7 @@ export class UI {
       case 'Text': case 'RichText': case 'TextWrapper': this.textoUI(n, c, el); break;
       case 'Localizer': n.loc = c; break;
       case 'Outline': case 'Shadow': (n.efectos ||= []).push(c); break;
-      case 'CanvasGroup': n.grupo = c; this.alfaGrupo(n, c.alfa); if (!c.bloquea) el.style.pointerEvents = 'none'; break;
+      case 'CanvasGroup': n.grupo = c; this.alfaGrupo(n, c.alfa); break;
       case 'Mask': case 'RectMask2D': el.style.overflow = 'hidden'; break;
       case 'Canvas': n.canvas = c; if (c.propio) el.style.zIndex = String(c.orden); break;
       case 'CanvasScaler': n.escalador = c; break;
@@ -131,6 +138,7 @@ export class UI {
       case 'ContentSizeFitter': n.ajuste = c; break;
       case 'LayoutElement': n.elemLayout = c; break;
       case 'AspectRatioFitter': case 'O7AspectRatioFitter': n.aspecto = c; break;
+      case 'TouchRectTransform': n.zonaTactil = c; break;
       default:
         // un Selectable (Button, GameActionButton, Toggle…): transición al tocar y clic
         if (c.m_Transition !== undefined && c.m_AnimationTriggers && !n.boton) n.boton = c;
@@ -142,7 +150,6 @@ export class UI {
   // clic (n.alClic, o this.alClic(n) para todos).
   tocable(n) {
     const b = n.boton, el = n.el;
-    el.style.pointerEvents = 'auto';
     el.style.touchAction = 'manipulation';
     let abajo = false;
     const estado = (cual) => {
@@ -199,6 +206,7 @@ export class UI {
     const token = (n.tokenImg = (n.tokenImg || 0) + 1);
     const s = c.m_Sprite && c.m_Sprite.sprite;
     const col = c.m_Color ? [c.m_Color.r, c.m_Color.g, c.m_Color.b, c.m_Color.a] : [1, 1, 1, 1];
+    this.ponerReceptor(n, g, c);
     const mat = this.nombreMaterial(c);
     if (mat && this.materiales[mat]) { n.dibujo = this.materiales[mat](n, c, g, this); return; }
     if (!s) {
@@ -233,6 +241,19 @@ export class UI {
     else this.tenido(s, col).then(poner);
     if (col[3] < 1) g.style.opacity = String(col[3]);
   }
+
+  // ¿Este gráfico recibe toques? (Graphic con raycastTarget, encendido, sin un CanvasGroup que bloquee)
+  receptor(n, c) {
+    if (!c || c.off || c.m_RaycastTarget === 0) return false;
+    for (let p = n; p; p = p.padre) {
+      if (p.grupo && !p.grupo.bloquea) return false;
+      if (p.grupo && p.grupo.ignora) break;
+    }
+    return true;
+  }
+
+  // Los toques: cada gráfico que recibe deja pasar el evento hacia arriba (al botón que lo contiene).
+  ponerReceptor(n, el, c) { el.style.pointerEvents = this.receptor(n, c) ? 'auto' : 'none'; }
 
   nombreMaterial(c) {
     const m = c.m_Material && c.m_Material.mat;
@@ -359,7 +380,11 @@ export class UI {
     }
     if (a === 'm_IsActive') { const si = v >= 0.5; if (!n.off !== si) this.activo(n, si); return; }
     if (a === 'm_Alpha') { if (!n.grupo || n.grupo.alfa !== v) this.alfaGrupo(n, v); return; }
-    if (a === 'm_BlocksRaycasts') { if (n.grupo) n.grupo.bloquea = v >= 0.5 ? 1 : 0; n.el.style.pointerEvents = v >= 0.5 ? '' : 'none'; return; }
+    if (a === 'm_BlocksRaycasts') {
+      const si = v >= 0.5 ? 1 : 0;
+      if (n.grupo && n.grupo.bloquea !== si) { n.grupo.bloquea = si; this.receptores(n); }
+      return;
+    }
     if (a === 'm_Interactable') { if (n.grupo) n.grupo.interact = v >= 0.5 ? 1 : 0; return; }
     if (a === 'm_FillAmount') { if (n.img && n.img.m_FillAmount !== v) this.relleno(n, v); return; }
     if (a === 'm_Sprite') { if (n.img && (!n.img.m_Sprite || n.img.m_Sprite.sprite !== v)) this.cambiarSprite(n, v); return; }
@@ -369,11 +394,20 @@ export class UI {
       const off = v < 0.5 ? 1 : 0;
       if ((c.off | 0) === off) return;
       c.off = off;
-      if (c === n.img || c === n.raw) { if (n.g) n.g.style.display = off ? 'none' : ''; else if (!off) this.pintarImagen(n); }
+      if (c === n.img || c === n.raw) {
+        if (n.g) { n.g.style.display = off ? 'none' : ''; this.ponerReceptor(n, n.g, c); } else if (!off) this.pintarImagen(n);
+      }
       else if (c === n.txt && n.span) n.span.style.display = off ? 'none' : '';
       return;
     }
     if (c) { c[a] = v; if (this.alAnimar) this.alAnimar(n, tipo, a, v); }
+  }
+
+  receptores(n) {
+    const g = n.img || n.raw;
+    if (g && n.g) this.ponerReceptor(n, n.g, g);
+    if (n.span && n.txt) this.ponerReceptor(n, n.span, n.txt);
+    for (const h of n.h || []) this.receptores(h);
   }
 
   compDe(n, tipo) {
@@ -488,6 +522,7 @@ export class UI {
     n.raw = c;
     if (c.off) return;
     const g = this.capa(n);
+    this.ponerReceptor(n, g, c);
     const mat = this.nombreMaterial(c);
     if (mat && this.materiales[mat]) { n.dibujo = this.materiales[mat](n, c, g, this); return; }
     const t = c.m_Texture && c.m_Texture.textura;
@@ -517,6 +552,7 @@ export class UI {
     span.style.color = `rgba(${col.r * 255},${col.g * 255},${col.b * 255},${col.a})`;
     el.appendChild(span);
     n.span = span;
+    this.ponerReceptor(n, span, c);
     this.ponerTexto(n, c.m_Text || '');
   }
 
