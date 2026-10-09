@@ -249,13 +249,10 @@ love.timer.sleep = function()
 end
 
 -- un paso de los hilos por cuadro: el bucle del juego (love.run) bombea los eventos una vez por cuadro
--- (y ahí también se mira si llegó la música, ver "Sonido")
-local mirarTarde
 local bombear = love.event.pump
 love.event.pump = function(...)
 	bombear(...)
 	pasoHilos()
-	if mirarTarde then mirarTarde() end
 end
 
 --||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -264,31 +261,8 @@ end
 -- Sin el hilo de sonido (en Android va en el principal) el juego hace un Source nuevo cada vez que
 -- suena algo: los efectos "static" se decodificaban enteros (OGG a PCM) en cada toque. Acá se
 -- decodifica cada uno una vez y se clona (los clones comparten el audio ya decodificado).
---
--- De la música, el .love trae de verdad sólo el tema del menú (music1); los otros cuatro y el
--- ambiente son silencios con el mismo nombre, y la página baja los de verdad por detrás a la carpeta
--- de guardado, que LÖVE mira antes que el .love. La lista va en /porteo/tarde.txt y la página anota
--- en /porteo/llegados.txt cada uno que llega. Los cinco temas son capas de la misma canción que
--- suenan juntas (el juego sube el volumen de la que corresponde): al llegar uno, el silencio que
--- suena en su lugar se cambia por el de verdad en el mismo segundo que la música que se oye, sin
--- cortarla. El ambiente se corta y el juego lo vuelve a arrancar cuando lo necesita.
 local fuenteNueva = love.audio.newSource
 local estaticos = {}
-local tarde, faltan = {}, 0
-local provisorias, esProvisoria, cambiados = {}, {}, {}
-do
-	local f = io.open('/porteo/tarde.txt', 'r')
-	if f then
-		for linea in f:lines() do
-			if linea ~= '' then
-				tarde[linea] = true
-				faltan = faltan + 1
-			end
-		end
-		f:close()
-	end
-end
-
 love.audio.newSource = function(a, tipo, ...)
 	if type(a) == 'string' and tipo == 'static' then
 		local p = estaticos[a]
@@ -298,79 +272,28 @@ love.audio.newSource = function(a, tipo, ...)
 		end
 		return p:clone()
 	end
-	local s = fuenteNueva(a, tipo, ...)
-	if type(a) == 'string' and tarde[a] and not cambiados[a] then
-		local real = love.filesystem.getRealDirectory(a)
-		if real and real:sub(-5) == '.love' then
-			provisorias[a] = provisorias[a] or {}
-			table.insert(provisorias[a], s)
-			esProvisoria[s] = true
-		end
-	end
-	return s
+	return fuenteNueva(a, tipo, ...)
 end
 
--- en qué segundo va la música que se oye: la de cualquier tema de verdad que esté sonando
-local function segundoDeLaMusica()
-	if type(SOURCES) ~= 'table' then return nil end
-	for codigo, lista in pairs(SOURCES) do
-		if type(codigo) == 'string' and codigo:find('^music') then
-			for _, e in ipairs(lista) do
-				if e.sound and not esProvisoria[e.sound] and e.sound:isPlaying() then return e.sound:tell() end
-			end
+--||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+-- Imágenes
+--||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+-- La versión web trae las texturas en 2x nada más (las 1x son las mismas a la mitad: 1,7 MB que no
+-- hacían falta). Si el juego pide una 1x (la opción "suavizado de píxeles" apagada), va la 2x con
+-- el doble de dpiscale: mide lo mismo (los quads usan getDimensions, que ya divide por dpiscale) y,
+-- con el filtro "nearest" que pone el juego en ese modo, se ve como la 1x.
+local imagenNueva = love.graphics.newImage
+love.graphics.newImage = function(a, op, ...)
+	if type(a) == 'string' then
+		local nombre = a:match('^resources/textures/1x/(.+)$')
+		if nombre and not love.filesystem.getInfo(a) then
+			local o = {}
+			for k, v in pairs(op or {}) do o[k] = v end
+			o.dpiscale = (o.dpiscale or 1) * 2
+			return imagenNueva('resources/textures/2x/' .. nombre, o, ...)
 		end
 	end
-	return nil
-end
-
-local function cambiar(ruta)
-	cambiados[ruta] = true
-	local lista = provisorias[ruta] or {}
-	provisorias[ruta] = nil
-	local codigo = ruta:match('([^/]+)%.ogg$')
-	local tema = codigo and codigo:find('^music')
-	for _, viejo in ipairs(lista) do
-		esProvisoria[viejo] = nil
-		if viejo:isPlaying() then
-			if tema then
-				local ok, nuevo = pcall(fuenteNueva, ruta, 'stream')
-				if ok then
-					nuevo:setVolume(viejo:getVolume())
-					nuevo:setPitch(viejo:getPitch())
-					nuevo:setLooping(viejo:isLooping())
-					pcall(nuevo.seek, nuevo, segundoDeLaMusica() or viejo:tell())
-					nuevo:play()
-					-- la misma entrada en la tabla del juego, con el sonido de verdad: el juego le sigue
-					-- manejando el volumen
-					for _, e in ipairs(type(SOURCES) == 'table' and SOURCES[codigo] or {}) do
-						if e.sound == viejo then e.sound = nuevo end
-					end
-				end
-			end
-			viejo:stop()
-		end
-	end
-	print('porteo: sonido ' .. ruta .. ' ya está')
-end
-
--- lo que llegó: la página agrega una línea por archivo
-local cuadros, leidas = 0, 0
-function mirarTarde()
-	if faltan <= 0 then return end
-	cuadros = cuadros + 1
-	if cuadros % 30 ~= 0 then return end
-	local f = io.open('/porteo/llegados.txt', 'r')
-	if not f then return end
-	local n = 0
-	for linea in f:lines() do
-		n = n + 1
-		if n > leidas and tarde[linea] and not cambiados[linea] then
-			cambiar(linea)
-			faltan = faltan - 1
-		end
-	end
-	f:close()
-	leidas = math.max(leidas, n)
+	return imagenNueva(a, op, ...)
 end
 
 --||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||

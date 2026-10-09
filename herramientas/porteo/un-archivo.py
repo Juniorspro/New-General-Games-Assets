@@ -136,12 +136,17 @@ ARRANQUE = r"""<script>
     el.textContent = '';  // que el texto no quede ocupando memoria dos veces
     return el.dataset.gz === '1' ? gunzip(u) : Promise.resolve(u);
   }
+  // Lo que es texto lleva charset: un <script> o CSS sin charset se lee con la codificación de la
+  // página, que acá es UTF-16 (un script agregado después con src daba "Invalid or unexpected token").
+  function tipoDe(a) {
+    return /^text\/|javascript|json|xml/.test(a.tipo) && !/charset=/i.test(a.tipo) ? a.tipo + ';charset=utf-8' : a.tipo;
+  }
   function url(a) {
-    if (!a.url) { a.blob = new Blob([a.datos], { type: a.tipo }); a.url = URL.createObjectURL(a.blob); }
+    if (!a.url) { a.blob = new Blob([a.datos], { type: tipoDe(a) }); a.url = URL.createObjectURL(a.blob); }
     return a.url;
   }
   function respuesta(a) {
-    return new Response(a.datos, { status: 200, headers: { 'Content-Type': a.tipo, 'Content-Length': String(a.datos.length) } });
+    return new Response(a.datos, { status: 200, headers: { 'Content-Type': tipoDe(a), 'Content-Length': String(a.datos.length) } });
   }
 
   // ---- los parches: cada pedido a un archivo del juego recibe lo suyo ----

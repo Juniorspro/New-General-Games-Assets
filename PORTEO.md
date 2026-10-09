@@ -773,9 +773,10 @@ Origen: balatro mío xd juniors.apk (65,7 MB, sha256 56487be6…42cd), por link 
 Motor: LÖVE con Lua; el LÖVE es el de Playstack (love.platform: nube, logros) y LuaJIT
 Estrategia: LÖVE 11.4 compilado para la web acá + el Lua del juego tal cual + una capa del navegador
 Fidelidad: 1:1 (su Lua, sus shaders, su azar: una semilla da la misma partida que en el teléfono)
-Tamaños: APK 66 MB → web 14,8 MB para arrancar (con el tema del menú) + 12,7 MB de música después
-Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de Rezona; falta medirlo
-        en el teléfono del dueño (el registro manda el costo de cada cuadro)
+Tamaños: APK 66 MB → web 9 MB en total con la música (motor 1,7 MB comprimido + juego 7,1 MB);
+        un solo .html de 8,7 MB, con la intro de JXStudios
+Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de Rezona (sitio y .html
+        único); en el teléfono del dueño, 67 cuadros/s
 ```
 
 - **Qué hizo falta** (detalle en [`porteos/balatro/LEEME.md`](porteos/balatro/LEEME.md)):
@@ -786,11 +787,14 @@ Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de 
   - hilos con corrutinas;
   - la ventana del tamaño del lienzo;
   - un shader para WebGL.
-- **Lo que no se usa del APK:**
-  - las fuentes CJK (61 MB);
+- **Lo que no se usa del APK** (o va más chico):
+  - las fuentes CJK y la rusa (62 MB), con esos idiomas;
+  - las texturas 1x (el juego recibe las 2x, recomprimidas sin pérdida);
+  - el sonido en Vorbis mono (17,5 MB → 5,1 MB);
   - la parte Android: Java, `liblove.so` y un `libcheckupdate.so` que no es del juego (de quien
     reempaquetó el APK). Del APK sólo se toma `assets/`, y nada de eso se ejecuta.
-- **Rearmarlo:** `porteos/balatro/portear.sh balatro.apk RUTA/A/emsdk SALIDA --registro __registro`.
+- **Rearmarlo:** `porteos/balatro/portear.sh balatro.apk RUTA/A/emsdk SALIDA --registro __registro`;
+  el .html único, con `herramientas/porteo/un-archivo.py SALIDA/sitio --al-final b/….wasm --al-final b/….love`.
 
 ---
 

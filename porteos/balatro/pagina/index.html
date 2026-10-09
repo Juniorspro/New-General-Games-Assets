@@ -5,11 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1e3b44">
 <title>Balatro</title>
+<!-- porteo:pwa -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icono-192.png">
+<!-- /porteo:pwa -->
 <!-- porteo: Balatro (la versión de Android, LÖVE + Lua) en el navegador. El motor es LÖVE compilado
      para la web (porteos/balatro/motor), el juego es su balatro.love con la capa del navegador
-     (porteos/balatro/juego). empaquetar.py llena la tabla de archivos y la imagen de la carga. -->
+     (porteos/balatro/juego). empaquetar.py llena la tabla de archivos y la imagen de la carga.
+     También anda como un solo .html (herramientas/porteo/un-archivo.py): ahí los archivos los da
+     window.__porteoArchivo en vez de la red. -->
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   /* SDL (Emscripten) toma el tamaño del lienzo de su CSS y lo multiplica por la densidad de pantalla */
@@ -23,19 +27,24 @@
 <script src="porteo-registro.js"></script>
 <script src="porteo-web.js"></script>
 <script src="porteo-carga.js"></script>
+<script src="porteo-intro.js"></script>
 <script>
 'use strict';
 (function () {
   var T = /*TABLA*/null;
   var IMAGEN = /*IMAGEN*/'';
   var GUARDADO = '/home/web_user/love/balatro';   // la carpeta de guardado de LÖVE (identity "balatro")
+  // en el .html único los archivos vienen en la página (no hay red ni caché que valga)
+  var unArchivo = typeof window.__porteoArchivo === 'function';
   var idioma = (navigator.language || 'es').slice(0, 2).toLowerCase();
   var lienzo = document.getElementById('canvas');
 
-  if (T.registro) Porteo.registro({ url: T.registro });
+  // el registro va a la puerta de Cloudflare, que lo acepta sólo con sesión: desde el .html único
+  // (otra página, otro origen) no llegaría
+  if (T.registro && !unArchivo) Porteo.registro({ url: T.registro });
   // horizontal (en vertical se gira el juego 90°), pantalla completa al primer toque, sin que se
   // apague, y el botón atrás como Escape (en Balatro abre la pausa). Sin service worker: la caché es
-  // la de abajo, y la música queda en IndexedDB
+  // la de abajo
   Porteo.web({ orientacion: 'landscape', offline: false });
 
   var carga = Porteo.carga({
@@ -58,16 +67,21 @@
            'Vender um curinga devolve metade do que custou.'],
     },
   });
+  var AVISO = {
+    es: 'Port no oficial, para uso personal, de «Balatro» (LocalThunk, Playstack). El juego, sus imágenes y sonidos son de sus autores.',
+    pt: 'Port não oficial, para uso pessoal, de "Balatro" (LocalThunk, Playstack). O jogo, suas imagens e sons pertencem aos seus autores.',
+    en: 'Unofficial personal-use port of "Balatro" (LocalThunk, Playstack). The game, its images and sounds belong to their authors.',
+  };
   (function () {
     var aviso = document.createElement('p');
     aviso.className = 'porteo-aviso-legal';
-    aviso.textContent = {
-      es: 'Port no oficial, para uso personal, de «Balatro» (LocalThunk, Playstack). El juego, sus imágenes y sonidos son de sus autores.',
-      pt: 'Port não oficial, para uso pessoal, de "Balatro" (LocalThunk, Playstack). O jogo, suas imagens e sons pertencem aos seus autores.',
-    }[idioma] || 'Unofficial personal-use port of "Balatro" (LocalThunk, Playstack). The game, its images and sounds belong to their authors.';
+    aviso.textContent = AVISO[idioma] || AVISO.en;
     var c = document.getElementById('porteo-carga');
     if (c) c.appendChild(aviso);
   })();
+  // la intro de JXStudios tapa el principio de la carga (un toque la saltea); si termina antes,
+  // queda la pantalla de carga con el Joker
+  Porteo.intro({ aviso: AVISO });
   var TXT = {
     es: ['Bajando el juego…', 'Arrancando…', 'No se pudo bajar el juego. Revisá la conexión.'],
     pt: ['Baixando o jogo…', 'Iniciando…', 'Não foi possível baixar o jogo. Verifique a conexão.'],
@@ -104,7 +118,7 @@
   var cache = null;
   async function abrirCache() {
     try {
-      if (!self.caches || !isSecureContext) return;
+      if (unArchivo || !self.caches || !isSecureContext) return;
       cache = await conTiempo(caches.open('porteo-balatro'), 4000, null);
       if (!cache) { Porteo.anotar('cache', 'no contesta'); return; }
       // lo de versiones anteriores, fuera (sin esperar)
@@ -113,9 +127,12 @@
     } catch (e) { cache = null; }
   }
 
-  // enCache: lo que va a la caché de la página; la música no (queda en IndexedDB, con las partidas)
-  async function traer(url, alAvanzar, enCache) {
-    if (enCache === false) enCache = null; else enCache = cache;
+  async function traer(url, alAvanzar) {
+    if (unArchivo) {
+      var adentro = window.__porteoArchivo(url, alAvanzar);
+      if (adentro) return adentro;
+    }
+    var enCache = cache;
     if (enCache) {
       try {
         var r = await conTiempo(enCache.match(url), 4000, null);
@@ -138,7 +155,7 @@
   }
 
   // una descarga que no recibe nada en 15 s se corta (y traer la reintenta): en el teléfono del dueño
-  // la música no terminaba nunca de bajar y no había forma de saber por qué
+  // la música (que antes bajaba aparte) no terminaba nunca de bajar y no había forma de saber por qué
   async function bajar(url, alAvanzar) {
     var control = window.AbortController ? new AbortController() : null, ultimo = Date.now();
     var vigia = setInterval(function () {
@@ -164,6 +181,7 @@
     } finally { clearInterval(vigia); }
   }
 
+  // en el .html único, el src lo cambia un-archivo.py por el del archivo que viene en la página
   function cargarScript(src) {
     return new Promise(function (ok, mal) {
       var s = document.createElement('script');
@@ -172,10 +190,6 @@
       s.onerror = function () { mal(new Error(src)); };
       document.head.appendChild(s);
     });
-  }
-
-  function existe(M, ruta, bytes) {
-    try { return M.FS.stat(ruta).size === bytes; } catch (e) { return false; }
   }
 
   async function arrancar() {
@@ -203,41 +217,31 @@
       printErr: function (t) { console.warn(t); },
     });
     window.porteoModulo = M;
-    // las partidas y la música de otras veces, de IndexedDB, antes de arrancar (ver persistencia.js)
+    // las partidas de otras veces, de IndexedDB, antes de arrancar (ver persistencia.js)
     if (M.porteoPartidas) await M.porteoPartidas;
+    // la primera versión bajaba la música aparte a la carpeta de guardado (12,7 MB en IndexedDB):
+    // ahora viene en el juego, y LÖVE mira esa carpeta antes que el .love
+    borrarCarpeta(M, GUARDADO + '/resources');
     try { M.FS.mkdir('/porteo'); } catch (e) { /* ya estaba */ }
     M.FS.writeFile('/porteo/idioma.txt', navigator.language || 'en');
     if (/[?&]medir/.test(location.search)) M.FS.writeFile('/porteo/medir', '1');
-    M.FS.writeFile('/porteo/tarde.txt', T.tarde.map(function (t) { return t.ruta; }).join('\n'));
     M.FS.writeFile('/balatro.love', listos[1], { canOwn: true });
-    // la música de una visita anterior ya está en la carpeta de guardado (IndexedDB). Lo que está se
-    // anota en /porteo/llegados.txt, y cada uno que llega se agrega: el juego lo pone en su lugar
-    var faltan = T.tarde.filter(function (t) { return !existe(M, GUARDADO + '/' + t.ruta, t.bytes); });
-    var llegados = T.tarde.filter(function (t) { return faltan.indexOf(t) < 0; }).map(function (t) { return t.ruta; });
-    M.FS.mkdirTree(GUARDADO + '/resources/sounds');
-    M.FS.writeFile('/porteo/llegados.txt', llegados.join('\n'));
-    Porteo.anotar('arranca', Math.round(performance.now()) + ' ms · faltan ' + faltan.length);
+    Porteo.anotar('arranca', Math.round(performance.now()) + ' ms' + (unArchivo ? ' · un archivo' : ''));
     carga.listo();
     M.callMain(['/balatro.love']);
     Porteo.arrancado();
-    // lo que no se esperó: los temas primero, de a tres a la vez, y cada uno a IndexedDB apenas llega
-    // (si la página se cierra, la vez siguiente ya está)
-    var cola = faltan.slice().sort(function (a, b) { return /\/music/.test(b.ruta) - /\/music/.test(a.ruta); });
-    var desde = performance.now();
-    async function obrero() {
-      for (var t = cola.shift(); t; t = cola.shift()) {
-        try {
-          var d = await traer(t.url, null, false);
-          M.FS.writeFile(GUARDADO + '/' + t.ruta, d, { canOwn: true });
-          llegados.push(t.ruta);
-          M.FS.writeFile('/porteo/llegados.txt', llegados.join('\n'));
-          if (M.porteoGuardar) M.porteoGuardar();
-          Porteo.anotar('tarde', t.ruta.split('/').pop() + ' · ' + Math.round(performance.now() - desde) + ' ms');
-        } catch (e) { Porteo.anotar('tarde', t.ruta + ': ' + (e && e.message || e)); }
-      }
-    }
-    await Promise.all([obrero(), obrero(), obrero()]);
-    if (faltan.length) Porteo.anotar('tarde', (llegados.length === T.tarde.length ? 'listo' : 'incompleto') + ' · ' + Math.round(performance.now() - desde) + ' ms');
+  }
+
+  function borrarCarpeta(M, ruta) {
+    var nombres;
+    try { nombres = M.FS.readdir(ruta); } catch (e) { return; }
+    nombres.forEach(function (n) {
+      if (n === '.' || n === '..') return;
+      var r = ruta + '/' + n;
+      try { if (M.FS.isDir(M.FS.stat(r).mode)) borrarCarpeta(M, r); else M.FS.unlink(r); } catch (e) { /* sigue */ }
+    });
+    try { M.FS.rmdir(ruta); } catch (e) { /* sigue */ }
+    if (M.porteoGuardar) M.porteoGuardar();
   }
 
   arrancar().catch(function (e) {

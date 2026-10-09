@@ -7,8 +7,9 @@ una capa chica que pone lo que la versión de Android tiene en su LÖVE propio y
 
 **Estado:** arranca, el menú, el tutorial, elegir ciega, repartir y jugar manos andan con toques,
 en vertical (girado 90°) y en horizontal, también adentro de otra página (Rezona). Guarda la
-partida y el perfil (IndexedDB). El sonido arranca con el primer toque. Falta jugarlo largo en un
-teléfono de verdad (rendimiento: ver "Lo que falta").
+partida y el perfil (IndexedDB). El sonido arranca con el primer toque. Empieza con la intro de
+JXStudios. Todo entra en 9 MB, música incluida, y también va como un solo .html de 8,7 MB. En el
+teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro).
 
 ## Cómo es
 
@@ -35,38 +36,45 @@ teléfono de verdad (rendimiento: ver "Lo que falta").
     deja ceder (en Lua 5.1 no se puede hacer yield a través de un pcall de C);
   - la ventana siempre del tamaño del lienzo: el juego arrancaba en pantalla completa;
   - un shader con un `for` que WebGL no acepta;
-  - los efectos de sonido se decodifican una vez y se clonan.
+  - los efectos de sonido se decodifican una vez y se clonan;
+  - sólo texturas 2x: cuando el juego pide una 1x (con el suavizado de píxeles apagado) recibe la
+    2x con el doble de `dpiscale`, que mide lo mismo.
 - **El arranque** ([`juego/porteo_despues.lua`](juego/porteo_despues.lua)):
   - un cartel de error que no cuelga la pestaña;
   - el idioma del navegador la primera vez;
   - fuera de la lista los idiomas sin fuente;
   - la medición de cada cuadro, que va al registro.
-- **La página** ([`pagina/index.html`](pagina/index.html)): la pantalla de carga con el Joker,
-  horizontal siempre (en vertical, girado), la caché, el registro y las partidas en IndexedDB, que
-  se guardan cada 4 s y al esconderse la página.
+- **La página** ([`pagina/index.html`](pagina/index.html)): la intro de JXStudios y después la
+  pantalla de carga con el Joker, horizontal siempre (en vertical, girado), la caché, el registro y
+  las partidas en IndexedDB, que se guardan cada 4 s y al esconderse la página. Como un solo .html
+  ([`un-archivo.py`](../../herramientas/porteo/un-archivo.py)) toma los archivos de la página misma.
 
 ## Lo que baja
 
-| qué | MB | cuándo |
+| qué | MB | |
 |---|---|---|
-| motor (love.js + love.wasm) | 4,8 | al abrir (Cloudflare lo comprime) |
-| juego (`balatro.love`: código, imágenes, efectos, fuentes y el tema del menú) | 10,0 | al abrir |
-| los otros 4 temas y el ambiente (8 OGG) | 12,7 | después de arrancar, de a tres; quedan en IndexedDB |
+| motor (love.js + love.wasm) | 4,8 | Cloudflare lo manda comprimido: 1,7 |
+| juego (`balatro.love`) | 7,1 | todo: código, imágenes, fuentes, efectos, ambiente y los cinco temas |
+| el .html único | 8,7 | lo mismo en un archivo (el motor con gzip) |
 
-El APK pesa 66 MB (104 descomprimido). Fuera de la versión web:
+`balatro.love` por dentro: música 3,7 MB, texturas 1,4, efectos 0,8, ambiente 0,6, código 0,3,
+textos 0,2. El APK pesa 66 MB (104 descomprimido). Fuera de la versión web, o más chico:
 
-- las fuentes china, japonesa, coreana y Go Noto: 61 MB, para cuatro idiomas que salen de la lista;
+- las fuentes china, japonesa, coreana, rusa y Go Noto (62 MB), con los textos de esos idiomas;
+- el sonido, en Vorbis mono: música y ambiente a calidad -1 (32 kb/s, corta en 13,9 kHz), efectos
+  a 0 (48 kb/s). De 17,5 MB a 5,1. En el parlante de un teléfono no se nota;
+- las texturas 1x (1,7 MB: son las 2x a la mitad) y las 2x de los logos, que el juego no usa; el
+  resto, recomprimidas sin pérdida con optipng (los mismos píxeles, 25% menos);
+- `gamecontrollerdb.txt`: un mapeo solo (en el navegador SDL ignora los de cada sistema);
 - lo de Android (dexopt, info.txt).
-
-Los cinco temas son capas de la misma canción que suenan juntas (el juego sube el volumen de la que
-corresponde: menú, tienda, sobres, jefe). El del menú viene adentro. Mientras bajan los otros suenan
-silencios con el mismo nombre, y cada uno que llega reemplaza a su silencio en el mismo segundo de la
-música que se oye, sin cortarla. Una descarga que no recibe nada en 15 s se corta y se reintenta.
 
 **Primera versión, con dos errores que se vieron en el teléfono del dueño:**
 
-- Toda la música bajaba por detrás, de a un archivo, sin vigilar si se frenaba. El registro mostró
-  que nunca terminaba, y no sonaba ningún tema.
+- Toda la música (12,7 MB) bajaba por detrás, de a un archivo, sin vigilar si se frenaba. El
+  registro mostró que nunca terminaba, y no sonaba ningún tema. La segunda versión traía el tema del
+  menú adentro y bajaba los otros de a tres, vigilados; desde la tercera, todo el sonido entra en el
+  juego (el dueño pidió unos 10 MB en total) y no baja nada aparte. La página borra la música que
+  quedó en IndexedDB de aquellas versiones.
 - Con Emscripten 6, el `--post-js` corre después de que el módulo ya arrancó, así que el juego
   empezaba antes de que llegaran las partidas de IndexedDB. Ahora la página espera
   `Module.porteoPartidas`, y no se escribe nada en IndexedDB hasta que la carga inicial terminó:
@@ -77,6 +85,8 @@ música que se oye, sin cortarla. Una descarga que no recibe nada en 15 s se cor
 ```bash
 porteos/balatro/portear.sh balatro.apk RUTA/A/emsdk salida --registro __registro
 herramientas/porteo/cloudflare/subir.py salida/sitio --proyecto porteo-balatro --clave … --registro-kv porteo_balatro_registro
+# el .html único (el motor y el juego al final: la intro aparece mientras se lee el resto)
+herramientas/porteo/un-archivo.py salida/sitio --salida Balatro.html --al-final b/….wasm --al-final b/….love
 ```
 
 | archivo | qué es |
@@ -85,16 +95,13 @@ herramientas/porteo/cloudflare/subir.py salida/sitio --proyecto porteo-balatro -
 | `motor/compilar.sh` | baja love.js en commits fijos, aplica `parchar.py`, compila con Emscripten |
 | `motor/parchar.py` | los cambios a LÖVE y a Lua 5.1 (ver arriba) |
 | `motor/persistencia.js` | las partidas en IndexedDB (reemplaza la de love.js, que guardaba sólo al cerrar) |
-| `empaquetar.py` | APK + motor → sitio (archivos con hash en `b/`, la página, manifest e íconos) |
+| `empaquetar.py` | APK + motor → sitio (archivos con hash en `b/`, la página, manifest e íconos); recodifica el sonido y las texturas (necesita ffmpeg y optipng) |
 | `juego/*.lua` | la capa del navegador; el main.lua y conf.lua del juego pasan a `balatro_*.lua` |
 
 Para medir el costo de cada cuadro: `index.html?medir` (cada 5 s en la consola y el registro).
 
 ## Lo que falta
 
-- Rendimiento en el teléfono. En esta máquina (CPU de servidor, WebAssembly) la lógica va de 1 a
-  9 ms por cuadro y el dibujo de 1 a 4. Sin el JIT de LuaJIT, en un teléfono puede ser 2–3 veces
-  más. El registro lo va a decir con la primera partida del dueño.
 - El orden de `pairs()` es distinto en Lua 5.1 que en LuaJIT. Balatro ordena las tablas antes de
   elegir al azar, así que no debería cambiar las partidas por semilla, pero no está comparado
   jugando.
