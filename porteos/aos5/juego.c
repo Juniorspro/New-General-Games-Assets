@@ -182,6 +182,9 @@ int juego_paso(double dt) {
   return n;
 }
 
+/* Qué fracción de la vuelta siguiente ya pasó (0..1): dónde dibujar entre la anterior y la actual. */
+float juego_fraccion(void) { return prog_int > 0 && acum > 0 ? (float)(acum / prog_int) : 0.0f; }
+
 /* Toques: `xy` en coordenadas GL del diseño (960×640, y para arriba), como Touch::getLocation. */
 void juego_toque(int fase, int n, const float *xy) {
   static u64 vec, arr, t[16];

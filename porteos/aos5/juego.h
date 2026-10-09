@@ -41,7 +41,11 @@ typedef struct {
 } Af;
 void dibujo_quad(Af m, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1,
                  u32 rgba, u32 pagina, int mezcla);
-int dibujo_armar(void);
+int dibujo_armar(void);              /* una vez por vuelta: la lista y sus parejas con la anterior */
+int dibujo_interpolar(float a);      /* en cada cuadro: los vértices en la fracción a (0..1) del camino */
+int dibujo_movimiento(void);
+int dibujo_emparejados(void);
+int dibujo_pareja(int i, float *dx, float *dy, float *giro);
 
 /* texto (texto.c) */
 typedef struct {

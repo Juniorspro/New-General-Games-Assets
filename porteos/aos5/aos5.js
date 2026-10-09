@@ -14,9 +14,10 @@
   var sucio = true, ultimo = 0, corriendo = false, terminado = false;
   var DISENO_W = 960, DISENO_H = 640;
   var MAXQ = 16384;
-  // contadores para las pruebas: tiempos en ms (suma y máximo) de la lógica del juego y del dibujo
-  var info = { vueltas: 0, cuadros: 0, dibujos: 0, toques: 0, msPaso: 0, maxPaso: 0, msDibujo: 0, maxDibujo: 0,
-    imagenes: 0, paginas: 0, esperas: 0, msEspera: 0, maxEspera: 0 };
+  // contadores para las pruebas: tiempos en ms (suma y máximo) de la lógica del juego y del dibujo;
+  // intermedios: dibujos entre vuelta y vuelta (el interpolado)
+  var info = { vueltas: 0, cuadros: 0, dibujos: 0, intermedios: 0, toques: 0, msPaso: 0, maxPaso: 0, msDibujo: 0,
+    maxDibujo: 0, imagenes: 0, paginas: 0, esperas: 0, msEspera: 0, maxEspera: 0 };
   A.info = info;
 
   function log(s) { if (A.verLog) console.log('[aos5] ' + s); A.ultimoLog = s; }
@@ -299,9 +300,9 @@
     if (M) M._aos_pantalla(bw, bh);
   }
 
-  function dibujar() {
-    var n = M._aos_dibujar();
-    if (porSubir > 0) { sucio = true; return; }   // pidió imágenes al dibujar: queda el cuadro anterior
+  // dibuja la escena en la fracción `a` del camino entre la vuelta anterior y la actual (1: la actual)
+  function dibujar(a) {
+    var n = M._aos_interpolar(a);
     var vp = M._aos_verts_ptr();
     var nl = M._aos_lotes_n(), lp = M._aos_lotes_ptr() >> 2;
     var sx = canvas.width / window.innerWidth, sy = canvas.height / window.innerHeight;
@@ -389,11 +390,14 @@
   }
 
   // ───────────────────────────── la vuelta
-  var esperaDesde = 0;
+  var esperaDesde = 0, armada = false, ultimaA = -1;
+  // El juego cambia lo que se ve cada 0,06 s; entre vuelta y vuelta se dibuja el punto intermedio
+  // (dibujo.c) para que se mueva a 60 cuadros. Con AOS.interpolar = false (o ?60=0), como el original.
+  A.interpolar = !/[?&]60=0\b/.test(location.search);
   function vuelta(t) {
     if (!corriendo) return;
     requestAnimationFrame(vuelta);
-    if (terminado || document.hidden) return;
+    if (terminado || document.hidden || A.detener) return;
     if (movidos) { mandar(1, Array.from(dedos.values())); movidos = false; }
     if (porSubir > 0) {
       // el juego espera sus imágenes, como el original que las cargaba en el hilo de GL; al seguir no
@@ -415,7 +419,11 @@
     ultimo = t;
     if (dt > 0.25) dt = 0.25;
     var n = 0, t0 = performance.now();
-    try { n = M._aos_paso(dt); } catch (er) { H.trap(String(er && er.message || er)); return; }
+    try {
+      n = M._aos_paso(dt);
+      // una vuelta nueva: se arma lo que se ve y se empareja con lo de la vuelta anterior
+      if (n > 0) { M._aos_armar(); armada = true; }
+    } catch (er) { H.trap(String(er && er.message || er)); return; }
     var t1 = performance.now();
     info.cuadros++;
     if (n > 0) {
@@ -424,13 +432,18 @@
       info.msPaso += t1 - t0;
       if (t1 - t0 > info.maxPaso) info.maxPaso = t1 - t0;
     }
-    if (sucio) {
-      try { dibujar(); } catch (er) { H.trap('dibujo: ' + er); }
+    if (M._aos_salir()) { salir(); return; }
+    if (!armada || porSubir > 0) return;   // pidió imágenes: queda el cuadro anterior hasta que lleguen
+    // 60 cuadros: entre vuelta y vuelta, el punto intermedio (si algo se mueve)
+    var a = A.interpolar ? Math.min(1, M._aos_fraccion()) : 1;
+    if (sucio || (a !== ultimaA && A.interpolar && M._aos_movimiento())) {
+      if (!sucio) info.intermedios++;
+      try { dibujar(a); } catch (er) { H.trap('dibujo: ' + er); }
+      ultimaA = a;
       var t2 = performance.now();
       info.msDibujo += t2 - t1;
       if (t2 - t1 > info.maxDibujo) info.maxDibujo = t2 - t1;
     }
-    if (M._aos_salir()) salir();
   }
   function salir() {
     corriendo = false;
@@ -512,4 +525,6 @@
   };
   A.ajustar = function () { ajustar(); };
   A.vista = function () { return vista; };   // el rectángulo del juego en la página (para las pruebas)
+  // para las pruebas: con AOS.detener = true la vuelta no avanza, y AOS.cuadro(a) dibuja la fracción a
+  A.cuadro = function (a) { if (M && armada) dibujar(a); };
 })();

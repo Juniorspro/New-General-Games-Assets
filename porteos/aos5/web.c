@@ -15,6 +15,7 @@ void juego_atras(void);
 void juego_fondo(int oculta);
 void juego_tamano_pantalla(float w, float h);
 int juego_politica_actual(void);
+float juego_fraccion(void);
 int juego_salir_pedido(void);
 int aos_mezcla(int i, int cual);
 int aos_nmezclas(void);
@@ -166,7 +167,11 @@ EMSCRIPTEN_KEEPALIVE int aos_iniciar(u32 semilla, float w, float h) {
   return juego_iniciar(semilla);
 }
 EMSCRIPTEN_KEEPALIVE int aos_paso(double dt) { return juego_paso(dt); }
-EMSCRIPTEN_KEEPALIVE int aos_dibujar(void) { return dibujo_armar(); }
+EMSCRIPTEN_KEEPALIVE int aos_armar(void) { return dibujo_armar(); }
+EMSCRIPTEN_KEEPALIVE int aos_interpolar(float a) { return dibujo_interpolar(a); }
+EMSCRIPTEN_KEEPALIVE float aos_fraccion(void) { return juego_fraccion(); }
+EMSCRIPTEN_KEEPALIVE int aos_movimiento(void) { return dibujo_movimiento(); }
+EMSCRIPTEN_KEEPALIVE int aos_emparejados(void) { return dibujo_emparejados(); }
 EMSCRIPTEN_KEEPALIVE void *aos_verts_ptr(void) { return aos_verts; }
 EMSCRIPTEN_KEEPALIVE void *aos_lotes_ptr(void) { return aos_lotes; }
 EMSCRIPTEN_KEEPALIVE int aos_lotes_n(void) { return aos_nlotes; }

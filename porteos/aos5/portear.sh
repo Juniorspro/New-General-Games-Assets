@@ -126,7 +126,8 @@ printf '%s\n' "${FUENTES[@]}" | xargs -P "$(nproc)" -I{} bash -c 'compilar "$1"'
 W="$SALIDA/aos5"
 rm -rf "$W"
 mkdir -p "$W"
-EXP=_aos_atlas,_aos_reiniciar_atlas,_aos_escena_dir,_aos_iniciar,_aos_paso,_aos_dibujar,_aos_verts_ptr,_aos_lotes_ptr,_aos_lotes_n
+EXP=_aos_atlas,_aos_reiniciar_atlas,_aos_escena_dir,_aos_iniciar,_aos_paso,_aos_armar,_aos_interpolar,_aos_fraccion
+EXP=$EXP,_aos_movimiento,_aos_emparejados,_aos_verts_ptr,_aos_lotes_ptr,_aos_lotes_n
 EXP=$EXP,_aos_toque,_aos_atras,_aos_fondo,_aos_politica,_aos_salir,_aos_blend,_aos_nblend,_aos_pantalla,_aos_reservar
 EXP=$EXP,_aos_paquete,_aos_heap,_malloc,_free
 # La memoria del juego va en las direcciones del .so (0..64 MB); lo de Emscripten, de 64 MB para arriba.

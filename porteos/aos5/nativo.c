@@ -230,8 +230,14 @@ static void volcar(int vuelta) {
       struct AosVert *v = &aos_verts[L->desde + q * 4];
       const char *n = imagen_en(L->pagina, (v[0].u + v[1].u + v[2].u + v[3].u) / 4,
                                 (v[0].v + v[1].v + v[2].v + v[3].v) / 4);
-      printf("  %-34s m%u (%.0f,%.0f)-(%.0f,%.0f) %08x\n", n, L->mezcla, v[2].x, 640 - v[2].y, v[1].x,
-             640 - v[1].y, v[0].rgba);
+      float dx, dy, giro;
+      int k = (int)((L->desde + q * 4) / 4);
+      if (dibujo_pareja(k, &dx, &dy, &giro))
+        printf("  %-34s m%u (%.0f,%.0f)-(%.0f,%.0f) %08x  movió %+.0f,%+.0f giró %+.0f°\n", n, L->mezcla, v[2].x,
+               640 - v[2].y, v[1].x, 640 - v[1].y, v[0].rgba, dx, -dy, giro);
+      else
+        printf("  %-34s m%u (%.0f,%.0f)-(%.0f,%.0f) %08x  (sin pareja)\n", n, L->mezcla, v[2].x, 640 - v[2].y, v[1].x,
+               640 - v[1].y, v[0].rgba);
     }
   }
 }
@@ -336,7 +342,6 @@ int main(int argc, char **argv) {
         juego_atras();
         printf("-- atrás en la vuelta %d\n", v);
       } else if (sscanf(tok, "d@%d", &at) == 1 && at == v) {
-        dibujo_armar();
         volcar(v);
       }
     }
@@ -344,6 +349,8 @@ int main(int argc, char **argv) {
     mirar(v);
     foto(v);
     int q = dibujo_armar();
+    dibujo_interpolar(1.0f);
+    if (getenv("AOS_PAREJAS") && q) printf("parejas %d: %d de %d\n", v, dibujo_emparejados(), q);
     if (getenv("AOS_USO")) marcar_usadas();
     if (v % 10 == 0 || v < 5) {
       u64 u, p, t;
@@ -352,7 +359,6 @@ int main(int argc, char **argv) {
              (unsigned long long)u / 1024, npaginas, subidas);
     }
   }
-  dibujo_armar();
   volcar(vueltas);
   if (pedidas) fclose(pedidas);
   if (getenv("AOS_USO") && usada) {

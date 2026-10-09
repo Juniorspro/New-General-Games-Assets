@@ -542,6 +542,7 @@ créditos ni se tapa al autor.
 | "cargando" que espera a Java | el juego prende su espera, pide un anuncio (`Application::OnInterstitial`) y la apaga sólo cuando Java avisa: sin aviso, el menú queda trabado desde el segundo arranque | cada pedido que en Android contesta Java se contesta acá (sin anuncios: "falló") |
 | el juego no atiende `onTouchesCancelled` | un dedo cancelado (gesto del sistema, pestaña oculta) deja el botón apretado: camina solo | mandar los cancelados como soltados |
 | diferencias entre la prueba nativa y la web | mismo código, distinto resultado: era el entorno (tamaños de archivo, reloj, `long` de 32 bits) | vigilar una palabra de memoria y comparar en qué instrucción cambia en cada lado |
+| interpolar entre vueltas emparejando cada pieza con la más cercana | en AOS5 los brazos y piernas de un muñeco usan la misma imagen: se cruzaban las parejas y a mitad de camino se separaban las rodillas | emparejar por orden de dibujo entre las iguales; dentro de cada muñeco, el reparto que menos gira; si la pose cambió de golpe, deslizar el muñeco entero. Revisar capturas en la mitad (`AOS.cuadro(0.5)`) ampliadas |
 | intérprete con pasos fijos por segundo ≠ fps del juego | si el bucle da 60 pasos y cada paso cuenta 1000/fps ms, el reloj del juego se desfasa | un solo número manda: pasos por segundo = fps del juego |
 | Clickteam de Android: leer las propiedades de objeto con el diseño publicado | el 2.º campo es la extensión y las animaciones van después de los calificadores: leídos al revés, ningún sprite tiene animaciones | `ccn.py` los lee en el orden de Android |
 | multiplicar la transparencia del editor por la de "fijar coeficiente" | el menú de FNaF 4 (125/128 de fábrica) nunca pasaba del 2 % de opacidad | la acción **reemplaza** la del editor |
@@ -1014,8 +1015,9 @@ Estrategia: traducción estática del ARM64 a C (recompilar.py: una función de 
 Fidelidad: 1:1 — corre el código del juego; sin anuncios (los videos con premio dan el premio),
            sin compras, sin Google Play Games ni noticias de su servidor
 Tamaños: APK original 52 MB → web 10,2 MB · zip 5,9 MB · APK 5,9 MB · un archivo 6,7 MB
-Pruebas: 32/32 de la lista §9 (porteos/aos5/prueba.mjs) + "mono" de toques al azar: 7 corridas,
-         ~70.000 vueltas, 16 pantallas, sin trampas ni funciones sin reemplazo
+Pruebas: lista §9 (porteos/aos5/prueba.mjs): 30/30 con el interpolado (web y .html; las 3 del APK
+         pasaron en la versión anterior) + "mono" de toques al azar: 7 corridas, ~70.000 vueltas,
+         16 pantallas, sin trampas ni funciones sin reemplazo
 ```
 
 - **Qué hizo falta** (detalle en [`porteos/aos5/LEEME.md`](porteos/aos5/LEEME.md)):
@@ -1032,16 +1034,25 @@ Pruebas: 32/32 de la lista §9 (porteos/aos5/prueba.mjs) + "mono" de toques al a
     dibuja y un vigía que dice qué instrucción ARM cambió una palabra (`-DAOS_DEPURAR`).
 - **Controles:** los del original (flechas, saltar, atacar, disparo apuntado, arma, habilidad,
   agacharse, pausa), con varios dedos; atrás del teléfono o Escape = la tecla atrás del juego.
-- **Para un A02:** la lógica corre una vez cada 0,06 s como el original y la página dibuja sólo
-  cuando hubo una vuelta; con la CPU 8 veces más lenta, una vuelta cuesta 4-6 ms y un dibujo 4-5 ms.
-- **Probado** (`porteos/aos5/prueba.mjs`, 32/32): carga; del título a la partida sólo tocando
+- **60 cuadros (interpolado):** la lógica corre una vez cada 0,06 s como el original (16,7 por
+  segundo) y la página dibuja a 60 los puntos intermedios: cada pieza de lo que se dibuja se empareja
+  con la misma de la vuelta anterior (imagen, recorte y tinte; entre iguales, por orden de dibujo) y
+  se interpola su centro, su giro y su color. Los muñecos van por grupo: si la pose cambió de golpe,
+  la pose cambia como en el original y el muñeco se desliza entero. Lo que se ve va una vuelta atrás
+  (0,06 s). `?60=0` en la dirección lo apaga. Lo que no se mueve (menús quietos) se dibuja sólo
+  cuando hay vuelta.
+- **Para un A02:** con la CPU 8 veces más lenta, una vuelta (con armar y emparejar lo que se ve)
+  cuesta ~7 ms y cada cuadro intermedio ~1,2 ms; la GPU pinta unas 3 pantallas por cuadro.
+- **Probado** (`porteos/aos5/prueba.mjs`, 30/30): carga; del título a la partida sólo tocando
   (premio diario, modos, tutorial, nivel 1, armas); cada control medido en la memoria del juego
-  (x, y y acción del jugador), con dos dedos; pausa con el botón y con atrás; página oculta (guarda,
+  (x, y y acción del jugador), con dos dedos; el interpolado (cuadros entre vuelta y vuelta, cada
+  pieza a mitad de camino en el cuadro 0,5); pausa con el botón y con atrás; página oculta (guarda,
   no avanza, suelta los dedos); recarga sin premio ni tutorial repetidos; acostado, parado
   (girado), chico y compu; sin internet; el `.html` único y el APK.
-- **Problemas conocidos:** no se probó en un teléfono real ni en Safari; ZOMBIE, JUMP, DEFENSE y
-  las etapas siguientes corren el mismo código pero no se recorrieron destrabados; el original no
-  tiene música (los MP3 del APK no se usan); firmado con la clave de esta sesión (§7).
+- **Problemas conocidos:** no se probó en un teléfono real ni en Safari (acá no hay GPU: con
+  SwiftShader, dibujar todos los cuadros llega a ~33 por segundo); ZOMBIE, JUMP, DEFENSE y las
+  etapas siguientes corren el mismo código pero no se recorrieron destrabados; el original no tiene
+  música (los MP3 del APK no se usan); firmado con la clave de esta sesión (§7).
 - **Rearmarlo:** `porteos/aos5/portear.sh AngerOfStick5jpark.AOS5v1.1.94.apk [SALIDA]` (~5 minutos
   la primera vez, ~1 después). **Probarlo:** `node porteos/aos5/prueba.mjs
   http://127.0.0.1:8876/aos5/ entrega-aos5/aos5.apk file:///…/aos5.html`.

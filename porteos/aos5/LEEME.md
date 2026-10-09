@@ -20,7 +20,7 @@ El juego no está en el repo (es público): `portear.sh` lo arma desde el APK.
 | `hle_cocos.c` | el cocos2d mínimo que usa el juego: nodos, sprites, letreros, escena, director, archivos, `UserDefault`, sonido, toques |
 | `hle_android.c` | lo que iba a Java: anuncios (no hay), ventanas y llamadas JNI |
 | `juego.c` | arranque, el reloj de cocos2d (una vuelta cada 0,06 s), toques, atrás, irse al fondo |
-| `dibujo.c`, `texto.c`, `tablas.c` | el dibujo (como `Node::visit`), las letras (medidas de FreeType con la arial del APK) y el atlas que se arma a medida que el juego pide imágenes |
+| `dibujo.c`, `texto.c`, `tablas.c` | el dibujo (como `Node::visit`) y el interpolado a 60 cuadros, las letras (medidas de FreeType con la arial del APK) y el atlas que se arma a medida que el juego pide imágenes |
 | `web.c`, `host.js`, `aos5.js`, `index.html` | la página: WebGL, WebAudio, guardado en el navegador, toques |
 | `armar-datos.py` | saca del APK las imágenes (WebP, cada una aparte), los efectos (Opus), los archivos de datos, la letra y el ícono |
 | `nativo.c` | la prueba sin navegador: corre el juego traducido en la máquina y vuelca lo que dibuja (para encontrar rápido lo que falta) |
@@ -62,8 +62,22 @@ edificios, la pausa, los resultados, las opciones (sonido, ayuda, cupones) y los
   juego con sus tablas virtuales y los campos donde el código del juego los lee; lo que no ve el
   juego (texturas, letras) va en una tabla aparte. El dibujo recorre la escena como `Node::visit`.
 - **El ritmo** es el del original: la lógica corre una vez cada 0,06 s (16,7 por segundo, como el
-  `schedule` de `kScene`) y lo que se ve cambia a ese ritmo; la página dibuja sólo cuando hubo una
-  vuelta, y el resto de los cuadros no gasta nada.
+  `schedule` de `kScene`).
+- **60 cuadros por segundo (interpolado).** El original mostraba cada vuelta tal cual: los muñecos se
+  movían a 16,7 cuadros. Acá, en cada vuelta se arma la lista de lo que se ve y cada pieza se
+  empareja con la misma de la vuelta anterior (misma imagen, recorte y tinte; entre piezas iguales,
+  por orden de dibujo: el juego dibuja cada esqueleto siempre en el mismo orden). En cada cuadro de
+  la pantalla se dibuja el punto intermedio: el centro, el giro, el largo y el color. Detalles:
+  - las piezas largas (brazos, piernas) interpolan sus dos puntas, así las articulaciones no se
+    separan aunque giren rápido; las cuadradas (cabezas, bloques, letras) giran sin achicarse;
+  - los brazos y piernas de un muñeco usan la misma imagen; cuando se cruzan, el juego puede
+    dibujarlos en otro orden: dentro de cada muñeco se elige el reparto que menos gira;
+  - si la pose cambió de golpe (un golpe nuevo, un salto), la pose cambia como en el original y el
+    muñeco se desliza entero: nunca queda medio muñeco en una pose y medio en otra;
+  - lo nuevo (un destello, un número) aparece tal cual;
+  - lo que se ve va una vuelta atrás (0,06 s): es lo que cuesta tener los dos extremos;
+  - si nada se mueve (un menú quieto), se dibuja sólo cuando hay vuelta;
+  - `?60=0` en la dirección (o `AOS.interpolar = false`) lo apaga: se ve como el original.
 - **Las imágenes** van cada una aparte en `imagenes.bin` (WebP; sin pérdida cuando pesa casi lo
   mismo: 1162 de 2096) y se acomodan en páginas de 1024×1024 la primera vez que el juego las pide,
   como el original que cargaba cada PNG al usarlo. Mientras se decodifican, el juego espera (como
@@ -87,15 +101,18 @@ edificios, la pausa, los resultados, las opciones (sonido, ayuda, cupones) y los
 | imágenes | 23 MB de PNG | 3,6 MB de WebP |
 | efectos | 6,1 MB de WAV (+ 3 MP3 que no suenan) | 0,55 MB de Opus a 48 kbps |
 | memoria de video | — | 36-40 MB en una partida (sólo lo que se usó; todas juntas serían 119 MB) |
-| una vuelta del juego / un dibujo | — | 0,5 / 0,4 ms en una PC; 4-6 / 4-5 ms con la CPU 8 veces más lenta |
+| una vuelta del juego (con armar y emparejar lo que se ve) / un cuadro | — | 1,2 / 0,5 ms en una PC; ~7 / ~1,2 ms con la CPU 8 veces más lenta |
+| lo que pinta la GPU por cuadro | — | unas 3 pantallas (el cielo, el fondo y lo demás) |
 
-Una vuelta cada 60 ms que cuesta ~10 ms en un teléfono lento deja la página a 60 cuadros por segundo
-con margen. El lienzo no pasa de 1600 px de ancho (el juego es de 960×640).
+A 60 cuadros, el cuadro que trae una vuelta cuesta ~8 ms en un teléfono lento y los otros ~1 ms:
+entra en los 16,7 ms de un cuadro con margen. Si un teléfono no llega a 60, dibuja los que pueda y
+el juego sigue a su velocidad. El lienzo no pasa de 1600 px de ancho (el juego es de 960×640).
 
 ## Problemas conocidos
 
 - No se probó en un teléfono de verdad ni en Safari; los números de arriba son de Chromium sin GPU
-  (SwiftShader) con la CPU frenada.
+  (SwiftShader) con la CPU frenada. Sin GPU, dibujar todos los cuadros llega a ~33 por segundo:
+  los 60 dependen de la GPU del teléfono, que pinta unas 3 pantallas por cuadro.
 - Se jugó el modo MAIN (menús, tutorial, la etapa 1 entera hasta los resultados, tienda, opciones,
   pausa) y una prueba "mono" de toques al azar recorrió 16 pantallas en ~70.000 vueltas sin una
   trampa; ZOMBIE, JUMP, DEFENSE y las etapas siguientes corren el mismo código traducido pero no se

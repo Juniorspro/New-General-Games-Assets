@@ -196,6 +196,31 @@ if (corre('C')) {
       await dedos(t, 'touchEnd', []);
     });
     ch('C: multitáctil: camina y ataca al mismo tiempo', dos.some((s) => s.accion === 40) && dos[dos.length - 1].x > xa + 40, `x ${xa} → ${dos[dos.length - 1].x}`);
+    // 60 cuadros: caminando, entre vuelta y vuelta se dibujan cuadros intermedios, y en el de la mitad
+    // cada pieza está a mitad de camino entre la vuelta anterior y la actual
+    const c0 = await t.pg.evaluate(() => ({ ...AOS.info }));
+    await dedos(t, 'touchStart', [[260, 555, 1]]);
+    await t.pg.waitForTimeout(1500);
+    const medio = await t.pg.evaluate(() => {
+      const M = AOS.M;
+      const centros = (a) => {
+        const n = M._aos_interpolar(a), F = M.HEAPF32, b0 = M._aos_verts_ptr() >> 2, c = [];
+        for (let i = 0; i < n; i++) { const b = b0 + i * 20; c.push((F[b] + F[b + 15]) / 2, (F[b + 1] + F[b + 16]) / 2); }
+        return c;
+      };
+      const p = centros(0), m = centros(0.5), a = centros(1);
+      let mueven = 0, fuera = 0;
+      for (let i = 0; i < a.length; i += 2) {
+        if (Math.hypot(a[i] - p[i], a[i + 1] - p[i + 1]) > 0.5) mueven++;
+        if (Math.hypot(m[i] - (p[i] + a[i]) / 2, m[i + 1] - (p[i + 1] + a[i + 1]) / 2) > 0.01) fuera++;
+      }
+      return { mueven, fuera, piezas: a.length / 2 };
+    });
+    await dedos(t, 'touchEnd', []);
+    const c1 = await t.pg.evaluate(() => ({ ...AOS.info }));
+    const inter = c1.intermedios - c0.intermedios, vueltas = c1.vueltas - c0.vueltas;
+    ch('C: 60 cuadros: entre vuelta y vuelta dibuja los puntos intermedios', inter > 0 && medio.mueven > 0 && medio.fuera === 0,
+      `${inter} cuadros intermedios en ${vueltas} vueltas; ${medio.mueven} de ${medio.piezas} piezas en movimiento, ${medio.fuera} fuera de lugar en la mitad`);
     ch('C: sin errores', t.errores.length === 0, t.errores.slice(0, 3).join(' | '));
   }
   await t.c.close();
