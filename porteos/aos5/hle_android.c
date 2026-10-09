@@ -3,7 +3,8 @@
  * No hay publicidad. Los videos con premio se dan por vistos enseguida: el juego recibe "cargado",
  * "mostrado", "completo" y "cerrado" como si el video hubiera terminado, así los premios (dron,
  * botiquín, arma gratis, doble recompensa) siguen andando. Los anuncios de pantalla completa nunca
- * están cargados y el banner no existe. */
+ * cargan (el juego recibe "falló", como en un teléfono sin anuncios para mostrar) y el banner no
+ * existe. */
 #include "rec.h"
 #include "juego.h"
 #include <stdio.h>
@@ -13,8 +14,6 @@
 #define W(i) ((u32)C.x[i])
 #define RET(v) (C.x[0] = (u64)(v))
 #define P(a) ((char *)G2H(a))
-
-void juego_encolar(u64 fn, u64 arg);
 
 enum { CB_LOAD, CB_SHOW, CB_COMPLETE, CB_CLOSE, CB_FAIL, CB_SKIP, NCB };
 typedef struct {
@@ -68,9 +67,9 @@ void H__ZN21InterstitialInterface17setOnLoadCallbackEPFvPcE(void) { anuncio(X(0)
 void H__ZN21InterstitialInterface17setOnShowCallbackEPFvPcE(void) { anuncio(X(0))->cb[CB_SHOW] = X(1); }
 void H__ZN21InterstitialInterface18setOnCloseCallbackEPFvPcE(void) { anuncio(X(0))->cb[CB_CLOSE] = X(1); }
 void H__ZN21InterstitialInterface17setOnFailCallbackEPFvPcE(void) { anuncio(X(0))->cb[CB_FAIL] = X(1); }
-void H__ZN21InterstitialInterface4loadEv(void) {}
+void H__ZN21InterstitialInterface4loadEv(void) { avisar(anuncio(X(0)), CB_FAIL); }
 void H__ZN21InterstitialInterface8isLoadedEv(void) { RET(0); }
-void H__ZN21InterstitialInterface4showEv(void) { avisar(anuncio(X(0)), CB_CLOSE); }
+void H__ZN21InterstitialInterface4showEv(void) { avisar(anuncio(X(0)), CB_FAIL); }
 void H__ZN22InterstitialController12callCallbackEPcS0_(void) {}
 
 /* ---- banner y lo demás de anuncios */

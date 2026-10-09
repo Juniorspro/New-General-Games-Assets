@@ -53,6 +53,8 @@ void texto_disenar(int fuente, float tam, const char *s, float ancho_max, int ha
 
 /* juego.c */
 void juego_programar(u64 obj, u64 fn, u64 ajuste, float intervalo);
+void juego_encolar(u64 fn, u64 arg);        /* una llamada del "lado Java", antes de la vuelta siguiente */
+u64 aos_simbolo(const char *mangled);        /* dirección de una función del juego por su nombre */
 void juego_salir(void);
 void juego_pantalla(float *w, float *h);
 void juego_politica(u32 p);

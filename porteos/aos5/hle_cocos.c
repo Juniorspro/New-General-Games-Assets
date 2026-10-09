@@ -786,11 +786,21 @@ static void azar_sembrar(u32 s) {
 void H__ZN7cocos2d11Application11getInstanceEv(void) { RET(aplicacion); }
 void H__ZN7cocos2d11ApplicationC2Ev(void) {}
 void H__ZN7cocos2d11ApplicationD2Ev(void) {}
-void H__ZN7cocos2d11Application12getNetStatusEv(void) { RET(0); }
+void H__ZN7cocos2d11Application12getNetStatusEv(void) {
+  if (getenv("AOS_RED")) aos_log("getNetStatus");
+  RET(0);
+}
 void H__ZN7cocos2d11Application8purchaseEi(void) { juego_compra(SW(1)); }
 void H__ZN7cocos2d11Application10setRestoreEv(void) {}
 void H__ZN7cocos2d11Application15getPurchaseListEv(void) {} /* pide a Java las compras hechas; no hay */
-void H__ZN7cocos2d11Application14OnInterstitialEi(void) {}
+/* El juego muestra "cargando" y pide un anuncio de pantalla completa (Java elegía la red de avisos);
+ * sin publicidad, se le contesta lo que contestaba Android cuando no había anuncio: InterstitialFail,
+ * que saca el "cargando" (bzStateGame +0xba8) y deja seguir. */
+void H__ZN7cocos2d11Application14OnInterstitialEi(void) {
+  static u64 fallo;
+  if (!fallo) fallo = aos_simbolo("_Z16InterstitialFailPc");
+  if (fallo) juego_encolar(fallo, 0);
+}
 void H__ZN7cocos2d11Application30RequestLoadRewardAd_DailyBonusEv(void) {}
 void H__ZN7cocos2d11Application18SkipGameClearBonusEv(void) {}
 void H__ZN7cocos2d11Application20ClearNotificationAllEv(void) {}
@@ -800,7 +810,10 @@ void H__ZN7cocos2d11Application10getSysInfoEi(void) { aos_string_en(X(8), ""); }
 void H__ZN7cocos2d9JniHelper14jstring2stringEP8_jstring(void) { aos_string_en(X(8), ""); }
 
 /* ================================================================== capa k* que no se traduce */
-void H__ZN6kScene8httpPostEPKcS1_R11CurlResData(void) { RET(0); }
+void H__ZN6kScene8httpPostEPKcS1_R11CurlResData(void) {
+  if (getenv("AOS_RED")) aos_log("httpPost %s [%.120s]", X(1) ? P(X(1)) : "", X(2) ? P(X(2)) : "");
+  RET(0);
+}
 void H__ZN6kScene12clearResDataEP11CurlResData(void) {}
 void H__ZN6kScene10getSysInfoEiPc(void) { WR8(X(2), 0); }
 void H__ZN6kScene11setParticleEffi(void) {}

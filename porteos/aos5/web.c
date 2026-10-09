@@ -12,6 +12,7 @@ int juego_iniciar(u32 semilla);
 int juego_paso(double dt);
 void juego_toque(int fase, int n, const float *xy);
 void juego_atras(void);
+void juego_fondo(int oculta);
 void juego_tamano_pantalla(float w, float h);
 int juego_politica_actual(void);
 int juego_salir_pedido(void);
@@ -169,12 +170,15 @@ EMSCRIPTEN_KEEPALIVE void *aos_lotes_ptr(void) { return aos_lotes; }
 EMSCRIPTEN_KEEPALIVE int aos_lotes_n(void) { return aos_nlotes; }
 EMSCRIPTEN_KEEPALIVE void aos_toque(int fase, int n, float *xy) { juego_toque(fase, n, xy); }
 EMSCRIPTEN_KEEPALIVE void aos_atras(void) { juego_atras(); }
+EMSCRIPTEN_KEEPALIVE void aos_fondo(int oculta) { juego_fondo(oculta); }
 EMSCRIPTEN_KEEPALIVE int aos_politica(void) { return juego_politica_actual(); }
 EMSCRIPTEN_KEEPALIVE int aos_salir(void) { return juego_salir_pedido(); }
 EMSCRIPTEN_KEEPALIVE int aos_blend(int i, int cual) { return aos_mezcla(i, cual); }
 EMSCRIPTEN_KEEPALIVE int aos_nblend(void) { return aos_nmezclas(); }
 EMSCRIPTEN_KEEPALIVE void aos_pantalla(float w, float h) { juego_tamano_pantalla(w, h); }
 EMSCRIPTEN_KEEPALIVE int aos_atlas(void) { return aos_atlas_lado(); }
+extern u64 aos_escena;
+EMSCRIPTEN_KEEPALIVE u32 aos_escena_dir(void) { return (u32)aos_escena; } /* para las pruebas */
 EMSCRIPTEN_KEEPALIVE void aos_reiniciar_atlas(void) { aos_atlas_reiniciar(); }
 EMSCRIPTEN_KEEPALIVE void aos_heap(u32 *out) {
   u64 u, p, t;

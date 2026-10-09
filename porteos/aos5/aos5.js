@@ -123,7 +123,8 @@
       var c = contexto();
       if (c && c.state === 'suspended' && !silencio) c.resume();
     }
-    return { tocar: tocar, parar: parar, todo: todo, cargar: cargar, pausar: pausar, desbloquear: desbloquear };
+    return { tocar: tocar, parar: parar, todo: todo, cargar: cargar, pausar: pausar, desbloquear: desbloquear,
+      ctx: function () { return ctx; } };
   })();
   A.sonido = Sonido;
 
@@ -369,18 +370,20 @@
     movidos = true;
     e.preventDefault();
   }
-  function arriba(e, fase) {
+  // Un dedo cancelado (el navegador se quedó con el gesto, la página se ocultó) se manda como soltado:
+  // el juego no atiende onTouchesCancelled y el botón quedaría apretado.
+  function arriba(e) {
     if (!dedos.has(e.pointerId)) return;
     var p = aDiseno(e);
     if (movidos) { mandar(1, Array.from(dedos.values())); movidos = false; }
     dedos.delete(e.pointerId);
-    mandar(fase, [p]);
+    mandar(2, [p]);
     e.preventDefault();
   }
   function soltarTodo() {
     var l = Array.from(dedos.values());
     dedos.clear();
-    if (l.length) mandar(3, l);
+    l.forEach(function (p) { mandar(2, [p]); });
   }
 
   // ───────────────────────────── la vuelta
@@ -388,7 +391,7 @@
   function vuelta(t) {
     if (!corriendo) return;
     requestAnimationFrame(vuelta);
-    if (terminado) return;
+    if (terminado || document.hidden) return;
     if (movidos) { mandar(1, Array.from(dedos.values())); movidos = false; }
     if (porSubir > 0) {
       // el juego espera sus imágenes, como el original que las cargaba en el hilo de GL; al seguir no
@@ -434,16 +437,20 @@
     else { var e = document.getElementById('fin'); if (e) e.hidden = false; }
   }
 
+  // la página se oculta (otra app, pantalla apagada, pestaña cerrada) o vuelve: como onPause/onResume
+  // de Android, el juego guarda y pausa; mientras está oculta no avanza
   function visibilidad() {
+    if (!M || terminado) return;
     if (document.hidden) {
-      Sonido.pausar(true);
       soltarTodo();
-      ultimo = 0;
+      try { M._aos_fondo(1); } catch (er) { H.trap(String(er)); }
+      Sonido.pausar(true);
     } else {
+      try { M._aos_fondo(0); } catch (er) { H.trap(String(er)); }
       Sonido.pausar(false);
-      ultimo = 0;
       sucio = true;
     }
+    ultimo = 0;
   }
 
   // ───────────────────────────── arranque
@@ -488,8 +495,8 @@
       document.addEventListener('visibilitychange', visibilidad);
       canvas.addEventListener('pointerdown', abajo, { passive: false });
       canvas.addEventListener('pointermove', mueve, { passive: false });
-      canvas.addEventListener('pointerup', function (e) { arriba(e, 2); }, { passive: false });
-      canvas.addEventListener('pointercancel', function (e) { arriba(e, 3); }, { passive: false });
+      canvas.addEventListener('pointerup', arriba, { passive: false });
+      canvas.addEventListener('pointercancel', arriba, { passive: false });
       canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
       corriendo = true;
       requestAnimationFrame(vuelta);
@@ -502,4 +509,5 @@
     return true;
   };
   A.ajustar = function () { ajustar(); };
+  A.vista = function () { return vista; };   // el rectángulo del juego en la página (para las pruebas)
 })();

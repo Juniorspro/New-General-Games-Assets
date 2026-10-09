@@ -13,7 +13,7 @@ static double acum = -1;
 static int politica;                  /* ResolutionPolicy: 0 EXACT_FIT (estirado), 2 SHOW_ALL */
 static float pant_w = 1600, pant_h = 720;
 static int salir_pedido;
-static u64 f_toque[4], f_tecla;
+static u64 f_toque[4], f_tecla, app_obj;
 
 /* ------------------------------------------------------------------ nombres y errores */
 const char *aos_nombre(u64 a) {
@@ -29,7 +29,9 @@ const char *aos_nombre(u64 a) {
   return r >= 0 ? aos_nombres[r].name : "?";
 }
 
-static u64 simbolo(const char *mangled) {
+u64 aos_simbolo(const char *mangled);
+static u64 simbolo(const char *mangled) { return aos_simbolo(mangled); }
+u64 aos_simbolo(const char *mangled) {
   for (int i = 0; i < aos_nnombres; i++)
     if (!strcmp(aos_nombres[i].mangled, mangled)) return aos_nombres[i].addr;
   aos_log("falta el símbolo %s", mangled);
@@ -121,7 +123,7 @@ int juego_iniciar(u32 semilla) {
   aos_cocos_init();
   if (semilla) aos_cocos_semilla(semilla);
   for (int i = 0; i < aos_ninits; i++) llamar(aos_inits[i]);
-  u64 app = aos_calloc(1, 0x40);
+  u64 app = app_obj = aos_calloc(1, 0x40);
   C.x[0] = app;
   llamar(simbolo("_ZN11AppDelegate29applicationDidFinishLaunchingEv"));
   f_toque[0] = simbolo("_ZN6kScene10onTouchesBERKSt6vectorIPN7cocos2d5TouchESaIS3_EEPNS1_5EventE");
@@ -201,6 +203,19 @@ void juego_toque(int fase, int n, const float *xy) {
   C.x[1] = vec;
   C.x[2] = 0;
   llamar(f_toque[fase & 3]);
+}
+
+/* La página se oculta o vuelve: lo que en Android eran onPause/onResume → AppDelegate. Al irse, el
+ * juego guarda (bzStateGame::adMassage(2): tiempos, ítems y etapas) y pausa el sonido. */
+void juego_fondo(int oculta) {
+  static u64 f[2];
+  if (!f[0]) {
+    f[0] = simbolo("_ZN11AppDelegate30applicationWillEnterForegroundEv");
+    f[1] = simbolo("_ZN11AppDelegate29applicationDidEnterBackgroundEv");
+  }
+  if (!app_obj || !f[oculta != 0]) return;
+  C.x[0] = app_obj;
+  llamar(f[oculta != 0]);
 }
 
 void juego_atras(void) {

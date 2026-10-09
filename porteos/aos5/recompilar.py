@@ -84,8 +84,13 @@ LAB = re.compile(r'^([0-9a-f]{16}) <(.+)>:$')
 
 
 def desarmar(so):
-    out = subprocess.run(['llvm-objdump', '-d', '--no-show-raw-insn', so], capture_output=True,
-                         text=True, errors='replace').stdout
+    """llvm-objdump con AArch64 (el de LLVM 18 es el probado; el de Emscripten sólo trae WebAssembly).
+    Otro se elige con OBJDUMP=..."""
+    od = os.environ.get('OBJDUMP', 'llvm-objdump')
+    r = subprocess.run([od, '-d', '--no-show-raw-insn', so], capture_output=True, text=True, errors='replace')
+    out = r.stdout
+    if r.returncode or not any(LIN.match(l) for l in out[:100000].split('\n')):
+        sys.exit(f'{od} no desarmó {so} (¿le falta AArch64?): {r.stderr.strip()[:300]}')
     ins, labels = {}, {}
     for l in out.split('\n'):
         m = LIN.match(l)

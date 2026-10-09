@@ -4,7 +4,7 @@ los archivos de datos, la fuente y las tablas que necesita el código (imagenes.
 
     armar-datos.py <AngerOfStick5.apk> <carpeta web> <carpeta gen>
 
-En la carpeta web deja datos/ (imagenes.bin, sonidos, datos.bin, fuente) y datos/indice.json; en gen,
+En la carpeta web deja datos/ (imagenes.bin, sonidos, datos.bin, fuente, ícono) y datos/indice.json; en gen,
 imagenes.c y fuentes.c (se compilan con el resto). El mismo APK da siempre los mismos bytes.
 """
 import hashlib, io, json, os, struct, subprocess, sys, tempfile, zipfile
@@ -213,6 +213,8 @@ def main():
     print('archivos y fuente…', file=sys.stderr)
     arch = archivos(z, web)
     fnt = fuente(z, web, gen)
+    # el ícono del juego, para la app instalada y el APK
+    open(os.path.join(web, 'datos', 'icono.png'), 'wb').write(z.read('assets/img/Icon/default_512.png'))
     json.dump(dict(imagenes=imgs, sonidos=snd, archivos=arch, fuente=fnt),
               open(os.path.join(web, 'datos', 'indice.json'), 'w'), ensure_ascii=False, indent=1)
 

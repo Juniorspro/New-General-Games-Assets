@@ -4,7 +4,11 @@
  *   nativo <imagen.bin> <carpeta assets del APK> [vueltas] [guion]
  *
  * El guion son toques: "t:x,y@vuelta" (tocar y soltar en coordenadas del juego 960×640, y para abajo),
- * "a@vuelta" (atrás), "d@vuelta" (volcar lo dibujado). */
+ * "h:x,y@desde-hasta" (mantener apretado), "a@vuelta" (atrás), "d@vuelta" (volcar lo dibujado),
+ * "f@vuelta" (con AOS_FOTO=prefijo: guardar la memoria del bzStateGame después de esa vuelta).
+ * Variables: AOS_RELOJ (ms desde 1970), AOS_SONIDO (anotar sonidos), AOS_TEXTOS (anotar textos),
+ * AOS_MIRAR (palabras a vigilar por vuelta), AOS_USO y AOS_PEDIDAS (imágenes dibujadas y subidas),
+ * AOS_VIGILAR (con -DAOS_DEPURAR: entre qué instrucciones cambió una palabra). */
 #define _GNU_SOURCE
 #include "rec.h"
 #include "juego.h"
@@ -111,17 +115,36 @@ void aos_archivo_escribir(const char *nombre, const u8 *datos, u32 largo) {
   fwrite(datos, 1, largo, f);
   fclose(f);
 }
+/* UserDefault: en memoria, y en /tmp/aos5-guardado/datos.txt para la corrida siguiente (como el
+ * localStorage de la página) */
 static struct {
   char k[64];
   char v[256];
 } datos[512];
-static int ndatos;
+static int ndatos, datos_leidos;
+static void datos_leer(void) {
+  datos_leidos = 1;
+  FILE *f = fopen("/tmp/aos5-guardado/datos.txt", "r");
+  char l[400];
+  while (f && fgets(l, sizeof l, f) && ndatos < 512) {
+    char *t = strchr(l, '\t');
+    if (!t) continue;
+    *t = 0;
+    l[strcspn(t + 1, "\n") + (t + 1 - l)] = 0;
+    snprintf(datos[ndatos].k, 64, "%s", l);
+    snprintf(datos[ndatos].v, 256, "%s", t + 1);
+    ndatos++;
+  }
+  if (f) fclose(f);
+}
 const char *aos_dato_texto(const char *k) {
+  if (!datos_leidos) datos_leer();
   for (int i = 0; i < ndatos; i++)
     if (!strcmp(datos[i].k, k)) return datos[i].v;
   return NULL;
 }
 void aos_dato_poner_texto(const char *k, const char *v) {
+  if (!datos_leidos) datos_leer();
   int i;
   for (i = 0; i < ndatos; i++)
     if (!strcmp(datos[i].k, k)) break;
@@ -130,6 +153,10 @@ void aos_dato_poner_texto(const char *k, const char *v) {
     snprintf(datos[ndatos++].k, 64, "%s", k);
   }
   snprintf(datos[i].v, 256, "%s", v);
+  mkdir("/tmp/aos5-guardado", 0755);
+  FILE *f = fopen("/tmp/aos5-guardado/datos.txt", "w");
+  for (int j = 0; f && j < ndatos; j++) fprintf(f, "%s\t%s\n", datos[j].k, datos[j].v);
+  if (f) fclose(f);
 }
 
 /* ------------------------------------------------------------------ volcado */
@@ -208,6 +235,45 @@ static void volcar(int vuelta) {
   }
 }
 
+/* AOS_MIRAR=dir1,dir2,...: avisa en qué vuelta cambió cada palabra (int32) */
+static void mirar(int vuelta) {
+  static u64 dir[16];
+  static u32 ult[16];
+  static int n = -1;
+  if (n < 0) {
+    n = 0;
+    const char *e = getenv("AOS_MIRAR");
+    while (e && *e && n < 16) {
+      char *fin;
+      dir[n] = strtoull(e, &fin, 0);
+      ult[n] = RD32(dir[n]);
+      n++;
+      e = *fin ? fin + 1 : fin;
+    }
+  }
+  for (int i = 0; i < n; i++) {
+    u32 x = RD32(dir[i]);
+    if (x != ult[i]) printf("-- vuelta %d: [%#llx] %d -> %d\n", vuelta, (unsigned long long)dir[i], (int)ult[i], (int)x);
+    ult[i] = x;
+  }
+}
+
+/* AOS_FOTO=prefijo y "f@vuelta" en el guion: guarda la memoria del bzStateGame en prefijo-VUELTA.bin */
+extern u64 aos_escena;
+static int foto_en[64], nfotos;
+static void foto(int vuelta) {
+  for (int i = 0; i < nfotos; i++)
+    if (foto_en[i] == vuelta && getenv("AOS_FOTO") && aos_escena) {
+      char p[512];
+      snprintf(p, sizeof p, "%s-%d.bin", getenv("AOS_FOTO"), vuelta);
+      FILE *f = fopen(p, "wb");
+      if (f) {
+        fwrite(G2H(aos_escena), 1, 0x340000, f);
+        fclose(f);
+      }
+    }
+}
+
 int main(int argc, char **argv) {
   if (argc < 3) {
     fprintf(stderr, "uso: nativo imagen.bin assets [vueltas] [guion]\n");
@@ -263,6 +329,8 @@ int main(int argc, char **argv) {
       } else if (sscanf(tok, "h:%f,%f@%d-%d", &x, &y, &at, &hasta) == 4 && (at == v || hasta == v)) {
         float xy[2] = {x, 640 - y};
         juego_toque(at == v ? 0 : 2, 1, xy);
+      } else if (sscanf(tok, "f@%d", &at) == 1 && at == v && nfotos < 64) {
+        foto_en[nfotos++] = v;
       } else if (sscanf(tok, "a@%d", &at) == 1 && at == v) {
         juego_atras();
         printf("-- atrás en la vuelta %d\n", v);
@@ -272,6 +340,8 @@ int main(int argc, char **argv) {
       }
     }
     juego_paso(0.06);
+    mirar(v);
+    foto(v);
     int q = dibujo_armar();
     if (getenv("AOS_USO")) marcar_usadas();
     if (v % 10 == 0 || v < 5) {
