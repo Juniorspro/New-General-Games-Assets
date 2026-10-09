@@ -8,7 +8,7 @@ una capa chica que pone lo que la versión de Android tiene en su LÖVE propio y
 **Estado:** arranca, el menú, el tutorial, elegir ciega, repartir y jugar manos andan con toques,
 en vertical (girado 90°) y en horizontal, también adentro de otra página (Rezona). Guarda la
 partida y el perfil (IndexedDB). El sonido arranca con el primer toque. Empieza con la intro de
-JXStudios. Todo entra en 9 MB, música incluida, y también va como un solo .html de 9,6 MB. En el
+JXStudios. Todo entra en 8,4 MB, música incluida, y también va como un solo .html de 9,9 MB. En el
 teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro).
 
 ## Cómo es
@@ -21,7 +21,10 @@ teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro).
     try/catch) pasaba por JavaScript;
   - texturas sin glTexStorage (como en Android) y las de las fuentes como LUMINANCE_ALPHA: con GLES 3
     LÖVE usa swizzle, que WebGL no tiene;
-  - sin MP3.
+  - sin MP3;
+  - sin lo que Balatro no usa, para que todo entre en un .html de menos de 10 MB: glslang (LÖVE lo
+    usa sólo para validar los shaders antes de pasárselos a WebGL, que los valida igual), Box2D
+    (love.physics), LuaSocket y ENet. El .wasm pasa de 4,5 MB a 3,3 (comprimido, de 1,67 a 1,33).
 - **El azar y `bit` de LuaJIT.** El Lua de la web es 5.1: su `math.randomseed` trunca a entero y
   Balatro siembra con fracciones (todas las semillas daban `srand(0)`, las mismas cartas siempre).
   [`motor/azar_luajit.c`](motor/azar_luajit.c) es el generador de LuaJIT 2.1 (Tausworthe 2^223) y
@@ -53,9 +56,9 @@ teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro).
 
 | qué | MB | |
 |---|---|---|
-| motor (love.js + love.wasm) | 4,8 | Cloudflare lo manda comprimido: 1,7 |
+| motor (love.js + love.wasm) | 3,5 | Cloudflare lo manda comprimido: 1,3 |
 | juego (`balatro.love`) | 7,1 | todo: código, imágenes, fuentes, efectos, ambiente y los cinco temas |
-| el .html único | 9,6 | lo mismo en un archivo (el motor con gzip), en UTF-8 (ver "En Rezona") |
+| el .html único | 9,9 | lo mismo en un archivo (el motor con gzip), todo en texto ASCII (ver "En Rezona") |
 
 `balatro.love` por dentro: música 3,7 MB, texturas 1,4, efectos 0,8, ambiente 0,6, código 0,3,
 textos 0,2. El APK pesa 66 MB (104 descomprimido). Fuera de la versión web, o más chico:
@@ -89,18 +92,20 @@ código). Con `allow-same-origin` las partidas se guardan (IndexedDB). Encima po
 cuadro: con el .html único eso era después de bajar los 9 MB, y la intro se pasaba tapada. La
 página avisa apenas arranca, así se ven la intro y la carga con lo que falta.
 
-El .html único va en UTF-8 (`un-archivo.py --utf8`, 7 bits por carácter): si la plataforma lo lee
-como texto (para meterle un script, guardarlo o pasarlo a `srcdoc`) sigue andando. El de UTF-16
-(8,7 MB) leído así no arrancaba. Probado con una página que imita a Rezona: el cuadro con su
-`sandbox`, su pantalla de carga, cargado por dirección, por `srcdoc` y por `blob:` con un script
-agregado; en las tres llega al menú con sonido, y las partidas siguen después de recargar.
+Rezona lee el .html como texto (lo confirmó el dueño). El primero, en UTF-16 (8,7 MB), así no
+arrancaba: no es UTF-8 válido. Ahora va con `un-archivo.py --texto`: ASCII imprimible de punta a
+punta, los datos en basE91, sin caracteres de control ni nada que un arreglo de texto toque; si
+alguien le mete saltos de línea a los datos, se ignoran. Probado con una página que imita a Rezona:
+el cuadro con su `sandbox` y su pantalla de carga, con el .html cargado por dirección, por `srcdoc` y
+por `blob:` (estos dos leído como texto y con un script agregado); en las tres llega al juego con
+sonido, y las partidas siguen después de recargar.
 
 ## Armarlo
 
 ```bash
 porteos/balatro/portear.sh balatro.apk RUTA/A/emsdk salida --registro __registro
 herramientas/porteo/cloudflare/subir.py salida/sitio --proyecto porteo-balatro --clave … --registro-kv porteo_balatro_registro
-# portear.sh también deja salida/Balatro.html: el .html único (un-archivo.py --utf8, con el motor
+# portear.sh también deja salida/Balatro.html: el .html único (un-archivo.py --texto, con el motor
 # y el juego al final: la intro aparece mientras se lee el resto)
 ```
 

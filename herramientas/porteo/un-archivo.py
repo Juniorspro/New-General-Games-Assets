@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Mete un juego HTML5 entero en UN solo .html que se abre con doble clic.
 
-    python3 un-archivo.py CARPETA [--inicio index.html] [--salida juego.html] [--al-final RUTA ...] [--utf8]
+    python3 un-archivo.py CARPETA [--inicio index.html] [--salida juego.html] [--al-final RUTA ...] [--texto]
 
 Por qué hace falta y no alcanza con copiar la carpeta: abierto desde el disco
 (file:// o content:// en Android), el navegador no deja hacer fetch() ni XHR a
@@ -27,12 +27,13 @@ Cómo:
     carcasa) puede pedirlos sin copias y con progreso con
     window.__porteoArchivo(ruta, alAvanzar) → Promise<Uint8Array>.
 
-  - --utf8: el .html en UTF-8 de verdad, con 7 bits de datos por carácter (un 14% más que los
-    archivos, contra el 3% del UTF-16). Para cuando el .html no se sirve tal cual: una plataforma
-    que lo lee como texto (para meterle algo, guardarlo en una base o pasarlo a srcdoc) rompe el
-    UTF-16, que no es UTF-8 válido. Cada carácter ASCII lleva 7 bits; los valores que el HTML no deja
-    pasar (NUL, CR y "<") van juntos con los 7 bits siguientes en un carácter de dos bytes
-    (U+0100..U+027F; al final, solo, U+0280..U+0282).
+  - --texto: el .html entero en ASCII imprimible (un 23% más que los archivos, contra el 3% del
+    UTF-16). Para plataformas que lo leen como texto (Rezona: para meterle algo, guardarlo o
+    pasarlo a srcdoc): el UTF-16 no es UTF-8 válido y ahí no arrancaba. Los datos van en basE91
+    (13 o 14 bits cada dos caracteres) con un alfabeto sin espacio, '"', '&' ni '<': nada que el
+    HTML cambie, ni caracteres de control, ni nada que una normalización de Unicode toque. Lo que no
+    es del alfabeto (un salto de línea que agregue alguien) se ignora al leer. El resto del HTML, en
+    ASCII también (lo que no lo es va como \\uXXXX o &#x…;).
 
 Límites conocidos: no cubre import() dinámico de módulos ES ni document.write;
 DecompressionStream pide Chrome 80+, Safari 16.4+, Firefox 113+.
@@ -99,46 +100,42 @@ def a_utf16(datos: bytes):
     return re.sub("[\x00\r<" + esc + "\ud800-\udfff]", cambiar, s), ord(esc)
 
 
-# ── bytes → texto de 7 bits (--utf8) ──────────────────────────────────────
-ILEGALES = b"\x00\x0d\x3c"  # NUL (el parser lo cambia por U+FFFD), CR (se vuelve LF), "<" (cerraría el <script>)
-ILEGAL_RE = re.compile(b"[\x00\x0d\x3c]")
+# ── bytes → texto ASCII (--texto) ─────────────────────────────────────────
+# basE91 (Joachim Henke), con el alfabeto en orden de código: los 94 imprimibles menos '"', '&' y '<'.
+ALFABETO = "".join(c for c in map(chr, range(0x21, 0x7F)) if c not in '"&<')
+# los valores van hasta 8191 (13 bits) u 8192 + 88 (14 bits cuando los 13 de abajo dan ≤ 88): < 91²
+PARES = [ALFABETO[v % 91] + ALFABETO[v // 91] for v in range(91 * 91)]
+assert len(ALFABETO) == 91
 
 
-def a_7bits(datos: bytes):
-    """bytes → texto: cada carácter, 7 bits (ver --utf8). El arranque (deco) hace lo inverso."""
-    n = len(datos)
-    total = (n * 8 + 6) // 7
-    b = datos + b"\0" * ((-n) % 7)
-    g = bytearray(len(b) // 7 * 8)
-    k, fb = 0, int.from_bytes
-    for i in range(0, len(b), 7):
-        x = fb(b[i:i + 7], "big")
-        g[k:k + 8] = ((x >> 49) & 127, (x >> 42) & 127, (x >> 35) & 127, (x >> 28) & 127,
-                      (x >> 21) & 127, (x >> 14) & 127, (x >> 7) & 127, x & 127)
-        k += 8
-    g = bytes(g[:total])
-    partes, i = [], 0
-    while True:
-        m = ILEGAL_RE.search(g, i)
-        if not m:
-            partes.append(g[i:].decode("ascii"))
-            return "".join(partes)
-        j = m.start()
-        partes.append(g[i:j].decode("ascii"))
-        c = ILEGALES.index(g[j])
-        if j + 1 < total:
-            partes.append(chr(0x100 + (c << 7) + g[j + 1]))
-            i = j + 2
-        else:
-            partes.append(chr(0x280 + c))
-            i = j + 1
+def a_base91(datos: bytes):
+    """bytes → texto en el alfabeto de 91 (ver --texto). El arranque (deco) hace lo inverso."""
+    out, b, n = [], 0, 0
+    for byte in datos:
+        b |= byte << n
+        n += 8
+        if n > 13:
+            v = b & 8191
+            if v > 88:
+                b >>= 13
+                n -= 13
+            else:
+                v = b & 16383
+                b >>= 14
+                n -= 14
+            out.append(PARES[v])
+    if n:
+        out.append(ALFABETO[b % 91])
+        if n > 7 or b > 90:
+            out.append(ALFABETO[b // 91])
+    return "".join(out)
 
 
-UTF8 = False  # --utf8
+TEXTO = False  # --texto
 
 
 def bloque(etiqueta: str, datos: bytes, gz: bool, **attrs):
-    texto, esc = (a_7bits(datos), 7) if UTF8 else a_utf16(datos)
+    texto, esc = (a_base91(datos), 91) if TEXTO else a_utf16(datos)
     extra = "".join(f' data-{k}="{v}"' for k, v in attrs.items())
     return (f'<script type="{etiqueta}"{extra} data-gz="{1 if gz else 0}" data-n="{len(datos)}" '
             f'data-e="{esc}">{texto}</script>')
@@ -160,26 +157,29 @@ ARRANQUE = r"""<script>
     var k = clave(u);
     return k && A[k] || null;
   }
-  // El texto de un bloque → sus bytes (un-archivo.py: a_utf16, o a_7bits si E es 7). También corre
-  // en el worker.
+  // El texto de un bloque → sus bytes (un-archivo.py: a_utf16, o a_base91 si E es 91). También
+  // corre en el worker.
   function deco(s, E, n) {
     var L = s.length;
-    if (E === 7) {
-      var IL = [0, 13, 60], b7 = new Uint8Array(n), j7 = 0, acc = 0, bits = 0;
-      for (var i7 = 0; i7 < L; i7++) {
-        var c7 = s.charCodeAt(i7), v, w = -1;
-        if (c7 < 0x80) v = c7;
-        else if (c7 < 0x280) { c7 -= 0x100; v = IL[c7 >> 7]; w = c7 & 127; }
-        else v = IL[c7 - 0x280];
-        acc = (acc << 7) | v; bits += 7;
-        if (bits >= 8) { bits -= 8; if (j7 < n) b7[j7++] = acc >> bits; acc &= (1 << bits) - 1; }
-        if (w >= 0) {
-          acc = (acc << 7) | w; bits += 7;
-          if (bits >= 8) { bits -= 8; if (j7 < n) b7[j7++] = acc >> bits; acc &= (1 << bits) - 1; }
-        }
+    if (E === 91) {
+      // el alfabeto: los imprimibles de 0x21 a 0x7E menos '"', '&' y '<', en orden; lo demás se saltea
+      var T = new Int16Array(128), k = 0, c;
+      for (c = 0; c < 128; c++) T[c] = c > 0x20 && c < 0x7F && c !== 0x22 && c !== 0x26 && c !== 0x3C ? k++ : -1;
+      var o = new Uint8Array(n), j9 = 0, v = -1, b = 0, nb = 0, d;
+      for (var i9 = 0; i9 < L; i9++) {
+        c = s.charCodeAt(i9);
+        d = c < 128 ? T[c] : -1;
+        if (d < 0) continue;
+        if (v < 0) { v = d; continue; }
+        v += d * 91;
+        b |= v << nb;
+        nb += (v & 8191) > 88 ? 13 : 14;
+        do { if (j9 < n) o[j9++] = b & 255; b >>= 8; nb -= 8; } while (nb > 7);
+        v = -1;
       }
-      if (j7 !== n) throw new Error('bloque dañado (' + j7 + ' de ' + n + ')');
-      return b7;
+      if (v > -1 && j9 < n) o[j9++] = (b | v << nb) & 255;
+      if (j9 !== n) throw new Error('bloque dañado (' + j9 + ' de ' + n + ')');
+      return o;
     }
     var u = new Uint16Array((n + 1) >> 1), j = 0;
     for (var i = 0; i < L; i++) {
@@ -407,6 +407,29 @@ ARRANQUE = r"""<script>
 """
 
 
+def a_ascii(html: str):
+    """Lo que no es ASCII fuera de los bloques (comentarios y textos de la página): en <script>, como
+    \\uXXXX; en <style>, como \\XXXXXX; en el resto, como &#x…;."""
+    def esc(texto, como):
+        return re.sub(r"[^\x00-\x7f]", lambda m: como(ord(m.group())), texto)
+
+    def js(c):
+        if c < 0x10000:
+            return f"\\u{c:04x}"
+        c -= 0x10000  # fuera del plano básico: el par de sustitutos
+        return f"\\u{0xD800 + (c >> 10):04x}\\u{0xDC00 + (c & 0x3FF):04x}"
+
+    partes = re.split(r"(<script\b[^>]*>.*?</script>|<style\b[^>]*>.*?</style>)", html, flags=re.S | re.I)
+    for i, p in enumerate(partes):
+        if p.lower().startswith("<script"):
+            partes[i] = esc(p, js)
+        elif p.lower().startswith("<style"):
+            partes[i] = esc(p, lambda c: f"\\{c:06x}")
+        else:
+            partes[i] = esc(p, lambda c: f"&#x{c:x};")
+    return "".join(partes)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("carpeta", type=Path)
@@ -414,11 +437,11 @@ def main():
     ap.add_argument("--salida", type=Path)
     ap.add_argument("--al-final", action="append", default=[], metavar="RUTA",
                     help="archivo grande que el juego pide con fetch(): va al final y no se lo espera para arrancar")
-    ap.add_argument("--utf8", action="store_true",
-                    help="UTF-8 de verdad (7 bits por carácter, 14%% más grande): aguanta que lo lean como texto")
+    ap.add_argument("--texto", action="store_true",
+                    help="todo en ASCII imprimible (23%% más grande): aguanta que lo lean y lo procesen como texto")
     a = ap.parse_args()
-    global UTF8
-    UTF8 = a.utf8
+    global TEXTO
+    TEXTO = a.texto
 
     d = a.carpeta.resolve()
     html = (d / a.inicio).read_text("utf-8")
@@ -498,10 +521,11 @@ def main():
     html = html.replace("</body>", final + "</body>", 1)
 
     salida = a.salida or d.parent / f"{d.name}-en-un-archivo.html"
-    if UTF8:
-        # el BOM manda aunque el servidor diga otro charset; el <meta>, por si alguien saca el BOM
+    if TEXTO:
+        # ASCII de punta a punta: se lee igual como UTF-8, Latin-1 o lo que sea, sin BOM (en srcdoc
+        # un BOM queda como un carácter antes del doctype y la página pasa a modo "quirks")
         html = html.replace("<head>", '<head>\n<meta charset="utf-8">', 1)
-        salida.write_bytes(codecs.BOM_UTF8 + html.encode("utf-8"))
+        salida.write_bytes(a_ascii(html).encode("ascii"))
     else:
         salida.write_bytes(codecs.BOM_UTF16_LE + html.encode("utf-16-le"))
     tam = salida.stat().st_size

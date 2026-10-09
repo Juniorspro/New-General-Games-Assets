@@ -13,6 +13,9 @@ Qué cambia y por qué:
   páginas: sin SharedArrayBuffer), las banderas que pide un Emscripten de 2026 (GetProcAddress para
   glad, OpenAL, las funciones de FS para el cargador propio) y la persistencia de las partidas
   (persistencia.js).
+- Sin lo que Balatro no usa, para que el .wasm pese menos (el juego entero tiene que entrar en un
+  .html de menos de 10 MB): glslang (LÖVE lo usa sólo para validar los shaders antes de dárselos a
+  WebGL, que los valida igual y da el mismo error), love.physics (Box2D), LuaSocket y ENet.
 """
 import re
 import shutil
@@ -113,12 +116,38 @@ def love(mega):
             "namespace love\n{\nnamespace graphics\n{\nnamespace opengl\n{\n")
 
 
+def sin_lo_que_no_usa(mega):
+    l = mega / "libs/love/src/modules"
+    # sin referencias a glslang, el enlazador no trae nada de su librería (era la mitad del motor)
+    s = l / "graphics/ShaderStage.cpp"
+    cambiar(s, "\tglslangShader = new glslang::TShader(glslangStage);\n",
+            "#ifndef LOVE_EMSCRIPTEN\n\tglslangShader = new glslang::TShader(glslangStage);\n")
+    cambiar(s, "\t\tdelete glslangShader;\n\t\tthrow love::Exception(\"%s\", err.c_str());\n\t}\n}",
+            "\t\tdelete glslangShader;\n\t\tthrow love::Exception(\"%s\", err.c_str());\n\t}\n#endif\n}")
+    cambiar(s, "\tdelete glslangShader;\n}\n\nbool ShaderStage::getConstant",
+            "#ifndef LOVE_EMSCRIPTEN\n\tdelete glslangShader;\n#endif\n}\n\nbool ShaderStage::getConstant")
+    s = l / "graphics/Shader.cpp"
+    cambiar(s, "bool Shader::validate(ShaderStage *vertex, ShaderStage *pixel, std::string &err)\n{\n",
+            "bool Shader::validate(ShaderStage *vertex, ShaderStage *pixel, std::string &err)\n{\n"
+            "#ifdef LOVE_EMSCRIPTEN\n\treturn true;\n#else\n")
+    cambiar(s, "\t\treturn false;\n\t}\n\n\treturn true;\n}\n\nbool Shader::initialize()\n{\n\treturn glslang::InitializeProcess();\n}"
+            "\n\nvoid Shader::deinitialize()\n{\n\tglslang::FinalizeProcess();\n}",
+            "\t\treturn false;\n\t}\n\n\treturn true;\n#endif\n}\n\nbool Shader::initialize()\n{\n"
+            "#ifdef LOVE_EMSCRIPTEN\n\treturn true;\n#else\n\treturn glslang::InitializeProcess();\n#endif\n}"
+            "\n\nvoid Shader::deinitialize()\n{\n#ifndef LOVE_EMSCRIPTEN\n\tglslang::FinalizeProcess();\n#endif\n}")
+    # los módulos que se registran en love.cpp (y sólo ahí): sin registrarlos, nadie los referencia
+    cambiar(l / "love/love.cpp", "// Libraries.\n#ifdef LOVE_ENABLE_LUASOCKET",
+            "#ifdef LOVE_EMSCRIPTEN\n#undef LOVE_ENABLE_PHYSICS\n#undef LOVE_ENABLE_LUASOCKET\n#undef LOVE_ENABLE_ENET\n#endif\n\n"
+            "// Libraries.\n#ifdef LOVE_ENABLE_LUASOCKET")
+
+
 def main():
     mega = Path(sys.argv[1])
     if not (mega / "libs/love/CMakeLists.txt").is_file():
         sys.exit("uso: parchar.py RUTA/A/megasource (con libs/love)")
     lua(mega)
     love(mega)
+    sin_lo_que_no_usa(mega)
     print("parchar: listo")
 
 

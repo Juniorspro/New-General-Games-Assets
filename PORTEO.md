@@ -435,8 +435,9 @@ guardan); sin `allow-orientation-lock` ni `screen-wake-lock`, el giro va por CSS
 pantalla de "cargando" hasta que el juego le manda `postMessage({type: "game:ready"})`, o 2,5 s después
 del `load` del cuadro (en un .html único de 9 MB, después de bajarlo entero), o a los 15 s. El juego
 (y el lanzador) avisan `game:ready` apenas arrancan: así se ven la intro y su propia carga. Si el dueño
-sube **un solo .html**, va con `un-archivo.py --utf8`: una plataforma que lo lee como texto (para
-meterle un script, guardarlo o pasarlo a `srcdoc`) rompe el de UTF-16, que no es UTF-8 válido.
+sube **un solo .html**, va con `un-archivo.py --texto`: Rezona lo lee como texto (lo confirmó el
+dueño), y el de UTF-16 no es UTF-8 válido. Con `--texto` el archivo es ASCII imprimible de punta a
+punta (los datos en basE91, +23 %): no tiene nada que una lectura o un arreglo de texto cambie.
 
 Al terminar cada porteo se entrega, **como archivos** (no sólo una ruta):
 
@@ -546,7 +547,7 @@ créditos ni se tapa al autor.
 | sacar Asyncify para achicar el wasm | los cuadros de diálogo de PvZ esperan con `emscripten_sleep` (`Dialog::WaitForResult`): sin Asyncify no andan | dejarlo (cuesta 2,4 MB de wasm y ~2 s con CPU ÷4) |
 | preguntarle al disco por cada nombre posible de una imagen | en Emscripten cada archivo que no existe es una excepción de JS: ~25 000 consultas, 1,2 s de la carga con CPU ÷4 | leer cada carpeta una vez y no preguntar por lo que no está (`PakInterface::PuedeAbrirse`) |
 | meter un binario en un `.html` con base64 | +33 % de tamaño, y leerlo es más lento | UTF-16 con BOM: dos bytes por carácter y sólo se escapa lo que el HTML no deja pasar (+3 %) |
-| el `.html` en UTF-16 en una plataforma que lo procesa como texto | no es UTF-8 válido: leído como texto, queda basura y no arranca nada (probado con `srcdoc`) | `un-archivo.py --utf8`: 7 bits por carácter ASCII (+14 %), UTF-8 de verdad |
+| el `.html` en UTF-16 en una plataforma que lo procesa como texto (Rezona) | no es UTF-8 válido: leído como texto, queda basura y no arranca nada (probado con `srcdoc`) | `un-archivo.py --texto`: todo ASCII imprimible, los datos en basE91 (+23 %); ni caracteres de control (un primer intento con 7 bits por carácter los tenía: un filtro de texto los podía sacar) |
 | un `<script src>` agregado después en la página UTF-16 | sin charset, el navegador lo lee con la codificación de la página: "Invalid or unexpected token" | los archivos de texto van como `charset=utf-8` |
 | compilar el C# decompilado contra las DLL de Unity que trae el APK | vienen recortadas (*managed stripping*): faltan setters de atributos y miembros que el juego no usaba, y salen errores que en Unity no existen (22 en Slime Rancher) | compilar contra las DLL completas del editor de la misma versión (`herramientas/unity/verificar`) |
 | el recorte del build en el código del juego | saca la mitad de un par de operadores (`==` sin `!=`) o un constructor: el decompilado no compila | agregar la otra mitad como la negación de la que quedó (`porteos/slime-rancher/arreglar.py`) |
@@ -785,8 +786,8 @@ Origen: balatro mío xd juniors.apk (65,7 MB, sha256 56487be6…42cd), por link 
 Motor: LÖVE con Lua; el LÖVE es el de Playstack (love.platform: nube, logros) y LuaJIT
 Estrategia: LÖVE 11.4 compilado para la web acá + el Lua del juego tal cual + una capa del navegador
 Fidelidad: 1:1 (su Lua, sus shaders, su azar: una semilla da la misma partida que en el teléfono)
-Tamaños: APK 66 MB → web 9 MB en total con la música (motor 1,7 MB comprimido + juego 7,1 MB);
-        un solo .html de 9,6 MB (UTF-8), con la intro de JXStudios
+Tamaños: APK 66 MB → web 8,4 MB en total con la música (motor 1,3 MB comprimido + juego 7,1 MB);
+        un solo .html de 9,9 MB, todo en texto ASCII (Rezona lo lee como texto), con la intro
 Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de Rezona (sitio y .html
         único); en el teléfono del dueño, 67 cuadros/s
 ```
@@ -798,7 +799,8 @@ Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de 
   - `love.platform` con guardado local en vez de la nube;
   - hilos con corrutinas;
   - la ventana del tamaño del lienzo;
-  - un shader para WebGL.
+  - un shader para WebGL;
+  - el motor sin lo que Balatro no usa (glslang, Box2D, LuaSocket, ENet): 4,5 → 3,3 MB.
 - **Lo que no se usa del APK** (o va más chico):
   - las fuentes CJK y la rusa (62 MB), con esos idiomas;
   - las texturas 1x (el juego recibe las 2x, recomprimidas sin pérdida);
@@ -806,7 +808,7 @@ Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de 
   - la parte Android: Java, `liblove.so` y un `libcheckupdate.so` que no es del juego (de quien
     reempaquetó el APK). Del APK sólo se toma `assets/`, y nada de eso se ejecuta.
 - **Rearmarlo:** `porteos/balatro/portear.sh balatro.apk RUTA/A/emsdk SALIDA --registro __registro`;
-  también arma el .html único (`SALIDA/Balatro.html`, con `un-archivo.py --utf8`).
+  también arma el .html único (`SALIDA/Balatro.html`, con `un-archivo.py --texto`).
 
 ---
 
