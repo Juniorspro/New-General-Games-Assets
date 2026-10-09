@@ -117,12 +117,24 @@
   // ---- 60 cuadros por segundo como máximo, como el juego en el teléfono (G.FPS_CAP = 60: lo cumple
   // durmiendo, y acá dormir no frena nada). En pantallas de 90 o 120 Hz el navegador pide un cuadro cada
   // 8 a 11 ms, el juego no llega y salen desparejos: el Poco X8 Pro del dueño daba 67 por segundo en el
-  // menú y tirones jugando. Se saltea el pedido si no pasaron ~16 ms desde el último cuadro. Y un
-  // teléfono que no llega a 60 (más de 15 ms de trabajo por cuadro, en promedio) va parejo a 30 en vez
-  // de alternar 60 y 30, que se ve a los tirones; vuelve a 60 cuando le sobra (menos de 11 ms)
-  var cuadros = window.porteoCuadros = { paso: 1000 / 60, trabajo: 8 };
+  // menú y tirones jugando. Se saltea el pedido si no pasaron ~16 ms desde el último cuadro.
+  // Después de cada cuadro, en una tarea aparte, porteo_llamar: ahí corre la lógica del juego cuando va
+  // a 30 con la imagen a 60 (juego/porteo_bucle.lua), sin demorar el cuadro que ya está dibujado. Lo
+  // que devuelve dice el ritmo: 1, a 30 parejos (el teléfono no llega ni así); 0, a 60
+  var cuadros = window.porteoCuadros = { paso: 1000 / 60, trabajo: 8, logica: 0 };
   (function () {
     var raf = window.requestAnimationFrame.bind(window), ultimo = -1e9;
+    var canal = new MessageChannel(), pedido = false;
+    canal.port1.onmessage = function () {
+      pedido = false;
+      var M = window.porteoModulo;
+      if (!M || typeof M._porteo_llamar !== 'function') return;
+      var t0 = performance.now();
+      var r = M._porteo_llamar(0);
+      cuadros.logica = 0.95 * cuadros.logica + 0.05 * (performance.now() - t0);
+      if (r === 1 && cuadros.paso < 20) cuadros.paso = 1000 / 30;
+      else if (r === 0 && cuadros.paso > 20) cuadros.paso = 1000 / 60;
+    };
     window.requestAnimationFrame = function (cb) {
       return raf(function cuadro(t) {
         if (t - ultimo < cuadros.paso - 3) return raf(cuadro);
@@ -130,8 +142,7 @@
         var t0 = performance.now();
         cb(t);
         cuadros.trabajo = 0.95 * cuadros.trabajo + 0.05 * (performance.now() - t0);
-        if (cuadros.paso < 20 && cuadros.trabajo > 15) { cuadros.paso = 1000 / 30; Porteo.anotar('cuadros', '30 por segundo'); }
-        else if (cuadros.paso > 20 && cuadros.trabajo < 11) { cuadros.paso = 1000 / 60; Porteo.anotar('cuadros', '60 por segundo'); }
+        if (!pedido) { pedido = true; canal.port2.postMessage(0); }
       });
     };
   })();

@@ -28,7 +28,9 @@ teléfono del dueño: 67 cuadros/s en el menú; jugando se trababa, y la causa e
     (love.physics), LuaSocket y ENet. El .wasm pasa de 4,5 MB a 3,3 (comprimido, de 1,67 a 1,33);
   - las imágenes sin la copia de sus píxeles en la memoria del wasm (ver "Memoria"), y 48 MB de
     memoria inicial (eran 128);
-  - sin las esperas a la GPU y con los vértices en búferes de la GPU (ver "Rendimiento").
+  - sin las esperas a la GPU y con los vértices en búferes de la GPU (ver "Rendimiento");
+  - `porteo_llamar`: una entrada al juego aparte del bucle de cuadros, para que la página corra la
+    lógica entre cuadro y cuadro (ver "Rendimiento").
 - **El azar y `bit` de LuaJIT.** El Lua de la web es 5.1: su `math.randomseed` trunca a entero y
   Balatro siembra con fracciones (todas las semillas daban `srand(0)`, las mismas cartas siempre).
   [`motor/azar_luajit.c`](motor/azar_luajit.c) es el generador de LuaJIT 2.1 (Tausworthe 2^223) y
@@ -52,8 +54,10 @@ teléfono del dueño: 67 cuadros/s en el menú; jugando se trababa, y la causa e
   - un cartel de error que no cuelga la pestaña;
   - el idioma del navegador la primera vez;
   - fuera de la lista los idiomas sin fuente;
-  - el modo liviano (texturas 1x) en teléfonos con poca memoria o sin WebGL 2;
-  - la medición de cada cuadro (y la memoria de texturas), que va al registro.
+  - el modo liviano (texturas 1x) en teléfonos con poca memoria o sin WebGL 2.
+- **El bucle de cuadros** ([`juego/porteo_bucle.lua`](juego/porteo_bucle.lua)): el `love.run` del
+  juego con la lógica a 30 y la imagen a 60 interpolada en los teléfonos que no llegan (ver
+  "Rendimiento"), y la medición de cada cuadro (y la memoria de texturas), que va al registro.
 - **La página** ([`pagina/index.html`](pagina/index.html)): la intro de JXStudios y después la
   pantalla de carga con el Joker, horizontal siempre (en vertical, girado), la caché, el registro y
   las partidas en IndexedDB, que se guardan cada 4 s y al esconderse la página. Como un solo .html
@@ -138,8 +142,23 @@ Chrome (jugando una mano) y uno del Lua del juego:
   parte de WebGL de cada cuadro, a la mitad.
 - **60 por segundo como máximo** (como el juego en el teléfono): en pantallas de 120 Hz el navegador
   pedía un cuadro cada 8 ms, el juego no llegaba y salían desparejos (el Poco daba 67/s en el menú).
-  Y un teléfono que no llega a 60 (más de 15 ms de trabajo por cuadro) va parejo a 30, en vez de
-  alternar; vuelve a 60 cuando le sobra (menos de 11 ms). Lo mide la página (`porteoCuadros`).
+- **La lógica a 30, la imagen a 60, interpolada** ([`juego/porteo_bucle.lua`](juego/porteo_bucle.lua)).
+  Por cuadro, la lógica del juego (`G:update`: eventos, el mando, mover y actualizar ~470 objetos)
+  cuesta más que el dibujo, y en un teléfono las dos juntas no entraban en 16,7 ms. En el modo
+  interpolado el cuadro sólo dibuja, y la lógica corre un cuadro sí y uno no, con el doble de tiempo,
+  en una tarea que la página lanza apenas termina el cuadro (`porteo_llamar`): si se pasa de los
+  16,7 ms se come el tiempo libre del cuadro siguiente, que sólo dibuja, en vez de demorar uno ya
+  listo. El cuadro que sigue a la lógica dibuja todo a mitad de camino entre lo de antes y lo de
+  ahora (de cada objeto lo visible, `VT`: posición, tamaño, giro y escala; y los relojes de los
+  shaders); el otro, lo de ahora. Guardar lo de antes de ~470 objetos cuesta 0,2 ms; la lógica, 5.
+  Con el procesador frenado 3 veces, la misma mano: 22 % menos de trabajo para los mismos cuadros.
+  El modo se elige solo, midiendo: normal (como el juego) si sobra o si lo que frena es la GPU (con
+  la lógica por debajo de ~21 pasos por segundo los resortes que mueven las cartas tiemblan);
+  interpolado si frena el procesador; a 30 parejos si ni interpolando pasaría de ~45.
+- **Un toque rápido entero en una vuelta.** El juego deja el apoyar en cola hasta su lógica y
+  atiende el soltar en el acto: si llegan juntos suelta antes de apoyar y el toque se pierde. Pasaba
+  en el bucle original con pocos cuadros, y con la lógica a 30 más seguido; ahora ese soltar va a la
+  vuelta siguiente.
 - El juego escribía "LONG DT" en la consola en cada cuadro lento; ya no.
 - Lo que queda es el Lua del juego (mover cartas, la interfaz, ver qué toca el dedo), sin JIT: el
   Lua 5.1 de la web es 2 a 3 veces más lento que el LuaJIT del teléfono. Compilar Lua en un solo

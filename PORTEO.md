@@ -797,7 +797,8 @@ Tamaños: APK 66 MB → web 8 MB en total con la música (motor 1,3 MB comprimid
 Memoria: para teléfonos de 1 GB: sin la copia de los píxeles de las imágenes (wasm 128 → 48 MB),
         modo liviano en todos: texturas 1x y menos píxeles (texturas 121 → 32 MB)
 Fluidez: sin las esperas a la GPU de cada texto nuevo (lógica 12–18 → 5 ms por cuadro), vértices
-        en búferes de la GPU, 60 cuadros/s como máximo y 30 parejos si el teléfono no llega
+        en búferes de la GPU, 60 cuadros/s como máximo; en los teléfonos que no llegan, la lógica
+        a 30 entre cuadro y cuadro y la imagen a 60 interpolada; 30 parejos si ni así
 Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de Rezona (sitio y .html
         único); en el teléfono del dueño, 67 cuadros/s
 ```
@@ -814,7 +815,10 @@ Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de 
   - la memoria para teléfonos de 1 GB: las texturas viajan en 1x y la 2x (que es la 1x con cada
     píxel repetido) se arma en la GPU; modo liviano con 1x y WebGL 1 (ver el LEEME);
   - la fluidez: LÖVE llamaba a `glGetError` por cada texto nuevo (en WebGL espera a la GPU) y
-    pasaba los vértices desde la memoria del programa, que Emscripten imitaba (ver el LEEME).
+    pasaba los vértices desde la memoria del programa, que Emscripten imitaba; y un bucle de
+    cuadros propio (`juego/porteo_bucle.lua`) que interpola: la lógica cada dos cuadros, en una
+    tarea entre cuadro y cuadro (`porteo_llamar`, una entrada nueva al motor), y el cuadro del
+    medio dibuja cada objeto a mitad de camino (ver el LEEME).
 - **Lo que no se usa del APK** (o va más chico):
   - las fuentes CJK y la rusa (62 MB), con esos idiomas;
   - las texturas 1x (el juego recibe las 2x, recomprimidas sin pérdida);

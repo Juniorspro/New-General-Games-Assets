@@ -29,6 +29,8 @@ Qué cambia y por qué:
 - Sin lo que Balatro no usa, para que el .wasm pese menos (el juego entero tiene que entrar en un
   .html de menos de 10 MB): glslang (LÖVE lo usa sólo para validar los shaders antes de dárselos a
   WebGL, que los valida igual y da el mismo error), love.physics (Box2D), LuaSocket y ENet.
+- porteo_llamar: la página corre la lógica del juego entre cuadro y cuadro, no adentro del cuadro
+  (ver entre_cuadros() y juego/porteo_bucle.lua).
 """
 import re
 import shutil
@@ -193,6 +195,39 @@ def vertices(mega):
             "#ifdef LOVE_EMSCRIPTEN\n\t// porteo: ver parchar.py\n\treturn new StreamBufferSubDataOrphan(mode, size);\n#endif\n")
 
 
+def entre_cuadros(mega):
+    # una segunda entrada al juego, aparte del bucle de cuadros: la página llama a porteo_llamar en
+    # una tarea después de cada cuadro, y ahí corre la lógica cuando va a 30 con la imagen a 60
+    # (porteo_bucle.lua). Va en un hilo de Lua propio: el principal queda suspendido entre cuadro y
+    # cuadro (love.run cede en cada uno) y no se le puede llamar nada mientras.
+    m = mega / "libs/love/src/love.cpp"
+    cambiar(m, "#if LOVE_EMSCRIPTEN\n#include <emscripten.h>\n#endif\n",
+            "#if LOVE_EMSCRIPTEN\n#include <emscripten.h>\n\n"
+            "// porteo: ver porteos/balatro/motor/parchar.py (entre_cuadros)\n"
+            "static lua_State *porteo_hilo = nullptr;\n\n"
+            "extern \"C\" EMSCRIPTEN_KEEPALIVE int porteo_llamar(int arg)\n"
+            "{\n"
+            "\tlua_State *L = porteo_hilo;\n"
+            "\tif (L == nullptr)\n\t\treturn -1;\n"
+            "\tlua_getglobal(L, \"porteo_llamar\");\n"
+            "\tif (!lua_isfunction(L, -1))\n\t{\n\t\tlua_pop(L, 1);\n\t\treturn -1;\n\t}\n"
+            "\tlua_pushinteger(L, arg);\n"
+            "\tif (lua_pcall(L, 1, 1, 0) != 0)\n\t{\n"
+            "\t\tprintf(\"porteo_llamar: %s\\n\", lua_tostring(L, -1));\n"
+            "\t\tlua_pop(L, 1);\n\t\treturn -2;\n\t}\n"
+            "\tint r = (int) lua_tointeger(L, -1);\n"
+            "\tlua_pop(L, 1);\n"
+            "\treturn r;\n"
+            "}\n#endif\n")
+    cambiar(m, "\tlua_State *L = luaL_newstate();\n\tluaL_openlibs(L);\n",
+            "\tlua_State *L = luaL_newstate();\n\tluaL_openlibs(L);\n"
+            "#ifdef LOVE_EMSCRIPTEN\n"
+            "\t// anclado en el registro para que el recolector no lo junte\n"
+            "\tporteo_hilo = lua_newthread(L);\n"
+            "\tluaL_ref(L, LUA_REGISTRYINDEX);\n"
+            "#endif\n")
+
+
 def main():
     mega = Path(sys.argv[1])
     if not (mega / "libs/love/CMakeLists.txt").is_file():
@@ -204,6 +239,7 @@ def main():
     webgl1(mega)
     rendimiento(mega)
     vertices(mega)
+    entre_cuadros(mega)
     print("parchar: listo")
 
 
