@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Craftsman PTGI</title>
+<!-- porteo: Craftsman PTGI (Minecraft PE 0.16 rebautizado, con los shaders de Tito Crack 6000) en el
+     navegador. El juego original es código ARM (libminecraftpe.so): acá el motor es nuestro (juego/*.js,
+     WebGL) y usa lo del APK: las texturas, los shaders de Tito (sin la sombra del personaje, como pidió
+     él), la interfaz, los textos y los sonidos (ver empaquetar.py). -->
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #hud { pointer-events: none; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="lienzo"></canvas>
+<canvas id="hud"></canvas>
+<script src="porteo-intro.js"></script>
+<script>
+  // la intro de JXStudios tapa el principio de la carga (un toque la saltea)
+  Porteo.intro({ aviso: {
+    es: 'Port no oficial, para uso personal, de «Craftsman PTGI» de Tito Crack 6000 (basado en Craftsman y Minecraft PE). El juego, sus imágenes, sonidos y shaders son de sus autores.',
+    pt: 'Port não oficial, para uso pessoal, de "Craftsman PTGI" de Tito Crack 6000 (baseado em Craftsman e Minecraft PE). O jogo, suas imagens, sons e shaders pertencem aos seus autores.',
+    en: 'Unofficial personal-use port of "Craftsman PTGI" by Tito Crack 6000 (based on Craftsman and Minecraft PE). The game, its images, sounds and shaders belong to their authors.'
+  } });
+</script>
+<script src="juego.js"></script>
+</body>
+</html>

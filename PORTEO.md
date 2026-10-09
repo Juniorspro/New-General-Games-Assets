@@ -828,6 +828,32 @@ Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de 
 - **Rearmarlo:** `porteos/balatro/portear.sh balatro.apk RUTA/A/emsdk SALIDA --registro __registro`;
   también arma el .html único (`SALIDA/Balatro.html`, con `un-archivo.py --texto`).
 
+### Craftsman PTGI (APK de Android, de Tito Crack 6000) — versión web jugable (creativo)
+
+```
+Origen: Craftsman_PTGI._By_Tito_Crack_6000.apk (56,9 MB, sha256 e80ccd10…3c6), por link de MediaFire;
+        lo mandó el autor de los shaders (Tito), que pidió sacar la sombra del personaje
+Motor: Minecraft PE 0.16 rebautizado: libminecraftpe.so (ARM nativo, no corre en un navegador)
+Estrategia: motor voxel propio en JS/WebGL que usa lo del APK tal cual: los shaders de Tito (sin la
+        sombra del personaje), texturas, bloques, interfaz, textos y sonidos
+Fidelidad: los shaders y los recursos son los del juego; el mundo, la física y los controles,
+        reimplementados como en MCPE 0.16 (generador propio: no da los mismos mundos que el original)
+Tamaños: APK 57 MB → 1,9 MB de datos (atlas WebP sin pérdida 1 MB, sonidos Opus 320 KB);
+        un solo .html de 2,3 MB, todo en texto ASCII
+Estado: creativo completo (mundos guardados, construir, agua y lava, inventario, sonido); probado en
+        Chromium, también dentro de Rezona (toques de verdad); falta supervivencia y bichos
+```
+
+- **Qué hizo falta** (detalle en [`porteos/craftsman/LEEME.md`](porteos/craftsman/LEEME.md)):
+  - generar, iluminar y mallar el mundo en un Web Worker con el formato de vértices y los uniformes
+    que esperan los shaders de MCPE;
+  - sacar la sombra del personaje del `renderchunk.fragment` (cinco capas, verificado);
+  - decodificar los FSB5 (FADPCM) a un solo Opus;
+  - la física de Minecraft, los toques de MCPE (con salto automático) y el agua que corre;
+  - una llamada de dibujo por capa y columna, resolución automática.
+- **Rearmarlo:** `porteos/craftsman/portear.sh Craftsman_PTGI.apk SALIDA` (deja
+  `SALIDA/Craftsman-PTGI.html`).
+
 ---
 
 ## Apéndice A — La orden original del dueño (textual)
