@@ -766,6 +766,32 @@ Estado: el proyecto compila sin errores (WebGL y editor); falta compilarlo con U
 - **Rearmarlo:** `porteos/slime-rancher/portear.sh RUTA/slime.apk [SALIDA]`. Análisis y
   números: [`porteos/slime-rancher/ANALISIS.md`](porteos/slime-rancher/ANALISIS.md).
 
+### Balatro (APK de Android) — versión web jugable
+
+```
+Origen: balatro mío xd juniors.apk (65,7 MB, sha256 56487be6…42cd), por link de MediaFire
+Motor: LÖVE con Lua; el LÖVE es el de Playstack (love.platform: nube, logros) y LuaJIT
+Estrategia: LÖVE 11.4 compilado para la web acá + el Lua del juego tal cual + una capa del navegador
+Fidelidad: 1:1 (su Lua, sus shaders, su azar: una semilla da la misma partida que en el teléfono)
+Tamaños: APK 66 MB → web 11,7 MB para arrancar + 15,6 MB de música que baja después
+Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de Rezona; falta medirlo
+        en el teléfono del dueño (el registro manda el costo de cada cuadro)
+```
+
+- **Qué hizo falta** (detalle en [`porteos/balatro/LEEME.md`](porteos/balatro/LEEME.md)):
+  - el motor, con Emscripten actual: sin hilos, WebGL 2, excepciones nativas de WebAssembly, y
+    texturas sin swizzle ni glTexStorage;
+  - el azar y `bit` de LuaJIT en el Lua 5.1 de la web: comparados con LuaJIT 2.1, mismas salidas;
+  - `love.platform` con guardado local en vez de la nube;
+  - hilos con corrutinas;
+  - la ventana del tamaño del lienzo;
+  - un shader para WebGL.
+- **Lo que no se usa del APK:**
+  - las fuentes CJK (61 MB);
+  - la parte Android: Java, `liblove.so` y un `libcheckupdate.so` que no es del juego (de quien
+    reempaquetó el APK). Del APK sólo se toma `assets/`, y nada de eso se ejecuta.
+- **Rearmarlo:** `porteos/balatro/portear.sh balatro.apk RUTA/A/emsdk SALIDA --registro __registro`.
+
 ---
 
 ## Apéndice A — La orden original del dueño (textual)
