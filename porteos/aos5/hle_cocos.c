@@ -786,6 +786,11 @@ static void azar_sembrar(u32 s) {
 void H__ZN7cocos2d11Application11getInstanceEv(void) { RET(aplicacion); }
 void H__ZN7cocos2d11ApplicationC2Ev(void) {}
 void H__ZN7cocos2d11ApplicationD2Ev(void) {}
+/* "Calificanos" y los enlaces a otros juegos: se abren afuera, como en el teléfono */
+void H__ZN7cocos2d11Application7openURLERKSs(void) {
+  aos_abrir_url(aos_string_c(X(1)));
+  RET(1);
+}
 void H__ZN7cocos2d11Application12getNetStatusEv(void) {
   if (getenv("AOS_RED")) aos_log("getNetStatus");
   RET(0);

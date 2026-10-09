@@ -86,6 +86,7 @@ void aos_sonido_parar(int id) { (void)id; }
 void aos_sonido_todo(int q) { (void)q; }
 void aos_sonido_cargar(const char *ruta) { (void)ruta; }
 void aos_vibrar(int ms) { (void)ms; }
+void aos_abrir_url(const char *url) { aos_log("abrir %s", url); }
 
 int aos_archivo_leer(const char *nombre, u8 **datos, u32 *largo) {
   char p[1024];

@@ -56,6 +56,8 @@
     vibrar: function (ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} },
     subir: function (i, pag, x, y, off, len) { subirImagen(pag, x, y, off, len); },
     vaciar: function () { vaciarAtlas(); },
+    // en el APK, Juego.java manda los enlaces de afuera al navegador del teléfono
+    abrir: function (u) { if (/^https?:/.test(u)) try { window.open(u, '_blank', 'noopener'); } catch (e) {} },
     glifo: function (f, cp, tam) { return Letras.glifo(cp, tam); },
   };
 

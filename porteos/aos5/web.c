@@ -38,6 +38,7 @@ extern void host_vibrar(int ms);
 extern int host_glifo(int fuente, u32 cp, float tam, float *out);
 extern void host_imagen_subir(int img, int pagina, int x, int y, u32 off, u32 len);
 extern void host_atlas_vaciar(void);
+extern void host_abrir_url(const char *url);
 
 void aos_log(const char *fmt, ...) {
   char b[1024];
@@ -64,6 +65,7 @@ void aos_sonido_cargar(const char *ruta) { host_sonido_cargar(ruta); }
 void aos_vibrar(int ms) { host_vibrar(ms); }
 void aos_imagen_subir(int img, int pagina, int x, int y, u32 off, u32 len) { host_imagen_subir(img, pagina, x, y, off, len); }
 void aos_atlas_vaciar(void) { host_atlas_vaciar(); }
+void aos_abrir_url(const char *url) { host_abrir_url(url); }
 
 /* ---- datos.bin: los archivos de assets/data del APK */
 static u8 *paquete;

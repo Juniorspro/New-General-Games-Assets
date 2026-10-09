@@ -538,6 +538,10 @@ créditos ni se tapa al autor.
 | espiar `fetch` en la versión de un archivo | el archivo sirve los datos sin pasar por el `fetch` de verdad: "0 de 0" | medir lo que el juego decodifica (`decodeAudioData`), no los pedidos |
 | abrir el `.html` desde el disco | `fetch`/XHR a los archivos de al lado están prohibidos en `file://` y `content://` | `un-archivo.py`: todo adentro y los pedidos interceptados |
 | leer los cuadros por segundo de Clickteam un campo antes | en la cabecera, "cantidad de pantallas" va justo antes de "cuadros por segundo": FNaF 2 (27 pantallas) quedó con fps 27 y todo temporizador 2,2× más rápido | leer `frameRate` en su lugar (`AppHeader` +0x68) y **medir el reloj del juego contra el reloj real** |
+| un juego nativo que mide sus propios archivos | AOS5 (`imgLoad`) compara el tamaño de tres PNG con el original y, si no coincide, borra el progreso: en la web las imágenes van en otro formato y el nivel 1 aparecía trabado | buscar `getSize`/`stat` sobre assets en el binario; servir archivos en blanco del tamaño original |
+| "cargando" que espera a Java | el juego prende su espera, pide un anuncio (`Application::OnInterstitial`) y la apaga sólo cuando Java avisa: sin aviso, el menú queda trabado desde el segundo arranque | cada pedido que en Android contesta Java se contesta acá (sin anuncios: "falló") |
+| el juego no atiende `onTouchesCancelled` | un dedo cancelado (gesto del sistema, pestaña oculta) deja el botón apretado: camina solo | mandar los cancelados como soltados |
+| diferencias entre la prueba nativa y la web | mismo código, distinto resultado: era el entorno (tamaños de archivo, reloj, `long` de 32 bits) | vigilar una palabra de memoria y comparar en qué instrucción cambia en cada lado |
 | intérprete con pasos fijos por segundo ≠ fps del juego | si el bucle da 60 pasos y cada paso cuenta 1000/fps ms, el reloj del juego se desfasa | un solo número manda: pasos por segundo = fps del juego |
 | Clickteam de Android: leer las propiedades de objeto con el diseño publicado | el 2.º campo es la extensión y las animaciones van después de los calificadores: leídos al revés, ningún sprite tiene animaciones | `ccn.py` los lee en el orden de Android |
 | multiplicar la transparencia del editor por la de "fijar coeficiente" | el menú de FNaF 4 (125/128 de fábrica) nunca pasaba del 2 % de opacidad | la acción **reemplaza** la del editor |
@@ -996,6 +1000,53 @@ Pruebas: 45/45 de la lista §9 (porteos/truco/prueba.mjs), 46/46 de las reglas, 
   `node porteos/truco/prueba.mjs http://127.0.0.1:8872/truco/ entrega-truco/truco.apk
   file:///…/truco.html`.
 - **No va al repo** (§11): nada del juego; sólo la receta, las reglas, la computadora y las pantallas.
+
+### Anger of Stick 5 (J-PARK, 1.1.94) — terminado (falta la prueba en un teléfono de verdad)
+
+```
+Origen: "AngerOfStick5jpark.AOS5v1.1.94.apk" por MediaFire (52 MB, sha256 9bb2f465…f212eae59):
+        el de Google Play, firmado por J-PARK (CN=J-PARK, Seoul). El juego es gratis
+Motor: cocos2d-x 3.17 con TODO el juego en código nativo ARM64 (lib/arm64-v8a/libMyGame.so,
+       símbolos de C++ a la vista: bzStateGame, kScene, kSprite…); nada de JS ni Lua
+Estrategia: traducción estática del ARM64 a C (recompilar.py: una función de C por función ARM,
+            la memoria del .so en sus mismas direcciones) compilada a WebAssembly, con una capa
+            propia en lugar de cocos2d, Android y la libc (WebGL, WebAudio, localStorage)
+Fidelidad: 1:1 — corre el código del juego; sin anuncios (los videos con premio dan el premio),
+           sin compras, sin Google Play Games ni noticias de su servidor
+Tamaños: APK original 52 MB → web 10,2 MB · zip 5,9 MB · APK 5,9 MB · un archivo 6,7 MB
+Pruebas: 32/32 de la lista §9 (porteos/aos5/prueba.mjs) + "mono" de toques al azar: 7 corridas,
+         ~70.000 vueltas, 16 pantallas, sin trampas ni funciones sin reemplazo
+```
+
+- **Qué hizo falta** (detalle en [`porteos/aos5/LEEME.md`](porteos/aos5/LEEME.md)):
+  - el traductor: banderas sólo donde se leen, tablas de saltos con la base guardada en x19..x28
+    (propagación de constantes por el grafo), veneers del erratum 843419, llamadas por puntero
+    por un despacho con todas las funciones; 538 funciones, 206.780 instrucciones;
+  - la capa: los objetos de cocos2d viven en la memoria del juego con sus tablas virtuales y sus
+    campos donde el juego los lee; el dibujo como `Node::visit`; letras con las medidas de FreeType;
+  - el atlas a pedido: cada imagen se decodifica y se acomoda la primera vez que el juego la pide
+    (36-40 MB de video en una partida; todas juntas serían 119 MB) y el juego espera mientras tanto;
+  - tres trampas del juego (§13): la protección por tamaño de archivo, el "cargando" que espera a
+    un anuncio, y la cancelación de toques que el juego no atiende;
+  - `nativo.c`: el mismo código corre en la máquina con guiones de toques, volcados de lo que se
+    dibuja y un vigía que dice qué instrucción ARM cambió una palabra (`-DAOS_DEPURAR`).
+- **Controles:** los del original (flechas, saltar, atacar, disparo apuntado, arma, habilidad,
+  agacharse, pausa), con varios dedos; atrás del teléfono o Escape = la tecla atrás del juego.
+- **Para un A02:** la lógica corre una vez cada 0,06 s como el original y la página dibuja sólo
+  cuando hubo una vuelta; con la CPU 8 veces más lenta, una vuelta cuesta 4-6 ms y un dibujo 4-5 ms.
+- **Probado** (`porteos/aos5/prueba.mjs`, 32/32): carga; del título a la partida sólo tocando
+  (premio diario, modos, tutorial, nivel 1, armas); cada control medido en la memoria del juego
+  (x, y y acción del jugador), con dos dedos; pausa con el botón y con atrás; página oculta (guarda,
+  no avanza, suelta los dedos); recarga sin premio ni tutorial repetidos; acostado, parado
+  (girado), chico y compu; sin internet; el `.html` único y el APK.
+- **Problemas conocidos:** no se probó en un teléfono real ni en Safari; ZOMBIE, JUMP, DEFENSE y
+  las etapas siguientes corren el mismo código pero no se recorrieron destrabados; el original no
+  tiene música (los MP3 del APK no se usan); firmado con la clave de esta sesión (§7).
+- **Rearmarlo:** `porteos/aos5/portear.sh AngerOfStick5jpark.AOS5v1.1.94.apk [SALIDA]` (~5 minutos
+  la primera vez, ~1 después). **Probarlo:** `node porteos/aos5/prueba.mjs
+  http://127.0.0.1:8876/aos5/ entrega-aos5/aos5.apk file:///…/aos5.html`.
+- **No va al repo** (§11): nada del juego (ni el C que sale del binario); sólo el traductor, la capa,
+  la página, la receta y las pruebas.
 
 ### FNaF 2 — port de otra sesión, analizado y corregido
 

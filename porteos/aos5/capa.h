@@ -42,3 +42,4 @@ void aos_archivo_escribir(const char *nombre, const u8 *datos, u32 largo);
 const char *aos_dato_texto(const char *clave);              /* NULL si no está */
 void aos_dato_poner_texto(const char *clave, const char *v);
 void aos_vibrar(int ms);
+void aos_abrir_url(const char *url);           /* un enlace del juego (calificar, otros juegos): afuera */
