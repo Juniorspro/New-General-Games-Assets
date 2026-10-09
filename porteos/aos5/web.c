@@ -172,6 +172,8 @@ EMSCRIPTEN_KEEPALIVE int aos_interpolar(float a) { return dibujo_interpolar(a); 
 EMSCRIPTEN_KEEPALIVE float aos_fraccion(void) { return juego_fraccion(); }
 EMSCRIPTEN_KEEPALIVE int aos_movimiento(void) { return dibujo_movimiento(); }
 EMSCRIPTEN_KEEPALIVE int aos_emparejados(void) { return dibujo_emparejados(); }
+/* para las pruebas: cómo se interpola la pieza i (0 tal cual, 1 sola, 2 con su figura, 3 hueso, 4 pegada) */
+EMSCRIPTEN_KEEPALIVE int aos_modo(int i) { return dibujo_modo(i); }
 EMSCRIPTEN_KEEPALIVE void *aos_verts_ptr(void) { return aos_verts; }
 EMSCRIPTEN_KEEPALIVE void *aos_lotes_ptr(void) { return aos_lotes; }
 EMSCRIPTEN_KEEPALIVE int aos_lotes_n(void) { return aos_nlotes; }

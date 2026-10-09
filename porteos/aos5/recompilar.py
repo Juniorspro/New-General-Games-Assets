@@ -1867,26 +1867,84 @@ HLE_ADDR = {0x89554c: 'std_ios_base_Init_Init'}
 INIT_ROOTS = [0x29581c, 0x295864, 0x295cf0, 0x296400, 0x296460, 0x2964c0]
 # lo que la capa propia necesita llamar del código original
 EXTRA_ROOTS = ['_ZNSt8_Rb_treeIiSt4pairIKiP7kSpriteESt10_Select1stIS4_ESt4lessIiESaIS4_EE16_M_insert_uniqueIS0_IiS3_EEES0_ISt17_Rb_tree_iteratorIS4_EbEOT_']
+# Tablas virtuales cuyas funciones se traducen todas: dynamic_cast (__dynamic_cast) llega a
+# __do_dyncast, __do_upcast… sólo por la tabla del typeinfo de cada clase, nunca con una llamada directa
+# (sin éstas, el ✓ del cartel "no alcanza el oro" se caía).
+VTABLE_ROOTS = ['_ZTVN10__cxxabiv117__class_type_infoE', '_ZTVN10__cxxabiv120__si_class_type_infoE',
+                '_ZTVN10__cxxabiv121__vmi_class_type_infoE']
+
+
+def vtable_entries(p, name):
+    """Las funciones de código a las que apunta la tabla virtual `name` (por sus relocaciones)."""
+    for nm, val, size, typ, shndx in p.elf.syms:
+        if nm == name and shndx and size:
+            break
+    else:
+        raise SystemExit(f'falta la tabla virtual {name}')
+    out = []
+    for off, typ, si, add, sec in p.elf.relocs:
+        if not val <= off < val + size:
+            continue
+        t = None
+        if typ == R_RELATIVE:
+            t = add
+        elif typ in (R_ABS64, R_GLOB_DAT) and p.elf.syms[si][4]:
+            t = p.elf.syms[si][1] + add
+        if t in p.fde:
+            out.append(t)
+    return out
+
+
+def reloc_map(p):
+    """Lo que vale cada palabra relocada de la imagen: una dirección, o el nombre si es importada."""
+    rel = getattr(p, '_relmap', None)
+    if rel is None:
+        rel = {}
+        for off, typ, si, add, sec in p.elf.relocs:
+            if typ == R_RELATIVE:
+                rel[off] = add
+            elif typ in (R_GLOB_DAT, R_ABS64):
+                nm, val, sz, styp, shndx = p.elf.syms[si]
+                rel[off] = val + add if shndx else nm
+        p._relmap = rel
+    return rel
+
+
+def vtable_at(p, v):
+    """Las funciones de la tabla virtual cuya dirección arma el código: la de los punteros (lo que
+    guarda un constructor) o el principio de la tabla (leída de la GOT: desplazamiento y typeinfo antes).
+    Termina en la primera palabra que no es una función; las importadas (__cxa_pure_virtual) se saltan."""
+    rel = reloc_map(p)
+
+    def es_func(a):
+        t = rel.get(a)
+        return isinstance(t, str) or t in p.fde
+
+    if not es_func(v) and v + 8 in rel and es_func(v + 16):
+        v += 16
+    out = []
+    while es_func(v):
+        if not isinstance(rel[v], str):
+            out.append(rel[v])
+        v += 8
+    return out
 
 
 def address_taken(p, f):
     """Funciones cuya dirección arma el código (adrp+add, adr, o leída de la GOT): punteros a función
-    que después se llaman con blr (pthread_once, std::function, qsort…)."""
+    que después se llaman con blr (pthread_once, std::function, qsort…), y las de las tablas virtuales
+    que arma (el constructor de una clase guarda su tabla y después se la llama por ahí: así llegan,
+    por ejemplo, los métodos de las facetas del locale de C++ que usa un ostringstream)."""
     out = set()
     pages = {}
     txt_lo, txt_hi = p.text['addr'], p.text['addr'] + p.text['size']
+    ro = p.elf.secs.get('.data.rel.ro')
     got = p.elf.secs['.got']
     gotrel = getattr(p, '_gotrel', None)
     if gotrel is None:
-        gotrel = {}
-        for off, typ, si, add, sec in p.elf.relocs:
-            if got['addr'] <= off < got['addr'] + got['size']:
-                if typ == R_RELATIVE:
-                    gotrel[off] = add
-                elif typ in (R_GLOB_DAT, R_ABS64):
-                    nm, val, sz, styp, shndx = p.elf.syms[si]
-                    if shndx and styp == 2:
-                        gotrel[off] = val + add
+        rel = reloc_map(p)
+        gotrel = {off: t for off, t in rel.items()
+                  if got['addr'] <= off < got['addr'] + got['size'] and not isinstance(t, str)}
         p._gotrel = gotrel
     for a in sorted(f.code):
         mn, ops = f.code[a]
@@ -1903,8 +1961,12 @@ def address_taken(p, f):
             m = re.match(r'^\[(x\d+), #(0x[0-9a-f]+)\]$', o[1])
             if m and m.group(1) in pages:
                 v = gotrel.get(pages[m.group(1)] + int(m.group(2), 16))
-        if v is not None and txt_lo <= v < txt_hi and v in p.fde and v != f.e:
+        if v is None:
+            continue
+        if txt_lo <= v < txt_hi and v in p.fde and v != f.e:
             out.add(v)
+        elif ro and ro['addr'] <= v < ro['addr'] + ro['size']:
+            out.update(t for t in vtable_at(p, v) if t != f.e)
     return out
 
 
@@ -1927,6 +1989,8 @@ def main():
     roots = [a for a, n in p.sym_at.items() if a in p.fde and ROOT_PAT.search(p.dem.get(n, n)) and not is_hle(n)]
     roots += [p.sym_addr[n] for n in EXTRA_ROOTS if n in p.sym_addr]
     roots += INIT_ROOTS
+    for n in VTABLE_ROOTS:
+        roots += vtable_entries(p, n)
 
     p.rec = {}
     p.hle_names = set()

@@ -26,8 +26,9 @@
   var H = window.AOS_HOST = {
     log: function (s) { log(s); },
     trap: function (s) {
-      terminado = true;
       console.error('[aos5] ' + s);
+      if (terminado) return;   // la primera es la causa: el abort() que viene atrás no la tapa
+      terminado = true;
       A.error = s;
       var e = document.getElementById('error');
       if (e) { e.textContent = 'El juego se detuvo: ' + s; e.hidden = false; }

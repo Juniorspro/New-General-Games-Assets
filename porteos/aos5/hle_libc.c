@@ -136,31 +136,195 @@ void H_isspace(void) { RET(W(0) == ' ' || (W(0) - 9u) < 5u); }
 void H_isdigit(void) { RET((W(0) - '0') < 10u); }
 void H_wctob(void) { RET(W(0) < 128 ? (u64)W(0) : (u64)(s64)-1); }
 void H_btowc(void) { RET(W(0) < 128 ? (u64)W(0) : (u64)(u32)-1); }
-void H_wctype(void) { RET(1); }
+/* Caracteres anchos (wchar_t de 4 bytes) y locale "C": los usa la biblioteca de C++ al armar las
+ * facetas del locale de los flujos (ctype<wchar_t>, collate, time_put…). Sólo ASCII, como el locale "C". */
+static const char *const CLASES[] = {"", "alnum", "alpha", "blank", "cntrl", "digit", "graph",
+                                     "lower", "print", "punct", "space", "upper", "xdigit"};
+void H_wctype(void) {
+  for (u32 i = 1; i < sizeof CLASES / sizeof *CLASES; i++)
+    if (!strcmp(P(X(0)), CLASES[i])) {
+      RET(i);
+      return;
+    }
+  RET(0);
+}
+void H_iswctype(void) {
+  u32 c = W(0);
+  int r = 0;
+  if (c < 128) switch (W(1)) {
+      case 1: r = isalnum((int)c); break;
+      case 2: r = isalpha((int)c); break;
+      case 3: r = c == ' ' || c == '\t'; break;
+      case 4: r = iscntrl((int)c); break;
+      case 5: r = isdigit((int)c); break;
+      case 6: r = isgraph((int)c); break;
+      case 7: r = islower((int)c); break;
+      case 8: r = isprint((int)c); break;
+      case 9: r = ispunct((int)c); break;
+      case 10: r = isspace((int)c); break;
+      case 11: r = isupper((int)c); break;
+      case 12: r = isxdigit((int)c); break;
+    }
+  RET(r != 0);
+}
+void H_towlower(void) { RET(W(0) < 128 ? (u32)tolower((int)W(0)) : W(0)); }
+void H_towupper(void) { RET(W(0) < 128 ? (u32)toupper((int)W(0)) : W(0)); }
+void H_wcslen(void) {
+  u64 n = 0;
+  while (RD32(X(0) + 4 * n)) n++;
+  RET(n);
+}
+void H_wmemchr(void) {
+  for (u64 i = 0; i < X(2); i++)
+    if (RD32(X(0) + 4 * i) == W(1)) {
+      RET(X(0) + 4 * i);
+      return;
+    }
+  RET(0);
+}
+void H_wmemcpy(void) {
+  memmove(G2H(X(0)), G2H(X(1)), (size_t)X(2) * 4);
+  RET(X(0));
+}
+void H_wmemmove(void) {
+  memmove(G2H(X(0)), G2H(X(1)), (size_t)X(2) * 4);
+  RET(X(0));
+}
+void H_wmemset(void) {
+  for (u64 i = 0; i < X(2); i++) WR32(X(0) + 4 * i, W(1));
+  RET(X(0));
+}
+static int wcmp(u64 a, u64 b) {
+  for (;; a += 4, b += 4) {
+    u32 x = RD32(a), y = RD32(b);
+    if (x != y) return x < y ? -1 : 1;
+    if (!x) return 0;
+  }
+}
+void H_strcoll(void) { RET((s64)strcmp(P(X(0)), P(X(1)))); }
+void H_wcscoll(void) { RET((s64)wcmp(X(0), X(1))); }
+void H_strxfrm(void) {
+  size_t n = strlen(P(X(1)));
+  if (X(2) > n) memcpy(P(X(0)), P(X(1)), n + 1);
+  RET(n);
+}
+void H_wcsxfrm(void) {
+  u64 n = 0;
+  while (RD32(X(1) + 4 * n)) n++;
+  if (X(2) > n) memmove(G2H(X(0)), G2H(X(1)), (size_t)(n + 1) * 4);
+  RET(n);
+}
+/* mbrtowc / wcrtomb: un byte por carácter, como el locale "C" */
+void H_mbrtowc(void) {
+  if (!X(1)) {
+    RET(0);
+    return;
+  }
+  if (!X(2)) {
+    RET((u64)(s64)-2);
+    return;
+  }
+  u8 c = (u8)P(X(1))[0];
+  if (X(0)) WR32(X(0), c);
+  RET(c ? 1 : 0);
+}
+void H_wcrtomb(void) {
+  if (!X(0)) {
+    RET(1);
+  } else if (W(1) < 256) {
+    P(X(0))[0] = (char)W(1);
+    RET(1);
+  } else
+    RET((u64)(s64)-1);
+}
+void H_setlocale(void) {
+  static u64 c;
+  if (!c) {
+    c = aos_malloc(2);
+    memcpy(P(c), "C", 2);
+  }
+  RET(c);
+}
+/* strftime con el struct tm de Android (nueve int y después tm_gmtoff y tm_zone) */
+static size_t hora_texto(char *out, size_t cap, u64 fmt, u64 tmg) {
+  struct tm t = {0};
+  t.tm_sec = (s32)RD32(tmg), t.tm_min = (s32)RD32(tmg + 4), t.tm_hour = (s32)RD32(tmg + 8);
+  t.tm_mday = (s32)RD32(tmg + 12), t.tm_mon = (s32)RD32(tmg + 16), t.tm_year = (s32)RD32(tmg + 20);
+  t.tm_wday = (s32)RD32(tmg + 24), t.tm_yday = (s32)RD32(tmg + 28), t.tm_isdst = (s32)RD32(tmg + 32);
+  return strftime(out, cap, P(fmt), &t);
+}
+void H_strftime(void) {
+  char b[512];
+  size_t n = hora_texto(b, sizeof b, X(2), X(3));
+  if (n < X(1)) memcpy(P(X(0)), b, n + 1);
+  RET(n < X(1) ? n : 0);
+}
+void H_wcsftime(void) {
+  /* el formato llega en wchar_t: se angosta, se arma y se vuelve a ensanchar */
+  char f[256], b[512];
+  size_t k = 0;
+  for (; k < sizeof f - 1 && RD32(X(2) + 4 * k); k++) f[k] = (char)RD32(X(2) + 4 * k);
+  f[k] = 0;
+  u64 tmp = aos_malloc(k + 1);
+  memcpy(P(tmp), f, k + 1);
+  size_t n = hora_texto(b, sizeof b, tmp, X(3));
+  aos_free(tmp);
+  if (n < X(1))
+    for (size_t i = 0; i <= n; i++) WR32(X(0) + 4 * i, (u8)b[i]);
+  RET(n < X(1) ? n : 0);
+}
 
 /* ---------------------------------------------------- printf con los argumentos del ARM */
-/* Los argumentos variables van como los otros en AAPCS64: enteros en x, flotantes en v, después pila. */
+/* Los argumentos variables van como los otros en AAPCS64: enteros en x, flotantes en v, después pila.
+ * Para vsnprintf y compañía vienen en un va_list del ARM (en la memoria del juego): __stack (+0),
+ * __gr_top (+8), __vr_top (+16), __gr_offs (+24) y __vr_offs (+28); mientras un offs es negativo, el
+ * argumento está en los registros guardados (8 bytes cada x, 16 cada v). */
 typedef struct {
   int gr, vr;
   u64 pila;
+  u64 lista; /* la dirección del va_list, o 0 si los argumentos están en los registros */
 } Va;
 
 static u64 va_int(Va *va) {
+  if (va->lista) {
+    s32 off = (s32)RD32(va->lista + 24);
+    if (off < 0) {
+      WR32(va->lista + 24, (u32)(off + 8));
+      return RD64(RD64(va->lista + 8) + (u64)(s64)off);
+    }
+    u64 p = RD64(va->lista);
+    WR64(va->lista, p + 8);
+    return RD64(p);
+  }
   if (va->gr < 8) return C.x[va->gr++];
   u64 v = RD64(va->pila);
   va->pila += 8;
   return v;
 }
 static double va_dbl(Va *va) {
+  if (va->lista) {
+    s32 off = (s32)RD32(va->lista + 28);
+    if (off < 0) {
+      WR32(va->lista + 28, (u32)(off + 16));
+      return F64(RD64(RD64(va->lista + 16) + (u64)(s64)off));
+    }
+    u64 p = RD64(va->lista);
+    WR64(va->lista, p + 8);
+    return F64(RD64(p));
+  }
   if (va->vr < 8) return F64(C.v[va->vr++]);
   double d = F64(RD64(va->pila));
   va->pila += 8;
   return d;
 }
 
+static size_t formatear(char *out, size_t cap, u64 fmt, Va va);
 /* Arma el texto de `fmt` (memoria del juego) en `out`; los argumentos empiezan en x[gr]. */
-size_t aos_formatear(char *out, size_t cap, u64 fmt, int gr) {
-  Va va = {gr, 0, C.sp};
+size_t aos_formatear(char *out, size_t cap, u64 fmt, int gr) { return formatear(out, cap, fmt, (Va){gr, 0, C.sp, 0}); }
+/* Lo mismo con los argumentos en un va_list del ARM (`lista`: su dirección en la memoria del juego). */
+static size_t formatear_lista(char *out, size_t cap, u64 fmt, u64 lista) { return formatear(out, cap, fmt, (Va){8, 8, 0, lista}); }
+
+static size_t formatear(char *out, size_t cap, u64 fmt, Va va) {
   const char *f = P(fmt);
   size_t n = 0;
   char spec[32], tmp[512];
@@ -292,6 +456,22 @@ void H_snprintf(void) {
     memcpy(P(X(0)), fbuf, m);
     P(X(0))[m] = 0;
   }
+  RET(n);
+}
+/* las versiones con va_list: las usa la biblioteca de C++ (los flujos, para escribir números) */
+void H_vsnprintf(void) {
+  size_t n = formatear_lista(fbuf, sizeof fbuf, X(2), X(3));
+  u64 cap = X(1);
+  if (cap) {
+    size_t m = n < cap - 1 ? n : (size_t)cap - 1;
+    memcpy(P(X(0)), fbuf, m);
+    P(X(0))[m] = 0;
+  }
+  RET(n);
+}
+void H_vsprintf(void) {
+  size_t n = formatear_lista(fbuf, sizeof fbuf, X(1), X(2));
+  memcpy(P(X(0)), fbuf, n + 1);
   RET(n);
 }
 void H___android_log_print(void) {
@@ -576,6 +756,12 @@ void H_fputs(void) {
   Archivo *a = archivo_de(X(1));
   if (a) archivo_poner(a, P(X(0)), (u32)strlen(P(X(0))));
   RET(0);
+}
+void H_vfprintf(void) {
+  size_t n = formatear_lista(fbuf, sizeof fbuf, X(1), X(2));
+  Archivo *a = archivo_de(X(0));
+  if (a) archivo_poner(a, fbuf, (u32)n);
+  RET(n);
 }
 void H_fread(void) {
   Archivo *a = archivo_de(X(3));

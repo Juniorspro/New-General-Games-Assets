@@ -105,8 +105,9 @@ async function muestras(t, ms, accion) {
   await junta;
   return out;
 }
-// del título a la partida, la primera vez (premio diario y tutorial incluidos)
-async function aJugar(t, { primera = true } = {}) {
+// del título a la partida, la primera vez (premio diario y tutorial incluidos); con hasta: PANTALLA.armas,
+// se queda en la elección de armas antes de la etapa
+async function aJugar(t, { primera = true, hasta = null } = {}) {
   const pasos = [];
   const paso = async (n, x, y, p) => { const e = await tocarHasta(t, x, y, p); pasos.push(`${n}:${e ? 'ok' : 'NO'}`); return e; };
   await esperar(t, (e) => e.pantalla === PANTALLA.titulo, 30000);
@@ -124,6 +125,7 @@ async function aJugar(t, { primera = true } = {}) {
     if (!await paso('cerrar tutorial', 937, 14, PANTALLA.niveles)) return { pasos };
   } else if (!await paso('MAIN', 115, 535, PANTALLA.niveles)) return { pasos };
   if (!await paso('nivel 1', 256, 290, PANTALLA.armas)) return { pasos };
+  if (hasta === PANTALLA.armas) return { pasos, e: await est(t) };
   // el cartel con el objetivo de la etapa sale sólo la primera vez
   let e = await tocarHasta(t, 876, 606, null, 15000, (e) => e.pantalla === PANTALLA.objetivo || e.pantalla === PANTALLA.jugando);
   pasos.push(`START:${e ? 'ok' : 'NO'}`);
@@ -197,7 +199,8 @@ if (corre('C')) {
     });
     ch('C: multitáctil: camina y ataca al mismo tiempo', dos.some((s) => s.accion === 40) && dos[dos.length - 1].x > xa + 40, `x ${xa} → ${dos[dos.length - 1].x}`);
     // 60 cuadros: caminando, entre vuelta y vuelta se dibujan cuadros intermedios, y en el de la mitad
-    // cada pieza está a mitad de camino entre la vuelta anterior y la actual
+    // cada pieza está en el camino entre la vuelta anterior y la actual (en línea recta, o en el arco de
+    // un hueso que gira en su articulación: cerca de la recta)
     const c0 = await t.pg.evaluate(() => ({ ...AOS.info }));
     await dedos(t, 'touchStart', [[260, 555, 1]]);
     await t.pg.waitForTimeout(1500);
@@ -211,8 +214,11 @@ if (corre('C')) {
       const p = centros(0), m = centros(0.5), a = centros(1);
       let mueven = 0, fuera = 0;
       for (let i = 0; i < a.length; i += 2) {
-        if (Math.hypot(a[i] - p[i], a[i + 1] - p[i + 1]) > 0.5) mueven++;
-        if (Math.hypot(m[i] - (p[i] + a[i]) / 2, m[i + 1] - (p[i + 1] + a[i + 1]) / 2) > 0.01) fuera++;
+        const dx = a[i] - p[i], dy = a[i + 1] - p[i + 1], d = Math.hypot(dx, dy);
+        if (d > 0.5) mueven++;
+        // distancia del centro en la mitad al segmento entre los dos extremos
+        const k = d > 0 ? Math.max(0, Math.min(1, ((m[i] - p[i]) * dx + (m[i + 1] - p[i + 1]) * dy) / (d * d))) : 0;
+        if (Math.hypot(m[i] - p[i] - k * dx, m[i + 1] - p[i + 1] - k * dy) > Math.max(3, 0.6 * d)) fuera++;
       }
       return { mueven, fuera, piezas: a.length / 2 };
     });
@@ -220,7 +226,7 @@ if (corre('C')) {
     const c1 = await t.pg.evaluate(() => ({ ...AOS.info }));
     const inter = c1.intermedios - c0.intermedios, vueltas = c1.vueltas - c0.vueltas;
     ch('C: 60 cuadros: entre vuelta y vuelta dibuja los puntos intermedios', inter > 0 && medio.mueven > 0 && medio.fuera === 0,
-      `${inter} cuadros intermedios en ${vueltas} vueltas; ${medio.mueven} de ${medio.piezas} piezas en movimiento, ${medio.fuera} fuera de lugar en la mitad`);
+      `${inter} cuadros intermedios en ${vueltas} vueltas; ${medio.mueven} de ${medio.piezas} piezas en movimiento, ${medio.fuera} fuera del camino en la mitad`);
     ch('C: sin errores', t.errores.length === 0, t.errores.slice(0, 3).join(' | '));
   }
   await t.c.close();
@@ -252,6 +258,30 @@ if (corre('D')) {
     ch('D: atrás (Escape) pausa y otra vez sigue', !!p2 && !!s2);
     // en el menú, atrás muestra la ventana de salir del juego
     ch('D: sin errores', t.errores.length === 0, t.errores.slice(0, 3).join(' | '));
+  }
+  await t.c.close();
+}
+
+// ── D2. comprar sin plata: el cartel "no alcanza" y su ✓ (se caía: dynamic_cast sin traducir) ──
+console.log('\nD2. Comprar sin plata');
+if (corre('D2')) {
+  const t = await abrir(WEB);
+  await listo(t);
+  const { e } = await aJugar(t, { hasta: PANTALLA.armas });
+  if (!e) ch('D2: llegar a la elección de armas', false);
+  else {
+    await t.pg.waitForTimeout(800);
+    await tocar(t, 780, 497);              // mejorar o comprar lo elegido: no alcanzan las gemas
+    await t.pg.waitForTimeout(1200);
+    await t.pg.screenshot({ path: `${CAPTURAS}/d2-no-alcanza.png` });
+    const a = await est(t);
+    await tocar(t, 525, 451);              // ✓: ir a comprar
+    await t.pg.waitForTimeout(2000);
+    await t.pg.screenshot({ path: `${CAPTURAS}/d2-comprar.png` });
+    const b = await est(t);
+    ch('D2: el ✓ del cartel "no alcanza" abre la compra y el juego sigue', !!a && !!b && !b.error && b.vueltas > a.vueltas,
+      b && b.error ? b.error : `vueltas ${a && a.vueltas} → ${b && b.vueltas}`);
+    ch('D2: sin errores', t.errores.length === 0, t.errores.slice(0, 3).join(' | '));
   }
   await t.c.close();
 }

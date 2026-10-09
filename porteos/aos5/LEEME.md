@@ -57,7 +57,10 @@ edificios, la pausa, los resultados, las opciones (sonido, ayuda, cupones) y los
   C++) se resuelven siguiendo las constantes por el grafo; las llamadas por puntero (funciones
   virtuales, `std::function`) van por un despacho que conoce todas las funciones. Entre funciones
   sólo viajan los registros que la otra lee. La memoria del `.so` queda en las mismas direcciones,
-  así los punteros del juego valen tal cual. 538 funciones, 206.780 instrucciones.
+  así los punteros del juego valen tal cual. Se traduce todo lo alcanzable desde el juego, también por
+  tablas virtuales: las que arma un constructor del código traducido (así entran, por ejemplo, las
+  facetas del locale de C++ que usa un `ostringstream` para escribir un precio) y las de los
+  `typeinfo` (las que usa `dynamic_cast`). 975 funciones, 236.171 instrucciones.
 - **La capa** reemplaza a cocos2d sin tocar el juego: los objetos de cocos2d viven en la memoria del
   juego con sus tablas virtuales y los campos donde el código del juego los lee; lo que no ve el
   juego (texturas, letras) va en una tabla aparte. El dibujo recorre la escena como `Node::visit`.
@@ -65,15 +68,23 @@ edificios, la pausa, los resultados, las opciones (sonido, ayuda, cupones) y los
   `schedule` de `kScene`).
 - **60 cuadros por segundo (interpolado).** El original mostraba cada vuelta tal cual: los muñecos se
   movían a 16,7 cuadros. Acá, en cada vuelta se arma la lista de lo que se ve y cada pieza se
-  empareja con la misma de la vuelta anterior (misma imagen, recorte y tinte; entre piezas iguales,
-  por orden de dibujo: el juego dibuja cada esqueleto siempre en el mismo orden). En cada cuadro de
-  la pantalla se dibuja el punto intermedio: el centro, el giro, el largo y el color. Detalles:
-  - las piezas largas (brazos, piernas) interpolan sus dos puntas, así las articulaciones no se
-    separan aunque giren rápido; las cuadradas (cabezas, bloques, letras) giran sin achicarse;
-  - los brazos y piernas de un muñeco usan la misma imagen; cuando se cruzan, el juego puede
-    dibujarlos en otro orden: dentro de cada muñeco se elige el reparto que menos gira;
-  - si la pose cambió de golpe (un golpe nuevo, un salto), la pose cambia como en el original y el
-    muñeco se desliza entero: nunca queda medio muñeco en una pose y medio en otra;
+  empareja con la misma de la vuelta anterior (misma imagen, recorte y tinte). En cada cuadro de la
+  pantalla se dibuja el punto intermedio. Detalles:
+  - el juego reasigna sus sprites de una vuelta a otra (el objeto que era un brazo pasa a ser otro):
+    por eso se empareja por lo que se ve, no por el objeto;
+  - las piezas se juntan en figuras: seguidas en el orden de dibujo, del mismo tinte y dentro del
+    contorno del muñeco, con lo chico de otro tinte que llevan encima (la vincha, un arma): la vincha
+    se mueve con la cabeza;
+  - un muñeco se interpola como esqueleto: sus huesos (brazos, piernas, torso) se unen por las
+    puntas; si son las mismas uniones en las dos vueltas, cada hueso gira en su articulación sin
+    cambiar de largo (una pierna que patea barre el aire en vez de achicarse) y la cabeza y la vincha
+    siguen al cuello;
+  - los tramos de brazos y piernas usan la misma imagen y el juego puede dibujarlos en otro orden: se
+    reparten de nuevo entre los de la vuelta anterior, eligiendo el reparto que mantiene unidas las
+    mismas articulaciones;
+  - si la pose cambió de golpe (el juego cambió la imagen de una pierna, un golpe nuevo), la pose
+    cambia como en el original y el muñeco se desliza entero: nunca queda medio muñeco en una pose y
+    medio en otra;
   - lo nuevo (un destello, un número) aparece tal cual;
   - lo que se ve va una vuelta atrás (0,06 s): es lo que cuesta tener los dos extremos;
   - si nada se mueve (un menú quieto), se dibuja sólo cuando hay vuelta;
@@ -97,14 +108,14 @@ edificios, la pausa, los resultados, las opciones (sonido, ayuda, cupones) y los
 
 | | original | porteo |
 |---|---|---|
-| descarga | APK de 52 MB | APK de 5,9 MB · web de 10,2 MB (3,7 MB de imágenes, 3,2 MB de WebAssembly que viajan como 0,5 MB con gzip) · `.html` único de 6,7 MB |
+| descarga | APK de 52 MB | APK de 5,9 MB · web de 10,7 MB (3,7 MB de imágenes, 3,7 MB de WebAssembly que viajan como 0,6 MB con gzip) · `.html` único de 6,8 MB |
 | imágenes | 23 MB de PNG | 3,6 MB de WebP |
 | efectos | 6,1 MB de WAV (+ 3 MP3 que no suenan) | 0,55 MB de Opus a 48 kbps |
 | memoria de video | — | 36-40 MB en una partida (sólo lo que se usó; todas juntas serían 119 MB) |
-| una vuelta del juego (con armar y emparejar lo que se ve) / un cuadro | — | 1,2 / 0,5 ms en una PC; ~7 / ~1,2 ms con la CPU 8 veces más lenta |
+| una vuelta del juego (con armar y emparejar lo que se ve) / un cuadro | — | 1,2 / 0,5 ms en una PC; ~9 / ~1,1 ms con la CPU 8 veces más lenta |
 | lo que pinta la GPU por cuadro | — | unas 3 pantallas (el cielo, el fondo y lo demás) |
 
-A 60 cuadros, el cuadro que trae una vuelta cuesta ~8 ms en un teléfono lento y los otros ~1 ms:
+A 60 cuadros, el cuadro que trae una vuelta cuesta ~10 ms en un teléfono lento y los otros ~1 ms:
 entra en los 16,7 ms de un cuadro con margen. Si un teléfono no llega a 60, dibuja los que pueda y
 el juego sigue a su velocidad. El lienzo no pasa de 1600 px de ancho (el juego es de 960×640).
 
@@ -120,3 +131,6 @@ el juego sigue a su velocidad. El lienzo no pasa de 1600 px de ancho (el juego e
 - La primera vez que aparece cada imagen el juego espera a que se decodifique (uno o dos cuadros; al
   entrar a una pantalla nueva, algo más). El original hacía lo mismo al cargar cada PNG.
 - Lo que va por Google o por un servidor (compras, ranking y logros en línea, noticias) no está.
+- En los golpes, el juego suele cambiar la imagen de un brazo o una pierna de una vuelta a otra: ahí
+  la pose cambia de una (a 16,7 cuadros, como el original) y sólo el desplazamiento va a 60. Al
+  caminar y correr, la mayoría de las vueltas se interpolan como esqueleto.

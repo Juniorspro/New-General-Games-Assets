@@ -46,6 +46,10 @@ int dibujo_interpolar(float a);      /* en cada cuadro: los vértices en la frac
 int dibujo_movimiento(void);
 int dibujo_emparejados(void);
 int dibujo_pareja(int i, float *dx, float *dy, float *giro);
+int dibujo_pareja_de(int i);
+int dibujo_nant(void);
+int dibujo_modo(int i);
+const void *dibujo_vertices(int i, int anterior);
 
 /* texto (texto.c) */
 typedef struct {

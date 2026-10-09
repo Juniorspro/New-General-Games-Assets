@@ -8,7 +8,9 @@
  * "f@vuelta" (con AOS_FOTO=prefijo: guardar la memoria del bzStateGame después de esa vuelta).
  * Variables: AOS_RELOJ (ms desde 1970), AOS_SONIDO (anotar sonidos), AOS_TEXTOS (anotar textos),
  * AOS_MIRAR (palabras a vigilar por vuelta), AOS_USO y AOS_PEDIDAS (imágenes dibujadas y subidas),
- * AOS_VIGILAR (con -DAOS_DEPURAR: entre qué instrucciones cambió una palabra). */
+ * AOS_VIGILAR (con -DAOS_DEPURAR: entre qué instrucciones cambió una palabra), AOS_PAREJAS (cuántas
+ * piezas tienen pareja en la vuelta anterior), AOS_HUESOS=vuelta (las puntas de las piezas de los
+ * muñecos y cuáles coinciden) y AOS_MODOS (cómo se interpolan las piezas de los muñecos). */
 #define _GNU_SOURCE
 #include "rec.h"
 #include "juego.h"
@@ -242,6 +244,62 @@ static void volcar(int vuelta) {
   }
 }
 
+/* el nombre de la imagen del cuadrilátero i y su centro (y para abajo) */
+static const char *nombre_q(int i, float *x, float *y) {
+  for (int l = 0; l < aos_nlotes; l++) {
+    struct AosLote *L = &aos_lotes[l];
+    if ((u32)i * 4 >= L->desde && (u32)i * 4 < L->desde + L->n * 4) {
+      struct AosVert *v = &aos_verts[i * 4];
+      *x = (v[0].x + v[3].x) / 2, *y = 640 - (v[0].y + v[3].y) / 2;
+      return imagen_en(L->pagina, (v[0].u + v[3].u) / 2, (v[0].v + v[3].v) / 2);
+    }
+  }
+  return "?";
+}
+/* AOS_HUESOS=vuelta: las piezas largas de esa vuelta (sus dos puntas: los centros de las puntas
+ * redondeadas) y qué puntas coinciden entre piezas, en esta vuelta y en la anterior */
+static void puntas(const struct AosVert *v, float e[2][2], float *L, float *W) {
+  float ux = v[1].x - v[0].x, uy = v[1].y - v[0].y, wx = v[2].x - v[0].x, wy = v[2].y - v[0].y;
+  float lx = ux, ly = uy, cx = wx, cy = wy;
+  if (ux * ux + uy * uy < wx * wx + wy * wy) lx = wx, ly = wy, cx = ux, cy = uy;
+  *L = hypotf(lx, ly), *W = hypotf(cx, cy);
+  float mx = (v[0].x + v[3].x) / 2, my = (v[0].y + v[3].y) / 2, k = *L > *W ? (*L - *W) / (2 * *L) : 0;
+  e[0][0] = mx - lx * k, e[0][1] = my - ly * k, e[1][0] = mx + lx * k, e[1][1] = my + ly * k;
+}
+static void huesos(void) {
+  int n = aos_nquads;
+  for (int i = 0; i < n; i++) {
+    const struct AosVert *v = dibujo_vertices(i, 0);
+    float e[2][2], L, W, x, y;
+    puntas(v, e, &L, &W);
+    const char *nm = nombre_q(i, &x, &y);
+    if (!strstr(nm, "PCimg") && !strstr(nm, "Headimg")) continue;
+    printf("  %3d %-26s %08x L%3.0f W%3.0f (%4.0f,%4.0f)-(%4.0f,%4.0f) pareja %d\n", i, nm, v[0].rgba, L, W, e[0][0],
+           640 - e[0][1], e[1][0], 640 - e[1][1], dibujo_pareja_de(i));
+    for (int j = 0; j < i; j++) {
+      const struct AosVert *u = dibujo_vertices(j, 0);
+      float f[2][2], L2, W2, x2, y2;
+      puntas(u, f, &L2, &W2);
+      const char *nm2 = nombre_q(j, &x2, &y2);
+      if (!strstr(nm2, "PCimg") && !strstr(nm2, "Headimg")) continue;
+      for (int a = 0; a < 2; a++)
+        for (int b = 0; b < 2; b++) {
+          float d = hypotf(e[a][0] - f[b][0], e[a][1] - f[b][1]);
+          if (d > 14) continue;
+          float dp = -1;
+          int pi = dibujo_pareja_de(i), pj = dibujo_pareja_de(j);
+          if (pi >= 0 && pj >= 0) {
+            float g[2][2], h[2][2], l1, w1, l2, w2;
+            puntas(dibujo_vertices(pi, 1), g, &l1, &w1);
+            puntas(dibujo_vertices(pj, 1), h, &l2, &w2);
+            dp = hypotf(g[a][0] - h[b][0], g[a][1] - h[b][1]);
+          }
+          printf("       punta %d de %d con punta %d de %d: %.1f px (antes %.1f)\n", a, i, b, j, d, dp);
+        }
+    }
+  }
+}
+
 /* AOS_MIRAR=dir1,dir2,...: avisa en qué vuelta cambió cada palabra (int32) */
 static void mirar(int vuelta) {
   static u64 dir[16];
@@ -351,6 +409,14 @@ int main(int argc, char **argv) {
     int q = dibujo_armar();
     dibujo_interpolar(1.0f);
     if (getenv("AOS_PAREJAS") && q) printf("parejas %d: %d de %d\n", v, dibujo_emparejados(), q);
+    if (getenv("AOS_HUESOS") && atoi(getenv("AOS_HUESOS")) == v) huesos();
+    if (getenv("AOS_MODOS") && q) { /* cuántas piezas de muñecos van en cada modo */
+      static long cuenta[5];
+      for (int i = 0; i < q; i++) { float x, y; const char *nm = nombre_q(i, &x, &y); if (strstr(nm, "PCimg") || strstr(nm, "Headimg")) cuenta[dibujo_modo(i)]++; }
+      extern int dibujo_por_que[8];
+      if (v % 500 == 0) printf("figuras grandes: %d sin todas las parejas, %d con un hueso dado vuelta, %d sin articulaciones, %d con pocos huesos unidos, %d esqueletos\n", dibujo_por_que[0], dibujo_por_que[1], dibujo_por_que[2], dibujo_por_que[3], dibujo_por_que[4]);
+      if (v % 500 == 0) printf("modos de los muñecos hasta la vuelta %d: tal cual %ld, cada una %ld, juntas %ld, huesos %ld, pegadas %ld\n", v, cuenta[0], cuenta[1], cuenta[2], cuenta[3], cuenta[4]);
+    }
     if (getenv("AOS_USO")) marcar_usadas();
     if (v % 10 == 0 || v < 5) {
       u64 u, p, t;
