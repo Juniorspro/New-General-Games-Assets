@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Anger of Stick 5</title>
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:,">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  #juego { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; display: block; touch-action: none; }
+  #carga { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #000; color: #ddd; font: 600 15px system-ui, sans-serif; transition: opacity .4s; z-index: 5; }
+  #carga .barra { width: min(60vw, 360px); height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+  #carga .barra i { display: block; height: 100%; width: 0; background: #8fd400; transition: width .2s; }
+  #error, #fin { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 80vw; z-index: 9;
+    background: rgba(20, 0, 0, .92); color: #fff; font: 14px/1.4 system-ui, sans-serif; padding: 14px 18px; border-radius: 10px; }
+  #fin { background: rgba(0, 0, 0, .85); }
+</style>
+</head>
+<body>
+<canvas id="juego"></canvas>
+<div id="carga"><div class="barra"><i></i></div><p>Cargando…</p></div>
+<div id="error" hidden></div>
+<div id="fin" hidden>Gracias por jugar.</div>
+<script src="porteo-intro.js"></script>
+<script src="porteo-web.js"></script>
+<script src="aos5-wasm.js"></script>
+<script src="aos5.js"></script>
+<script>
+(function () {
+  var carga = document.getElementById('carga');
+  var relleno = carga.querySelector('i'), msg = carga.querySelector('p');
+  if (window.Porteo && Porteo.web) Porteo.web({ orientacion: 'landscape', atras: function () { return AOS.atras(); }, despierto: true });
+  addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); AOS.atras(); } });
+  var intro = Promise.resolve();
+  if (window.Porteo && Porteo.intro && !sessionStorage.getItem('aos5-sin-intro')) {
+    intro = Porteo.intro({ aviso: { es: 'Port no oficial de «Anger of Stick 5» de J-PARK, sin publicidad.',
+      en: 'Unofficial port of J-PARK’s «Anger of Stick 5», with no ads.', pt: 'Port não oficial de «Anger of Stick 5», da J-PARK, sem anúncios.' } });
+  }
+  var actualizar = (window.Porteo && Porteo.actualizar) ? Porteo.actualizar({ alAvanzar: function (h, t) {
+    msg.textContent = 'Actualizando…'; relleno.style.width = (100 * h / t) + '%'; } }) : Promise.resolve(false);
+  actualizar.then(function (recargar) {
+    if (recargar) { location.reload(); return; }
+    relleno.style.width = '40%';
+    return AOS.arrancar().then(function () { relleno.style.width = '100%'; return intro; }).then(function () {
+      try { sessionStorage.setItem('aos5-sin-intro', '1'); } catch (_) {}
+      carga.style.opacity = 0;
+      carga.style.pointerEvents = 'none';
+      setTimeout(function () { carga.remove(); }, 450);
+    });
+  }).catch(function (e) {
+    msg.textContent = 'No se pudo cargar el juego: ' + (e && e.message || e);
+    console.error(e);
+  });
+})();
+</script>
+</body>
+</html>

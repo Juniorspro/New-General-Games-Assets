@@ -1,0 +1,471 @@
+/* Anger of Stick 5 en el navegador: carga el juego traducido (aos5.wasm), lo hace andar al ritmo de
+ * cocos2d (una vuelta cada 0,06 s) y dibuja lo que arma en WebGL. Toques, sonido y guardado como el
+ * original. */
+(function () {
+  'use strict';
+  var A = window.AOS = {};
+  var M;                      // el módulo de emscripten
+  var gl, canvas, prog, vbo, ibo, texturas = {}, pendientes = {};
+  var indice;                 // datos/indice.json
+  var sucio = true, ultimo = 0, corriendo = false, terminado = false;
+  var DISENO_W = 960, DISENO_H = 640;
+  var MAXQ = 16384;
+  var info = { vueltas: 0, cuadros: 0, dibujos: 0, toques: 0 };
+  A.info = info;
+
+  function log(s) { if (A.verLog) console.log('[aos5] ' + s); A.ultimoLog = s; }
+
+  // ───────────────────────────── lo que pide el juego (host.js → acá)
+  var H = window.AOS_HOST = {
+    log: function (s) { log(s); },
+    trap: function (s) {
+      terminado = true;
+      console.error('[aos5] ' + s);
+      A.error = s;
+      var e = document.getElementById('error');
+      if (e) { e.textContent = 'El juego se detuvo: ' + s; e.hidden = false; }
+    },
+    sonido: function (r, bucle, vol) { return Sonido.tocar(r, bucle, vol); },
+    parar: function (id) { Sonido.parar(id); },
+    todo: function (q) { Sonido.todo(q); },
+    cargar: function (r) { Sonido.cargar(r); },
+    leer: function (n) {
+      try {
+        var v = localStorage.getItem('aos5.archivo.' + n);
+        if (v == null) return null;
+        var b = atob(v), u = new Uint8Array(b.length);
+        for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+        return u;
+      } catch (e) { return null; }
+    },
+    escribir: function (n, d) {
+      try {
+        var s = '';
+        for (var i = 0; i < d.length; i += 8192) s += String.fromCharCode.apply(null, d.subarray(i, i + 8192));
+        localStorage.setItem('aos5.archivo.' + n, btoa(s));
+      } catch (e) { log('no se pudo guardar ' + n + ': ' + e); }
+    },
+    dato: function (k) { try { return localStorage.getItem('aos5.dato.' + k); } catch (e) { return null; } },
+    datoPoner: function (k, v) { try { localStorage.setItem('aos5.dato.' + k, v); } catch (e) {} },
+    vibrar: function (ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} },
+    glifo: function (f, cp, tam) { return Letras.glifo(cp, tam); },
+  };
+
+  // ───────────────────────────── sonido
+  var Sonido = (function () {
+    var ctx = null, buffers = {}, cargando = {}, fuentes = {}, sigId = 1, musica = null, musicaRuta = null;
+    var silencio = false;
+    function archivo(r) {
+      var b = r.replace(/^.*sound\//, '').replace(/\.(wav|mp3|ogg)$/i, '');
+      return 'datos/sonido/' + b + '.ogg';
+    }
+    function esMusica(r) { return /\.mp3$/i.test(r); }
+    function contexto() {
+      if (!ctx) {
+        var C = window.AudioContext || window.webkitAudioContext;
+        if (!C) return null;
+        try { ctx = new C({ sampleRate: 24000 }); } catch (e) { ctx = new C(); }
+      }
+      return ctx;
+    }
+    function cargar(r) {
+      if (esMusica(r) || buffers[r] || cargando[r]) return cargando[r];
+      var c = contexto();
+      if (!c) return null;
+      cargando[r] = fetch(archivo(r)).then(function (x) { return x.arrayBuffer(); })
+        .then(function (ab) { return new Promise(function (ok, mal) { c.decodeAudioData(ab, ok, mal); }); })
+        .then(function (b) { buffers[r] = b; return b; })
+        .catch(function (e) { log('sonido ' + r + ': ' + e); });
+      return cargando[r];
+    }
+    function tocar(r, bucle, vol) {
+      var id = sigId++;
+      if (esMusica(r)) {
+        if (!musica) { musica = new Audio(); musica.preload = 'auto'; }
+        if (musicaRuta !== r) { musica.src = archivo(r); musicaRuta = r; }
+        musica.loop = !!bucle;
+        musica.volume = Math.max(0, Math.min(1, vol));
+        musica.currentTime = 0;
+        if (!silencio) { var pr = musica.play(); if (pr && pr.catch) pr.catch(function () {}); }
+        fuentes[id] = { musica: true };
+        return id;
+      }
+      var c = contexto();
+      if (!c || silencio) return id;
+      var arrancar = function (b) {
+        if (!b || silencio) return;
+        var s = c.createBufferSource();
+        s.buffer = b;
+        s.loop = !!bucle;
+        var g = c.createGain();
+        g.gain.value = Math.max(0, Math.min(1, vol));
+        s.connect(g).connect(c.destination);
+        s.onended = function () { delete fuentes[id]; };
+        s.start();
+        fuentes[id] = { s: s };
+      };
+      if (buffers[r]) arrancar(buffers[r]);
+      else { var p = cargar(r); if (p) p.then(arrancar); }
+      return id;
+    }
+    function parar(id) {
+      var f = fuentes[id];
+      if (!f) return;
+      if (f.musica) { if (musica) musica.pause(); }
+      else try { f.s.stop(); } catch (e) {}
+      delete fuentes[id];
+    }
+    function todo(q) {
+      if (q === 0) {
+        Object.keys(fuentes).forEach(function (id) { parar(+id); });
+        if (musica) musica.pause();
+      } else if (q === 1) pausar(true);
+      else pausar(false);
+    }
+    function pausar(si) {
+      silencio = si;
+      if (ctx) { try { si ? ctx.suspend() : ctx.resume(); } catch (e) {} }
+      if (musica && musicaRuta) {
+        if (si) musica.pause();
+        else if (musica.loop) { var pr = musica.play(); if (pr && pr.catch) pr.catch(function () {}); }
+      }
+    }
+    function desbloquear() {
+      var c = contexto();
+      if (c && c.state === 'suspended' && !silencio) c.resume();
+      if (musica && musica.paused && musica.loop && !silencio) { var pr = musica.play(); if (pr && pr.catch) pr.catch(function () {}); }
+    }
+    return { tocar: tocar, parar: parar, todo: todo, cargar: cargar, pausar: pausar, desbloquear: desbloquear };
+  })();
+  A.sonido = Sonido;
+
+  // ───────────────────────────── letras (las dibuja el navegador con la arial del APK)
+  var Letras = (function () {
+    var PAG = 1024, paginas = [], cache = {}, x = 0, y = 0, alto = 0, ctx2 = null, lienzo = null;
+    var BASE = 1000;   // número de página para el dibujo (las del atlas son 0..)
+    function nuevaPagina() {
+      lienzo = document.createElement('canvas');
+      lienzo.width = lienzo.height = PAG;
+      ctx2 = lienzo.getContext('2d');
+      ctx2.fillStyle = '#fff';
+      ctx2.textBaseline = 'alphabetic';
+      paginas.push({ lienzo: lienzo, sucia: true });
+      x = 0; y = 0; alto = 0;
+    }
+    function glifo(cp, tam) {
+      var k = cp + '/' + tam;
+      if (cache[k]) return cache[k];
+      if (!lienzo) nuevaPagina();
+      var ch = String.fromCodePoint(cp);
+      ctx2.font = tam + 'px aos5arial, Arial, sans-serif';
+      var m = ctx2.measureText(ch);
+      var izq = Math.ceil(m.actualBoundingBoxLeft || 0), der = Math.ceil(m.actualBoundingBoxRight || m.width);
+      var arr = Math.ceil(m.actualBoundingBoxAscent || tam), aba = Math.ceil(m.actualBoundingBoxDescent || 0);
+      var w = izq + der + 2, h = arr + aba + 2;
+      if (x + w > PAG) { x = 0; y += alto + 1; alto = 0; }
+      if (y + h > PAG) { nuevaPagina(); }
+      ctx2.font = tam + 'px aos5arial, Arial, sans-serif';
+      ctx2.fillText(ch, x + 1 + izq, y + 1 + arr);
+      paginas[paginas.length - 1].sucia = true;
+      var g = new Float32Array([BASE + paginas.length - 1,
+        (x) / PAG, (y) / PAG, (x + w) / PAG, (y + h) / PAG,
+        -izq - 1, -aba - 1, der + 1, arr + 1]);
+      x += w + 1;
+      alto = Math.max(alto, h);
+      sucio = true;
+      return (cache[k] = g);
+    }
+    return { glifo: glifo, paginas: paginas, BASE: BASE };
+  })();
+
+  // ───────────────────────────── WebGL
+  var VS = 'attribute vec2 p; attribute vec2 t; attribute vec4 c; varying vec2 vt; varying vec4 vc;' +
+    'void main(){ gl_Position = vec4(p.x/480.0-1.0, p.y/320.0-1.0, 0.0, 1.0); vt = t; vc = c; }';
+  var FS = 'precision mediump float; uniform sampler2D s; varying vec2 vt; varying vec4 vc;' +
+    'void main(){ gl_FragColor = texture2D(s, vt) * vc; }';
+
+  function iniciarGL() {
+    canvas = document.getElementById('juego');
+    var op = { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false,
+      preserveDrawingBuffer: false, powerPreference: 'high-performance' };
+    gl = canvas.getContext('webgl', op) || canvas.getContext('experimental-webgl', op);
+    if (!gl) throw new Error('Este navegador no tiene WebGL');
+    function sh(t, s) { var x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); return x; }
+    prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+    gl.bindAttribLocation(prog, 0, 'p');
+    gl.bindAttribLocation(prog, 1, 't');
+    gl.bindAttribLocation(prog, 2, 'c');
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+    vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, MAXQ * 4 * 20, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.enableVertexAttribArray(1);
+    gl.enableVertexAttribArray(2);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 20, 0);
+    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 8);
+    gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, true, 20, 16);
+    var idx = new Uint16Array(MAXQ * 6);
+    for (var i = 0; i < MAXQ; i++) {
+      idx[i * 6] = i * 4; idx[i * 6 + 1] = i * 4 + 1; idx[i * 6 + 2] = i * 4 + 2;
+      idx[i * 6 + 3] = i * 4 + 2; idx[i * 6 + 4] = i * 4 + 1; idx[i * 6 + 5] = i * 4 + 3;
+    }
+    ibo = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+    gl.uniform1i(gl.getUniformLocation(prog, 's'), 0);
+    gl.enable(gl.BLEND);
+    gl.disable(gl.DEPTH_TEST);
+    canvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); });
+    canvas.addEventListener('webglcontextrestored', function () { iniciarGL(); texturas = {}; cargarPaginas(); sucio = true; });
+  }
+
+  function textura(img, premult) {
+    var t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, premult ? 1 : 0);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  }
+
+  // las páginas del atlas: se cargan todas en segundo plano, primero las de los menús
+  function cargarPaginas() {
+    var orden = ['raiz', 'ui', 'bg', 'daily', 'loading', 'icon', 'npc1', 'npc2', 'out', 'out2', 'tile', 'example'];
+    var lista = indice.paginas.map(function (p, i) { return { p: p, i: i }; });
+    lista.sort(function (a, b) {
+      var x = orden.indexOf(a.p.grupo), y = orden.indexOf(b.p.grupo);
+      return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || a.i - b.i;
+    });
+    var cola = lista.slice(), activos = 0;
+    function siguiente() {
+      while (activos < 3 && cola.length) {
+        var it = cola.shift();
+        if (texturas[it.i] || pendientes[it.i]) continue;
+        activos++;
+        pendientes[it.i] = true;
+        (function (it) {
+          fetch('datos/' + it.p.archivo).then(function (r) { return r.blob(); })
+            .then(function (b) { return createImageBitmap ? createImageBitmap(b, { premultiplyAlpha: 'premultiply', colorSpaceConversion: 'none' }) : imagenDeBlob(b); })
+            .then(function (bm) {
+              texturas[it.i] = textura(bm, !(bm instanceof ImageBitmap));
+              if (bm.close) bm.close();
+              sucio = true;
+            })
+            .catch(function (e) { log('atlas ' + it.p.archivo + ': ' + e); })
+            .then(function () { activos--; delete pendientes[it.i]; siguiente(); if (!cola.length && !activos) A.atlasListos = true; });
+        })(it);
+      }
+    }
+    siguiente();
+  }
+  function imagenDeBlob(b) {
+    return new Promise(function (ok, mal) {
+      var im = new Image();
+      im.onload = function () { ok(im); };
+      im.onerror = mal;
+      im.src = URL.createObjectURL(b);
+    });
+  }
+
+  var vista = { x: 0, y: 0, w: 1, h: 1 };   // el rectángulo del diseño en la pantalla, en px CSS
+  function ajustar() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var cw = window.innerWidth, ch = window.innerHeight;
+    var bw = Math.round(cw * dpr), bh = Math.round(ch * dpr);
+    var tope = 1600;   // más que esto no se ve mejor (el juego es de 960×640) y cuesta
+    if (bw > tope) { bh = Math.round(bh * tope / bw); bw = tope; }
+    if (canvas.width !== bw || canvas.height !== bh) { canvas.width = bw; canvas.height = bh; sucio = true; }
+    canvas.style.width = cw + 'px';
+    canvas.style.height = ch + 'px';
+    var pol = M ? M._aos_politica() : 0;
+    if (pol === 0) vista = { x: 0, y: 0, w: cw, h: ch };         // EXACT_FIT: estirado como el original
+    else {
+      var s = Math.min(cw / DISENO_W, ch / DISENO_H);
+      vista = { w: DISENO_W * s, h: DISENO_H * s, x: (cw - DISENO_W * s) / 2, y: (ch - DISENO_H * s) / 2 };
+    }
+    if (M) M._aos_pantalla(bw, bh);
+  }
+
+  function dibujar() {
+    var n = M._aos_dibujar();
+    var vp = M._aos_verts_ptr();
+    var nl = M._aos_lotes_n(), lp = M._aos_lotes_ptr() >> 2;
+    var sx = canvas.width / window.innerWidth, sy = canvas.height / window.innerHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.viewport(Math.round(vista.x * sx), Math.round((window.innerHeight - vista.y - vista.h) * sy),
+      Math.round(vista.w * sx), Math.round(vista.h * sy));
+    // las letras nuevas
+    Letras.paginas.forEach(function (p, i) {
+      if (!p.sucia) return;
+      var id = Letras.BASE + i;
+      if (texturas[id]) { gl.bindTexture(gl.TEXTURE_2D, texturas[id]); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, p.lienzo); }
+      else texturas[id] = textura(p.lienzo, true);
+      p.sucia = false;
+    });
+    if (n > 0) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, M.HEAPU8.subarray(vp, vp + n * 80));
+    }
+    var U = M.HEAPU32, faltan = false;
+    for (var l = 0; l < nl; l++) {
+      var pag = U[lp + l * 4], mez = U[lp + l * 4 + 1], desde = U[lp + l * 4 + 2], cuantos = U[lp + l * 4 + 3];
+      var t = texturas[pag];
+      if (!t) { faltan = true; continue; }
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.blendFunc(blends[mez][0], blends[mez][1]);
+      gl.drawElements(gl.TRIANGLES, cuantos * 6, gl.UNSIGNED_SHORT, (desde / 4) * 12);
+    }
+    info.dibujos++;
+    sucio = faltan;   // si faltaba una página, se vuelve a dibujar cuando llegue
+  }
+  var blends = [];
+
+  // ───────────────────────────── toques (como los manda cocos2d en Android)
+  var dedos = new Map();   // pointerId → {x, y} en coordenadas GL del diseño
+  function aDiseno(e) {
+    var x = (e.clientX - vista.x) / vista.w * DISENO_W;
+    var y = (1 - (e.clientY - vista.y) / vista.h) * DISENO_H;
+    return { x: x, y: y };
+  }
+  var buf = null;
+  function mandar(fase, lista) {
+    if (!M || terminado || !lista.length) return;
+    info.toques = (info.toques || 0) + 1;
+    info.ultimoToque = [fase, Math.round(lista[0].x), Math.round(lista[0].y)];
+    if (!buf) buf = M._aos_reservar(16 * 8);
+    var F = M.HEAPF32, b = buf >> 2;
+    for (var i = 0; i < lista.length && i < 16; i++) { F[b + 2 * i] = lista[i].x; F[b + 2 * i + 1] = lista[i].y; }
+    try { M._aos_toque(fase, Math.min(lista.length, 16), buf); } catch (er) { H.trap(String(er)); }
+  }
+  var movidos = false;
+  function abajo(e) {
+    Sonido.desbloquear();
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    var p = aDiseno(e);
+    dedos.set(e.pointerId, p);
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    mandar(0, [p]);
+    e.preventDefault();
+  }
+  function mueve(e) {
+    if (!dedos.has(e.pointerId)) return;
+    dedos.set(e.pointerId, aDiseno(e));
+    movidos = true;
+    e.preventDefault();
+  }
+  function arriba(e, fase) {
+    if (!dedos.has(e.pointerId)) return;
+    var p = aDiseno(e);
+    if (movidos) { mandar(1, Array.from(dedos.values())); movidos = false; }
+    dedos.delete(e.pointerId);
+    mandar(fase, [p]);
+    e.preventDefault();
+  }
+  function soltarTodo() {
+    var l = Array.from(dedos.values());
+    dedos.clear();
+    if (l.length) mandar(3, l);
+  }
+
+  // ───────────────────────────── la vuelta
+  function vuelta(t) {
+    if (!corriendo) return;
+    requestAnimationFrame(vuelta);
+    if (terminado) return;
+    if (movidos) { mandar(1, Array.from(dedos.values())); movidos = false; }
+    var dt = ultimo ? (t - ultimo) / 1000 : 0;
+    ultimo = t;
+    if (dt > 0.25) dt = 0.25;
+    var n = 0;
+    try { n = M._aos_paso(dt); } catch (er) { H.trap(String(er && er.message || er)); return; }
+    info.cuadros++;
+    if (n > 0) { info.vueltas += n; sucio = true; }
+    if (sucio) {
+      try { dibujar(); } catch (er) { H.trap('dibujo: ' + er); }
+    }
+    if (M._aos_salir()) salir();
+  }
+  function salir() {
+    corriendo = false;
+    Sonido.todo(0);
+    if (window.porteoSalir) window.porteoSalir();
+    else { var e = document.getElementById('fin'); if (e) e.hidden = false; }
+  }
+
+  function visibilidad() {
+    if (document.hidden) {
+      Sonido.pausar(true);
+      soltarTodo();
+      ultimo = 0;
+    } else {
+      Sonido.pausar(false);
+      ultimo = 0;
+      sucio = true;
+    }
+  }
+
+  // ───────────────────────────── arranque
+  function bajar(u, tipo) {
+    return fetch(u).then(function (r) {
+      if (!r.ok) throw new Error(u + ': ' + r.status);
+      return tipo === 'json' ? r.json() : r.arrayBuffer();
+    });
+  }
+
+  A.arrancar = function (op) {
+    op = op || {};
+    iniciarGL();
+    var fuente = new FontFace('aos5arial', 'url(datos/arial.ttf)');
+    var listo = Promise.all([
+      bajar('datos/indice.json', 'json'),
+      bajar('datos/imagen.bin'),
+      bajar('datos/datos.bin'),
+      fuente.load().then(function (f) { document.fonts.add(f); }).catch(function () {}),
+      AOS5({ locateFile: function (p) { return p; } }),
+    ]);
+    return listo.then(function (r) {
+      indice = r[0];
+      M = A.M = r[4];
+      // la memoria del .so, en su lugar
+      var img = new DataView(r[1]);
+      var u8 = new Uint8Array(r[1]);
+      if (img.getUint32(0, true) !== 0x69534f41) throw new Error('imagen.bin rara');
+      var roLo = img.getUint32(8, true), roN = img.getUint32(12, true), rwLo = img.getUint32(16, true), rwN = img.getUint32(20, true);
+      M.HEAPU8.set(u8.subarray(24, 24 + roN), roLo);
+      M.HEAPU8.set(u8.subarray(24 + roN, 24 + roN + rwN), rwLo);
+      var paq = new Uint8Array(r[2]);
+      var p = M._aos_reservar(paq.length);
+      M.HEAPU8.set(paq, p);
+      M._aos_paquete(p, paq.length);
+      for (var i = 0; i < M._aos_nblend(); i++) blends.push([M._aos_blend(i, 0), M._aos_blend(i, 1)]);
+      cargarPaginas();
+      ajustar();
+      var semilla = (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0;
+      if (!M._aos_iniciar(op.semilla || semilla, canvas.width, canvas.height)) throw new Error('el juego no arrancó');
+      window.addEventListener('resize', ajustar);
+      document.addEventListener('visibilitychange', visibilidad);
+      canvas.addEventListener('pointerdown', abajo, { passive: false });
+      canvas.addEventListener('pointermove', mueve, { passive: false });
+      canvas.addEventListener('pointerup', function (e) { arriba(e, 2); }, { passive: false });
+      canvas.addEventListener('pointercancel', function (e) { arriba(e, 3); }, { passive: false });
+      canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+      corriendo = true;
+      requestAnimationFrame(vuelta);
+    });
+  };
+  A.atras = function () {
+    if (!M || terminado) return false;
+    try { M._aos_atras(); } catch (er) { H.trap(String(er)); }
+    return true;
+  };
+  A.ajustar = function () { ajustar(); };
+})();
