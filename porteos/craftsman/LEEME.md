@@ -6,7 +6,8 @@ shaders que les hizo Tito) jugable en el navegador del teléfono, en un solo `.h
 **Estado:** modo creativo completo para construir: menú con el panorama de la cueva, mundos
 guardados (crear con nombre y semilla, abrir, borrar), mundo infinito con biomas, cuevas, minerales y
 árboles, día y noche, agua y lava que corren, poner y romper con toques como MCPE 0.16, inventario
-creativo de cuatro pestañas, el bloque en la mano, partículas, sonidos del juego, opciones. La
+creativo de cuatro pestañas, el bloque en la mano, partículas, sonidos del juego, opciones. Siempre
+acostado: con el teléfono parado el juego se gira 90° solo (también adentro de Rezona). La
 supervivencia (vida, hambre, herramientas, fabricar) y los bichos todavía no.
 
 ## Cómo es
@@ -63,6 +64,12 @@ medio (doble toque: volar; volando, subir y bajar). Arrastrar mira. Tocar un blo
 (o abre la puerta); mantener el dedo quieto rompe (uno cada 0,25 s, como el creativo del juego).
 La barra rápida elige; "…" abre el inventario. En la computadora: mouse (clic para bloquear el
 puntero), WASD, espacio, shift, ctrl, rueda, 1-9, E y Esc.
+
+Lo que en el APK hace Android lo hace [`herramientas/porteo/web.js`](../../herramientas/porteo/web.js),
+como en Balatro y PvZ: con el teléfono parado gira el juego 90° (para el lado al que se gire el
+teléfono, por el acelerómetro) y traduce los toques; al primer toque pide pantalla completa y trabar
+la pantalla acostada; el botón atrás pausa (en los menús vuelve una pantalla; dos seguidos salen) y
+la pantalla no se apaga mientras se juega.
 
 ### Rendimiento
 

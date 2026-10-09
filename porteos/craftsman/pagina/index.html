@@ -18,8 +18,13 @@
 <body>
 <canvas id="lienzo"></canvas>
 <canvas id="hud"></canvas>
+<script src="porteo-web.js"></script>
 <script src="porteo-intro.js"></script>
 <script>
+  // siempre acostado: con el teléfono parado el juego se gira 90° (para el lado al que se gire el
+  // teléfono) y los toques se traducen; atrás pausa (dos seguidos salen), pantalla completa y
+  // horizontal al primer toque, y la pantalla no se apaga jugando
+  Porteo.web({ orientacion: 'landscape', offline: false });
   // la intro de JXStudios tapa el principio de la carga (un toque la saltea)
   Porteo.intro({ aviso: {
     es: 'Port no oficial, para uso personal, de «Craftsman PTGI» de Tito Crack 6000 (basado en Craftsman y Minecraft PE). El juego, sus imágenes, sonidos y shaders son de sus autores.',

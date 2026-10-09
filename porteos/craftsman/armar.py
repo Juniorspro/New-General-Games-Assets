@@ -36,8 +36,10 @@ def main():
             partes.append(leer(n))
     (sitio / "juego.js").write_text("\n".join(partes), encoding="utf-8")
     shutil.copyfile(AQUI / "pagina" / "index.html", sitio / "index.html")
-    # la intro de JXStudios (la misma de los otros ports)
+    # la intro de JXStudios y lo que en el APK hace Android (girar 90° con el teléfono parado, atrás =
+    # pausa, pantalla completa, que no se apague): los mismos de los otros ports
     shutil.copyfile(RAIZ / "herramientas" / "porteo" / "intro.js", sitio / "porteo-intro.js")
+    shutil.copyfile(RAIZ / "herramientas" / "porteo" / "web.js", sitio / "porteo-web.js")
     print("armar:", (sitio / "juego.js").stat().st_size, "bytes de juego.js")
 
 

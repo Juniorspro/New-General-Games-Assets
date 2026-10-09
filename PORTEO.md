@@ -840,8 +840,9 @@ Fidelidad: los shaders y los recursos son los del juego; el mundo, la física y 
         reimplementados como en MCPE 0.16 (generador propio: no da los mismos mundos que el original)
 Tamaños: APK 57 MB → 1,9 MB de datos (atlas WebP sin pérdida 1 MB, sonidos Opus 320 KB);
         un solo .html de 2,3 MB, todo en texto ASCII
-Estado: creativo completo (mundos guardados, construir, agua y lava, inventario, sonido); probado en
-        Chromium, también dentro de Rezona (toques de verdad); falta supervivencia y bichos
+Estado: creativo completo (mundos guardados, construir, agua y lava, inventario, sonido); siempre
+        acostado (con el teléfono parado se gira 90°, web.js); probado en Chromium, también dentro de
+        Rezona, en horizontal y en vertical (toques de verdad); falta supervivencia y bichos
 ```
 
 - **Qué hizo falta** (detalle en [`porteos/craftsman/LEEME.md`](porteos/craftsman/LEEME.md)):

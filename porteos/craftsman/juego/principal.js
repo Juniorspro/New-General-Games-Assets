@@ -158,7 +158,8 @@
     aplicarOpciones();
     I.cargandoParte = undefined;
     I.ir('titulo');
-    window.prueba = { cam: cam, mundo: mundo, render: Render, jugador: J, partida: function () { return partida; }, abrir: abrirMundo, crear: crearMundo, cuenta: cuenta, listo: true };
+    window.prueba = { cam: cam, mundo: mundo, render: Render, jugador: J, partida: function () { return partida; }, abrir: abrirMundo, crear: crearMundo, cuenta: cuenta,
+      rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, listo: true };
   }
 
   function refrescarMundos() {
@@ -448,7 +449,7 @@
   var caminadoAntes = 0, pasosLuz = 0, golpeDesde = -1, equipo = 1, itemAntes = '', bamboleo = 0;
   var estadoMano = { item: null, golpe: 0, equipo: 1, bamboleo: [0, 0] };
   function golpe() { golpeDesde = performance.now(); }
-  var cuenta = { puestos: 0, rotos: 0 };
+  var cuenta = { puestos: 0, rotos: 0, saltos: 0 };
   function paso() {
     var c = I.control, e = J.entrada, activo = I.pantalla === 'juego';
     e.adelante = activo ? c.adelante : 0;
@@ -702,6 +703,7 @@
       var antes = 0;
       return function (cuando) {
         var ahora = cuando || performance.now();
+        cuenta.saltos++;
         if (partida && partida.creativo && ahora - antes < 350) {
           J.volando = !J.volando; J.vy = 0; antes = 0;
           I.juego.volando = J.volando; I.sucio();
@@ -718,11 +720,19 @@
     if (!f) return;
     I.acciones[n] = function (b) { Sonido.tocar('random.click', 0.5, 1); return f(b); };
   });
+  // Escape (y el botón atrás del teléfono, que web.js convierte en Escape): pausa en el juego y vuelve
+  // una pantalla en los menús
   addEventListener('keydown', function (e) {
-    if (e.code === 'Escape' && jugando) {
-      if (I.pantalla === 'juego') I.acciones.pausa();
-      else if (I.pantalla === 'pausa') I.acciones.seguir();
-    }
+    if (e.code !== 'Escape') return;
+    var p = I.pantalla;
+    if (jugando) {
+      if (p === 'juego') I.acciones.pausa();
+      else if (p === 'pausa') I.acciones.seguir();
+      else if (p === 'opciones') I.acciones.listoOpciones();
+      else if (p === 'pregunta') I.acciones.preguntaNo();
+    } else if (p === 'mundos' || p === 'opciones') { if (p === 'opciones') guardarOpciones(); I.ir('titulo'); }
+    else if (p === 'crear') I.ir('mundos');
+    else if (p === 'pregunta') I.acciones.preguntaNo();
   });
   addEventListener('resize', function () { I.sucio(); });
   // el teléfono le puede sacar la GPU a la página (poca memoria, otra app): se guarda y, cuando la
