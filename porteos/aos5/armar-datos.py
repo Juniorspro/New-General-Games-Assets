@@ -1,70 +1,18 @@
 #!/usr/bin/env python3
-"""Saca del APK de Anger of Stick 5 lo que usa el porteo: imágenes en atlas WebP, sonidos en Opus,
+"""Saca del APK de Anger of Stick 5 lo que usa el porteo: imágenes en WebP, sonidos en Opus,
 los archivos de datos, la fuente y las tablas que necesita el código (imagenes.c, fuentes.c).
 
     armar-datos.py <AngerOfStick5.apk> <carpeta web> <carpeta gen>
 
-En la carpeta web deja datos/ (atlas, sonidos, datos.bin, fuente) y datos/indice.json; en gen,
+En la carpeta web deja datos/ (imagenes.bin, sonidos, datos.bin, fuente) y datos/indice.json; en gen,
 imagenes.c y fuentes.c (se compilan con el resto). El mismo APK da siempre los mismos bytes.
 """
 import hashlib, io, json, os, struct, subprocess, sys, tempfile, zipfile
 from PIL import Image
 
 SHA_PROBADO = '9bb2f4658d51e0b4dc2cf899269266e85903a4673059383dadb10e9f212eae59'  # AngerOfStick5jpark.AOS5v1.1.94.apk
-TAM_PAGINA = 2048
 MARGEN = 2          # pixeles de borde repetido alrededor de cada imagen (filtro lineal sin manchas)
 CALIDAD = 88        # WebP con pérdida para el color; el alfa va sin pérdida
-
-
-def grupo(ruta):
-    p = ruta.split('/')
-    if p[0] == 'img' and len(p) > 2:
-        return p[1]
-    return 'raiz'
-
-
-class MaxRects:
-    """Empaquetado MaxRects (mejor lado corto) en una página de tam×tam."""
-
-    def __init__(self, tam):
-        self.tam = tam
-        self.libres = [(0, 0, tam, tam)]
-        self.usado_w = self.usado_h = 0
-
-    def meter(self, w, h):
-        mejor = None
-        for x, y, fw, fh in self.libres:
-            if w <= fw and h <= fh:
-                corto = min(fw - w, fh - h)
-                largo = max(fw - w, fh - h)
-                if mejor is None or (corto, largo) < mejor[0]:
-                    mejor = ((corto, largo), x, y)
-        if mejor is None:
-            return None
-        _, x, y = mejor
-        self._partir(x, y, w, h)
-        self.usado_w = max(self.usado_w, x + w)
-        self.usado_h = max(self.usado_h, y + h)
-        return x, y
-
-    def _partir(self, x, y, w, h):
-        nuevos = []
-        for fx, fy, fw, fh in self.libres:
-            if x >= fx + fw or x + w <= fx or y >= fy + fh or y + h <= fy:
-                nuevos.append((fx, fy, fw, fh))
-                continue
-            if x > fx:
-                nuevos.append((fx, fy, x - fx, fh))
-            if x + w < fx + fw:
-                nuevos.append((x + w, fy, fx + fw - x - w, fh))
-            if y > fy:
-                nuevos.append((fx, fy, fw, y - fy))
-            if y + h < fy + fh:
-                nuevos.append((fx, y + h, fw, fy + fh - y - h))
-        # sacar los contenidos en otros
-        self.libres = [r for i, r in enumerate(nuevos)
-                       if not any(j != i and r[0] >= o[0] and r[1] >= o[1] and r[0] + r[2] <= o[0] + o[2]
-                                  and r[1] + r[3] <= o[1] + o[3] for j, o in enumerate(nuevos))]
 
 
 def con_borde(im, m):
@@ -89,73 +37,68 @@ def tiene_alfa(im, png):
     return False
 
 
+def webp(im, sin_perdida):
+    buf = io.BytesIO()
+    if sin_perdida:
+        im.save(buf, 'WEBP', lossless=True, quality=100, method=6, exact=False)
+    else:
+        im.save(buf, 'WEBP', quality=CALIDAD, method=6, alpha_quality=100, exact=False)
+    return buf.getvalue()
+
+
+def una_imagen(datos):
+    """(w, h, alfa, webp, sin pérdida) de un PNG/JPG del APK."""
+    im = Image.open(io.BytesIO(datos))
+    im.load()
+    alfa = tiene_alfa(im, datos)
+    w, h = im.size
+    b = con_borde(im.convert('RGBA'), MARGEN)
+    if b.getextrema()[3][0] == 255:
+        b = b.convert('RGB')        # opaca: sin canal alfa pesa menos
+    con, sin = webp(b, False), webp(b, True)
+    if len(sin) <= len(con) * 1.15:
+        return w, h, alfa, sin, True
+    return w, h, alfa, con, False
+
+
 def imagenes(z, web, gen):
+    """Cada imagen, con su borde repetido, como WebP aparte dentro de datos/imagenes.bin. La página las
+    decodifica cuando el juego las pide y las acomoda en su atlas (tablas.c), como el original que
+    cargaba cada PNG al usarlo. Se elige sin pérdida si pesa casi lo mismo que con pérdida."""
+    from concurrent.futures import ProcessPoolExecutor
     rutas = sorted(n[7:] for n in z.namelist() if n.startswith('assets/') and n.lower().endswith(('.png', '.jpg')))
-    info = {}
-    grupos = {}
-    for r in rutas:
-        datos = z.read('assets/' + r)
-        im = Image.open(io.BytesIO(datos))
-        im.load()
-        alfa = tiene_alfa(im, datos)
-        info[r] = dict(w=im.size[0], h=im.size[1], alfa=int(alfa), tam=len(datos))
-        grupos.setdefault(grupo(r), []).append((r, im.convert('RGBA')))
-    paginas = []
-    for g in sorted(grupos):
-        lst = sorted(grupos[g], key=lambda t: (-max(t[1].size), -t[1].size[0] * t[1].size[1], t[0]))
-        abiertas = []
-        for r, im in lst:
-            w, h = im.size[0] + 2 * MARGEN, im.size[1] + 2 * MARGEN
-            lugar = None
-            for pag in abiertas:
-                xy = pag['mr'].meter(w, h)
-                if xy:
-                    lugar = (pag, xy)
-                    break
-            if not lugar:
-                pag = dict(mr=MaxRects(max(TAM_PAGINA, w, h)), imgs=[], grupo=g)
-                abiertas.append(pag)
-                lugar = (pag, pag['mr'].meter(w, h))
-            pag, (x, y) = lugar
-            pag['imgs'].append((r, im, x, y))
-        paginas += abiertas
+    originales = [z.read('assets/' + r) for r in rutas]
+    filas, cuerpo = [], bytearray()
+    sin_perdida = 0
+    with ProcessPoolExecutor() as ex:   # el resultado no depende de en qué orden terminen
+        for r, datos, (w, h, alfa, wp, sp) in zip(rutas, originales, ex.map(una_imagen, originales, chunksize=8)):
+            filas.append((r, w, h, int(alfa), len(cuerpo), len(wp), len(datos)))
+            cuerpo += wp
+            sin_perdida += sp
     os.makedirs(os.path.join(web, 'datos'), exist_ok=True)
-    indice = []
-    for i, pag in enumerate(paginas):
-        pw = (pag['mr'].usado_w + 3) // 4 * 4
-        ph = (pag['mr'].usado_h + 3) // 4 * 4
-        lienzo = Image.new('RGBA', (pw, ph))
-        for r, im, x, y in pag['imgs']:
-            lienzo.paste(con_borde(im, MARGEN), (x, y))
-            info[r].update(pagina=i, x=x + MARGEN, y=y + MARGEN)
-        nombre = f'atlas-{pag["grupo"].lower()}-{i:02d}.webp'
-        buf = io.BytesIO()
-        lienzo.save(buf, 'WEBP', quality=CALIDAD, method=4, alpha_quality=100, exact=False)
-        open(os.path.join(web, 'datos', nombre), 'wb').write(buf.getvalue())
-        indice.append(dict(archivo=nombre, w=pw, h=ph, grupo=pag['grupo'], imagenes=len(pag['imgs'])))
-        print(f'  {nombre}: {pw}×{ph}, {len(pag["imgs"])} imágenes, {len(buf.getvalue()) // 1024} KB', file=sys.stderr)
+    open(os.path.join(web, 'datos', 'imagenes.bin'), 'wb').write(cuerpo)
+    print(f'  {len(filas)} imágenes ({sin_perdida} sin pérdida), {len(cuerpo) // 1024} KB', file=sys.stderr)
     # tabla para el código (ordenada por ruta: búsqueda binaria)
     with open(os.path.join(gen, 'imagenes.c'), 'w') as f:
         f.write('/* generado por armar-datos.py desde el APK */\n#include "aos.h"\n\n')
-        f.write('typedef struct { const char *ruta; u16 w, h; u8 alfa; u8 pagina; u16 x, y; u32 tam; } AosImg;\n')
+        f.write(f'const int aos_img_margen = {MARGEN};\n')
+        f.write('typedef struct { const char *ruta; u16 w, h; u8 alfa; u32 off, len, tam; } AosImg;\n')
         f.write('const AosImg aos_imgs[] = {\n')
-        for r in sorted(info):
-            d = info[r]
+        for r, w, h, alfa, off, ln, tam in filas:
             ruta = r.replace('\\', '\\\\').replace('"', '\\"')
-            f.write(f'  {{"{ruta}", {d["w"]}, {d["h"]}, {d["alfa"]}, {d["pagina"]}, {d["x"]}, {d["y"]}, {d["tam"]}}},\n')
+            f.write(f'  {{"{ruta}", {w}, {h}, {alfa}, {off}, {ln}, {tam}}},\n')
         f.write('};\nconst int aos_nimgs = sizeof aos_imgs / sizeof aos_imgs[0];\n')
         # el resto de assets/ que no va como archivo (sonidos, fuentes...): ruta y tamaño original
+        son_img = set(rutas)
         otros = sorted((n[7:], z.getinfo(n).file_size) for n in z.namelist()
-                       if n.startswith('assets/') and not n.endswith('/') and n[7:] not in info
+                       if n.startswith('assets/') and not n.endswith('/') and n[7:] not in son_img
                        and not n.startswith('assets/data/'))
         f.write('typedef struct { const char *ruta; u32 tam; } AosOtro;\nconst AosOtro aos_otros[] = {\n')
         for r, t in otros:
             ruta = r.replace('\\', '\\\\').replace('"', '\\"')
             f.write(f'  {{"{ruta}", {t}}},\n')
         f.write('};\nconst int aos_notros = sizeof aos_otros / sizeof aos_otros[0];\n')
-        f.write('const u16 aos_paginas[][2] = {' + ', '.join(f'{{{p["w"]}, {p["h"]}}}' for p in indice) + '};\n')
-        f.write(f'const int aos_npaginas = {len(indice)};\n')
-    return indice
+    return dict(archivo='imagenes.bin', bytes=len(cuerpo), imagenes=len(filas))
 
 
 def sonidos(z, web):
@@ -264,13 +207,13 @@ def main():
         print(f'aviso: este APK ({sha[:16]}…) no es el probado (Anger of Stick 5 1.1.94 de J-PARK)', file=sys.stderr)
     z = zipfile.ZipFile(apk)
     print('imágenes…', file=sys.stderr)
-    paginas = imagenes(z, web, gen)
+    imgs = imagenes(z, web, gen)
     print('sonidos…', file=sys.stderr)
     snd = sonidos(z, web)
     print('archivos y fuente…', file=sys.stderr)
     arch = archivos(z, web)
     fnt = fuente(z, web, gen)
-    json.dump(dict(paginas=paginas, sonidos=snd, archivos=arch, fuente=fnt),
+    json.dump(dict(imagenes=imgs, sonidos=snd, archivos=arch, fuente=fnt),
               open(os.path.join(web, 'datos', 'indice.json'), 'w'), ensure_ascii=False, indent=1)
 
 

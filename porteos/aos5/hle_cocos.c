@@ -225,6 +225,7 @@ static int sprite_archivo(u64 s, const char *ruta) {
     aos_log("imagen que no está: %s", ruta);
     return 0;
   }
+  aos_imagen_pedida(img);
   sprite_con(s, img, 0, 0, (float)w, (float)h);
   return 1;
 }
@@ -465,6 +466,7 @@ void H__ZN7cocos2d5Image17initWithImageFileERKSs(void) {
   int w, h;
   int img = aos_imagen(aos_string_c(X(1)), &w, &h);
   if (o) o->img = img;
+  if (img >= 0) aos_imagen_pedida(img);
   RET(img >= 0);
 }
 void H__ZN7cocos2d5ImageD0Ev(void) {}

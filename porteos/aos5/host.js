@@ -32,6 +32,8 @@ addToLibrary({
   },
   host_dato_poner: function (k, v) { AOS_HOST.datoPoner(UTF8ToString(k), UTF8ToString(v)); },
   host_vibrar: function (ms) { AOS_HOST.vibrar(ms); },
+  host_imagen_subir: function (i, pag, x, y, off, len) { AOS_HOST.subir(i, pag, x, y, off >>> 0, len >>> 0); },
+  host_atlas_vaciar: function () { AOS_HOST.vaciar(); },
   host_glifo: function (f, cp, tam, out) {
     var g = AOS_HOST.glifo(f, cp, tam);
     if (!g) return 0;

@@ -29,8 +29,11 @@ int aos_imagen_alfa(int img);
 void aos_imagen_tam(int img, int *w, int *h);
 /* bytes del archivo original de assets/ que no se publica como archivo (0 si no es uno de ésos) */
 u32 aos_tam_original(const char *ruta);
-/* página del atlas, esquina de la imagen en uv y uv por pixel */
+/* página del atlas, esquina de la imagen en uv y uv por pixel (si todavía no estaba, la pide) */
 int aos_imagen_atlas(int img, u32 *pagina, float *pu, float *pv, float *su, float *sv);
+int aos_imagen_lugar(int img, int *pagina, int *x, int *y); /* para las pruebas */
+int aos_atlas_lado(void);
+void aos_atlas_reiniciar(void);
 
 /* dibujo.c */
 typedef struct {

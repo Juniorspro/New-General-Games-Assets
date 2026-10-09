@@ -35,6 +35,8 @@ extern char *host_dato(const char *clave);
 extern void host_dato_poner(const char *clave, const char *v);
 extern void host_vibrar(int ms);
 extern int host_glifo(int fuente, u32 cp, float tam, float *out);
+extern void host_imagen_subir(int img, int pagina, int x, int y, u32 off, u32 len);
+extern void host_atlas_vaciar(void);
 
 void aos_log(const char *fmt, ...) {
   char b[1024];
@@ -59,6 +61,8 @@ void aos_sonido_parar(int id) { host_sonido_parar(id); }
 void aos_sonido_todo(int q) { host_sonido_todo(q); }
 void aos_sonido_cargar(const char *ruta) { host_sonido_cargar(ruta); }
 void aos_vibrar(int ms) { host_vibrar(ms); }
+void aos_imagen_subir(int img, int pagina, int x, int y, u32 off, u32 len) { host_imagen_subir(img, pagina, x, y, off, len); }
+void aos_atlas_vaciar(void) { host_atlas_vaciar(); }
 
 /* ---- datos.bin: los archivos de assets/data del APK */
 static u8 *paquete;
@@ -170,6 +174,8 @@ EMSCRIPTEN_KEEPALIVE int aos_salir(void) { return juego_salir_pedido(); }
 EMSCRIPTEN_KEEPALIVE int aos_blend(int i, int cual) { return aos_mezcla(i, cual); }
 EMSCRIPTEN_KEEPALIVE int aos_nblend(void) { return aos_nmezclas(); }
 EMSCRIPTEN_KEEPALIVE void aos_pantalla(float w, float h) { juego_tamano_pantalla(w, h); }
+EMSCRIPTEN_KEEPALIVE int aos_atlas(void) { return aos_atlas_lado(); }
+EMSCRIPTEN_KEEPALIVE void aos_reiniciar_atlas(void) { aos_atlas_reiniciar(); }
 EMSCRIPTEN_KEEPALIVE void aos_heap(u32 *out) {
   u64 u, p, t;
   aos_heap_stats(&u, &p, &t);

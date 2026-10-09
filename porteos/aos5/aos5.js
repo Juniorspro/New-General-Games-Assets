@@ -5,12 +5,18 @@
   'use strict';
   var A = window.AOS = {};
   var M;                      // el módulo de emscripten
-  var gl, canvas, prog, vbo, ibo, texturas = {}, pendientes = {};
-  var indice;                 // datos/indice.json
+  var gl, canvas, prog, vbo, ibo, texturas = {};
+  var imagenesBin;            // datos/imagenes.bin: cada imagen del APK como WebP (con su borde)
+  var porSubir = 0;           // imágenes pedidas que todavía se están decodificando
+  var generacion = 0;         // sube cuando se vacía el atlas: lo que llegue de antes se tira
+  var ladoAtlas = 1024;
+  var colaToques = [];        // toques que llegan mientras el juego espera sus imágenes
   var sucio = true, ultimo = 0, corriendo = false, terminado = false;
   var DISENO_W = 960, DISENO_H = 640;
   var MAXQ = 16384;
-  var info = { vueltas: 0, cuadros: 0, dibujos: 0, toques: 0 };
+  // contadores para las pruebas: tiempos en ms (suma y máximo) de la lógica del juego y del dibujo
+  var info = { vueltas: 0, cuadros: 0, dibujos: 0, toques: 0, msPaso: 0, maxPaso: 0, msDibujo: 0, maxDibujo: 0,
+    imagenes: 0, paginas: 0, esperas: 0, msEspera: 0, maxEspera: 0 };
   A.info = info;
 
   function log(s) { if (A.verLog) console.log('[aos5] ' + s); A.ultimoLog = s; }
@@ -48,6 +54,8 @@
     dato: function (k) { try { return localStorage.getItem('aos5.dato.' + k); } catch (e) { return null; } },
     datoPoner: function (k, v) { try { localStorage.setItem('aos5.dato.' + k, v); } catch (e) {} },
     vibrar: function (ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} },
+    subir: function (i, pag, x, y, off, len) { subirImagen(pag, x, y, off, len); },
+    vaciar: function () { vaciarAtlas(); },
     glifo: function (f, cp, tam) { return Letras.glifo(cp, tam); },
   };
 
@@ -220,7 +228,15 @@
     gl.enable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
     canvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); });
-    canvas.addEventListener('webglcontextrestored', function () { iniciarGL(); texturas = {}; cargarPaginas(); sucio = true; });
+    canvas.addEventListener('webglcontextrestored', function () {
+      iniciarGL();
+      texturas = {};
+      generacion++;
+      porSubir = 0;
+      Letras.paginas.forEach(function (p) { p.sucia = true; });
+      if (M) M._aos_reiniciar_atlas();   // las imágenes se vuelven a pedir al dibujar
+      sucio = true;
+    });
   }
 
   function textura(img, premult) {
@@ -235,35 +251,42 @@
     return t;
   }
 
-  // las páginas del atlas: se cargan todas en segundo plano, primero las de los menús
-  function cargarPaginas() {
-    var orden = ['raiz', 'ui', 'bg', 'daily', 'loading', 'icon', 'npc1', 'npc2', 'out', 'out2', 'tile', 'example'];
-    var lista = indice.paginas.map(function (p, i) { return { p: p, i: i }; });
-    lista.sort(function (a, b) {
-      var x = orden.indexOf(a.p.grupo), y = orden.indexOf(b.p.grupo);
-      return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || a.i - b.i;
-    });
-    var cola = lista.slice(), activos = 0;
-    function siguiente() {
-      while (activos < 3 && cola.length) {
-        var it = cola.shift();
-        if (texturas[it.i] || pendientes[it.i]) continue;
-        activos++;
-        pendientes[it.i] = true;
-        (function (it) {
-          fetch('datos/' + it.p.archivo).then(function (r) { return r.blob(); })
-            .then(function (b) { return createImageBitmap ? createImageBitmap(b, { premultiplyAlpha: 'premultiply', colorSpaceConversion: 'none' }) : imagenDeBlob(b); })
-            .then(function (bm) {
-              texturas[it.i] = textura(bm, !(bm instanceof ImageBitmap));
-              if (bm.close) bm.close();
-              sucio = true;
-            })
-            .catch(function (e) { log('atlas ' + it.p.archivo + ': ' + e); })
-            .then(function () { activos--; delete pendientes[it.i]; siguiente(); if (!cola.length && !activos) A.atlasListos = true; });
-        })(it);
+  // el atlas: páginas de ladoAtlas² que se van llenando con las imágenes que pide el juego (tablas.c
+  // decide dónde va cada una). Se decodifican en otro hilo; mientras falte alguna, el juego espera.
+  function pagina(n) {
+    if (texturas[n]) return texturas[n];
+    var t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, ladoAtlas, ladoAtlas, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    info.paginas++;
+    return (texturas[n] = t);
+  }
+  function subirImagen(pag, x, y, off, len) {
+    var gen = generacion;
+    porSubir++;
+    info.imagenes++;
+    var b = new Blob([imagenesBin.subarray(off, off + len)], { type: 'image/webp' });
+    var dec = window.createImageBitmap ? createImageBitmap(b, { premultiplyAlpha: 'premultiply', colorSpaceConversion: 'none' })
+      : imagenDeBlob(b);
+    dec.then(function (bm) {
+      if (gen === generacion && gl) {
+        gl.bindTexture(gl.TEXTURE_2D, pagina(pag));
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, window.ImageBitmap && bm instanceof ImageBitmap ? 0 : 1);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE, bm);
       }
-    }
-    siguiente();
+      if (bm.close) bm.close();
+    }).catch(function (e) { log('imagen en ' + off + ': ' + e); })
+      .then(function () { if (gen === generacion) porSubir--; sucio = true; });
+  }
+  function vaciarAtlas() {
+    generacion++;
+    porSubir = 0;
+    Object.keys(texturas).forEach(function (k) { if (k < Letras.BASE) { gl.deleteTexture(texturas[k]); delete texturas[k]; } });
+    info.paginas = 0;
   }
   function imagenDeBlob(b) {
     return new Promise(function (ok, mal) {
@@ -295,6 +318,7 @@
 
   function dibujar() {
     var n = M._aos_dibujar();
+    if (porSubir > 0) { sucio = true; return; }   // pidió imágenes al dibujar: queda el cuadro anterior
     var vp = M._aos_verts_ptr();
     var nl = M._aos_lotes_n(), lp = M._aos_lotes_ptr() >> 2;
     var sx = canvas.width / window.innerWidth, sy = canvas.height / window.innerHeight;
@@ -315,19 +339,21 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, M.HEAPU8.subarray(vp, vp + n * 80));
     }
-    var U = M.HEAPU32, faltan = false;
+    var U = M.HEAPU32;
     for (var l = 0; l < nl; l++) {
       var pag = U[lp + l * 4], mez = U[lp + l * 4 + 1], desde = U[lp + l * 4 + 2], cuantos = U[lp + l * 4 + 3];
       var t = texturas[pag];
-      if (!t) { faltan = true; continue; }
+      if (!t) continue;   // una página todavía vacía
       gl.bindTexture(gl.TEXTURE_2D, t);
       gl.blendFunc(blends[mez][0], blends[mez][1]);
       gl.drawElements(gl.TRIANGLES, cuantos * 6, gl.UNSIGNED_SHORT, (desde / 4) * 12);
     }
     info.dibujos++;
-    sucio = faltan;   // si faltaba una página, se vuelve a dibujar cuando llegue
+    sucio = false;
+    if (alPrimerCuadro) { alPrimerCuadro(); alPrimerCuadro = null; }
   }
   var blends = [];
+  var alPrimerCuadro, primerCuadro = new Promise(function (ok) { alPrimerCuadro = ok; });
 
   // ───────────────────────────── toques (como los manda cocos2d en Android)
   var dedos = new Map();   // pointerId → {x, y} en coordenadas GL del diseño
@@ -339,6 +365,7 @@
   var buf = null;
   function mandar(fase, lista) {
     if (!M || terminado || !lista.length) return;
+    if (porSubir > 0) { colaToques.push([fase, lista]); return; }
     info.toques = (info.toques || 0) + 1;
     info.ultimoToque = [fase, Math.round(lista[0].x), Math.round(lista[0].y)];
     if (!buf) buf = M._aos_reservar(16 * 8);
@@ -377,20 +404,46 @@
   }
 
   // ───────────────────────────── la vuelta
+  var esperaDesde = 0;
   function vuelta(t) {
     if (!corriendo) return;
     requestAnimationFrame(vuelta);
     if (terminado) return;
     if (movidos) { mandar(1, Array.from(dedos.values())); movidos = false; }
+    if (porSubir > 0) {
+      // el juego espera sus imágenes, como el original que las cargaba en el hilo de GL; al seguir no
+      // recupera el tiempo de la espera
+      if (!esperaDesde) { esperaDesde = t; info.esperas++; }
+      ultimo = 0;
+      return;
+    }
+    if (esperaDesde) {
+      var e = t - esperaDesde;
+      info.msEspera += e;
+      if (e > info.maxEspera) info.maxEspera = e;
+      esperaDesde = 0;
+      var cola = colaToques;
+      colaToques = [];
+      cola.forEach(function (c) { mandar(c[0], c[1]); });
+    }
     var dt = ultimo ? (t - ultimo) / 1000 : 0;
     ultimo = t;
     if (dt > 0.25) dt = 0.25;
-    var n = 0;
+    var n = 0, t0 = performance.now();
     try { n = M._aos_paso(dt); } catch (er) { H.trap(String(er && er.message || er)); return; }
+    var t1 = performance.now();
     info.cuadros++;
-    if (n > 0) { info.vueltas += n; sucio = true; }
+    if (n > 0) {
+      info.vueltas += n;
+      sucio = true;
+      info.msPaso += t1 - t0;
+      if (t1 - t0 > info.maxPaso) info.maxPaso = t1 - t0;
+    }
     if (sucio) {
       try { dibujar(); } catch (er) { H.trap('dibujo: ' + er); }
+      var t2 = performance.now();
+      info.msDibujo += t2 - t1;
+      if (t2 - t1 > info.maxDibujo) info.maxDibujo = t2 - t1;
     }
     if (M._aos_salir()) salir();
   }
@@ -426,14 +479,14 @@
     iniciarGL();
     var fuente = new FontFace('aos5arial', 'url(datos/arial.ttf)');
     var listo = Promise.all([
-      bajar('datos/indice.json', 'json'),
+      bajar('datos/imagenes.bin'),
       bajar('datos/imagen.bin'),
       bajar('datos/datos.bin'),
       fuente.load().then(function (f) { document.fonts.add(f); }).catch(function () {}),
       AOS5({ locateFile: function (p) { return p; } }),
     ]);
     return listo.then(function (r) {
-      indice = r[0];
+      imagenesBin = new Uint8Array(r[0]);
       M = A.M = r[4];
       // la memoria del .so, en su lugar
       var img = new DataView(r[1]);
@@ -447,7 +500,7 @@
       M.HEAPU8.set(paq, p);
       M._aos_paquete(p, paq.length);
       for (var i = 0; i < M._aos_nblend(); i++) blends.push([M._aos_blend(i, 0), M._aos_blend(i, 1)]);
-      cargarPaginas();
+      ladoAtlas = M._aos_atlas();
       ajustar();
       var semilla = (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0;
       if (!M._aos_iniciar(op.semilla || semilla, canvas.width, canvas.height)) throw new Error('el juego no arrancó');
@@ -460,6 +513,7 @@
       canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
       corriendo = true;
       requestAnimationFrame(vuelta);
+      return primerCuadro;   // la pantalla de carga se va cuando el primer cuadro está completo
     });
   };
   A.atras = function () {

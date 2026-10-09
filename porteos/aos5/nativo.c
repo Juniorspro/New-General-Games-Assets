@@ -145,23 +145,53 @@ extern struct AosLote {
 typedef struct {
   const char *ruta;
   u16 w, h;
-  u8 alfa, pagina;
-  u16 x, y;
-  u32 tam;
+  u8 alfa;
+  u32 off, len, tam;
 } AosImg;
 extern const AosImg aos_imgs[];
 extern const int aos_nimgs;
-extern const u16 aos_paginas[][2];
+static int imagen_en_i(u32 pagina, float u, float v) {
+  float px = u * aos_atlas_lado(), py = v * aos_atlas_lado();
+  for (int i = 0; i < aos_nimgs; i++) {
+    int p, x, y;
+    if (aos_imagen_lugar(i, &p, &x, &y) && (u32)p == pagina && px >= x - 0.5f && px <= x + aos_imgs[i].w + 0.5f &&
+        py >= y - 0.5f && py <= y + aos_imgs[i].h + 0.5f)
+      return i;
+  }
+  return -1;
+}
 static const char *imagen_en(u32 pagina, float u, float v) {
   if (pagina >= 1000) return "(letra)";
-  float px = u * aos_paginas[pagina][0], py = v * aos_paginas[pagina][1];
-  for (int i = 0; i < aos_nimgs; i++) {
-    const AosImg *m = &aos_imgs[i];
-    if (m->pagina == pagina && px >= m->x - 0.5f && px <= m->x + m->w + 0.5f && py >= m->y - 0.5f &&
-        py <= m->y + m->h + 0.5f)
-      return m->ruta;
+  int i = imagen_en_i(pagina, u, v);
+  return i >= 0 ? aos_imgs[i].ruta : "(atlas)";
+}
+
+/* qué imágenes se dibujaron (AOS_USO=archivo: al final escribe "ruta w h" de cada una) y cuándo se
+ * pidió cada una por primera vez (AOS_PEDIDAS=archivo: "vuelta ruta") */
+static u8 *usada;
+static int vuelta_actual;
+static FILE *pedidas;
+static int npaginas, subidas;
+void aos_imagen_subir(int img, int pagina, int x, int y, u32 off, u32 len) {
+  (void)x, (void)y, (void)off, (void)len;
+  if (pagina + 1 > npaginas) npaginas = pagina + 1;
+  subidas++;
+  if (!getenv("AOS_PEDIDAS")) return;
+  if (!pedidas) pedidas = fopen(getenv("AOS_PEDIDAS"), "w");
+  if (pedidas) fprintf(pedidas, "%d %s\n", vuelta_actual, aos_imgs[img].ruta);
+}
+void aos_atlas_vaciar(void) { npaginas = 0; }
+static void marcar_usadas(void) {
+  if (!usada) usada = calloc((size_t)aos_nimgs, 1);
+  for (int l = 0; l < aos_nlotes; l++) {
+    struct AosLote *L = &aos_lotes[l];
+    if (L->pagina >= 1000) continue;
+    for (u32 q = 0; q < L->n; q++) {
+      struct AosVert *v = &aos_verts[L->desde + q * 4];
+      int i = imagen_en_i(L->pagina, (v[0].u + v[1].u + v[2].u + v[3].u) / 4, (v[0].v + v[1].v + v[2].v + v[3].v) / 4);
+      if (i >= 0) usada[i] = 1;
+    }
   }
-  return "(atlas)";
 }
 
 static void volcar(int vuelta) {
@@ -216,19 +246,23 @@ int main(int argc, char **argv) {
   }
   for (int v = 1; v <= vueltas; v++) {
     reloj_ms += 60;
+    vuelta_actual = v;
     /* guion */
     char tok[64];
     const char *g = guion;
     int n;
     while (sscanf(g, "%63s%n", tok, &n) == 1) {
       g += n;
-      int at;
+      int at, hasta;
       float x, y;
       if (sscanf(tok, "t:%f,%f@%d", &x, &y, &at) == 3 && at == v) {
         float xy[2] = {x, 640 - y};
         juego_toque(0, 1, xy);
         juego_toque(2, 1, xy);
         printf("-- toque (%.0f,%.0f) en la vuelta %d\n", x, y, v);
+      } else if (sscanf(tok, "h:%f,%f@%d-%d", &x, &y, &at, &hasta) == 4 && (at == v || hasta == v)) {
+        float xy[2] = {x, 640 - y};
+        juego_toque(at == v ? 0 : 2, 1, xy);
       } else if (sscanf(tok, "a@%d", &at) == 1 && at == v) {
         juego_atras();
         printf("-- atrás en la vuelta %d\n", v);
@@ -239,13 +273,22 @@ int main(int argc, char **argv) {
     }
     juego_paso(0.06);
     int q = dibujo_armar();
+    if (getenv("AOS_USO")) marcar_usadas();
     if (v % 10 == 0 || v < 5) {
       u64 u, p, t;
       aos_heap_stats(&u, &p, &t);
-      printf("vuelta %d: %d cuadriláteros, %d lotes, heap %llu KB\n", v, q, aos_nlotes, (unsigned long long)u / 1024);
+      printf("vuelta %d: %d cuadriláteros, %d lotes, heap %llu KB, atlas %d páginas (%d subidas)\n", v, q, aos_nlotes,
+             (unsigned long long)u / 1024, npaginas, subidas);
     }
   }
   dibujo_armar();
   volcar(vueltas);
+  if (pedidas) fclose(pedidas);
+  if (getenv("AOS_USO") && usada) {
+    FILE *u = fopen(getenv("AOS_USO"), "w");
+    for (int i = 0; u && i < aos_nimgs; i++)
+      if (usada[i]) fprintf(u, "%s %d %d\n", aos_imgs[i].ruta, aos_imgs[i].w, aos_imgs[i].h);
+    if (u) fclose(u);
+  }
   return 0;
 }

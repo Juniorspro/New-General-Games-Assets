@@ -28,6 +28,11 @@ void aos_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 u64 aos_ahora_ms(void);                        /* reloj de pared, milisegundos */
 void aos_hora_local(s64 t, int tm[9]);         /* sec, min, hour, mday, mon, year-1900, wday, yday, isdst */
 int aos_imagen(const char *ruta, int *w, int *h); /* id de la imagen (>=0) o -1 */
+void aos_imagen_pedida(int img);               /* el juego cargó la imagen: se acomoda en el atlas (tablas.c) */
+/* el anfitrión decodifica el WebP (off, len) de datos/imagenes.bin y lo sube a la página del atlas en x, y;
+ * mientras haya alguna sin subir, el juego espera (como el original, que cargaba en el hilo de GL) */
+void aos_imagen_subir(int img, int pagina, int x, int y, u32 off, u32 len);
+void aos_atlas_vaciar(void);                   /* se tiran todas las páginas: se vuelve a subir lo que se use */
 int aos_sonido_tocar(const char *ruta, int bucle, float volumen); /* id */
 void aos_sonido_parar(int id);
 void aos_sonido_todo(int que);                 /* 0 parar, 1 pausar, 2 seguir */
