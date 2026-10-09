@@ -123,6 +123,17 @@ var Render = (function () {
     return R.conShaders && !R.shadersFallaron;
   };
 
+  // el filtro del atlas del terreno. Como la versión de PC: cada píxel de la textura tal cual (sin
+  // suavizar) y de lejos el promedio entre mipmaps. Sin filtro anisotrópico: en muchas GPU (y en
+  // ANGLE) prenderlo suaviza también lo que se ve de cerca, aunque se pida NEAREST, y con el 2 que
+  // había el pasto, la tierra y el bloque en la mano se veían lavados, como comprimidos.
+  // (min, aniso) se pueden cambiar para comparar en las pruebas
+  R.filtrarAtlas = function (min, aniso) {
+    gl.bindTexture(gl.TEXTURE_2D, atlas);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl[min]);
+    if (GL.aniso) gl.texParameterf(gl.TEXTURE_2D, GL.aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.max(1, Math.min(aniso || 1, GL.anisoMax)));
+  };
+
   R.iniciar = function (lienzo, datos, imagenes, op) {
     gl = GL.iniciar(lienzo);
     if (!gl) throw new Error('sin WebGL');
@@ -138,8 +149,8 @@ var Render = (function () {
       '#if __VERSION__ >= 300\n#define attribute in\n#define varying out\n#endif\nattribute POS4 POSITION; attribute vec2 TEXCOORD_0; uniform MAT4 WORLDVIEWPROJ; varying vec2 uv; void main(){ gl_Position = WORLDVIEWPROJ * POSITION; uv = TEXCOORD_0; }',
       '#if __VERSION__ >= 300\n#define varying in\n#define texture2D texture\nout vec4 FragColor;\n#define gl_FragColor FragColor\n#endif\nuniform sampler2D TEXTURE_0; varying vec2 uv; void main(){ vec4 c = texture2D(TEXTURE_0, uv); if (c.a < 0.1) discard; gl_FragColor = vec4(c.rgb, c.a); }');
 
-    atlas = GL.textura(imagenes.terreno, 'nitido', 3);
-    if (GL.aniso) gl.texParameterf(gl.TEXTURE_2D, GL.aniso.TEXTURE_MAX_ANISOTROPY_EXT, 2);
+    atlas = GL.textura(imagenes.terreno, 'cerca', 3);
+    R.filtrarAtlas('NEAREST_MIPMAP_LINEAR', 1);
     mapaLuz = GL.textura(new ImageData(16, 16), 'lineal', 0);
     R.texSol = GL.textura(imagenes.sol, 'cerca', 0);
     R.texLuna = GL.textura(imagenes.luna, 'cerca', 0);

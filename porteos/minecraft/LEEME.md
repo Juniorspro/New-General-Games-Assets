@@ -1,7 +1,7 @@
 # Minecraft PE 1.2 (Android) → navegador
 
 Minecraft PE 1.2 (el APK "Minecraft-v1.2" que mandó el dueño, la beta 1.2.0.2) jugable en el
-navegador del teléfono, en un solo `.html` de 1,9 MB, con **los shaders de Tito Crack 6000** (los del
+navegador del teléfono, en un solo `.html` de 2,4 MB, con **los shaders de Tito Crack 6000** (los del
 APK de Craftsman PTGI) como opción al empezar, **servidores** para jugar con otros y **bichos**.
 
 **Estado:** creativo completo para construir, con la interfaz de la 1.2:
@@ -43,14 +43,19 @@ del APK se usa todo lo demás, sin tocar ([`empaquetar.py`](empaquetar.py)):
   grilla plana a la que su shader da forma, y las de la 1.2 son cajas de 12×4×12 armadas desde
   `clouds.png`, dibujadas en dos pasadas (profundidad y después color) como el juego.
 - **Las texturas** de `textures/terrain_texture.json`, en un atlas WebP sin pérdida con 4 px de
-  borde repetido por textura (de lejos no se mezclan vecinas) y filtrado trilineal de lejos.
+  borde repetido por textura (de lejos no se mezclan vecinas). Se ven como en la versión de PC: de
+  cerca cada píxel tal cual y de lejos el promedio de los mipmaps. Sin filtro anisotrópico: en
+  muchas GPU (y en ANGLE) prenderlo suaviza también lo de cerca aunque se pida NEAREST, y con él el
+  pasto, la tierra y el bloque en la mano se veían lavados, "comprimidos". El agua y la lava que
+  corren vienen de 32 px y se usa la mitad por bloque, como el juego.
 - **Los bloques** de `blocks.json` (forma, texturas por cara y el sonido de cada uno) con su número
   de la 1.2; lo que el juego tiene en código (qué es opaco, cuánta luz da) está en
   [`juego/comun.js`](juego/comun.js).
 - **La interfaz** ([`juego/interfaz.js`](juego/interfaz.js)): los dibujos de `textures/ui` en un
   atlas con sus "nineslice", armados como los `ui/*.json` del juego (los botones claros con su
   borde, las pestañas, el panel hueco con su relleno al 80 %, el negro al 75 % sobre el panorama);
-  `gui.png` para la barra y los controles; la fuente `default8.png`; el logo; las frases amarillas.
+  `gui.png` para la barra y los controles; la fuente `default8.png`; el logo (a su tamaño, 1936 px,
+  sin pérdida) y el panorama del río (las 6 caras de 1080 px en WebP); las frases amarillas.
 - **Los modelos de los bichos y de los jugadores**: `models/mobs.json` (con la herencia
   "hijo:padre" resuelta) y sus texturas; [`juego/modelos.js`](juego/modelos.js) arma las cajas con el
   reparto de textura de Minecraft y las poses que el juego les da en código (el cuerpo acostado de
@@ -81,7 +86,14 @@ hora del día salen de la sala y del reloj: todos ven el mismo mundo a la misma 
 ### Rendimiento
 
 Lo del port de Craftsman (60 cuadros como máximo, el hilo del mundo dormido cuando no hay nada que
-hacer, precisión de los shaders como el juego, resolución automática) y además:
+hacer, precisión de los shaders como el juego) y además:
+
+- **Resolución automática que sube y baja**: si no llega a la velocidad elegida dibuja el mundo con
+  menos píxeles (hasta un tercio) y, si llega, cada tanto prueba con más (hasta los de la pantalla;
+  si con más no llega, vuelve y espera el doble para probar de nuevo). La de Craftsman sólo bajaba:
+  con el tope de 60 cuadros nunca veía que sobraba, y una bajada al entrar al mundo (cuando la CPU
+  arma los trozos, no por los píxeles) lo dejaba borroso para siempre. Lo dibujado con menos píxeles
+  se estira en píxeles cuadrados (`image-rendering: pixelated`), no suavizado.
 
 - **Hojas contra hojas**: no se dibujan las caras de hojas pegadas a otras hojas (como las "hojas
   inteligentes"): en la selva eran 440.000 cuadrados de hojas a distancia 6, ahora 150.000.

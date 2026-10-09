@@ -23,13 +23,16 @@ var GL = (function () {
       }
     }
     GL.aniso = gl.getExtension('EXT_texture_filter_anisotropic');
+    GL.anisoMax = GL.aniso ? gl.getParameter(GL.aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT) || 1 : 1;
     var f = gl.getShaderPrecisionFormat && gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
     GL.altaEnFragmentos = !!(f && f.precision > 0);
-    // el nombre de la GPU (para elegir de entrada menos píxeles en las flojas)
+    // el nombre de la GPU: en las viejas o chicas (las de los teléfonos de 1 GB) se empieza con menos
+    // píxeles
     try {
       var di = gl.getExtension('WEBGL_debug_renderer_info');
       GL.gpu = di ? String(gl.getParameter(di.UNMASKED_RENDERER_WEBGL)) : String(gl.getParameter(gl.RENDERER));
     } catch (e) { GL.gpu = ''; }
+    GL.floja = /Mali-(4|T6|T7)|Adreno \(TM\) [1-4]\d\d|PowerVR (SGX|Rogue G)|Vivante|VideoCore|GC\d{3,4}/i.test(GL.gpu);
     GL.gl = gl;
     return gl;
   };
@@ -102,10 +105,9 @@ var GL = (function () {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
     if (mip) {
       gl.generateMipmap(gl.TEXTURE_2D);
-      // 'suave': trilineal (el panorama dibujado chico para el fondo difuminado); 'nitido': de cerca
-      // los píxeles tal cual y de lejos trilineal (el atlas del terreno: sin el moiré del agua y del
-      // pasto a lo lejos)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filtro === 'suave' || filtro === 'nitido' ? gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST_MIPMAP_LINEAR);
+      // 'suave': trilineal (el panorama); si no, como la versión de PC: los píxeles de la textura tal
+      // cual y entre mipmaps el promedio (el atlas del terreno: ver Render.filtrarAtlas)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filtro === 'suave' ? gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST_MIPMAP_LINEAR);
       if (GL.v2) gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, mip);
     } else gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f);
     var w = repetir ? gl.REPEAT : gl.CLAMP_TO_EDGE;

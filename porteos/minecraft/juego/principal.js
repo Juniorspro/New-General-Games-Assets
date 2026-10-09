@@ -217,14 +217,21 @@
       im.src = src;
     });
   }
+  // jugando, el mundo se dibuja con menos píxeles que la pantalla cuando el teléfono no da (ver
+  // resolucionAuto) y el navegador lo estira: con píxeles cuadrados ('pixelated'), como se ven las
+  // texturas del juego. Estirado suavizado (lo que hacía el navegador solo) todo se veía borroso, como
+  // comprimido. En los menús sí suavizado: el panorama de atrás es una foto
+  var lienzoNitido = null;
   function ajustarTamano() {
-    // en los menús el panorama se dibuja con menos píxeles (en el título, nítido como la 1.2; atrás de
-    // los otros menús, que lo tapan al 75 %, con muy pocos y el navegador lo estira suavizado)
+    // en los menús el panorama: en el título nítido como la 1.2 (un cubo con 6 fotos no le cuesta
+    // nada a ninguna GPU); atrás de los otros menús, que lo tapan al 75 %, con muy pocos píxeles y el
+    // navegador lo estira suavizado (queda difuminado)
     var menu = !jugando || I.pantalla === 'cargando';
     var dp = Math.min(window.devicePixelRatio || 1, debil ? 1.5 : 2);
-    var base = menu ? (I.pantalla === 'titulo' ? Math.min(dp, 1.5) * (debil ? 0.6 : 0.85) : 0.25) : dp * (opciones.resolucion || escalaAuto);
+    var base = menu ? (I.pantalla === 'titulo' ? dp : 0.25) : dp * (opciones.resolucion || escalaAuto);
     var w = Math.max(1, Math.round(lienzo.clientWidth * base)), h = Math.max(1, Math.round(lienzo.clientHeight * base));
     if (lienzo.width !== w || lienzo.height !== h) { lienzo.width = w; lienzo.height = h; }
+    if (lienzoNitido !== !menu) { lienzoNitido = !menu; lienzo.style.imageRendering = menu ? '' : 'pixelated'; }
   }
 
   async function arrancar() {
@@ -250,7 +257,7 @@
     imgs.grietas = [];
     for (i = 0; i < 10; i++) imgs.grietas.push(await cargarImagen('datos/grieta' + i + '.png'));
     var pano = [];
-    for (i = 0; i < 6; i++) pano.push(await cargarImagen('datos/panorama' + i + '.jpg'));
+    for (i = 0; i < 6; i++) pano.push(await cargarImagen('datos/panorama' + i + '.webp'));
     // las texturas de los bichos y los jugadores
     imgs.bichos = {};
     var texB = {};
@@ -266,7 +273,7 @@
     // los shaders de Tito se compilan recién cuando se eligen (en un teléfono flojo tardan)
     Render.iniciar(lienzo, datos, imgs, { shaders: opciones.shaders === true, sofisticados: opciones.sofisticados });
     Render.panorama(pano);
-    if (/Mali-(4|T6|T7)|Adreno \(TM\) [1-4]\d\d|PowerVR (SGX|Rogue G)|Vivante|VideoCore|GC\d{3,4}/i.test(GL.gpu || '')) debil = true;
+    if (GL.floja) debil = true;
     if (debil) escalaAuto = 0.6;
     var creativo = O.creativo();
     I.prepararIconos(creativo, datos);
@@ -876,25 +883,38 @@
   // El cuadro
   // ------------------------------------------------------------------------------------------
   var ultimo = 0, acum = 0, cuadros = 0, segundo = 0, fovActual = 0, estabaPausado = false, ultimoEstado = 0, ultimoBichos = 0;
-  // resolución automática: si no llega a ~45 cuadros por segundo baja los píxeles (hasta la mitad), si
-  // sobra la vuelve a subir. Si bajar no mejoró nada (un teléfono que limita a 30 para ahorrar
+  // resolución automática. La meta es la velocidad elegida (60 o 30 cuadros): si no llega a ~3/4,
+  // menos píxeles (de a 15 %, hasta un tercio); si llega, cada tanto prueba con más (hasta los de la
+  // pantalla; en los flojos hasta 1,5 por punto) y si con más ya no llega vuelve y espera el doble
+  // para volver a probar. Antes sólo bajaba: con el tope de cuadros nunca se veía que sobraba, y una
+  // bajada al entrar al mundo (cuando la CPU arma los trozos de alrededor, no por los píxeles) lo
+  // dejaba borroso para siempre. Si bajar no mejoró nada (un teléfono que limita a 30 para ahorrar
   // batería), vuelve atrás y deja de probar un rato
   var escalaAuto = 1, ema = 16, ventana = 0, antesDeBajar = 0, intentoFallido = 0;
+  var probando = 0, esperaSubir = 8000, ultimoCambio = 0, entradaJuego = 0;
   function resolucionAuto(dt, ahora) {
     if (opciones.resolucion) return;
     ema += (dt * 1000 - ema) * 0.05;
     ventana += dt;
     if (ventana < 2) return;
     ventana = 0;
-    if (antesDeBajar) {
-      if (ema > antesDeBajar * 0.92) { escalaAuto = Math.min(1, escalaAuto / 0.85); intentoFallido = ahora; }
-      antesDeBajar = 0;
+    if (ahora - entradaJuego < 6000) return;
+    var meta = 1000 / (opciones.limite || 60);
+    var dp = Math.min(window.devicePixelRatio || 1, debil ? 1.5 : 2);
+    var tope = debil ? 1 : Math.max(1, (window.devicePixelRatio || 1) / dp);
+    if (probando) {
+      if (ema > meta * 1.2) { escalaAuto = probando; esperaSubir = Math.min(esperaSubir * 2, 240000); }
+      else esperaSubir = 8000;
+      probando = 0; ultimoCambio = ahora;
       return;
     }
-    // la meta es la velocidad elegida (60 o 30 cuadros): si no llega, menos píxeles
-    var meta = 1000 / (opciones.limite || 60);
+    if (antesDeBajar) {
+      if (ema > antesDeBajar * 0.92) { escalaAuto = Math.min(tope, escalaAuto / 0.85); intentoFallido = ahora; }
+      antesDeBajar = 0; ultimoCambio = ahora;
+      return;
+    }
     if (ema > meta * 1.35 && escalaAuto > 0.35 && ahora - intentoFallido > 30000) { antesDeBajar = ema; escalaAuto = Math.max(0.35, escalaAuto * 0.85); }
-    else if (ema < meta * 0.92 && escalaAuto < 1) escalaAuto = Math.min(1, escalaAuto / 0.9);
+    else if (ema < meta * 1.08 && escalaAuto < tope && ahora - ultimoCambio > esperaSubir) { probando = escalaAuto; escalaAuto = Math.min(tope, escalaAuto / 0.85); }
   }
 
   // el tope de cuadros por segundo: el navegador llama a cada refresco de la pantalla (90 o 120 por
@@ -920,7 +940,7 @@
     }
     if (I.pantalla === 'cargando') {
       if (esperandoSuelo) buscarSuelo();
-      if (!esperandoSuelo && listoParaEntrar()) { I.ir('juego'); acum = 0; }
+      if (!esperandoSuelo && listoParaEntrar()) { I.ir('juego'); acum = 0; entradaJuego = t; }
       else { Render.dibujarPanorama(t / 1000 * 0.03, -0.04); I.dibujar(); return; }
     }
     if (esperandoSuelo) buscarSuelo();

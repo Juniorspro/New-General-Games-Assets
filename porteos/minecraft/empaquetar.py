@@ -191,6 +191,11 @@ def armar_atlas(apk, salida):
                 lista.append(None)
                 continue
             px, py, w, h, b = lugares[clave]
+            # el agua y la lava que corren (water_flow, lava_flow) vienen de 32 px para que el juego
+            # tome 16 por bloque, como todas (la versión de PC usa la mitad en los costados): entera en
+            # un bloque se veía al doble de fina que el resto
+            if clave[0].endswith("_flow") and w == 32:
+                w, h = w // 2, h // 2
             lista.append([px / ANCHO, py / alto, (px + w) / ANCHO, (py + h) / alto])
         uv[nombre] = lista
     print(f"atlas: {len(unicas)} texturas en {ANCHO}x{alto}")
@@ -440,15 +445,15 @@ def interfaz(apk, salida):
     for origen, destino in (("gui.png", "gui.png"), ("icons.png", "iconos.png")):
         guardar_png(apk.imagen(g + origen), salida / destino)
     guardar_png(apk.imagen(PAQUETE + "font/default8.png"), salida / "fuente.png")
-    # el logo de la 1.2 (1936 px de ancho): a 1024 alcanza en cualquier teléfono
-    logo = apk.imagen(PAQUETE + "textures/ui/title.png")
-    logo = logo.resize((1024, round(logo.height * 1024 / logo.width)), Image.LANCZOS)
-    logo.save(salida / "logo.webp", "WEBP", quality=90, method=6)
-    # el panorama del menú (un mundo con un río): 6 caras de 1080 px; a 768 en JPEG se ve bien de
-    # fondo y pesa poco
+    # el logo de la 1.2 tal cual (1936 px de ancho, sin pérdida: 93 KB). Achicado a 1024 en un
+    # teléfono de 2400 px se estiraba y se veía blando
+    apk.imagen(PAQUETE + "textures/ui/title.png").save(salida / "logo.webp", "WEBP", lossless=True, quality=100, method=6)
+    # el panorama del título (un mundo con un río): las 6 caras de 1080 px de la 1.2 en WebP. A 768 en
+    # JPEG (lo que había) pesaba 340 KB en vez de 730, pero se veía borroso y con los cuadraditos del
+    # JPEG en los bordes de los bloques
     for i in range(6):
-        im = apk.imagen(PAQUETE + f"textures/ui/panorama_{i}.png").convert("RGB").resize((768, 768), Image.LANCZOS)
-        im.save(salida / f"panorama{i}.jpg", quality=80, optimize=True, progressive=True)
+        im = apk.imagen(PAQUETE + f"textures/ui/panorama_{i}.png").convert("RGB")
+        im.save(salida / f"panorama{i}.webp", "WEBP", quality=85, method=6)
     apk.imagen("res/drawable-xxhdpi-v4/icon.png").resize((96, 96), Image.LANCZOS).save(salida / "icono.png", optimize=True)
     # los huevos de los bichos (el inventario creativo los trae para hacerlos aparecer)
     for n in ("spawn_egg", "spawn_egg_overlay"):

@@ -571,7 +571,10 @@ var Interfaz = (function () {
     if (img.logo) {
       lw = Math.min(W * 0.6625, (H * 0.3) * img.logo.width / img.logo.height);
       lh = lw * img.logo.height / img.logo.width;
+      // el logo viene de 1936 px y se achica: con la calidad alta el navegador promedia (la baja
+      // saltea píxeles y los bordes de las letras salen serruchados)
       ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img.logo, Math.round((W - lw) / 2), Math.round(H * 0.1), Math.round(lw), Math.round(lh));
       ctx.imageSmoothingEnabled = false;
     }
