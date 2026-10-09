@@ -861,6 +861,37 @@ Estado: creativo completo (mundos guardados, construir, agua y lava, inventario,
 - **Rearmarlo:** `porteos/craftsman/portear.sh Craftsman_PTGI.apk SALIDA` (deja
   `SALIDA/Craftsman-PTGI.html`).
 
+### Minecraft PE 1.2 (APK de Android) — versión web jugable (creativo, servidores, bichos)
+
+```
+Origen: Minecraft-v1.2 (LUISGAMERXD HD).apk (63,6 MB, sha256 e0a9278f…2421), por link de MediaFire
+        (de la descripción de un video de YouTube); es la beta 1.2.0.2, x86
+Motor: libminecraftpe.so (nativo, no corre en un navegador)
+Estrategia: el motor voxel del port de Craftsman, crecido para la 1.2: interfaz de la 1.2 (ui/*.json
+        y textures/ui), sus shaders de fábrica y, como opción al empezar, los de Tito (del APK de
+        Craftsman PTGI, sin la sombra del personaje); multijugador por un broker MQTT público
+Fidelidad: recursos, interfaz, textos (en, es, pt), sonidos, modelos de bichos y shaders del juego;
+        el mundo, la física, la IA de los bichos y la red, reimplementados
+Tamaños: APK 64 MB → 1,7 MB de datos; un solo .html de 1,9 MB en texto ASCII
+Estado: creativo; idioma y shaders al empezar; 3 mundos públicos fijados + servidores agregados
+        (jugadores, chat, bloques, golpes, bichos compartidos, lo construido retenido en el broker);
+        bichos de día y de noche; probado en Chromium (también tipo Rezona, acostado y parado, y dos
+        y tres clientes contra un broker local); falta supervivencia de verdad
+```
+
+- **Qué hizo falta** (detalle en [`porteos/minecraft/LEEME.md`](porteos/minecraft/LEEME.md)):
+  - el empaquetador de la 1.2 (`terrain_texture.json` con rutas, `blocks.json` con sonido, los
+    `.fsb` sueltos de `sound_definitions.json`, los JSON con comentarios al final de las líneas);
+  - la interfaz de la 1.2 dibujada con sus nineslice; los idiomas del juego más los textos propios;
+  - las nubes de cajas de la 1.2 para el modo sin shaders;
+  - los modelos de `mobs.json` con su herencia, el box UV y las poses del código del juego;
+  - la red sin servidor: estado cada 100 ms, acciones, chat, bichos con dueño y lo construido como
+    mensajes retenidos por trozo;
+  - del lag de la selva: las caras de hojas contra hojas fuera; de "la semilla da siempre el mismo
+    mundo": un corrimiento del ruido por semilla.
+- **Rearmarlo:** `porteos/minecraft/portear.sh Minecraft-1.2.apk Craftsman_PTGI.apk SALIDA` (deja
+  `SALIDA/Minecraft-1.2.html`).
+
 ---
 
 ## Apéndice A — La orden original del dueño (textual)
