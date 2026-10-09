@@ -8,7 +8,7 @@ una capa chica que pone lo que la versión de Android tiene en su LÖVE propio y
 **Estado:** arranca, el menú, el tutorial, elegir ciega, repartir y jugar manos andan con toques,
 en vertical (girado 90°) y en horizontal, también adentro de otra página (Rezona). Guarda la
 partida y el perfil (IndexedDB). El sonido arranca con el primer toque. Empieza con la intro de
-JXStudios. Todo entra en 9 MB, música incluida, y también va como un solo .html de 8,7 MB. En el
+JXStudios. Todo entra en 9 MB, música incluida, y también va como un solo .html de 9,6 MB. En el
 teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro).
 
 ## Cómo es
@@ -55,7 +55,7 @@ teléfono del dueño: 67 cuadros/s (lógica 4,8 ms y dibujo 3,7 ms por cuadro).
 |---|---|---|
 | motor (love.js + love.wasm) | 4,8 | Cloudflare lo manda comprimido: 1,7 |
 | juego (`balatro.love`) | 7,1 | todo: código, imágenes, fuentes, efectos, ambiente y los cinco temas |
-| el .html único | 8,7 | lo mismo en un archivo (el motor con gzip) |
+| el .html único | 9,6 | lo mismo en un archivo (el motor con gzip), en UTF-8 (ver "En Rezona") |
 
 `balatro.love` por dentro: música 3,7 MB, texturas 1,4, efectos 0,8, ambiente 0,6, código 0,3,
 textos 0,2. El APK pesa 66 MB (104 descomprimido). Fuera de la versión web, o más chico:
@@ -80,13 +80,28 @@ textos 0,2. El APK pesa 66 MB (104 descomprimido). Fuera de la versión web, o m
   `Module.porteoPartidas`, y no se escribe nada en IndexedDB hasta que la carga inicial terminó:
   escribir antes borraba allá lo que todavía no estaba acá.
 
+## En Rezona
+
+Rezona muestra cada juego en `<iframe src=… sandbox="allow-scripts allow-same-origin
+allow-pointer-lock allow-modals" allow="autoplay; fullscreen; clipboard-write; gamepad">` (de su
+código). Con `allow-same-origin` las partidas se guardan (IndexedDB). Encima pone su pantalla de
+"cargando" hasta que el juego avisa `game:ready` por `postMessage`, o 2,5 s después del `load` del
+cuadro: con el .html único eso era después de bajar los 9 MB, y la intro se pasaba tapada. La
+página avisa apenas arranca, así se ven la intro y la carga con lo que falta.
+
+El .html único va en UTF-8 (`un-archivo.py --utf8`, 7 bits por carácter): si la plataforma lo lee
+como texto (para meterle un script, guardarlo o pasarlo a `srcdoc`) sigue andando. El de UTF-16
+(8,7 MB) leído así no arrancaba. Probado con una página que imita a Rezona: el cuadro con su
+`sandbox`, su pantalla de carga, cargado por dirección, por `srcdoc` y por `blob:` con un script
+agregado; en las tres llega al menú con sonido, y las partidas siguen después de recargar.
+
 ## Armarlo
 
 ```bash
 porteos/balatro/portear.sh balatro.apk RUTA/A/emsdk salida --registro __registro
 herramientas/porteo/cloudflare/subir.py salida/sitio --proyecto porteo-balatro --clave … --registro-kv porteo_balatro_registro
-# el .html único (el motor y el juego al final: la intro aparece mientras se lee el resto)
-herramientas/porteo/un-archivo.py salida/sitio --salida Balatro.html --al-final b/….wasm --al-final b/….love
+# portear.sh también deja salida/Balatro.html: el .html único (un-archivo.py --utf8, con el motor
+# y el juego al final: la intro aparece mientras se lee el resto)
 ```
 
 | archivo | qué es |

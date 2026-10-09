@@ -71,6 +71,9 @@
         document.getElementById('afuera').hidden = false;
       }
     });
+    // Rezona tapa su cuadro con una pantalla de carga propia hasta que el juego avisa "game:ready" (o
+    // 2,5 s después del load): el juego ya muestra su carga, así que se avisa ya
+    try { window.parent.postMessage({ type: 'game:ready' }, '*'); } catch (e) { /* nada */ }
     const f = document.createElement('iframe');
     f.allow = 'fullscreen; autoplay; screen-wake-lock; gamepad; accelerometer; gyroscope';
     f.setAttribute('allowfullscreen', '');

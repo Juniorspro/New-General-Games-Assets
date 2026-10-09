@@ -82,6 +82,10 @@
   // la intro de JXStudios tapa el principio de la carga (un toque la saltea); si termina antes,
   // queda la pantalla de carga con el Joker
   Porteo.intro({ aviso: AVISO });
+  // Rezona muestra el juego en un cuadro y lo tapa con su propia pantalla de carga hasta que el juego
+  // avisa "game:ready" (o hasta 2,5 s después de que bajó la página entera: en el .html único, los
+  // 9 MB). Se avisa ya: así se ven la intro y la carga del juego, que muestra cuánto falta
+  try { if (window.parent !== window) window.parent.postMessage({ type: 'game:ready' }, '*'); } catch (e) { /* nada */ }
   var TXT = {
     es: ['Bajando el juego…', 'Arrancando…', 'No se pudo bajar el juego. Revisá la conexión.'],
     pt: ['Baixando o jogo…', 'Iniciando…', 'Não foi possível baixar o jogo. Verifique a conexão.'],

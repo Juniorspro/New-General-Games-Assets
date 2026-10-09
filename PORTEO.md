@@ -428,6 +428,16 @@ sesión va en la dirección, ver `herramientas/porteo/cloudflare/LEEME.md`). Se 
 de otro sitio con el lanzador en un `<iframe>` (también con `sandbox` sin `allow-same-origin`) tiene
 que llegar al menú.
 
+**Cómo muestra Rezona un juego** (de su código, octubre de 2026): `<iframe src=play_url
+sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-modals" allow="autoplay;
+fullscreen; clipboard-write; gamepad">`. Con `allow-same-origin`, IndexedDB anda (las partidas se
+guardan); sin `allow-orientation-lock` ni `screen-wake-lock`, el giro va por CSS. Encima pone su
+pantalla de "cargando" hasta que el juego le manda `postMessage({type: "game:ready"})`, o 2,5 s después
+del `load` del cuadro (en un .html único de 9 MB, después de bajarlo entero), o a los 15 s. El juego
+(y el lanzador) avisan `game:ready` apenas arrancan: así se ven la intro y su propia carga. Si el dueño
+sube **un solo .html**, va con `un-archivo.py --utf8`: una plataforma que lo lee como texto (para
+meterle un script, guardarlo o pasarlo a `srcdoc`) rompe el de UTF-16, que no es UTF-8 válido.
+
 Al terminar cada porteo se entrega, **como archivos** (no sólo una ruta):
 
 1. **HTML5** — carpeta lista para subir, pasada por **`pwa.py`**
@@ -536,6 +546,8 @@ créditos ni se tapa al autor.
 | sacar Asyncify para achicar el wasm | los cuadros de diálogo de PvZ esperan con `emscripten_sleep` (`Dialog::WaitForResult`): sin Asyncify no andan | dejarlo (cuesta 2,4 MB de wasm y ~2 s con CPU ÷4) |
 | preguntarle al disco por cada nombre posible de una imagen | en Emscripten cada archivo que no existe es una excepción de JS: ~25 000 consultas, 1,2 s de la carga con CPU ÷4 | leer cada carpeta una vez y no preguntar por lo que no está (`PakInterface::PuedeAbrirse`) |
 | meter un binario en un `.html` con base64 | +33 % de tamaño, y leerlo es más lento | UTF-16 con BOM: dos bytes por carácter y sólo se escapa lo que el HTML no deja pasar (+3 %) |
+| el `.html` en UTF-16 en una plataforma que lo procesa como texto | no es UTF-8 válido: leído como texto, queda basura y no arranca nada (probado con `srcdoc`) | `un-archivo.py --utf8`: 7 bits por carácter ASCII (+14 %), UTF-8 de verdad |
+| un `<script src>` agregado después en la página UTF-16 | sin charset, el navegador lo lee con la codificación de la página: "Invalid or unexpected token" | los archivos de texto van como `charset=utf-8` |
 | compilar el C# decompilado contra las DLL de Unity que trae el APK | vienen recortadas (*managed stripping*): faltan setters de atributos y miembros que el juego no usaba, y salen errores que en Unity no existen (22 en Slime Rancher) | compilar contra las DLL completas del editor de la misma versión (`herramientas/unity/verificar`) |
 | el recorte del build en el código del juego | saca la mitad de un par de operadores (`==` sin `!=`) o un constructor: el decompilado no compila | agregar la otra mitad como la negación de la que quedó (`porteos/slime-rancher/arreglar.py`) |
 | un port de Android de un juego de PC | quien lo porteó puede **reemplazar** el teclado y el mouse por controles de pantalla: en la web de PC no se puede jugar | buscar si la entrada original sigue en el código (en Slime Rancher, `SRInput` con todas sus teclas) y que el control táctil consulte también a la de PC |
@@ -774,7 +786,7 @@ Motor: LÖVE con Lua; el LÖVE es el de Playstack (love.platform: nube, logros) 
 Estrategia: LÖVE 11.4 compilado para la web acá + el Lua del juego tal cual + una capa del navegador
 Fidelidad: 1:1 (su Lua, sus shaders, su azar: una semilla da la misma partida que en el teléfono)
 Tamaños: APK 66 MB → web 9 MB en total con la música (motor 1,7 MB comprimido + juego 7,1 MB);
-        un solo .html de 8,7 MB, con la intro de JXStudios
+        un solo .html de 9,6 MB (UTF-8), con la intro de JXStudios
 Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de Rezona (sitio y .html
         único); en el teléfono del dueño, 67 cuadros/s
 ```
@@ -794,7 +806,7 @@ Estado: menú, partida, guardado y sonido andan en Chromium, también dentro de 
   - la parte Android: Java, `liblove.so` y un `libcheckupdate.so` que no es del juego (de quien
     reempaquetó el APK). Del APK sólo se toma `assets/`, y nada de eso se ejecuta.
 - **Rearmarlo:** `porteos/balatro/portear.sh balatro.apk RUTA/A/emsdk SALIDA --registro __registro`;
-  el .html único, con `herramientas/porteo/un-archivo.py SALIDA/sitio --al-final b/….wasm --al-final b/….love`.
+  también arma el .html único (`SALIDA/Balatro.html`, con `un-archivo.py --utf8`).
 
 ---
 

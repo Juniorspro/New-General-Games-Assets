@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Mete un juego HTML5 entero en UN solo .html que se abre con doble clic.
 
-    python3 un-archivo.py CARPETA [--inicio index.html] [--salida juego.html] [--al-final RUTA ...]
+    python3 un-archivo.py CARPETA [--inicio index.html] [--salida juego.html] [--al-final RUTA ...] [--utf8]
 
 Por qué hace falta y no alcanza con copiar la carpeta: abierto desde el disco
 (file:// o content:// en Android), el navegador no deja hacer fetch() ni XHR a
@@ -26,6 +26,13 @@ Cómo:
     compila su wasm; fetch() de esa ruta espera a que estén. El juego (o su
     carcasa) puede pedirlos sin copias y con progreso con
     window.__porteoArchivo(ruta, alAvanzar) → Promise<Uint8Array>.
+
+  - --utf8: el .html en UTF-8 de verdad, con 7 bits de datos por carácter (un 14% más que los
+    archivos, contra el 3% del UTF-16). Para cuando el .html no se sirve tal cual: una plataforma
+    que lo lee como texto (para meterle algo, guardarlo en una base o pasarlo a srcdoc) rompe el
+    UTF-16, que no es UTF-8 válido. Cada carácter ASCII lleva 7 bits; los valores que el HTML no deja
+    pasar (NUL, CR y "<") van juntos con los 7 bits siguientes en un carácter de dos bytes
+    (U+0100..U+027F; al final, solo, U+0280..U+0282).
 
 Límites conocidos: no cubre import() dinámico de módulos ES ni document.write;
 DecompressionStream pide Chrome 80+, Safari 16.4+, Firefox 113+.
@@ -92,8 +99,46 @@ def a_utf16(datos: bytes):
     return re.sub("[\x00\r<" + esc + "\ud800-\udfff]", cambiar, s), ord(esc)
 
 
+# ── bytes → texto de 7 bits (--utf8) ──────────────────────────────────────
+ILEGALES = b"\x00\x0d\x3c"  # NUL (el parser lo cambia por U+FFFD), CR (se vuelve LF), "<" (cerraría el <script>)
+ILEGAL_RE = re.compile(b"[\x00\x0d\x3c]")
+
+
+def a_7bits(datos: bytes):
+    """bytes → texto: cada carácter, 7 bits (ver --utf8). El arranque (deco) hace lo inverso."""
+    n = len(datos)
+    total = (n * 8 + 6) // 7
+    b = datos + b"\0" * ((-n) % 7)
+    g = bytearray(len(b) // 7 * 8)
+    k, fb = 0, int.from_bytes
+    for i in range(0, len(b), 7):
+        x = fb(b[i:i + 7], "big")
+        g[k:k + 8] = ((x >> 49) & 127, (x >> 42) & 127, (x >> 35) & 127, (x >> 28) & 127,
+                      (x >> 21) & 127, (x >> 14) & 127, (x >> 7) & 127, x & 127)
+        k += 8
+    g = bytes(g[:total])
+    partes, i = [], 0
+    while True:
+        m = ILEGAL_RE.search(g, i)
+        if not m:
+            partes.append(g[i:].decode("ascii"))
+            return "".join(partes)
+        j = m.start()
+        partes.append(g[i:j].decode("ascii"))
+        c = ILEGALES.index(g[j])
+        if j + 1 < total:
+            partes.append(chr(0x100 + (c << 7) + g[j + 1]))
+            i = j + 2
+        else:
+            partes.append(chr(0x280 + c))
+            i = j + 1
+
+
+UTF8 = False  # --utf8
+
+
 def bloque(etiqueta: str, datos: bytes, gz: bool, **attrs):
-    texto, esc = a_utf16(datos)
+    texto, esc = (a_7bits(datos), 7) if UTF8 else a_utf16(datos)
     extra = "".join(f' data-{k}="{v}"' for k, v in attrs.items())
     return (f'<script type="{etiqueta}"{extra} data-gz="{1 if gz else 0}" data-n="{len(datos)}" '
             f'data-e="{esc}">{texto}</script>')
@@ -104,17 +149,39 @@ ARRANQUE = r"""<script>
 (function () {
   'use strict';
   var A = {};
+  // Una página abierta desde una dirección blob: (otra página la armó con el texto del .html) no
+  // resuelve direcciones relativas: ahí la clave es la ruta tal cual.
   function clave(u) {
-    try { var h = new URL(u, document.baseURI).href; return h.split('#')[0].split('?')[0]; } catch (e) { return null; }
+    try { var h = new URL(u, document.baseURI).href; return h.split('#')[0].split('?')[0]; }
+    catch (e) { return typeof u === 'string' ? u.replace(/^\.\//, '').split('#')[0].split('?')[0] : null; }
   }
   function buscar(u) {
     if (typeof u !== 'string' || /^(blob|data):/.test(u)) return null;
     var k = clave(u);
     return k && A[k] || null;
   }
-  // El texto UTF-16 de un bloque → sus bytes (un-archivo.py: a_utf16). También corre en el worker.
+  // El texto de un bloque → sus bytes (un-archivo.py: a_utf16, o a_7bits si E es 7). También corre
+  // en el worker.
   function deco(s, E, n) {
-    var u = new Uint16Array((n + 1) >> 1), j = 0, L = s.length;
+    var L = s.length;
+    if (E === 7) {
+      var IL = [0, 13, 60], b7 = new Uint8Array(n), j7 = 0, acc = 0, bits = 0;
+      for (var i7 = 0; i7 < L; i7++) {
+        var c7 = s.charCodeAt(i7), v, w = -1;
+        if (c7 < 0x80) v = c7;
+        else if (c7 < 0x280) { c7 -= 0x100; v = IL[c7 >> 7]; w = c7 & 127; }
+        else v = IL[c7 - 0x280];
+        acc = (acc << 7) | v; bits += 7;
+        if (bits >= 8) { bits -= 8; if (j7 < n) b7[j7++] = acc >> bits; acc &= (1 << bits) - 1; }
+        if (w >= 0) {
+          acc = (acc << 7) | w; bits += 7;
+          if (bits >= 8) { bits -= 8; if (j7 < n) b7[j7++] = acc >> bits; acc &= (1 << bits) - 1; }
+        }
+      }
+      if (j7 !== n) throw new Error('bloque dañado (' + j7 + ' de ' + n + ')');
+      return b7;
+    }
+    var u = new Uint16Array((n + 1) >> 1), j = 0;
     for (var i = 0; i < L; i++) {
       var c = s.charCodeAt(i);
       if (c === E) { c = s.charCodeAt(++i); c = c < 0x900 ? c + 0xD700 : c === 0x900 ? 0 : c === 0x901 ? 13 : c === 0x902 ? 60 : E; }
@@ -347,7 +414,11 @@ def main():
     ap.add_argument("--salida", type=Path)
     ap.add_argument("--al-final", action="append", default=[], metavar="RUTA",
                     help="archivo grande que el juego pide con fetch(): va al final y no se lo espera para arrancar")
+    ap.add_argument("--utf8", action="store_true",
+                    help="UTF-8 de verdad (7 bits por carácter, 14%% más grande): aguanta que lo lean como texto")
     a = ap.parse_args()
+    global UTF8
+    UTF8 = a.utf8
 
     d = a.carpeta.resolve()
     html = (d / a.inicio).read_text("utf-8")
@@ -427,7 +498,12 @@ def main():
     html = html.replace("</body>", final + "</body>", 1)
 
     salida = a.salida or d.parent / f"{d.name}-en-un-archivo.html"
-    salida.write_bytes(codecs.BOM_UTF16_LE + html.encode("utf-16-le"))
+    if UTF8:
+        # el BOM manda aunque el servidor diga otro charset; el <meta>, por si alguien saca el BOM
+        html = html.replace("<head>", '<head>\n<meta charset="utf-8">', 1)
+        salida.write_bytes(codecs.BOM_UTF8 + html.encode("utf-8"))
+    else:
+        salida.write_bytes(codecs.BOM_UTF16_LE + html.encode("utf-16-le"))
     tam = salida.stat().st_size
     print(f"{salida}: {tam:,} bytes ({tam / 1048576:.2f} MB) — {len(bloques)} bloques + {len(partes)} partes al final, "
           f"{crudo / 1048576:.2f} MB de archivos")

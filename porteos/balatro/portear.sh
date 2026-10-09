@@ -21,6 +21,8 @@ if [ ! -f "$SALIDA/motor/love.wasm" ]; then
   "$AQUI/motor/compilar.sh" "$EMSDK" "$SALIDA/motor" "$SALIDA/fuentes"
 fi
 python3 -I "$AQUI/empaquetar.py" "$APK" "$SALIDA/motor" "$SALIDA/sitio" "$@"
-# el motor y el juego al final del .html: la intro aparece mientras el navegador lee el resto
-python3 -I "$AQUI/../../herramientas/porteo/un-archivo.py" "$SALIDA/sitio" --salida "$SALIDA/Balatro.html" \
+# el motor y el juego al final del .html: la intro aparece mientras el navegador lee el resto. En
+# UTF-8 (--utf8): una plataforma que lo lee como texto (para meterle un script, guardarlo o pasarlo a
+# srcdoc) rompía el de UTF-16
+python3 -I "$AQUI/../../herramientas/porteo/un-archivo.py" "$SALIDA/sitio" --utf8 --salida "$SALIDA/Balatro.html" \
   --al-final "$(cd "$SALIDA/sitio" && ls b/*.wasm)" --al-final "$(cd "$SALIDA/sitio" && ls b/*.love)"
