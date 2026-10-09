@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e3b44">
+<title>Balatro</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono-192.png">
+<!-- porteo: Balatro (la versión de Android, LÖVE + Lua) en el navegador. El motor es LÖVE compilado
+     para la web (porteos/balatro/motor), el juego es su balatro.love con la capa del navegador
+     (porteos/balatro/juego). empaquetar.py llena la tabla de archivos y la imagen de la carga. -->
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  /* SDL (Emscripten) toma el tamaño del lienzo de su CSS y lo multiplica por la densidad de pantalla */
+  #canvas { display: block; width: 100vw; height: 100vh; touch-action: none; outline: none; -webkit-tap-highlight-color: transparent; }
+  .porteo-aviso-legal { position: absolute; left: 6%; right: 6%; top: max(10px, 2.5vmin); margin: 0; text-align: center;
+    font: 11px/1.35 system-ui, sans-serif; color: rgba(255, 255, 255, .45); }
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+<script src="porteo-registro.js"></script>
+<script src="porteo-web.js"></script>
+<script src="porteo-carga.js"></script>
+<script>
+'use strict';
+(function () {
+  var T = /*TABLA*/null;
+  var IMAGEN = /*IMAGEN*/'';
+  var GUARDADO = '/home/web_user/love/balatro';   // la carpeta de guardado de LÖVE (identity "balatro")
+  var idioma = (navigator.language || 'es').slice(0, 2).toLowerCase();
+  var lienzo = document.getElementById('canvas');
+
+  if (T.registro) Porteo.registro({ url: T.registro });
+  // horizontal (en vertical se gira el juego 90°), pantalla completa al primer toque, sin que se
+  // apague, y el botón atrás como Escape (en Balatro abre la pausa). Sin service worker: la caché es
+  // la de abajo, y la música queda en IndexedDB
+  Porteo.web({ orientacion: 'landscape', offline: false });
+
+  var carga = Porteo.carga({
+    imagen: IMAGEN, titulo: 'Balatro', saltarEn: -1,
+    consejos: {
+      es: ['Los comodines se activan de izquierda a derecha: el orden importa.',
+           'Guardar plata da interés: 1 $ por cada 5 $ al final de la ronda (hasta 5 $).',
+           'Las cartas de planeta suben de nivel una mano de póker.',
+           'Saltear una ciega da una etiqueta con premio.',
+           'Vender un comodín devuelve la mitad de lo que costó.'],
+      en: ['Jokers trigger from left to right: order matters.',
+           'Saving money earns interest: $1 for every $5 at the end of the round (up to $5).',
+           'Planet cards level up a poker hand.',
+           'Skipping a blind gives you a tag with a reward.',
+           'Selling a Joker gives back half of what it cost.'],
+      pt: ['Os curingas ativam da esquerda para a direita: a ordem importa.',
+           'Guardar dinheiro rende juros: $1 a cada $5 no fim da rodada (até $5).',
+           'Cartas de planeta sobem o nível de uma mão de pôquer.',
+           'Pular um blind dá uma etiqueta com prêmio.',
+           'Vender um curinga devolve metade do que custou.'],
+    },
+  });
+  (function () {
+    var aviso = document.createElement('p');
+    aviso.className = 'porteo-aviso-legal';
+    aviso.textContent = {
+      es: 'Port no oficial, para uso personal, de «Balatro» (LocalThunk, Playstack). El juego, sus imágenes y sonidos son de sus autores.',
+      pt: 'Port não oficial, para uso pessoal, de "Balatro" (LocalThunk, Playstack). O jogo, suas imagens e sons pertencem aos seus autores.',
+    }[idioma] || 'Unofficial personal-use port of "Balatro" (LocalThunk, Playstack). The game, its images and sounds belong to their authors.';
+    var c = document.getElementById('porteo-carga');
+    if (c) c.appendChild(aviso);
+  })();
+  var TXT = {
+    es: ['Bajando el juego…', 'Arrancando…', 'No se pudo bajar el juego. Revisá la conexión.'],
+    pt: ['Baixando o jogo…', 'Iniciando…', 'Não foi possível baixar o jogo. Verifique a conexão.'],
+  }[idioma] || ['Downloading the game…', 'Starting…', 'Could not download the game. Check your connection.'];
+
+  // ---- la densidad del lienzo: hasta 2 píxeles por punto. SDL multiplica el tamaño CSS por
+  // devicePixelRatio, y en un teléfono de 3,25 eran 2775×1270 píxeles por cuadro con el CRT y el
+  // fondo en shader: mucho trabajo de GPU (y batería) para una diferencia que no se ve
+  (function () {
+    var d = Object.getOwnPropertyDescriptor(Window.prototype, 'devicePixelRatio') || Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    if (d && d.get) Object.defineProperty(window, 'devicePixelRatio', { configurable: true, get: function () { return Math.min(2, d.get.call(window)); } });
+  })();
+
+  // ---- el sonido: el AudioContext lo crea el OpenAL de Emscripten; se lo pausa con la página oculta
+  // (sin cuadros LÖVE no recarga la música y lo que quedaba en cola se repetía cortado)
+  var contextos = [];
+  (function () {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    function Contexto(op) { var c = new AC(op); contextos.push(c); return c; }
+    Contexto.prototype = AC.prototype;
+    window.AudioContext = Contexto;
+    if (window.webkitAudioContext) window.webkitAudioContext = Contexto;
+  })();
+  document.addEventListener('visibilitychange', function () {
+    contextos.forEach(function (c) {
+      try { if (document.hidden) { if (c.state === 'running') c.suspend(); } else if (c.state === 'suspended') c.resume(); } catch (e) { /* nada */ }
+    });
+  });
+
+  // ---- lo que se baja: de la caché si está (Cache Storage, con tiempo máximo: hay teléfonos donde no
+  // contesta), si no de la red con progreso, y a la caché sin esperar ----
+  var conTiempo = function (p, ms, valor) { return Promise.race([p, new Promise(function (ok) { setTimeout(function () { ok(valor); }, ms); })]); };
+  var cache = null;
+  async function abrirCache() {
+    try {
+      if (!self.caches || !isSecureContext) return;
+      cache = await conTiempo(caches.open('porteo-balatro'), 4000, null);
+      if (!cache) { Porteo.anotar('cache', 'no contesta'); return; }
+      // lo de versiones anteriores, fuera (sin esperar)
+      var sirven = new Set([T.motor, T.wasm, T.juego].map(function (u) { return new URL(u, location.href).href; }));
+      cache.keys().then(function (ks) { ks.forEach(function (r) { if (!sirven.has(r.url)) cache.delete(r).catch(function () {}); }); }).catch(function () {});
+    } catch (e) { cache = null; }
+  }
+
+  async function traer(url, alAvanzar) {
+    if (cache) {
+      try {
+        var r = await conTiempo(cache.match(url), 4000, null);
+        if (r) { var d = new Uint8Array(await r.arrayBuffer()); if (alAvanzar) alAvanzar(d.length); return d; }
+      } catch (e) { /* de la red */ }
+    }
+    var ultimo;
+    for (var intento = 0; intento < 4; intento++) {
+      try {
+        var datos = await bajar(url, alAvanzar);
+        if (cache) cache.put(url, new Response(datos)).catch(function () {});
+        return datos;
+      } catch (e) {
+        ultimo = e;
+        Porteo.anotar('reintento', url + ': ' + (e && e.message || e));
+        await new Promise(function (ok) { setTimeout(ok, 1000 * (intento + 1)); });
+      }
+    }
+    throw ultimo;
+  }
+
+  async function bajar(url, alAvanzar) {
+    var r = await fetch(url, { cache: 'no-cache' });
+    if (!r.ok) throw new Error(url + ': ' + r.status);
+    var total = +r.headers.get('content-length') || 0;
+    if (!r.body || !total) { var d = new Uint8Array(await r.arrayBuffer()); if (alAvanzar) alAvanzar(d.length); return d; }
+    var lector = r.body.getReader(), datos = new Uint8Array(total), van = 0;
+    for (;;) {
+      var p = await lector.read();
+      if (p.done) break;
+      if (van + p.value.length > datos.length) { var mas = new Uint8Array(van + p.value.length); mas.set(datos.subarray(0, van)); datos = mas; }
+      datos.set(p.value, van);
+      van += p.value.length;
+      if (alAvanzar) alAvanzar(van);
+    }
+    return van === datos.length ? datos : datos.subarray(0, van);
+  }
+
+  function cargarScript(src) {
+    return new Promise(function (ok, mal) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.onload = ok;
+      s.onerror = function () { mal(new Error(src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function existe(M, ruta, bytes) {
+    try { return M.FS.stat(ruta).size === bytes; } catch (e) { return false; }
+  }
+
+  async function arrancar() {
+    await abrirCache();
+    var WASM = 4.5e6;   // no se sabe hasta bajarlo: para repartir la barra alcanza
+    var van = { wasm: 0, juego: 0 }, total = WASM + T.juegoBytes;
+    function avance(cual) {
+      return function (n) {
+        van[cual] = n;
+        var f = (van.wasm + van.juego) / total;
+        carga.progreso(0.92 * f, TXT[0], ((van.wasm + van.juego) / 1048576).toFixed(1) + ' / ' + (total / 1048576).toFixed(1) + ' MB');
+      };
+    }
+    var listos = await Promise.all([traer(T.wasm, avance('wasm')), traer(T.juego, avance('juego')), cargarScript(T.motor)]);
+    Porteo.anotar('bajado', Math.round(performance.now()) + ' ms');
+    carga.progreso(0.95, TXT[1]);
+    var M = await Love({
+      canvas: lienzo,
+      wasmBinary: listos[0],
+      print: function (t) {
+        console.log(t);
+        if (/^porteo: error:/.test(t)) Porteo.anotar('error', t);
+        else if (/^porteo:/.test(t)) Porteo.anotar('juego', t);
+      },
+      printErr: function (t) { console.warn(t); },
+    });
+    window.porteoModulo = M;
+    try { M.FS.mkdir('/porteo'); } catch (e) { /* ya estaba */ }
+    M.FS.writeFile('/porteo/idioma.txt', navigator.language || 'en');
+    if (/[?&]medir/.test(location.search)) M.FS.writeFile('/porteo/medir', '1');
+    M.FS.writeFile('/porteo/tarde.txt', T.tarde.map(function (t) { return t.ruta; }).join('\n'));
+    M.FS.writeFile('/balatro.love', listos[1], { canOwn: true });
+    // la música de una visita anterior ya está en la carpeta de guardado (IndexedDB)
+    var faltan = T.tarde.filter(function (t) { return !existe(M, GUARDADO + '/' + t.ruta, t.bytes); });
+    M.FS.mkdirTree(GUARDADO + '/resources/sounds');
+    if (!faltan.length) M.FS.writeFile('/porteo/tarde-listo', '1');
+    Porteo.anotar('arranca', Math.round(performance.now()) + ' ms · faltan ' + faltan.length);
+    carga.listo();
+    M.callMain(['/balatro.love']);
+    Porteo.arrancado();
+    // lo que no se esperó: de a uno, sin apuro
+    for (var i = 0; i < faltan.length; i++) {
+      var t = faltan[i];
+      try {
+        var d = await traer(t.url);
+        M.FS.writeFile(GUARDADO + '/' + t.ruta, d, { canOwn: true });
+      } catch (e) { Porteo.anotar('tarde', t.ruta + ': ' + (e && e.message || e)); return; }
+    }
+    if (faltan.length) {
+      M.FS.writeFile('/porteo/tarde-listo', '1');
+      Porteo.anotar('tarde', 'listo · ' + Math.round(performance.now()) + ' ms');
+      if (M.porteoGuardar) M.porteoGuardar();
+    }
+  }
+
+  arrancar().catch(function (e) {
+    console.error(e);
+    Porteo.fallo(TXT[2], String(e && e.message || e));
+  });
+})();
+</script>
+</body>
+</html>
