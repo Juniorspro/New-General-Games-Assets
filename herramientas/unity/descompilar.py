@@ -5,12 +5,15 @@ los campos salen por nombre: __this->fields.Progress), las cadenas literales com
 TypeInfo/MethodInfo con su nombre.
 
     python descompilar.py preparar GHIDRA LIBIL2CPP.so DUMP PROYECTO     una vez (unos minutos)
-    python descompilar.py servir GHIDRA PROYECTO DUMP SOCKET             queda corriendo
+    python descompilar.py servir GHIDRA PROYECTO DUMP SOCKET [AYUDAS]    queda corriendo
     python descompilar.py pedir SOCKET 'Clase\\$\\$Metodo$' 0x24268c0 …  el C de cada método
 
 GHIDRA es la carpeta de Ghidra (11.x, con Java 21); DUMP, la salida de Il2CppDumper con
-GenerateStruct (script.json, il2cpp.h). Necesita pyghidra, que viene con Ghidra
-(Ghidra/Features/PyGhidra/pypkg/dist: jpype1, packaging, pyghidra).
+GenerateStruct (script.json, il2cpp.h). AYUDAS (opcional) es un JSON con las funciones internas de
+IL2CPP de ese binario, {"0x127c48c": ["il2cpp_init_metadata", false], "0x127c700": ["il2cpp_null", true]}
+(true = no vuelve): se nombran y la inicialización perezosa de metadatos se saca del C.
+Necesita pyghidra, que viene con Ghidra (Ghidra/Features/PyGhidra/pypkg/dist: jpype1, packaging,
+pyghidra). El socket UNIX tiene que tener una ruta corta (p. ej. /tmp/gh/s).
 """
 import json
 import os
@@ -132,29 +135,138 @@ def preparar(ghidra, so, dump, proyecto):
         except Exception:
             pass
     prog.endTransaction(tx, True)
-    gp.save(prog)
+    gp.saveAs(prog, '/', 'libil2cpp.so', True)      # recién importado: todavía no tiene lugar en el proyecto
     gp.close()
     print(f'[listo en {time.time() - t0:.0f} s]', file=sys.stderr)
 
 
 # ------------------------------------------------------------------ servidor
-def _limpiar_c(c):
-    """Menos ruido: sin advertencias de Ghidra ni la inicialización perezosa de metadatos de IL2CPP."""
+def _limpiar_c(c, init=None):
+    """Menos ruido: sin advertencias de Ghidra ni la inicialización perezosa de metadatos de IL2CPP
+    (if (flag == 0) { init(&TypeInfo); …; flag = 1; })."""
     out = []
-    for l in c.splitlines():
-        if not l.strip() or l.strip().startswith('/* WARNING'):
-            continue
-        out.append(l)
+    lineas = c.splitlines()
+    i = 0
+    rx = re.compile(r"^(\s*)if \(\(?[bc]Ram[0-9a-f]+( & 1\))? == (0|'\\0')\) \{$")
+    while i < len(lineas):
+        l = lineas[i]
+        m = rx.match(l) if init else None
+        if m:
+            fin = m.group(1) + '}'
+            j = i + 1
+            while j < len(lineas) and lineas[j] != fin:
+                j += 1
+            cuerpo = '\n'.join(lineas[i + 1:j])
+            if init in cuerpo and 'Ram' in cuerpo:
+                i = j + 1
+                continue
+        if l.strip() and not l.strip().startswith('/* WARNING'):
+            out.append(l)
+        i += 1
     return '\n'.join(out)
 
 
-def servir(ghidra, proyecto, dump, ruta_socket):
+def _flotante(h):
+    """Un entero de 32 bits que parece un float lindo (0.2, 1.65, -3.1…) → su valor, si no None."""
+    import struct
+    v = struct.unpack('<f', struct.pack('<I', h))[0]
+    if v != v or v == 0 or not (1e-4 <= abs(v) <= 1e6):
+        return None
+    for d in range(0, 7):
+        if abs(round(v, d) - v) <= abs(v) * 1e-6:
+            return round(v, d)
+    return None
+
+
+def _anotar_flotantes(t):
+    def uno(m):
+        x = m.group(0)
+        h = int(x, 16)
+        if len(x) <= 10:
+            f = _flotante(h) if h >= 0x30000000 else None
+            return f'{x}/*{f}*/' if f is not None else x
+        lo, hi = _flotante(h & 0xffffffff), _flotante(h >> 32)
+        if lo is not None or hi is not None:
+            return f'{x}/*{lo if lo is not None else hex(h & 0xffffffff)},{hi if hi is not None else hex(h >> 32)}*/'
+        return x
+    return re.sub(r'0x[0-9a-f]{8}(?:[0-9a-f]{8})?\b', uno, t)
+
+
+def _corto(c, prefijos):
+    """Para leer: sin el bloque de declaraciones, sin namespaces, sin los MethodInfo de IL2CPP, con las
+    líneas partidas unidas y los floats escritos en hexadecimal anotados con su valor."""
+    for pre in prefijos:
+        c = c.replace(pre, '')
+    lineas = c.splitlines()
+    # unir lo que Ghidra partió (paréntesis abiertos)
+    unidas, buf, abiertos = [], None, 0
+    for l in lineas:
+        if buf is not None:
+            buf += ' ' + l.strip()
+            abiertos += l.count('(') - l.count(')')
+            if abiertos <= 0:
+                unidas.append(buf)
+                buf = None
+            continue
+        abiertos = l.count('(') - l.count(')')
+        if abiertos > 0 and not l.rstrip().endswith('{'):
+            buf = l.rstrip()
+        else:
+            unidas.append(l)
+    if buf is not None:
+        unidas.append(buf)
+    out, en_decl, previa = [], False, None
+    for l in unidas:
+        if l == '{':
+            en_decl = True
+            out.append(l)
+            continue
+        if en_decl:
+            e = l.strip()
+            if not any(x in e for x in ('=', '(', '{', '}', 'goto ', 'return')) and not e.endswith(':'):
+                continue
+            en_decl = False
+        out.append(l)
+    t = '\n'.join(out)
+    t = re.sub(r',\s*\(MethodInfo \*\)0x0\)', ')', t)
+    t = re.sub(r',\s*method(_\d+)?\)', ')', t)
+    t = re.sub(r',\s*(extraout_x\d+(_\d+)?|pMVar\d+)\)', ')', t)
+    t = re.sub(r'\(MethodInfo \*\)0x0', '0', t)
+    t = re.sub(r'\(\s+', '(', t)
+    t = re.sub(r'\s+\)', ')', t)
+    # los chequeos de null que sólo tiran la excepción, y las barreras del recolector
+    sin_asig = r'(?:[^=;{}\n]|==)*'
+    t = re.sub(r'\n\s*if \(' + sin_asig + r'\)\s*\n?\s*goto code_r0x[0-9a-f]+;', '', t)
+    t = re.sub(r'\n\s*(\w+ = )?il2cpp_write_barrier\([^;]*\);', '', t)
+    return _anotar_flotantes(t)
+
+
+def servir(ghidra, proyecto, dump, ruta_socket, ayudas=None):
     arrancar(ghidra)
     from ghidra.base.project import GhidraProject
     from ghidra.app.decompiler import DecompInterface, DecompileOptions
-    from ghidra.util.task import ConsoleTaskMonitor
+    from ghidra.app.cmd.function import CreateFunctionCmd
+    from ghidra.program.model.symbol import SourceType
+    from ghidra.util.task import ConsoleTaskMonitor, TaskMonitor
     gp = GhidraProject.openProject(proyecto, 'il2cpp', True)
-    prog = gp.openProgram('/', 'libil2cpp.so', True)
+    prog = gp.openProgram('/', 'libil2cpp.so', False)
+    init = None
+    if ayudas:
+        # las funciones internas de IL2CPP con nombre, y las que tiran excepción, sin vuelta
+        tx = prog.startTransaction('ayudas')
+        b0, fm0 = prog.getImageBase(), prog.getFunctionManager()
+        for a, (n, sin_vuelta) in json.load(open(ayudas)).items():
+            d = b0.add(int(a, 16))
+            f = fm0.getFunctionAt(d)
+            if f is None:
+                CreateFunctionCmd(d).applyTo(prog, TaskMonitor.DUMMY)
+                f = fm0.getFunctionAt(d)
+            if f is not None:
+                f.setName(n, SourceType.USER_DEFINED)
+                f.setNoReturn(bool(sin_vuelta))
+            if 'init' in n and not sin_vuelta and init is None:
+                init = n
+        prog.endTransaction(tx, True)
     ifc = DecompInterface()
     op = DecompileOptions()
     op.grabFromProgram(prog)
@@ -162,7 +274,26 @@ def servir(ghidra, proyecto, dump, ruta_socket):
     ifc.openProgram(prog)
     base = prog.getImageBase()
     fm = prog.getFunctionManager()
-    metodos = [(m['Name'], m['Address']) for m in json.load(open(os.path.join(dump, 'script.json'), encoding='utf-8'))['ScriptMethod']]
+    datos_script = json.load(open(os.path.join(dump, 'script.json'), encoding='utf-8'))
+    metodos = [(m['Name'], m['Address']) for m in datos_script['ScriptMethod']]
+    # las cadenas literales con su texto entero (los nombres s_<texto> son los de preparar())
+    textos, usados = {}, set()
+    for x in datos_script['ScriptString']:
+        v = x['Value']
+        n = 's_' + (re.sub(r'[^0-9A-Za-z_]', '_', v)[:48] or 'vacia')
+        k, i = n, 2
+        while k in usados:
+            k = f'{n}_{i}'
+            i += 1
+        usados.add(k)
+        textos[k] = v
+    del datos_script
+    # los namespaces (de dump.cs), del más largo al más corto, como prefijos de los nombres en C
+    prefijos = set()
+    for l in open(os.path.join(dump, 'dump.cs'), encoding='utf-8'):
+        if l.startswith('// Namespace: ') and len(l) > 15:
+            prefijos.add(l[14:].strip().replace('.', '_') + '_')
+    prefijos = sorted(prefijos, key=len, reverse=True)
     mon = ConsoleTaskMonitor()
 
     def un_metodo(addr):
@@ -172,7 +303,10 @@ def servir(ghidra, proyecto, dump, ruta_socket):
         r = ifc.decompileFunction(f, 120, mon)
         if not r.decompileCompleted():
             return f'// {f.getName()}: {r.getErrorMessage()}'
-        return f'// {f.getName()} @ {f.getEntryPoint()}\n' + _limpiar_c(r.getDecompiledFunction().getC())
+        c = _corto(_limpiar_c(r.getDecompiledFunction().getC(), init), prefijos)
+        c = re.sub(r'(?:\*\(\w+ \*\*?\))?&?(?<![A-Za-z0-9_])_?(s_[A-Za-z0-9_]+)',
+                   lambda m: json.dumps(textos[m.group(1)], ensure_ascii=False) if m.group(1) in textos else m.group(0), c)
+        return f'// {f.getName()} @ {f.getEntryPoint()}\n' + c
 
     if os.path.exists(ruta_socket):
         os.unlink(ruta_socket)
@@ -228,6 +362,6 @@ if __name__ == '__main__':
     if a[0] == 'preparar':
         preparar(*a[1:5])
     elif a[0] == 'servir':
-        servir(*a[1:5])
+        servir(*a[1:6])
     else:
         pedir(a[1], a[2:])
