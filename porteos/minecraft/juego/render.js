@@ -721,7 +721,7 @@ var Render = (function () {
   function prepararEntidades(imagenes) {
     ent = GL.programa(
       '#if __VERSION__ >= 300\n#define attribute in\n#define varying out\n#endif\nattribute POS4 POSITION; attribute vec4 COLOR; attribute vec2 TEXCOORD_0; uniform MAT4 WORLDVIEWPROJ; uniform vec2 FOG_CONTROL; uniform float RENDER_DISTANCE; varying vec2 uv; varying vec4 col; varying float niebla; void main(){ gl_Position = WORLDVIEWPROJ * POSITION; uv = TEXCOORD_0; col = COLOR; float d = length(POSITION.xyz) / RENDER_DISTANCE; niebla = clamp((d - FOG_CONTROL.x) / (FOG_CONTROL.y - FOG_CONTROL.x), 0.0, 1.0); }',
-      '#if __VERSION__ >= 300\n#define varying in\n#define texture2D texture\nout vec4 FragColor;\n#define gl_FragColor FragColor\n#endif\nuniform sampler2D TEXTURE_0; uniform vec4 FOG_COLOR; varying vec2 uv; varying vec4 col; varying float niebla; void main(){ vec4 c = texture2D(TEXTURE_0, uv); if (c.a < 0.1) discard; vec3 rgb = mix(c.rgb, vec3(1.0, 0.0, 0.0), (1.0 - col.a) * 0.6) * col.rgb; gl_FragColor = vec4(mix(rgb, FOG_COLOR.rgb, niebla), 1.0); }');
+      '#if __VERSION__ >= 300\n#define varying in\n#define texture2D texture\nout vec4 FragColor;\n#define gl_FragColor FragColor\n#endif\nuniform sampler2D TEXTURE_0; uniform vec4 FOG_COLOR; uniform float TRANSLUCIDO; varying vec2 uv; varying vec4 col; varying float niebla; void main(){ vec4 c = texture2D(TEXTURE_0, uv); if (c.a < 0.1) discard; vec3 rgb = mix(c.rgb, vec3(1.0, 0.0, 0.0), (1.0 - col.a) * 0.6) * col.rgb; gl_FragColor = vec4(mix(rgb, FOG_COLOR.rgb, niebla), mix(1.0, c.a, TRANSLUCIDO)); }');
     for (var k in imagenes) texEnt[k] = GL.textura(imagenes[k], 'cerca', 0);
   }
   // la luz de un bicho: la del mapa de luz en su celda; con los shaders de Tito, que oscurecen la
@@ -736,7 +736,7 @@ var Render = (function () {
   function dibujarEntidades(lista, cam) {
     // cuántos vértices hacen falta
     var n = 0, i;
-    for (i = 0; i < lista.length; i++) n += Modelos.vertices(lista[i]);
+    for (i = 0; i < lista.length; i++) n += Modelos.vertices(lista[i]) + Modelos.verticesFuego(lista[i]);
     if (!n) return;
     if (entDatos.length < n * 10) {
       entDatos = new Float32Array(n * 10 * 2);
@@ -748,22 +748,35 @@ var Render = (function () {
         gl.bindVertexArray(null);
       }
     }
-    // por textura: los vértices de todos los que la usan, juntos
-    var porTex = {}, orden = [];
+    // por textura: los vértices de todos los que la usan, juntos (las capas translúcidas, como la
+    // piel de afuera del slime, aparte y al final)
+    var porTex = {}, orden = [], quemados = [];
     for (i = 0; i < lista.length; i++) {
-      var e = lista[i];
-      // fuera de la vista (una caja de 2 bloques alrededor) no se dibuja
-      if (!visible(e.x - cam.x - 1, e.y - cam.y, e.z - cam.z - 1, e.x - cam.x + 1, e.y - cam.y + 2.2, e.z - cam.z + 1)) continue;
-      Modelos.capas(e).forEach(function (c) {
-        if (!porTex[c.tex]) { porTex[c.tex] = []; orden.push(c.tex); }
-        porTex[c.tex].push([e, c]);
+      var e = lista[i], r = (e.radio || 1) + 1;
+      // fuera de la vista (una caja alrededor, más grande para los bichos grandes) no se dibuja
+      if (!visible(e.x - cam.x - r, e.y - cam.y - 1, e.z - cam.z - r, e.x - cam.x + r, e.y - cam.y + (e.alto || 2) + 0.5, e.z - cam.z + r)) continue;
+      if (e.quema) quemados.push(e);
+      Modelos.capas(e).forEach(function (c, ic) {
+        var t = Modelos.textura(e, c, ic), clave = (c.translucido ? '~' : '') + t;
+        if (!porTex[clave]) { porTex[clave] = []; orden.push(clave); }
+        porTex[clave].push([e, c]);
       });
     }
+    orden.sort(function (a, b) { return (a.charAt(0) === '~') - (b.charAt(0) === '~'); });
     var o = 0, tramos = [];
     for (i = 0; i < orden.length; i++) {
       var desde = o;
       porTex[orden[i]].forEach(function (par) { o = Modelos.escribir(entDatos, o, par[0], par[1], cam, luzEntidad); });
       tramos.push([orden[i], desde / 10, (o - desde) / 10]);
+    }
+    // el fuego de los que se queman, con el atlas de los bloques (antes de lo translúcido)
+    var uvFuego = R.uv && R.uv.fire_0 && R.uv.fire_1 ? [R.uv.fire_0[0], R.uv.fire_1[0]] : null;
+    if (quemados.length && uvFuego) {
+      var desdeF = o, luzF = luzEntidad(0xFF);
+      quemados.forEach(function (q) { o = Modelos.fuego(entDatos, o, q, cam, luzF, uvFuego); });
+      var pos = 0;
+      while (pos < tramos.length && tramos[pos][0].charAt(0) !== '~') pos++;
+      tramos.splice(pos, 0, ['#fuego', desdeF / 10, (o - desdeF) / 10]);
     }
     if (!o) return;
     usar(ent);
@@ -774,10 +787,19 @@ var Render = (function () {
     gl.bufferData(gl.ARRAY_BUFFER, entDatos.subarray(0, o), gl.STREAM_DRAW);
     // los modelos se dan vuelta en x (como los de Minecraft): los triángulos quedan al revés
     gl.disable(gl.CULL_FACE);
+    var transl = false;
+    gl.uniform1f(ent.u.TRANSLUCIDO, 0);
     for (i = 0; i < tramos.length; i++) {
-      gl.bindTexture(gl.TEXTURE_2D, texEnt[tramos[i][0]]);
+      var clave = tramos[i][0], tr = clave.charAt(0) === '~';
+      if (tr && !transl) {
+        transl = true;
+        gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+        gl.uniform1f(ent.u.TRANSLUCIDO, 1);
+      }
+      gl.bindTexture(gl.TEXTURE_2D, clave === '#fuego' ? atlas : texEnt[tr ? clave.slice(1) : clave]);
       gl.drawArrays(gl.TRIANGLES, tramos[i][1], tramos[i][2]);
     }
+    if (transl) { gl.disable(gl.BLEND); gl.depthMask(true); }
     gl.enable(gl.CULL_FACE);
     gl.bindVertexArray(null);
   }

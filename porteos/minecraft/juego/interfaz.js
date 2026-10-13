@@ -288,7 +288,7 @@ var Interfaz = (function () {
     lista.forEach(function (it, n) {
       var ox = (n % cols) * LADO, oy = Math.floor(n / cols) * LADO;
       iconosPos[it.id + ':' + it.m] = [ox, oy];
-      if (it.huevo) { huevo(x, ox, oy, it.huevo); return; }
+      if (it.huevo !== undefined) { huevo(x, ox, oy, it.huevo); return; }
       var b = C.bloques[it.id], f = C.FORMA[it.id];
       // las texturas "de mano" (carried) ya traen su color: ésas no se tiñen
       var tn = b.texMano ? 0 : b.tinte;
@@ -334,8 +334,13 @@ var Interfaz = (function () {
       x.fillRect(a, b, w, h);
       x.restore();
     }
-    // el huevo: spawn_egg teñido con el color de fondo y spawn_egg_overlay con el de las manchas
+    // el huevo: el dibujo de cada bicho de la 1.2 (textures/items/egg_*.png, en huevos.png)
     function huevo(x, ox, oy, colores) {
+      if (typeof colores === 'number') {
+        var hv = img.huevos;
+        if (hv) x.drawImage(hv, (colores % 8) * 16, Math.floor(colores / 8) * 16, 16, 16, ox + 4, oy + 4, LADO - 8, LADO - 8);
+        return;
+      }
       [['spawn_egg', colores[0]], ['spawn_egg_overlay', colores[1]]].forEach(function (par) {
         var im = img[par[0]];
         if (!im) return;

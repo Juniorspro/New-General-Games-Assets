@@ -455,9 +455,7 @@ def interfaz(apk, salida):
         im = apk.imagen(PAQUETE + f"textures/ui/panorama_{i}.png").convert("RGB")
         im.save(salida / f"panorama{i}.webp", "WEBP", quality=85, method=6)
     apk.imagen("res/drawable-xxhdpi-v4/icon.png").resize((96, 96), Image.LANCZOS).save(salida / "icono.png", optimize=True)
-    # los huevos de los bichos (el inventario creativo los trae para hacerlos aparecer)
-    for n in ("spawn_egg", "spawn_egg_overlay"):
-        guardar_png(apk.imagen(PAQUETE + f"textures/items/{n}.png"), salida / f"{n}.png")
+    # (los dibujos de los huevos de los bichos los arma empaquetar_bichos.py: huevos.png)
     return atlas_ui(apk, salida)
 
 
@@ -499,21 +497,6 @@ def frases(apk):
 # Bichos: los modelos de models/mobs.json (con la herencia "hijo:padre" resuelta: los huesos con
 # "reset" reemplazan al del padre y los demás le cambian sólo lo que traen) y sus texturas
 # ---------------------------------------------------------------------------------------------
-BICHOS = {
-    # nombre: [(geometría, textura), ...] (capas del modelo)
-    "pig": [("geometry.pig", "pig/pig")],
-    "cow": [("geometry.cow", "cow/cow")],
-    "sheep": [("geometry.sheep.sheared", "sheep/sheep"), ("geometry.sheep", "sheep/sheep")],
-    "chicken": [("geometry.chicken", "chicken")],
-    "zombie": [("geometry.zombie", "zombie/zombie")],
-    "skeleton": [("geometry.skeleton", "skeleton/skeleton")],
-    "creeper": [("geometry.creeper", "creeper/creeper")],
-    "spider": [("geometry.spider", "spider/spider")],
-    "steve": [("geometry.humanoid.custom", "steve")],
-    "alex": [("geometry.humanoid.customSlim", "alex")],
-}
-
-
 def geometrias(apk):
     crudo = apk.json(PAQUETE + "models/mobs.json")
     por_nombre, padre = {}, {}
@@ -542,34 +525,6 @@ def geometrias(apk):
     return resolver
 
 
-def bichos(apk, salida):
-    resolver = geometrias(apk)
-    sal = {}
-    for nombre, capas in BICHOS.items():
-        lista = []
-        for geo, tex in capas:
-            g = resolver(geo)
-            huesos = []
-            for h in g["huesos"]:
-                if h.get("neverRender") or not h.get("cubes"):
-                    continue
-                cubos = [{"o": c["origin"], "t": c["size"], "uv": c["uv"], "i": c.get("inflate", 0)} for c in h["cubes"]]
-                b = {"n": h["name"], "p": h.get("pivot", [0, 0, 0]), "c": cubos}
-                if h.get("rotation") and any(h["rotation"]):
-                    b["r"] = h["rotation"]
-                if h.get("mirror"):
-                    b["m"] = True
-                huesos.append(b)
-            im = apk.textura("textures/entity/" + tex)
-            archivo = "bicho_" + tex.replace("/", "_") + ".png"
-            if not (salida / archivo).exists():
-                guardar_png(im, salida / archivo)
-            lista.append({"tex": archivo, "tw": im.width, "th": im.height, "huesos": huesos})
-        sal[nombre] = lista
-    print("bichos:", ", ".join(sal))
-    return sal
-
-
 def main():
     if len(sys.argv) != 4:
         sys.exit(__doc__)
@@ -584,6 +539,9 @@ def main():
     import empaquetar_ui
     # la interfaz de la 1.2 completa (ui/*.json y sus texturas) para el intérprete juego/jui.js
     empaquetar_ui.armar(apk, PAQUETE, salida, jsonc, IDIOMAS)
+    # todos los bichos de la 1.2 (modelos, entidades del behavior pack, botín, sonidos, huevos)
+    import empaquetar_bichos
+    bichos, eventos_bichos = empaquetar_bichos.armar(apk, salida, geometrias(apk), guardar_png, PAQUETE)
     datos = {
         "atlas": {"tam": tam, "uv": uv},
         "bloques": bloques(apk),
@@ -591,8 +549,9 @@ def main():
         "textos": textos(apk),
         "frases": frases(apk),
         "ui": ui,
-        "bichos": bichos(apk, salida),
-        "sonidos": sonidos12.sacar(apk, salida, PAQUETE),
+        "bichos": bichos.pop("modelos"),
+        "entidades": bichos,
+        "sonidos": sonidos12.sacar(apk, salida, PAQUETE, eventos_bichos),
     }
     (salida / "datos.json").write_text(json.dumps(datos, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print("datos:", (salida / "datos.json").stat().st_size, "bytes")

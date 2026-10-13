@@ -47,10 +47,10 @@ var Objetos = (function () {
   // sus dos colores (fondo y manchas) los de cada huevo del juego
   // ------------------------------------------------------------------------------------------
   var HUEVO = O.HUEVO = 383;
-  var HUEVOS = O.HUEVOS = {
-    12: ['pig', 0xf0a5a2, 0xdb635f], 11: ['cow', 0x443626, 0xa1a1a1], 13: ['sheep', 0xe7e7e7, 0xffb5b5],
-    10: ['chicken', 0xa1a1a1, 0xff0000], 32: ['zombie', 0x00afaf, 0x799c65], 34: ['skeleton', 0xc1c1c1, 0x494949],
-    33: ['creeper', 0x0da70b, 0x000000], 35: ['spider', 0x342d27, 0xa80e0e]
+  // número del bicho en la 1.2 → [bicho, lugar del dibujo en huevos.png]; en el orden del inventario
+  var HUEVOS = O.HUEVOS = {}, ORDEN_HUEVOS = [];
+  O.prepararHuevos = function (l) {
+    (l || []).forEach(function (h) { HUEVOS[h[0]] = [h[1], h[2]]; ORDEN_HUEVOS.push(h[0]); });
   };
   O.esHuevo = function (it) { return !!it && it.id === HUEVO; };
   O.bichoDe = function (it) { return it && it.id === HUEVO && HUEVOS[it.m] ? HUEVOS[it.m][0] : null; };
@@ -119,15 +119,18 @@ var Objetos = (function () {
     [[50], [76], [208], [65], [64], [193], [194], [195], [196], [197], [71], [96], [167]].concat(rango(171, 16),
       [[47], [58], [61], [54], [146], [116], [145], [123], [91], [26], [46], [66], [27], [28], [126], [25], [23], [125],
       [52], [19], [165], [246], [247], [245], [92]],
-      [[HUEVO, 12], [HUEVO, 11], [HUEVO, 13], [HUEVO, 10], [HUEVO, 32], [HUEVO, 34], [HUEVO, 33], [HUEVO, 35]])
+      ['huevos'])
   ];
   // lo que el motor sabe dibujar y existe en el juego
   O.creativo = function () {
     var lista = [];
     PESTANAS.forEach(function (p, tab) {
       p.forEach(function (e) {
+        if (e === 'huevos') {
+          ORDEN_HUEVOS.forEach(function (n) { var h = HUEVOS[n]; if (h && Modelos.existe(h[0])) lista.push({ id: HUEVO, m: n, tab: tab, huevo: h[1] }); });
+          return;
+        }
         var id = e[0], m = e[1] || 0;
-        if (id === HUEVO) { var h = HUEVOS[m]; if (h && Modelos.existe(h[0])) lista.push({ id: id, m: m, tab: tab, huevo: [h[1], h[2]] }); return; }
         var b = C.bloques[id];
         if (!b || !b.existe || b.forma === C.F.nada) return;
         lista.push({ id: id, m: m, tab: tab });

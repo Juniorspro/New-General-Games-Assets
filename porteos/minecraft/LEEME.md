@@ -1,7 +1,7 @@
 # Minecraft PE 1.2 (Android) → navegador
 
 Minecraft PE 1.2 (el APK "Minecraft-v1.2" que mandó el dueño, la beta 1.2.0.2) jugable en el
-navegador del teléfono, en un solo `.html` de 3,2 MB, con **los shaders de Tito Crack 6000** (los del
+navegador del teléfono, en un solo `.html` de 5,5 MB, con **los shaders de Tito Crack 6000** (los del
 APK de Craftsman PTGI) como opción al empezar, **servidores** para jugar con otros y **bichos**.
 
 **Estado:** creativo completo para construir, con **las pantallas de la 1.2 de verdad** (las de sus
@@ -27,10 +27,18 @@ APK de Craftsman PTGI) como opción al empezar, **servidores** para jugar con ot
 - **multijugador** en esos mundos: se ven los otros jugadores (con su skin, Steve o Alex, y su
   nombre arriba), lo que construyen, el chat, se pueden pegar (vida, golpes, muerte y reaparecer) y
   los bichos de cada uno se ven en lo de los demás;
-- **bichos**: de día cerdos, vacas, ovejas y gallinas en el pasto; de noche (o en las cuevas)
-  zombis, esqueletos, creepers y arañas; caminan, miran, suenan, huyen si se les pega, se mueren
-  dando vuelta, los zombis y esqueletos se queman al sol. En creativo los monstruos no atacan (como
-  el juego); en los servidores, donde hay vida, sí;
+- **todos los bichos de la 1.2** (45: de la gallina al wither y el dragón, con sus variantes:
+  profesiones de los aldeanos, colores de las ovejas y los shulkers, pelajes de los caballos, las
+  llamas, los conejos, los loros y los gatos, crías) con lo que hacen en el juego, sacado de su
+  behavior pack: los animales pastan, huyen, siguen a la madre y a quien tiene su comida; los
+  monstruos persiguen, pegan, disparan (flechas, bolas de nieve, de fuego y del wither, pociones de
+  la bruja, escupitajos de la llama, balas del shulker), el creeper se infla y explota, el
+  enderman se teletransporta y se lleva bloques, el evocador llama colmillos y vexes, el slime se
+  parte; los gólems defienden a los aldeanos; los muertos vivos se prenden fuego al sol. Aparecen
+  solos según el bioma (de día los animales en el pasto, de noche o en las cuevas los monstruos,
+  los calamares en el agua, los murciélagos en las cuevas) y con los huevos del inventario. En
+  creativo los monstruos no atacan al jugador (como el juego); en los servidores, donde hay vida,
+  sí;
 - el mundo infinito con biomas, cuevas, minerales y árboles, día y noche, agua y lava que corren,
   los controles táctiles de MCPE, partículas, los sonidos del juego.
 
@@ -72,12 +80,26 @@ del APK se usa todo lo demás, sin tocar ([`empaquetar.py`](empaquetar.py)):
 - **El juego** ([`juego/interfaz.js`](juego/interfaz.js)): la barra, la cruceta y el inventario con
   `gui.png` y los dibujos de `textures/ui`; el logo (a su tamaño, 1936 px, sin pérdida) y el
   panorama del río (las 6 caras de 1080 px en WebP); las frases amarillas.
-- **Los modelos de los bichos y de los jugadores**: `models/mobs.json` (con la herencia
-  "hijo:padre" resuelta) y sus texturas; [`juego/modelos.js`](juego/modelos.js) arma las cajas con el
-  reparto de textura de Minecraft y las poses que el juego les da en código (el cuerpo acostado de
-  los cuadrúpedos, las patas, la cabeza, los brazos del zombi, las patas de la araña).
+- **Los bichos** ([`empaquetar_bichos.py`](empaquetar_bichos.py)): los modelos de
+  `models/mobs.json` (con la herencia "hijo:padre" resuelta) y sus texturas (de los `.tga`, el
+  canal alfa que marca lo que brilla, como los ojos de la araña y del enderman, va a una capa
+  aparte); el behavior pack (`behavior_packs/vanilla/entities/*.json`: componentes, grupos de
+  componentes, eventos con filtros) tal cual, y los sonidos de `sounds.json`.
+  [`juego/conducta.js`](juego/conducta.js) interpreta ese formato como el juego: arma los
+  componentes de los grupos activos, corre los eventos (`add`/`remove`, `randomize`, `sequence`,
+  filtros como `is_family`, `has_component`, `is_daytime`, `is_biome`), los sensores y las metas
+  (`behavior.*`) por prioridad. [`juego/bichos.js`](juego/bichos.js) pone la física (caminar,
+  trepar, volar, nadar, saltar), el daño (sol, lava, agua, caída, explosiones), los proyectiles y
+  dónde aparecen. [`juego/modelos.js`](juego/modelos.js) arma las cajas con el reparto de textura
+  de Minecraft y las animaciones que el juego tiene en código (caminar, mirar, los brazos del zombi,
+  el arco del esqueleto, las alas, los tentáculos, el slime que se estira, la cola del lobo...) y
+  los tamaños que sus renderers cambian (el ghast ×4,5, el murciélago ×0,35...). Lo que el juego
+  hace en C++ y no está en el behavior pack (el tamaño al azar del slime, las variantes del
+  caballo, la tabla de aparición por bioma) está escrito en esos archivos.
 - **Los sonidos**: los `.fsb` sueltos de la 1.2 (`sounds/sound_definitions.json`), decodificados con
-  el decodificador del port de Craftsman, en un solo Opus de 700 KB (con los de los bichos).
+  el decodificador del port de Craftsman, a Opus ([`sonidos12.py`](sonidos12.py)): uno de 400 KB
+  con los de siempre (bloques, pasos, el jugador) y uno por bicho, que se trae y decodifica recién
+  cuando ese bicho aparece (todos juntos eran 640 s, más de 50 MB de memoria decodificados).
 
 ### Los servidores ([`juego/red.js`](juego/red.js))
 

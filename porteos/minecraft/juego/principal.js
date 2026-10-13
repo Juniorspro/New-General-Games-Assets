@@ -236,7 +236,7 @@
 
   async function arrancar() {
     // primero la fuente (pesa poco) para mostrar la carga
-    var chicas = ['fuente', 'gui', 'iconos', 'ui', 'icono', 'spawn_egg', 'spawn_egg_overlay'];
+    var chicas = ['fuente', 'gui', 'iconos', 'ui', 'icono', 'huevos'];
     var lista = await Promise.all(chicas.map(function (n) { return cargarImagen('datos/' + n + '.png'); }));
     chicas.forEach(function (n, i) { imgs[n] = lista[i]; });
     I.iniciar(hud, imgs, {});
@@ -276,14 +276,19 @@
     imgs.bichos = {};
     var texB = {};
     for (var nb in datos.bichos) datos.bichos[nb].forEach(function (c) { texB[c.tex] = 1; });
+    // y las de las variantes (aldeanos, conejos, caballos, loros, gatos, llamas, shulkers, lobos)
+    var vrs = (datos.entidades && datos.entidades.variantes) || {};
+    for (var nv in vrs) vrs[nv].forEach(function (t) { if (t) texB[t] = 1; });
     var nombresB = Object.keys(texB), imB = await Promise.all(nombresB.map(function (n) { return cargarImagen('datos/' + n); }));
     nombresB.forEach(function (n, k) { imgs.bichos[n] = imB[k]; });
     I.cargandoParte = 0.8; I.sucio();
 
     C.armarBloques(datos.bloques);
     O.prepararMateriales();
-    Modelos.preparar(datos.bichos);
+    Modelos.preparar(datos.bichos, (datos.entidades && datos.entidades.variantes) || {});
     Muneco.preparar(datos.bichos, imgs.bichos);
+    B.iniciar(datos.entidades);
+    O.prepararHuevos(B.huevos());
     ajustarTamano();
     // los shaders de Tito se compilan recién cuando se eligen (en un teléfono flojo tardan)
     Render.iniciar(lienzo, datos, imgs, { shaders: opciones.shaders === true, sofisticados: opciones.sofisticados });
@@ -305,7 +310,7 @@
     // la primera vez: el idioma y después con o sin shaders (sobre el menú)
     irAlTitulo();
     window.prueba = { cam: cam, mundo: mundo, render: Render, jugador: J, partida: function () { return partida; }, abrir: abrirMundo, crear: crearMundo,
-      cuenta: cuenta, bichos: B, red: Red, publico: entrarPublico, pantallas: Pantallas, jui: Jui,
+      cuenta: cuenta, bichos: B, red: Red, publico: entrarPublico, pantallas: Pantallas, jui: Jui, comando: function (t) { comando(t); },
       rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, ms: function () { return msCuadro; },
       diag: null, pedirDiag: function () { if (trab) trab.postMessage({ t: 'diag' }); }, listo: true };
   }
@@ -791,7 +796,12 @@
   // ------------------------------------------------------------------------------------------
   // Los bichos: sonidos, golpes, explosiones, la luz y aparecer
   // ------------------------------------------------------------------------------------------
-  B.sonido = function (ev, e, vol) { Sonido.tocar(ev, vol, 0.8 + Math.random() * 0.4, e.x, e.y + 0.5, e.z); };
+  B.alCrear = function (e) { Sonido.precargarEventos(B.eventosDe(e.tipo)); };
+  B.sonido = function (ev, e, vol, tono) { Sonido.tocar(ev, vol, tono || 0.8 + Math.random() * 0.4, e.x, e.y + 0.5, e.z); };
+  // lo que cambian los bichos en el mundo (la oveja que come pasto, el enderman que se lleva bloques)
+  B.ponerBloque = function (x, y, z, id, m) {
+    if (Mundo.poner(x, y, z, id, m) && partida && !partida.local) Red.bloques([x, y, z, id, m]);
+  };
   B.alMorir = function (e) { if (opciones.particulas) Render.romper(Math.floor(e.x), Math.floor(e.y), Math.floor(e.z), 80, 0); };
   B.golpear = function (obj, dano, e) {
     var dx = obj.x - e.x, dz = obj.z - e.z, l = Math.sqrt(dx * dx + dz * dz) || 1, kx = dx / l * 0.4, kz = dz / l * 0.4;
@@ -799,14 +809,15 @@
     if (obj.id) Red.accion({ type: 'hit_player', targetId: obj.id, dmg: dano, byName: nombre, kx: +kx.toFixed(3), kz: +kz.toFixed(3) });
     else recibirDano(dano, nombre, [kx, kz]);
   };
-  B.explosion = function (x, y, z, r, jug) {
+  B.explosion = function (x, y, z, r, jug, quien) {
     Sonido.tocar('random.explode', 1, 0.9 + Math.random() * 0.2, x, y, z);
+    var nombreQ = quien && quien.tipo ? I.t('entity.' + quien.tipo + '.name', quien.tipo) : I.t('entity.creeper.name', 'Creeper');
     for (var k = 0; k < jug.length; k++) {
       var j = jug[k], d = Math.sqrt((j.x - x) * (j.x - x) + (j.y + 1 - y) * (j.y + 1 - y) + (j.z - z) * (j.z - z));
       if (d < r * 2) {
-        var dano = Math.round((1 - d / (r * 2)) * 16), dx = (j.x - x) / (d || 1), dz = (j.z - z) / (d || 1);
-        if (j.id) Red.accion({ type: 'hit_player', targetId: j.id, dmg: dano, byName: I.t('entity.creeper.name', 'Creeper'), kx: dx, kz: dz });
-        else recibirDano(dano, I.t('entity.creeper.name', 'Creeper'), [dx, dz]);
+        var dano = Math.round((1 - d / (r * 2)) * 16 * Math.max(1, r / 3)), dx = (j.x - x) / (d || 1), dz = (j.z - z) / (d || 1);
+        if (j.id) Red.accion({ type: 'hit_player', targetId: j.id, dmg: dano, byName: nombreQ, kx: dx, kz: dz });
+        else if (B.conVida) recibirDano(dano, nombreQ, [dx, dz]);
       }
     }
     // el pozo de la explosión (como el juego, menos la roca madre y la obsidiana); en un servidor,
