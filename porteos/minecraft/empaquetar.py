@@ -372,6 +372,8 @@ def cielo(apk, salida):
     guardar_png(apk.imagen(env + "clouds.png"), salida / "nubes.png")
     for i in range(10):
         guardar_png(apk.imagen(env + f"destroy_stage_{i}.png"), salida / f"grieta{i}.png")
+    # los orbes de experiencia (16 tamaños en una grilla de 4x4)
+    guardar_png(apk.imagen(PAQUETE + "textures/entity/experience_orb.png"), salida / "orbe.png")
 
 
 # ---------------------------------------------------------------------------------------------

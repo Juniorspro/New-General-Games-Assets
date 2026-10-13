@@ -90,6 +90,16 @@ var Objetos = (function () {
     if (m === 'liquid') return id === 10 || id === 11 ? ['liquid.lavapop', 0.6, 1] : ['random.splash', 0.3, 1.2];
     return ['dig.' + m, 1, 0.8];
   };
+  // el golpe de cada paso mientras se mina (sounds.json, block_sounds: "hit" es el paso, al 25 % y una
+  // octava más grave)
+  O.sonidoGolpe = function (id) {
+    var m = MATERIAL[id];
+    if (m === 'liquid') return null;
+    if (m === 'glass' || m === 'metal' || m === 'anvil') return ['step.stone', 0.25, 0.5];
+    if (m === 'ladder') return ['step.wood', 0.25, 0.5];
+    if (m === 'slime') return ['step.grass', 0.25, 0.5];
+    return ['step.' + m, 0.25, 0.5];
+  };
   O.sonidoPaso = function (id) {
     var m = MATERIAL[id];
     if (m === 'glass' || m === 'metal') return ['step.stone', 0.15, m === 'metal' ? 1.5 : 1];

@@ -271,6 +271,7 @@
     for (var i = 0; i < otras.length; i++) imgs[otras[i]] = await cargarImagen('datos/' + otras[i] + '.png');
     imgs.grietas = [];
     for (i = 0; i < 10; i++) imgs.grietas.push(await cargarImagen('datos/grieta' + i + '.png'));
+    imgs.orbe = await cargarImagen('datos/orbe.png').catch(function () { return null; });
     var pano = [];
     for (i = 0; i < 6; i++) pano.push(await cargarImagen('datos/panorama' + i + '.webp'));
     // las texturas de los bichos y los jugadores
@@ -286,6 +287,8 @@
 
     C.armarBloques(datos.bloques);
     Items.preparar(datos.objetos);
+    Minar.preparar();
+    Botin.preparar(datos.entidades && datos.entidades.botin);
     O.prepararMateriales();
     Modelos.preparar(datos.bichos, (datos.entidades && datos.entidades.variantes) || {});
     Muneco.preparar(datos.bichos, imgs.bichos);
@@ -314,6 +317,7 @@
     window.prueba = { cam: cam, mundo: mundo, render: Render, jugador: J, partida: function () { return partida; }, abrir: abrirMundo, crear: crearMundo,
       cuenta: cuenta, bichos: B, red: Red, publico: entrarPublico, pantallas: Pantallas, jui: Jui, comando: function (t) { comando(t); }, inventario: function () { return inv; },
       supervivencia: function () { return sup; }, muerto: function () { return muerto; }, tirados: function () { return tirados; }, hudPan: function () { return hudPan; },
+      pegar: function (fx, fy) { return pegar(fx, fy); },
       rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, ms: function () { return msCuadro; },
       diag: null, pedirDiag: function () { if (trab) trab.postMessage({ t: 'diag' }); }, listo: true };
   }
@@ -375,6 +379,8 @@
     for (var k in n) if (m[k] === undefined && k !== 'id') m[k] = n[k];
     m.modo = n.modo || 'creativo';
     m.creativo = m.modo === 'creativo';
+    // en supervivencia (y aventura) se empieza sin nada, como el juego
+    if (!m.creativo) m.barra = [];
     return BD.guardarMundo(m).then(function () { return abrirMundo(m); });
   }
   // un mundo público o un servidor: el mismo mundo para todos (la semilla sale de la sala), sin
@@ -485,6 +491,8 @@
         I.juego.red = null;
         B.cargar(m.bichos_lista);
       }
+      Tirados.cargar(m.local ? m.tirados : null);
+      minando = null;
       ultimoCentro = [Math.floor(J.x / 16), Math.floor(J.z / 16), Math.floor((J.y + 1.62) / 16)];
       trab.postMessage({ t: 'ini', bloques: datos.bloques, uv: datos.atlas.uv, semilla: m.semilla, dist: opciones.dist, tipo: m.tipo,
         suave: opciones.suave, hojas: opciones.hojas, cx: ultimoCentro[0], cz: ultimoCentro[1], sy: ultimoCentro[2] });
@@ -543,6 +551,7 @@
     m.inventario = Inventario.guardar(inv);
     m.supervivencia = Supervivencia.guardar(sup);
     m.bichos_lista = B.paraGuardar();
+    m.tirados = Tirados.guardar();
     var claves = Array.from(Mundo.sucios);
     Mundo.sucios.clear();
     var regs = claves.map(function (k) {
@@ -565,6 +574,7 @@
       partida = null;
       I.juego.red = null;
       B.limpiar();
+      Tirados.limpiar();
       if (trab) { trab.terminate(); trab = null; }
       Render.reiniciar();
       Mundo.iniciar(null);
@@ -699,16 +709,37 @@
     Pantallas.ir('muerte');
     I.ir('jui');
   }
-  var tirados = [];
+  // tirar algo (EntityPlayer.dropItem): hacia donde se mira, desde la altura de los ojos; al morir,
+  // para cualquier lado
+  var tirados = Tirados.lista;
   function tirarObjeto(c, alMorir) {
     if (!c || c.n <= 0) return;
-    var a = alMorir ? Math.random() * Math.PI * 2 : J.yaw, v = alMorir ? Math.random() * 0.5 : 0.3;
-    tirados.push({ c: Inventario.copia(c), x: J.x, y: J.y + (alMorir ? 0.5 : 1.3), z: J.z, vx: Math.sin(a) * v, vy: 0.2, vz: -Math.cos(a) * v,
-      edad: 0, espera: alMorir ? 40 : 40 });
+    if (alMorir) {
+      var a = Math.random() * Math.PI * 2, v = Math.random() * 0.5;
+      Tirados.cosa(c, J.x, J.y + 1.32, J.z, Math.sin(a) * v, 0.2, -Math.cos(a) * v, 40);
+      return;
+    }
+    var cp = Math.cos(J.pitch), f = 0.3, g = Math.random() * Math.PI * 2, h = 0.02 * Math.random();
+    Tirados.cosa(c, J.x, J.y + 1.32, J.z, Math.sin(J.yaw) * cp * f + Math.cos(g) * h, -Math.sin(J.pitch) * f + 0.1 + (Math.random() - Math.random()) * 0.1,
+      -Math.cos(J.yaw) * cp * f + Math.sin(g) * h, 40);
   }
-  function soltarXp(x, y, z, n) {
-    if (n > 0) tirados.push({ xp: n, x: x, y: y, z: z, vx: 0, vy: 0.2, vz: 0, edad: 0, espera: 0 });
-  }
+  function soltarXp(x, y, z, n) { if (n > 0) Tirados.orbes(x, y, z, n); }
+  // levantar lo tirado: al inventario (lo que no entra queda en el piso)
+  var ganchosTirados = {
+    levantar: function (c) {
+      var sobra = Inventario.agregar(inv, c);
+      if (sobra < c.n) { I.sucio(); if (I.pantalla === 'jui') Jui.sucio(); }
+      return sobra;
+    },
+    xp: function (n) {
+      var antes = sup.nivel;
+      Supervivencia.sumarXp(sup, n);
+      // cada 5 niveles suena la subida (EntityPlayer.addExperienceLevel)
+      if (sup.nivel > antes && sup.nivel % 5 === 0) Sonido.tocar('random.levelup', 0.75, 1);
+      I.sucio();
+    },
+    sonido: function (ev, vol, tono, x, y, z) { Sonido.tocar(ev, vol, tono, x, y, z); }
+  };
   function reaparecer() {
     Supervivencia.reaparecer(sup);
     muerto = false; vida = sup.vida; I.juego.vida = vida; ultimoAtacante = ''; ultimaCausa = ''; caida = 0;
@@ -750,18 +781,20 @@
       });
     }
     var kx = Math.sin(J.yaw) * 0.4, kz = -Math.cos(J.yaw) * 0.4;
-    if (jug && (!mejor || tj < mejor.t)) {
-      Red.golpear(jug.id, 2, kx, kz);
-      golpe(); golpeRed = true;
-      return true;
+    if (!(jug && (!mejor || tj < mejor.t)) && !mejor) return false;
+    var it = I.juego.barra[I.juego.elegido], d = it && Items.def[it.id], dano = d && d.dano ? d.dano : 1;
+    // el golpe crítico: cayendo (EntityPlayer.attackTargetEntityWithCurrentItem)
+    if (!J.enPiso && J.vy < 0 && !J.enAgua && !J.volando && !J.enEscalera) dano *= 1.5;
+    if (jug && (!mejor || tj < mejor.t)) Red.golpear(jug.id, dano, kx, kz);
+    else if (mejor.remoto) Red.golpearBicho(mejor.e.dueno, mejor.e.mid, dano, kx, kz);
+    else B.golpe(mejor.e, dano, kx, kz);
+    if (supervivencia()) {
+      // la espada se gasta 1 por golpe, las demás herramientas 2
+      if (d && d.dur && Inventario.desgastar(inv, I.juego.elegido, d.herr === 'espada' ? 1 : 2)) Sonido.tocar('random.break', 0.8, 0.8 + Math.random() * 0.4);
+      Supervivencia.cansar(sup, 0.1);
     }
-    if (mejor) {
-      if (mejor.remoto) Red.golpearBicho(mejor.e.dueno, mejor.e.mid, 3, kx, kz);
-      else B.golpe(mejor.e, 3, kx, kz);
-      golpe(); golpeRed = true;
-      return true;
-    }
-    return false;
+    golpe(); golpeRed = true;
+    return true;
   }
 
   function usar(h) {
@@ -793,7 +826,7 @@
     var bicho = O.bichoDe(it);
     if (bicho) {
       var e = B.crear(bicho, h.x + h.nx + 0.5, h.y + h.ny, h.z + h.nz + 0.5);
-      if (e) { e.yaw = J.yaw + Math.PI; golpe(); }
+      if (e) { e.yaw = J.yaw + Math.PI; golpe(); gastarElegido(); }
       return;
     }
     var id = it.id, m = it.m;
@@ -815,6 +848,7 @@
       if ((mh & 7) === (m & 7) && ((h.ny === 1 && !(mh & 8)) || (h.ny === -1 && (mh & 8)))) {
         ponerBloque(h.x, h.y, h.z, doble, m & 7);
         sonar(O.sonidoPoner(id), h.x, h.y, h.z);
+        gastarElegido();
         return;
       }
     }
@@ -835,7 +869,14 @@
     }
     sonar(O.sonidoPoner(id), tx, ty, tz);
     golpe();
+    gastarElegido();
     cuenta.puestos++;
+  }
+  // en supervivencia lo que se pone (o el huevo que se usa) se gasta
+  function gastarElegido() {
+    if (!supervivencia()) return;
+    Inventario.gastar(inv, I.juego.elegido, 1);
+    I.sucio();
   }
 
   // el bloque que pone un objeto ([id, meta]) o null: las semillas (y la papa y la zanahoria) su
@@ -854,13 +895,31 @@
     return d && d.pone && C.FORMA[d.pone] !== C.F.nada ? [d.pone, 0] : null;
   }
 
-  function romper(h) {
+  // supervivencia: se mina de a poco y lo roto suelta lo suyo (en creativo y en los servidores, no)
+  function supervivencia() { return !!(partida && !partida.creativo); }
+  function soltarBloque(id, m, x, y, z, item) {
+    if (!supervivencia() || partida.soltarBloques === false) return;
+    var s = Minar.suelta(id, m, item);
+    s.cosas.forEach(function (c) { Tirados.deBloque({ id: c[0], m: c[1], n: c[2] }, x, y, z); });
+    if (s.xp > 0) Tirados.orbes(x + 0.5, y + 0.5, z + 0.5, s.xp);
+  }
+  function romper(h, item) {
     var id = h.id, m = Mundo.meta(h.x, h.y, h.z);
     ponerBloque(h.x, h.y, h.z, 0, 0);
-    // las cosas de dos bloques se van enteras
+    soltarBloque(id, m, h.x, h.y, h.z, item);
+    if (supervivencia()) {
+      // el hielo deja agua si abajo hay algo (BlockIce); la piedra con un pez plateado lo suelta
+      if (Minar.dejaAgua(id) && Mundo.bloque(h.x, h.y - 1, h.z) !== 0) ponerBloque(h.x, h.y, h.z, 8, 0);
+      if (id === 97) B.crear('silverfish', h.x + 0.5, h.y, h.z + 0.5);
+    }
+    // las cosas de dos bloques se van enteras (la puerta suelta su objeto una vez: el de la mitad
+    // de abajo)
     if (C.FORMA[id] === C.F.puerta || id === 175) {
       var otro = (m & 8) ? h.y - 1 : h.y + 1;
-      if (Mundo.bloque(h.x, otro, h.z) === id) ponerBloque(h.x, otro, h.z, 0, 0);
+      if (Mundo.bloque(h.x, otro, h.z) === id) {
+        if (m & 8) soltarBloque(id, Mundo.meta(h.x, otro, h.z), h.x, otro, h.z, item);
+        ponerBloque(h.x, otro, h.z, 0, 0);
+      }
     }
     // lo que estaba apoyado arriba (plantas, antorchas paradas, nieve fina, puertas) se cae
     var a = Mundo.bloque(h.x, h.y + 1, h.z);
@@ -868,6 +927,7 @@
       var ma = Mundo.meta(h.x, h.y + 1, h.z);
       if (O.necesitaSuelo(a) || (C.FORMA[a] === C.F.antorcha && (ma === 5 || ma === 0)) || a === 78 || a === 171 ||
           (C.FORMA[a] === C.F.puerta && !(ma & 8)) || C.FORMA[a] === C.F.riel) {
+        soltarBloque(a, ma, h.x, h.y + 1, h.z, null);
         ponerBloque(h.x, h.y + 1, h.z, 0, 0);
         if (C.FORMA[a] === C.F.puerta || a === 175) ponerBloque(h.x, h.y + 2, h.z, 0, 0);
       }
@@ -878,6 +938,40 @@
     golpe();
     cuenta.rotos++;
   }
+  // minar en supervivencia (PlayerControllerMP.onPlayerDamageBlock): lo que avanza cada paso depende
+  // de la dureza y de lo que se tiene en la mano; cada 4 pasos suena el golpe; al romperlo, 5 pasos
+  // de espera hasta el siguiente
+  var minando = null, esperaMinar = 0;
+  function minarPaso(h, ahora) {
+    var it = I.juego.barra[I.juego.elegido];
+    if (!minando || minando.x !== h.x || minando.y !== h.y || minando.z !== h.z || minando.id !== h.id) {
+      minando = { x: h.x, y: h.y, z: h.z, id: h.id, prog: 0, ultimo: ahora, sonido: 0 };
+    }
+    var dt = Math.min(250, ahora - minando.ultimo);
+    minando.ultimo = ahora;
+    if (ahora < esperaMinar) return;
+    var av = Minar.avance(h.id, it, { bajoAgua: J.cabezaEnAgua, enAire: !J.enPiso && !J.volando && !J.enAgua });
+    if (av <= 0) return;
+    minando.prog += av >= 1 ? 1 : av * dt / 50;
+    if (ahora - minando.sonido >= 200) {
+      minando.sonido = ahora;
+      var sg = O.sonidoGolpe(h.id);
+      if (sg) Sonido.tocar(sg[0], sg[1], sg[2], h.x + 0.5, h.y + 0.5, h.z + 0.5);
+    }
+    if (golpeDesde < 0) golpe();
+    mundo.rompiendo = Math.min(0.999, minando.prog);
+    if (minando.prog < 1) return;
+    romper(h, it);
+    // la herramienta se gasta (y se rompe) y minar cansa
+    var gasto = Minar.desgaste(h.id, it);
+    if (gasto && Inventario.desgastar(inv, I.juego.elegido, gasto)) Sonido.tocar('random.break', 0.8, 0.8 + Math.random() * 0.4);
+    Supervivencia.cansar(sup, 0.005);
+    minando = null; esperaMinar = ahora + 250;
+    mundo.apuntado = null; mundo.rompiendo = 0;
+    I.sucio();
+  }
+  // en creativo con una espada en la mano no se rompe (como el juego)
+  function espadaEnMano() { var it = I.juego.barra[I.juego.elegido], d = it && Items.def[it.id]; return !!(d && d.herr === 'espada'); }
 
   // romper en creativo: al instante y, con el dedo quieto, uno cada 0,25 s (como el juego)
   var proximoRomper = 0, hayObjetivo = false, proximoPegar = 0;
@@ -887,7 +981,7 @@
     var d = I.pantalla === 'juego' ? I.dedoMundo() : null, a = null;
     if (d) {
       if (!d.rompiendo) { var q = t - d.t0; if (q > 120) a = { x: d.x, y: d.y, p: q / 300 }; }
-      else if (hayObjetivo) a = { x: d.x, y: d.y, p: proximoRomper ? 1 - Math.max(0, proximoRomper - t) / 250 : 0 };
+      else if (hayObjetivo) a = { x: d.x, y: d.y, p: supervivencia() ? (minando ? minando.prog : 0) : proximoRomper ? 1 - Math.max(0, proximoRomper - t) / 250 : 0 };
     }
     var antes = I.juego.anillo;
     I.juego.anillo = a;
@@ -907,10 +1001,12 @@
       if (h) {
         hayObjetivo = true;
         mundo.apuntado = h;
-        if (ahora >= proximoRomper && !aventura()) { romper(h); proximoRomper = ahora + 250; mundo.apuntado = null; }
-      }
+        if (aventura()) { /* nada */ }
+        else if (supervivencia()) minarPaso(h, ahora);
+        else if (ahora >= proximoRomper && !espadaEnMano()) { romper(h); proximoRomper = ahora + 250; mundo.apuntado = null; }
+      } else minando = null;
     } else {
-      proximoRomper = 0;
+      proximoRomper = 0; minando = null;
       // con mouse: el contorno del bloque de la mira
       if (I.conMouse && I.pantalla === 'juego') mundo.apuntado = tocarBloque(0.5, 0.5, false);
     }
@@ -925,7 +1021,22 @@
   B.ponerBloque = function (x, y, z, id, m) {
     if (Mundo.poner(x, y, z, id, m) && partida && !partida.local) Red.bloques([x, y, z, id, m]);
   };
-  B.alMorir = function (e) { if (opciones.particulas) Render.romper(Math.floor(e.x), Math.floor(e.y), Math.floor(e.z), 80, 0); };
+  B.alMorir = function (e, porJugador) {
+    if (opciones.particulas) Render.romper(Math.floor(e.x), Math.floor(e.y), Math.floor(e.z), 80, 0);
+    // el botín de su tabla (minecraft:loot) en los mundos propios (las crías no sueltan nada) y la
+    // experiencia si el jugador le pegó hace poco (EntityLivingBase.onDeath)
+    if (!partida || !partida.local || e.bebe) return;
+    var tabla = e.c && e.c['minecraft:loot'] && e.c['minecraft:loot'].table;
+    if (tabla && partida.botinBichos !== false) {
+      Botin.tirar(tabla, { jugador: porJugador, fuego: e.quema > 0, dificultad: B.dificultad, color: e.variante || 0 }).forEach(function (c) {
+        Tirados.cosa(c, e.x, e.y + 0.5, e.z, Math.random() * 0.2 - 0.1, 0.2, Math.random() * 0.2 - 0.1, 10);
+      });
+    }
+    if (porJugador && !partida.creativo) {
+      var t = B.TIPOS[e.tipo], xp = Botin.experiencia(e.tipo, t && t.hostil, e.bebe, B.tamSlime(e));
+      if (xp > 0) Tirados.orbes(e.x, e.y + 0.5, e.z, xp);
+    }
+  };
   B.golpear = function (obj, dano, e, causa) {
     var dx = obj.x - e.x, dz = obj.z - e.z, l = Math.sqrt(dx * dx + dz * dz) || 1, kx = dx / l * 0.4, kz = dz / l * 0.4;
     var nombre = O.nombreBicho ? O.nombreBicho(e.tipo) : I.t('entity.' + e.tipo + '.name', e.tipo);
@@ -964,7 +1075,13 @@
     Red.remotos.forEach(function (j) { jugs.push(j); p.push(Math.floor(j.x), Math.floor(j.y + 1), Math.floor(j.z)); });
     var nb = p.length / 3 - jugs.length;
     cands.forEach(function (c) { p.push(c.x, c.y, c.z); });
-    esperaLuces = { nb: nb, jugs: jugs, cands: cands.length, id: ++pedidoLuces };
+    // y la de lo tirado cerca (para dibujarlo con la luz de su lugar)
+    var tir = [];
+    for (var k = 0; k < Tirados.lista.length && tir.length < 128; k++) {
+      var o = Tirados.lista[k];
+      if (Math.abs(o.x - J.x) < 48 && Math.abs(o.z - J.z) < 48) { tir.push(o); p.push(Math.floor(o.x), Math.floor(o.y + 0.1), Math.floor(o.z)); }
+    }
+    esperaLuces = { nb: nb, jugs: jugs, cands: cands.length, tir: tir, id: ++pedidoLuces };
     trab.postMessage({ t: 'luces', p: p, pedido: pedidoLuces });
   }
   function lucesRecibidas(d) {
@@ -973,7 +1090,9 @@
     if (!e || d.pedido !== e.id) return;
     B.ponerLuces(d.v.slice(0, e.nb));
     e.jugs.forEach(function (j, i) { var v = d.v[e.nb + i]; if (v >= 0) j.luz = v; });
-    if (partida && B.activo) B.aparecer(d.v.slice(e.nb + e.jugs.length), luzDelDia());
+    var base = e.nb + e.jugs.length;
+    if (partida && B.activo) B.aparecer(d.v.slice(base, base + e.cands), luzDelDia());
+    e.tir.forEach(function (o, i) { var v = d.v[base + e.cands + i]; if (v >= 0) o.luz = v; });
   }
   // qué tan de día es (0 de noche, 1 de día; como el brillo del cielo del juego)
   function luzDelDia() {
@@ -1063,6 +1182,8 @@
     var jugs = [{ x: J.x, y: J.y, z: J.z, id: null, vivo: !muerto }];
     Red.remotos.forEach(function (j) { jugs.push({ x: j.x, y: j.y, z: j.z, id: j.id, vivo: j.hp > 0 }); });
     B.paso(jugs, luzDelDia());
+    // lo tirado en el piso y los orbes (se levantan al pasar)
+    Tirados.paso({ x: J.x, y: J.y, z: J.z, vivo: !muerto }, ganchosTirados);
     if (pasosLuz % 5 === 2) pedirLuces();
     // el trabajador sigue al jugador
     var cx = Math.floor(J.x / 16), cz = Math.floor(J.z / 16), sy = Math.max(0, Math.min(7, Math.floor((J.y + 1.62) / 16)));
@@ -1207,6 +1328,7 @@
     mundo.temperatura = tb === undefined ? 0.8 : tb;
     // lo que se dibuja además del mundo: los bichos y los otros jugadores (con su nombre arriba)
     var ents = B.paraDibujar(alfa), nombres = [];
+    mundo.tirados = Tirados.lista; mundo.alfa = alfa;
     if (partida && !partida.local) {
       var tam = I.tam();
       Red.remotos.forEach(function (j) {
@@ -1660,6 +1782,15 @@
       I.sucio();
     },
     elegir: function (i) { I.juego.elegido = i; mostrarNombre(); I.sucio(); },
+    // mantener una casilla de la barra: tira lo que tiene (en supervivencia; en creativo no hace falta)
+    tirarBarra: function (i) {
+      var c = inv.barra[i];
+      if (!c || !supervivencia() || muerto) return;
+      inv.barra[i] = null;
+      tirarObjeto(c);
+      golpe();
+      I.sucio();
+    },
     saltoDoble: (function () {
       var antes = 0;
       return function (cuando) {

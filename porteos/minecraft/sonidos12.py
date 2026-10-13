@@ -23,7 +23,7 @@ PREFIJOS = ("dig.", "step.", "damage.", "game.player.", "fire.", "liquid.", "jum
 SUELTOS = {"random.click", "random.glass", "random.pop", "random.splash", "random.swim", "random.door_open",
            "random.door_close", "random.chestopen", "random.chestclosed", "random.fizz", "random.break",
            "random.orb", "random.levelup", "random.hurt", "random.fuse", "random.explode", "random.bow",
-           "random.bowhit", "random.burp", "random.eat", "mob.attack"}
+           "random.bowhit", "random.burp", "random.eat", "random.drink", "mob.attack"}
 # lo que no suena en el motor (de los bichos: montarlos, ordeñar, poner huevos, curar aldeanos, romper
 # puertas)
 FUERA = ("mob.cow.milk", "mob.chicken.plop", "mob.pig.boost", "mob.sheep.shear", "mob.zombie.remedy",

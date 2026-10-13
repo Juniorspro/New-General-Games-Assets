@@ -12,6 +12,7 @@ var Bichos = (function () {
   'use strict';
   var B = {};
   var lista = [];             // los propios
+  B.lista = lista;
   var remotos = new Map();    // "dueño/id" → bicho de otro jugador
   var proyectiles = [];
   var proximoId = 1;
@@ -579,13 +580,16 @@ var Bichos = (function () {
     }
   }
   function morirDel_todo(e) {
-    if (B.alMorir) B.alMorir(e);
+    if (B.alMorir) B.alMorir(e, e.golpeJugador !== undefined && tick - e.golpeJugador < 100);
   }
+  B.tamSlime = tamSlime;
   // un golpe del jugador (propio o ajeno): con el tiempo de invulnerabilidad del juego (medio segundo)
   B.golpe = function (e, dano, kx, kz, quien) {
     if (e.golpeado > 0 || e.muerte > 0) return false;
     e.golpeado = 10;
     var j = quien || jugadores[0] || null;
+    // para la experiencia: el juego la da si el jugador le pegó en los últimos 5 segundos
+    if (!quien) e.golpeJugador = tick;
     herir(e, dano, 'entity_attack', j, kx, kz);
     return true;
   };

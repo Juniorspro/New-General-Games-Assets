@@ -1507,7 +1507,7 @@ var Jui = (function () {
   };
   var listaSuelta = [];
   J.dibujarSuelta = function (ctx, pan) { if (pan) dibujarPantalla(ctx, pan, listaSuelta); };
-  // tocar una pantalla suelta (los casilleros de la barra del HUD): true si había un botón ahí
+  // tocar una pantalla suelta (los casilleros de la barra del HUD): el botón que había ahí o false
   J.tocarSuelta = function (pan, x, y) {
     if (!pan) return false;
     var l = [];
@@ -1515,7 +1515,8 @@ var Jui = (function () {
     l.sort(function (a, b) { return b.capa - a.capa || b.orden - a.orden; });
     for (var i = 0; i < l.length; i++) {
       var c = l[i].c;
-      if (c.t === 'button' && x >= c.x && y >= c.y && x <= c.x + c.w && y <= c.y + c.h && habilitado(c)) { apretar(c); return true; }
+      // (el que sigue al dedo, lo agarrado en los inventarios, no ataja toques)
+      if (c.t === 'button' && !c.p.follows_cursor && x >= c.x && y >= c.y && x <= c.x + c.w && y <= c.y + c.h && habilitado(c)) { apretar(c); return c; }
     }
     return false;
   };

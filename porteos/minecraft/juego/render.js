@@ -155,6 +155,7 @@ var Render = (function () {
     R.texSol = GL.textura(imagenes.sol, 'cerca', 0);
     R.texLuna = GL.textura(imagenes.luna, 'cerca', 0);
     R.grietas = imagenes.grietas.map(function (im) { return GL.textura(im, 'cerca', 0, true); });
+    if (imagenes.orbe) R.texOrbe = GL.textura(imagenes.orbe, 'cerca', 0);
     R.texNubes = imagenes.nubes ? GL.textura(imagenes.nubes, 'cerca', 0, true) : null;
     if (imagenes.nubes) mascaraNubes(imagenes.nubes);
     armarIndices(16384);
@@ -556,6 +557,7 @@ var Render = (function () {
     gl.bindTexture(gl.TEXTURE_2D, atlas);
     dibujarParticulas(cam);
     if (mundo.entidades && mundo.entidades.length) dibujarEntidades(mundo.entidades, cam);
+    if (mundo.tirados && mundo.tirados.length) dibujarTirados(mundo.tirados, cam, mundo.alfa === undefined ? 1 : mundo.alfa);
     gl.bindTexture(gl.TEXTURE_2D, atlas);
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -1054,16 +1056,22 @@ var Render = (function () {
     if (clave === mano.clave) return;
     mano.clave = clave; mano.n = 0;
     if (!it) return;
-    var id = it.id, m = it.m, f = C.FORMA[id], F = C.F, v = [];
-    mano.objeto = false;
+    var r = vertices(it);
+    if (!r) return;
+    mano.plano = r.plano; mano.objeto = r.objeto;
+    subirMano(r.v);
+  }
+  // la malla de una cosa (centrada, de -0,5 a 0,5): { v, plano, objeto } o null
+  function vertices(it) {
+    var id = it.id, m = it.m, f = C.FORMA[id], F = C.F, v = [], res = { v: v, plano: false, objeto: false };
     if (Items.es(id)) {
       var ro = rectObjeto(id, m);
-      if (!ro || !texObjetos) return;
+      if (!ro || !texObjetos) return null;
       extruido(v, ro);
-      mano.plano = true; mano.objeto = true;
-      subirMano(v);
-      return;
+      res.plano = true; res.objeto = true;
+      return res;
     }
+    if (!C.bloques[id]) return null;
     var b = C.bloques[id], tinte = b.tinte === 1 ? [0.57, 0.74, 0.35] : b.tinte === 2 ? [0.47, 0.67, 0.18] : b.tinte === 3 ? [0.25, 0.4, 0.9] : [1, 1, 1];
     var llevada = !!b.texMano;
     function quad(p, r, sombra, tn) {
@@ -1079,11 +1087,10 @@ var Render = (function () {
       f === F.surcos || f === F.nenufar || f === F.panel || f === F.fuego || f === F.tallo;
     if (plano) {
       var r = R.rectCara(id, f === F.puerta ? 'side' : 'up', f === F.planta2 ? m & 7 : m) || R.rectCara(id, 'side', m);
-      mano.plano = true;
+      res.plano = true;
       quad([[-0.5, -0.5, 0], [0.5, -0.5, 0], [0.5, 0.5, 0], [-0.5, 0.5, 0]], r, 1, b.tinte);
       quad([[0.5, -0.5, 0], [-0.5, -0.5, 0], [-0.5, 0.5, 0], [0.5, 0.5, 0]], r && [r[2], r[1], r[0], r[3]], 0.8, b.tinte);
     } else {
-      mano.plano = false;
       var mm = (id === 17 || id === 162) ? m & 3 : m;
       var alto = f === F.losa ? 0.5 : f === F.capa ? 0.125 : f === F.alfombra ? 0.0625 : 1, y1 = -0.5 + alto;
       var arriba = R.rectCara(id, 'up', mm), lado = R.rectCara(id, 'side', mm) || arriba, frente = R.rectCara(id, 'south', mm) || lado;
@@ -1097,7 +1104,7 @@ var Render = (function () {
       quad([[0.5, -0.5, 0.5], [0.5, -0.5, -0.5], [0.5, y1, -0.5], [0.5, y1, 0.5]], corte(lado), 0.6, b.tinte === 2);
       quad([[-0.5, -0.5, -0.5], [-0.5, -0.5, 0.5], [-0.5, y1, 0.5], [-0.5, y1, -0.5]], corte(lado), 0.6, b.tinte === 2);
     }
-    subirMano(v);
+    return v.length ? res : null;
   }
   function subirMano(v) {
     if (!mano.b) {
@@ -1158,6 +1165,111 @@ var Render = (function () {
     gl.enable(gl.CULL_FACE);
     gl.bindVertexArray(null);
   };
+
+  // ------------------------------------------------------------------------------------------
+  // Las cosas tiradas (RenderEntityItem: giran una vuelta cada 6 s y suben y bajan; los bloques al
+  // 0,25 y lo plano al 0,5, con más copias cuantas más hay) y los orbes de experiencia (RenderXPOrb:
+  // de frente a la cámara, del tamaño de lo que valen, titilando de verde a amarillo)
+  // ------------------------------------------------------------------------------------------
+  var mallasTiradas = new Map(), mTir = GL.mat4(), mvpTir = GL.mat4(), orbeBuf = null, orbeDatos = new Float32Array(0);
+  R.texOrbe = null;
+  function mallaTirada(c) {
+    var clave = c.id + ':' + c.m, mm = mallasTiradas.get(clave);
+    if (mm) return mm;
+    var r = vertices(c);
+    mm = { n: 0, plano: false, objeto: false };
+    if (r) {
+      mm.vao = gl.createVertexArray(); mm.vbo = gl.createBuffer();
+      gl.bindVertexArray(mm.vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mm.vbo);
+      atributosSimple();
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(r.v), gl.STATIC_DRAW);
+      gl.bindVertexArray(null);
+      mm.n = r.v.length / 10; mm.plano = r.plano; mm.objeto = r.objeto;
+    }
+    mallasTiradas.set(clave, mm);
+    return mm;
+  }
+  // el azar fijo de cada cosa (las copias quedan siempre en el mismo lugar)
+  function azarDe(sem, k) { var x = Math.sin(sem * 91.17 + k * 12.9898) * 43758.5453; return x - Math.floor(x); }
+  function dibujarTirados(l, cam, alfa) {
+    if (!simple) return;
+    usar(simple);
+    var hayOrbes = false;
+    for (var i = 0; i < l.length; i++) {
+      var e = l[i];
+      if (e.xp !== undefined) { hayOrbes = true; continue; }
+      var mm = mallaTirada(e.c);
+      if (!mm.n) continue;
+      var x = e.px + (e.x - e.px) * alfa, y = e.py + (e.y - e.py) * alfa, z = e.pz + (e.z - e.pz) * alfa;
+      var dx = x - cam.x, dz = z - cam.z;
+      if (dx * dx + dz * dz > 64 * 64) continue;
+      var t = (e.edad || 0) + alfa, sube = Math.sin(t / 10 + e.giro) * 0.1 + 0.1, esc = mm.plano ? 0.5 : 0.25;
+      var luz = colorLuz(e.luz === undefined ? R.luzJugador : e.luz);
+      gl.uniform4f(simple.u.CURRENT_COLOR, luz[0], luz[1], luz[2], 1);
+      gl.bindTexture(gl.TEXTURE_2D, mm.objeto ? texObjetos : atlas);
+      gl.bindVertexArray(mm.vao);
+      if (mm.plano) gl.disable(gl.CULL_FACE);
+      var copias = Tirados.copias(e.c.n), sem = e.c.id * 31 + e.c.m;
+      for (var k = 0; k < copias; k++) {
+        var m = mTir;
+        m.set(GL.mat4());
+        GL.trasladar(m, dx, y - cam.y + sube + 0.25, dz);
+        multRot(m, t / 20 + e.giro, 0, 1, 0);
+        if (k > 0) {
+          if (mm.plano) GL.trasladar(m, (azarDe(sem, k) * 2 - 1) * 0.075, (azarDe(sem, k + 7) * 2 - 1) * 0.075, k * 0.09375);
+          else GL.trasladar(m, (azarDe(sem, k) * 2 - 1) * 0.15, (azarDe(sem, k + 7) * 2 - 1) * 0.15, (azarDe(sem, k + 13) * 2 - 1) * 0.15);
+        }
+        var s = GL.mat4(); s[0] = s[5] = s[10] = esc;
+        GL.mult(m, m, s);
+        GL.mult(mvpTir, vp, m);
+        gl.uniformMatrix4fv(simple.u.WORLDVIEWPROJ, false, mvpTir);
+        gl.drawArrays(gl.TRIANGLES, 0, mm.n);
+      }
+      gl.enable(gl.CULL_FACE);
+    }
+    gl.bindVertexArray(null);
+    if (hayOrbes && R.texOrbe) dibujarOrbes(l, cam, alfa);
+  }
+  function dibujarOrbes(l, cam, alfa) {
+    var n = l.length * 60;
+    if (orbeDatos.length < n) orbeDatos = new Float32Array(n * 2);
+    if (!orbeBuf) {
+      orbeBuf = { vao: gl.createVertexArray(), vbo: gl.createBuffer() };
+      gl.bindVertexArray(orbeBuf.vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, orbeBuf.vbo);
+      atributosSimple();
+      gl.bindVertexArray(null);
+    }
+    var cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+    var rx = cy, rz = sy, ux = sp * sy, uy = cp, uz = -sp * cy, o = 0, d = orbeDatos;
+    for (var i = 0; i < l.length; i++) {
+      var e = l[i];
+      if (e.xp === undefined) continue;
+      var x = e.px + (e.x - e.px) * alfa - cam.x, y = e.py + (e.y - e.py) * alfa - cam.y + 0.1, z = e.pz + (e.z - e.pz) * alfa - cam.z;
+      var tam = Tirados.tamOrbe(e.xp), u0 = (tam % 4) * 16 / 64, v0 = Math.floor(tam / 4) * 16 / 64, u1 = u0 + 0.25, v1 = v0 + 0.25;
+      var f = ((e.color || 0) + alfa) / 2, rr = (Math.sin(f) + 1) * 0.5, bb = (Math.sin(f + 4.1887903) + 1) * 0.1, s = 0.3;
+      var esq = [[-0.5, -0.25, u0, v1], [0.5, -0.25, u1, v1], [0.5, 0.75, u1, v0], [-0.5, -0.25, u0, v1], [0.5, 0.75, u1, v0], [-0.5, 0.75, u0, v0]];
+      for (var k = 0; k < 6; k++) {
+        var q = esq[k];
+        d[o++] = x + (rx * q[0] + ux * q[1]) * s; d[o++] = y + uy * q[1] * s; d[o++] = z + (rz * q[0] + uz * q[1]) * s; d[o++] = 1;
+        d[o++] = rr; d[o++] = 1; d[o++] = bb; d[o++] = 1;
+        d[o++] = q[2]; d[o++] = q[3];
+      }
+    }
+    if (!o) return;
+    usar(simple);
+    gl.uniformMatrix4fv(simple.u.WORLDVIEWPROJ, false, vp);
+    gl.uniform4f(simple.u.CURRENT_COLOR, 1, 1, 1, 1);
+    gl.bindTexture(gl.TEXTURE_2D, R.texOrbe);
+    gl.bindVertexArray(orbeBuf.vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, orbeBuf.vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, d.subarray(0, o), gl.STREAM_DRAW);
+    gl.disable(gl.CULL_FACE);
+    gl.drawArrays(gl.TRIANGLES, 0, o / 10);
+    gl.enable(gl.CULL_FACE);
+    gl.bindVertexArray(null);
+  }
 
   R.matrices = function () { return { vp: vp, proy: proy, vista: vista }; };
   R.reiniciar = function () { cols.forEach(borrar); cols.clear(); };

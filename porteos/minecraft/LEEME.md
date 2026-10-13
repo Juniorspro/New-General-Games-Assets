@@ -49,6 +49,16 @@ APK de Craftsman PTGI) como opción al empezar, **servidores** para jugar con ot
   ladea al recibir un golpe; al morir el mensaje del juego para cada causa ("intentó nadar en la
   lava", "Creeper hizo volar por los aires a..."), se cae lo que se llevaba y la experiencia, y se
   reaparece;
+- **minar** como el juego: cada bloque con su dureza, la herramienta que lo rompe rápido y la que
+  hace falta para que suelte algo (el pico del nivel justo para los minerales, la pala para la
+  nieve), las grietas, el golpe que suena cada 4 pasos, la herramienta que se gasta y se rompe; lo
+  que suelta cada bloque (el adoquín de la piedra, la tierra del pasto, el pedernal de la grava, los
+  retoños y las manzanas de las hojas, las semillas del pasto, los cultivos maduros...) y la
+  experiencia de los minerales. Las cosas quedan en el piso girando y flotando, se juntan, se
+  levantan al pasar (y se tiran manteniendo una casilla de la barra) y los orbes de experiencia
+  buscan al jugador. Los bichos sueltan su botín de las `loot_tables` de la 1.2 (cocido si se
+  quemaban) y experiencia si los mató el jugador; las espadas y herramientas pegan lo suyo, con
+  golpes críticos al caer;
 - **el HUD de la 1.2** (su `hud_screen.json`, el estilo de bolsillo): los corazones arriba a la
   izquierda (tiemblan con poca vida, titilan al lastimarse) con la armadura debajo, la comida
   arriba a la derecha con las burbujas debajo, la barra de experiencia con el nivel sobre la barra
@@ -58,8 +68,7 @@ APK de Craftsman PTGI) como opción al empezar, **servidores** para jugar con ot
   los controles táctiles de MCPE, partículas, los sonidos del juego.
 
 Siempre acostado: con el teléfono parado se gira 90° solo (también adentro de Rezona). Falta para
-la supervivencia completa: minar con herramientas (lo que sueltan los bloques, los objetos en el
-piso), fabricar, el horno y el cofre, comer y usar objetos.
+la supervivencia completa: fabricar, el horno y el cofre, comer y usar objetos.
 
 ## Cómo es
 

@@ -1135,8 +1135,11 @@ var Interfaz = (function () {
           pulsados[cr] = true; actualizarCruceta(); sucio = true;
           return;
         }
-        if (I.tocarHud && !(I.opc && I.opc.ocultarInterfaz) && I.tocarHud(x / Jui.escala, y / Jui.escala)) {
-          dedos.set(e.pointerId, { tipo: 'boton' });
+        var bh = I.tocarHud && !(I.opc && I.opc.ocultarInterfaz) ? I.tocarHud(x / Jui.escala, y / Jui.escala) : null;
+        if (bh) {
+          // una casilla de la barra: mantenerla un segundo tira lo que tiene (como la 1.2 de bolsillo)
+          var qh = Jui.coleccionDe(bh);
+          dedos.set(e.pointerId, { tipo: 'hud', casilla: qh && qh.col === 'hotbar_items' ? qh.i : -1, t0: e.timeStamp || performance.now(), x0: x, y0: y, movio: false });
           sucio = true;
           return;
         }
@@ -1192,6 +1195,8 @@ var Interfaz = (function () {
         // deslizar el dedo entre flechas (como el juego)
         var cr = crucetaEn(x, y);
         if (cr && cr !== d.b && cr !== 'agachar') { pulsados[d.b] = false; d.b = cr; pulsados[cr] = true; actualizarCruceta(); sucio = true; }
+      } else if (d.tipo === 'hud') {
+        if (Math.hypot(x - d.x0, y - d.y0) > 12 * dpr) d.movio = true;
       } else if (d.tipo === 'mundo') {
         var dx = x - d.x, dy = y - d.y;
         d.x = x; d.y = y;
@@ -1283,6 +1288,10 @@ var Interfaz = (function () {
     ultimaRevision = ahora;
     dedos.forEach(function (d) {
       var quieto = ahora - d.t0;
+      if (d.tipo === 'hud' && d.casilla >= 0 && !d.movio && !d.hecho && quieto > 1000) {
+        d.hecho = true;
+        if (I.acciones.tirarBarra) I.acciones.tirarBarra(d.casilla);
+      }
       if (d.tipo === 'mundo' && !d.movio && !d.rompiendo && ((quieto > 300 && hueco < 150) || quieto > 900)) {
         d.rompiendo = true;
         I.control.rompiendo = (I.opc && I.opc.dividido) ? [0.5, 0.5] : [d.x / W, d.y / H];

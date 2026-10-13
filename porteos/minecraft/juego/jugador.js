@@ -219,6 +219,8 @@ var Jugador = (function () {
   };
 
   J.ubicar = function (x, y, z) { J.x = J.px = x; J.y = J.py = y; J.z = J.pz = z; J.vx = J.vy = J.vz = 0; };
+  // las cajas con las que se choca en un bloque (también para los objetos tirados)
+  J.cajas = cajas;
   J.OJOS = OJOS;
   return J;
 })();
