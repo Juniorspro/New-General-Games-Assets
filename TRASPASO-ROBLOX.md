@@ -265,7 +265,7 @@ se imita.
 
 ## 9. Los juegos que hicimos en HTML: gráficos, mecánicas y estilos
 
-Sale de `memoria/`, de `GUIA-JUEGOS.md` (§0, §6, §7 y §11), de los README y de las constantes del código. Lo que va
+Sale de `memoria/`, de `GUIA-JUEGOS.md` (§4, §7 y §12), de los README y de las constantes del código. Lo que va
 con "(?)" no está confirmado.
 
 **Para pasar los números a Roblox:** 1 stud ≈ 0,28 m (un personaje mide unos 5 studs). Los metros se multiplican por

@@ -1,15 +1,16 @@
 # Juegos
 
-La receta visual completa está en `GUIA-JUEGOS.md`: abrila por sección, y la
-`§ 11` son las trampas. Ver también: [rezona](rezona.md), [maquina](maquina.md)
+La guía definitiva (2D y 3D) está en `GUIA-JUEGOS.md`: abrila por sección (el
+índice está arriba); la `§ 12` son las trampas y la `§ 13`, lo que se comprueba
+antes de mandar. Ver también: [rezona](rezona.md), [maquina](maquina.md)
 (para probar), [higgsfield](higgsfield.md). El catálogo de carpetas está en el
 [índice](INDICE.md).
 
 ## Cómo se hacen acá
 
 - **Pedidos fijos del dueño (23/09):**
-  - Siempre una pantalla de idioma (español, inglés, portugués) antes del
-    menú, y el juego entero traducido.
+  - El juego entero traducido. Desde el 08/10, 13 idiomas y sin cartel
+    ([idiomas](idiomas.md)); los juegos viejos, pantalla de 3 antes del menú.
   - Cada juego con su propio estilo de menú, botones, orden y transiciones.
   - Cada juego nuevo, bastante mejor que el anterior en animaciones y efectos.
     Antes de empezar uno, mirá qué tenía el último y subí la vara.

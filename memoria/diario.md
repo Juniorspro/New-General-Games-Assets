@@ -4,6 +4,10 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Quedan las ~8 más nuevas; las viejas pasan a
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
+- **13/10/2026 · `claude/fijate-iszyer`:**
+  - Pidió "el md definitivo de creación de juegos 3D y 2D que aprendimos en esta sesión": `GUIA-JUEGOS.md`
+    rehecha (88 KB, 14 secciones: lo que pide, técnica, 2D, 3D, assets, celu, sonido, idiomas, pruebas, entrega,
+    ports, trampas, lista final), sacada de las notas de la memoria. Las referencias apuntan a las secciones nuevas.
 - **08/10/2026 · `claude/fijate-iszyer`:**
   - Pidió 13 idiomas (por países) con opción en el menú en vez del cartel, y sacarles la intro, en los zip.
     Hecho en los 5 ([idiomas](idiomas.md)): `motor2d/idiomas.js` + `<juego>/js/idiomas.js`; los de píxeles con el

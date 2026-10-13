@@ -2,7 +2,7 @@
 
 Un MCP que genera imágenes, sprites, audio, modelos 3D y esqueletos, y que
 además aloja juegos. Fuente: `ARRANQUE.md § 6`,
-`herramientas/rezona/estado.json` y `GUIA-JUEGOS.md § 1-4, 7`. Ver también:
+`herramientas/rezona/estado.json` y `GUIA-JUEGOS.md § 5 y 7.3`. Ver también:
 [desplegar](desplegar.md), [juegos](juegos.md), [higgsfield](higgsfield.md).
 
 ## Conectarlo

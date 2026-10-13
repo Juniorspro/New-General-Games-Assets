@@ -166,4 +166,4 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 
 Documentos de la raíz (son la fuente; se abren por sección, nunca enteros):
 `ARRANQUE.md` (cómo se trabaja), `ESTADO.md` (qué hay en los dos sitios),
-`GUIA-JUEGOS.md` (receta visual con Rezona), `MEMORIA.md` (este método).
+`GUIA-JUEGOS.md` (la guía definitiva de juegos 2D y 3D), `MEMORIA.md` (este método).

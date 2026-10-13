@@ -13,7 +13,7 @@ también: [rezona](rezona.md), [juegos](juegos.md).
   después (`bosque/herramientas/procesar_assets.py`).
 - **Recortes:** se pide sobre fondo blanco y se pasa por `remove_background`.
   Falló una vez de ocho y el reintento anduvo. Deja halos blancos: hay que
-  descontaminar y sangrar (`GUIA-JUEGOS.md § 5.2`).
+  descontaminar y sangrar (`GUIA-JUEGOS.md § 5.4`).
 - **Objetos 3D:** `tripo_h3_1_image_to_3d` con texture, pbr y detailed cuesta 9
   créditos. Llegan en un cubo de 1 m, con texturas de 4096 y cuantizados.
 - **Personaje:** `image_to_3d` (Meshy) en pose A y con simetría, sin esqueleto.

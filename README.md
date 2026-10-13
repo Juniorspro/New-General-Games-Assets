@@ -10,9 +10,10 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 > [`memoria/INDICE.md`](memoria/INDICE.md), que dice qué sección abrir
 > ([`MEMORIA.md`](MEMORIA.md) explica cómo se usa y se mantiene).
 
-> **Para hacer un juego que se vea bien:** [`GUIA-JUEGOS.md`](GUIA-JUEGOS.md),
-> la receta con Rezona: qué pedir, cómo procesarlo y qué hacer en el motor.
-> Sale de lo medido en `bosque/` y en los juegos anteriores.
+> **Para hacer un juego:** [`GUIA-JUEGOS.md`](GUIA-JUEGOS.md), la guía definitiva de
+> juegos 2D y 3D para el celular: lo que pide quien pide, la técnica, el arte, el
+> sonido, los 13 idiomas, las pruebas con bots, la entrega y las trampas. Sale de lo
+> medido en los juegos del repo (22/09 a 08/10).
 
 ## Qué hay
 
