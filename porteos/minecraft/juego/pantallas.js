@@ -311,7 +311,7 @@ var Pantallas = (function () {
     desconectado: 'disconnect.disconnect_screen', inventario: 'crafting_pocket.survival_inventory_screen_pocket',
     inventarioCreativo: 'crafting_pocket.creative_inventory_screen_pocket', mesa: 'crafting_pocket.crafting_screen_pocket',
     horno: 'furnace.furnace_screen', cofre: 'chest.small_chest_screen', cofreGrande: 'chest.large_chest_screen',
-    cofreEnder: 'chest.ender_chest_screen', efectos: 'mob_effect.mob_effect_screen'
+    cofreEnder: 'chest.ender_chest_screen', efectos: 'mob_effect.mob_effect_screen', cama: 'bed.in_bed_screen'
   };
   // variables de plataforma de cada pantalla ($is_pregame: fuera del mundo; sin elegir una imagen
   // propia para la skin: el botón "Aspecto nuevo" no aparece)
@@ -1317,6 +1317,15 @@ var Pantallas = (function () {
       }
     };
   };
+  // durmiendo (in_bed_screen): "Salir de la cama" y el chat
+  CTRL.cama = function () {
+    return {
+      boton: function (id) {
+        if (id === 'button.wake_up_button' || id === 'button.menu_cancel' || id === 'button.menu_exit') G.despertar();
+        else if (id === 'button.chat') G.abrirChat();
+      }
+    };
+  };
   CTRL.horno = ctrlContenedor;
   CTRL.cofre = ctrlContenedor;
   CTRL.cofreGrande = ctrlContenedor;
@@ -1385,6 +1394,12 @@ var Pantallas = (function () {
       nombre = texto || '';
       if (ultimoNombre) Jui.quitar(ultimoNombre);
       ultimoNombre = nombre ? Jui.fabricar(pan, 'item_text_factory', creativo ? 'creative_item_text' : 'survival_item_text') : null;
+    };
+    // los avisos de arriba de la barra (hud_actionbar_text: "Solo se puede dormir de noche"...)
+    var ultimoAviso = null;
+    pan.aviso = function (texto) {
+      if (ultimoAviso) Jui.quitar(ultimoAviso);
+      ultimoAviso = Jui.fabricar(pan, 'hud_actionbar_text_factory', 'hud_actionbar_text', { '$actionbar_text': texto || '' });
     };
     // los colores del port en códigos § (los del juego)
     var COLORES = { '#ff8080': '§c', '#ff5555': '§c', '#ffff55': '§e', '#c0c0c0': '§7', '#55ff55': '§a' };

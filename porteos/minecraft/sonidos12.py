@@ -23,11 +23,13 @@ PREFIJOS = ("dig.", "step.", "damage.", "game.player.", "fire.", "liquid.", "jum
 SUELTOS = {"random.click", "random.glass", "random.pop", "random.splash", "random.swim", "random.door_open",
            "random.door_close", "random.chestopen", "random.chestclosed", "random.fizz", "random.break",
            "random.orb", "random.levelup", "random.hurt", "random.fuse", "random.explode", "random.bow",
-           "random.bowhit", "random.burp", "random.eat", "random.drink", "mob.attack"}
-# lo que no suena en el motor (de los bichos: montarlos, ordeñar, poner huevos, curar aldeanos, romper
-# puertas)
-FUERA = ("mob.cow.milk", "mob.chicken.plop", "mob.pig.boost", "mob.sheep.shear", "mob.zombie.remedy",
-         "mob.zombie.unfect", "mob.zombie.wood")
+           "random.bowhit", "random.burp", "random.eat", "random.drink", "mob.attack",
+           # usar objetos: los baldes, esquilar, ordeñar, la gallina que pone, la correa, la armadura del caballo
+           "bucket.fill_water", "bucket.empty_water", "bucket.fill_lava", "bucket.empty_lava", "mob.sheep.shear",
+           "mob.cow.milk", "mob.chicken.plop", "leashknot.place", "leashknot.break", "mob.horse.armor",
+           "mob.horse.leather", "mob.pig.boost", "random.pop2", "mob.zombie.remedy", "mob.zombie.unfect"}
+# lo que no suena en el motor (los zombis rompiendo puertas)
+FUERA = ("mob.zombie.wood",)
 # de cada evento, cuántas variantes como mucho y cuánto de cada una (el rugido del dragón, el
 # nacimiento del wither: se cortan con un desvanecido)
 MAX_VARIANTES = 4

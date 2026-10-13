@@ -612,6 +612,7 @@ var Bichos = (function () {
     });
     if (B.explosion) B.explosion(x, y, z, Math.round(poder), jugadoresRef(), quien, fuego);
   }
+  B.explosionEn = explosionEn;
   function jugadoresRef() { return jugadores.map(function (j) { return j.ref; }); }
 
   // ------------------------------------------------------------------------------------------

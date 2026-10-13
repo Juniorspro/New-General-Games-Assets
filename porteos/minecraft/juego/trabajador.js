@@ -448,6 +448,8 @@
             luzPlana(li);
             variante = m;
             if (id === 6) variante = m & 7;
+            // las zanahorias, las papas y la remolacha crecen en 8 pasos con 4 dibujos (como el juego)
+            else if ((id === 141 || id === 142 || id === 244) && TEXCARA[id][0] && TEXCARA[id][0].length === 4) variante = [0, 0, 1, 1, 2, 2, 2, 3][m & 7];
             var cara2 = 0;
             if (forma === F.planta2) { cara2 = (m & 8) ? 1 : 0; variante = m & 7; if (m & 8) variante = lme[li - LA] & 7; }
             rect = tex(id, cara2, variante);
@@ -697,7 +699,7 @@
   function agendar(x, y, z) {
     var b = idEn(x, y, z);
     if (!esLiquido(b)) return;
-    var k = ((x + 33554432) * 67108864 + (z + 33554432)) * 128 + y, cuando = tickLiq + (b <= 9 ? 5 : 30);
+    var k = ((x + 1048576) * 2097152 + (z + 1048576)) * 128 + y, cuando = tickLiq + (b <= 9 ? 5 : 30);
     var e = agenda.get(k);
     if (!e || e.t > cuando) agenda.set(k, { x: x, y: y, z: z, t: cuando });
   }
@@ -775,7 +777,15 @@
     var n = Math.floor((ahora - ultimoLiq) / 50);
     if (n <= 0) return;
     tickLiq += n; ultimoLiq += n * 50;
-    if (!agenda.size) return;
+    // lo que el mundo hace solo (crecer.js): como mucho 4 pasos de una (si el teléfono se trabó, no
+    // se ponen al día todos juntos)
+    if (conAzar) for (var pa = 0; pa < Math.min(n, 4); pa++) Crecer.paso(centro.cx, centro.cz, 4, trozoListo);
+    if (sueltos.length) { postMessage({ t: 'soltar', lista: sueltos }); sueltos = []; }
+    if (estallan.length) { postMessage({ t: 'tnt', lista: estallan }); estallan = []; }
+    if (!agenda.size) {
+      if (cambiosLiq.length) { postMessage({ t: 'bloques', lista: cambiosLiq }); cambiosLiq = []; }
+      return;
+    }
     var toca = [];
     agenda.forEach(function (e, k) { if (e.t <= tickLiq && toca.length < 4000) { toca.push(e); agenda.delete(k); } });
     for (var i = 0; i < toca.length; i++) correr(toca[i].x, toca[i].y, toca[i].z);
@@ -791,6 +801,41 @@
     });
     mallasLiq.clear();
   }
+
+  // ------------------------------------------------------------------------------------------
+  // Lo que crecer.js necesita del mundo: los bloques, la luz (con la del cielo según la hora), poner
+  // (con luz y mallas, como lo que pone el jugador, y avisando a la página), lo que se suelta y la TNT
+  // que se prende con el fuego
+  // ------------------------------------------------------------------------------------------
+  var conAzar = false, restaCielo = 0, lloviendo = false, dificultadMundo = 2, sueltos = [], estallan = [];
+  function trozoListo(cx, cz) { var t = trozo(cx, cz); return !!(t && t.gen && t.luzOk); }
+  function luzCruda(x, y, z) {
+    if (y >= ALTO) return 0xF0;
+    var t = trozo(x >> 4, z >> 4);
+    if (!t || !t.luzOk || y < 0) return 0;
+    return t.luz[(y << 8) | ((z & 15) << 4) | (x & 15)];
+  }
+  Crecer.iniciar({
+    id: idEn, meta: metaEn,
+    luz: function (x, y, z) { var L = luzCruda(x, y, z); return Math.max(L & 15, (L >> 4) - restaCielo); },
+    luzBloque: function (x, y, z) { return luzCruda(x, y, z) & 15; },
+    frena: function (id) { return id > 0 ? FRENA[id] : 0; },
+    solido: function (id) { return id < 0 || (id > 0 && C.SOLIDO[id] === 1); },
+    llueve: function (x, y, z) { return lloviendo && (luzCruda(x, y, z) >> 4) === 15; },
+    dificultad: function () { return dificultadMundo; },
+    poner: function (x, y, z, id, m) {
+      var t = trozo(x >> 4, z >> 4);
+      if (!t || !t.gen || y < 0 || y >= ALTO) return;
+      var i = (y << 8) | ((z & 15) << 4) | (x & 15);
+      if (t.ids[i] === id && t.meta[i] === m) return;
+      pendientes.push({ x: x, y: y, z: z, id: id, m: m, solo: true });
+      // ya en los datos (lo que sigue en este paso lo ve); la luz y las mallas, con los pendientes
+      t.ids[i] = id; t.meta[i] = m; t.cambiado = true;
+      cambiosLiq.push(x, y, z, id, m);
+    },
+    soltar: function (x, y, z, id, m) { sueltos.push(x, y, z, id, m); },
+    explotar: function (x, y, z) { estallan.push(x, y, z); }
+  });
 
   var avisado = false;
   // el bucle de trabajo duerme cuando no hay nada que hacer: antes se volvía a llamar enseguida para
@@ -846,7 +891,7 @@
     }
     // se cortó por tiempo (queda trabajo) o llegó algo mientras tanto: sigue ya; si no, duerme
     if (!sinTrabajo || pendientes.length) programar(0);
-    else if (agenda.size && !pausa) programar(50);
+    else if ((agenda.size || conAzar) && !pausa) programar(50);
   }
 
   // un bloque cambiado: los datos, la luz de los trozos que alcanza y las mallas que toca
@@ -857,6 +902,13 @@
       var cx = Math.floor(p.x / 16), cz = Math.floor(p.z / 16), t = trozo(cx, cz);
       if (!t || !t.gen || p.y < 0 || p.y >= ALTO) continue;
       var lx = p.x - cx * 16, lz = p.z - cz * 16, i = (p.y << 8) | (lz << 4) | lx;
+      // (lo que viene de la página: el fuego que se prende tiene sus pasos; un tronco o una hoja que
+      // se va hace que las hojas de alrededor se fijen si les queda tronco)
+      if (!p.solo) {
+        var antes = t.ids[i];
+        if ((antes === 17 || antes === 162 || antes === 18 || antes === 161) && p.id !== antes) Crecer.revisarHojas(p.x, p.y, p.z);
+        if (p.id === 51) Crecer.agendarFuego(p.x, p.y, p.z);
+      }
       t.ids[i] = p.id; t.meta[i] = p.m;
       t.cambiado = true;
       agendarCerca(p.x, p.y, p.z);
@@ -902,7 +954,27 @@
       prepararTexturas();
       aplicarHojas();
       centro = { cx: d.cx | 0, cz: d.cz | 0, sy: d.sy || 4 };
+      conAzar = !!d.azar;
       planificar();
+      programar(0);
+    } else if (d.t === 'clima') {
+      // la hora (cuánto le resta la noche a la luz del cielo), la lluvia y la dificultad
+      restaCielo = d.resta | 0; lloviendo = !!d.lluvia; dificultadMundo = d.dificultad === undefined ? 2 : d.dificultad;
+    } else if (d.t === 'leer') {
+      // (las pruebas: los bloques que tiene el trabajador)
+      var lr = [];
+      for (var qi = 0; qi + 2 < d.p.length; qi += 3) lr.push(idEn(d.p[qi], d.p[qi + 1], d.p[qi + 2]));
+      postMessage({ t: 'diag', leidos: lr, hojasPend: Crecer.ocupado() });
+    } else if (d.t === 'pruebaAzar') {
+      // (las pruebas: muchos pasos al azar seguidos en un bloque, para no esperar minutos)
+      var antesP = [idEn(d.x, d.y, d.z), metaEn(d.x, d.y, d.z), luzCruda(d.x, d.y + 1, d.z), restaCielo];
+      for (var pz = 0; pz < (d.n || 1); pz++) Crecer.pasoAzar(d.x, d.y, d.z);
+      postMessage({ t: 'diag', azar: antesP, despues: [idEn(d.x, d.y, d.z), metaEn(d.x, d.y, d.z)] });
+      if (cambiosLiq.length) { postMessage({ t: 'bloques', lista: cambiosLiq }); cambiosLiq = []; }
+      programar(0);
+    } else if (d.t === 'arbol') {
+      // el polvo de hueso en un retoño (si no hay lugar, no pasa nada)
+      Crecer.arbol(d.x, d.y, d.z, d.m);
       programar(0);
     } else if (d.t === 'centro') {
       centro = { cx: d.cx, cz: d.cz, sy: d.sy };

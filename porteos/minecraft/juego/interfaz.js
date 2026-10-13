@@ -1018,6 +1018,8 @@ var Interfaz = (function () {
       ctx.clearRect(0, 0, W, H);
       ctx.imageSmoothingEnabled = false;
       I.botones = [];
+      // durmiendo, la pantalla se va oscureciendo
+      if (I.juego.oscuro > 0) { ctx.fillStyle = 'rgba(0,0,0,' + I.juego.oscuro.toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
       Jui.dibujar(ctx);
       sucio = false;
       return;

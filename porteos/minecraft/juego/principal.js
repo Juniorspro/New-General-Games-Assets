@@ -318,6 +318,9 @@
       cuenta: cuenta, bichos: B, red: Red, publico: entrarPublico, pantallas: Pantallas, jui: Jui, comando: function (t) { comando(t); }, inventario: function () { return inv; },
       supervivencia: function () { return sup; }, muerto: function () { return muerto; }, tirados: function () { return tirados; }, hudPan: function () { return hudPan; },
       pegar: function (fx, fy) { return pegar(fx, fy); }, darEfecto: function (id, dur, amp) { return darEfecto(id, dur, amp); },
+      azar: function (x, y, z, n) { trab.postMessage({ t: 'pruebaAzar', x: x, y: y, z: z, n: n }); }, tnts: function () { return tnts; },
+      leerTrabajador: function (p) { trab.postMessage({ t: 'leer', p: p }); },
+      durmiendo: function () { return durmiendo; },
       rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, ms: function () { return msCuadro; },
       diag: null, pedirDiag: function () { if (trab) trab.postMessage({ t: 'diag' }); }, listo: true };
   }
@@ -501,7 +504,7 @@
       Contenedores.cargar(m.local ? m.contenedores : null);
       minando = null;
       ultimoCentro = [Math.floor(J.x / 16), Math.floor(J.z / 16), Math.floor((J.y + 1.62) / 16)];
-      trab.postMessage({ t: 'ini', bloques: datos.bloques, uv: datos.atlas.uv, semilla: m.semilla, dist: opciones.dist, tipo: m.tipo,
+      trab.postMessage({ t: 'ini', azar: !!m.local, bloques: datos.bloques, uv: datos.atlas.uv, semilla: m.semilla, dist: opciones.dist, tipo: m.tipo,
         suave: opciones.suave, hojas: opciones.hojas, cx: ultimoCentro[0], cz: ultimoCentro[1], sy: ultimoCentro[2] });
       J.camara(1, cam);
       jugando = true;
@@ -537,6 +540,8 @@
     else if (d.t === 'trozo') Mundo.recibir(d);
     else if (d.t === 'bloques') Mundo.aplicar(d.lista);
     else if (d.t === 'fuera') { Render.quitar(d.cx, d.cz); Mundo.quitar(d.cx, d.cz); }
+    else if (d.t === 'soltar') { for (var i = 0; i + 4 < d.lista.length; i += 5) soltarMundo(d.lista[i + 3], d.lista[i + 4], d.lista[i], d.lista[i + 1], d.lista[i + 2]); }
+    else if (d.t === 'tnt') { for (var k = 0; k + 2 < d.lista.length; k += 3) prenderTnt(d.lista[k], d.lista[k + 1], d.lista[k + 2], 80); }
   }
 
   // la carga del mundo termina cuando están las mallas de los trozos de alrededor del jugador
@@ -662,6 +667,7 @@
     }
     var antes = sup.vida, real = Supervivencia.danar(sup, dano, causa, Inventario.puntosArmadura(inv));
     if (real <= 0 && sup.vida > 0) return;
+    if (durmiendo) despertar(false);
     // los corazones titilan un segundo mostrando en blanco lo que se perdió (GuiIngame) y la cámara se
     // ladea medio segundo (hurtTime)
     if (sup.vida < antes) {
@@ -796,7 +802,12 @@
   function reaparecer() {
     Supervivencia.reaparecer(sup);
     muerto = false; vida = sup.vida; I.juego.vida = vida; ultimoAtacante = ''; ultimaCausa = ''; caida = 0;
-    J.ubicar(aparicion[0], aparicion[1], aparicion[2]);
+    // en la cama si sigue ahí (si no: "Faltaba tu cama o estaba obstruida")
+    var cama = partida && partida.cama, lugar = null;
+    if (cama && Mundo.bloque(cama[0], cama[1], cama[2]) === 26) lugar = salidaCama(cama[0], cama[1], cama[2]);
+    else if (cama && Mundo.cargado(cama[0], cama[2])) { partida.cama = null; aviso(I.t('tile.bed.notValid', 'Your home bed was missing or obstructed')); }
+    if (lugar) J.ubicar(lugar[0], lugar[1], lugar[2]);
+    else J.ubicar(aparicion[0], aparicion[1], aparicion[2]);
     esperandoSuelo = true;
     Pantallas.vaciar();
     I.ir('juego');
@@ -868,6 +879,7 @@
   function usar(h) {
     var id = h.id, f = C.FORMA[id];
     if (id === 58) { abrirPantalla('mesa'); return true; }
+    if (id === 26) return usarCama(h);
     if (id === 61 || id === 62) { abrirPantalla('horno', { cont: Contenedores.horno(h.x, h.y, h.z) }); return true; }
     if (id === 54 || id === 146 || id === 130) {
       // no se abre con un bloque macizo encima (BlockChest.isBlocked)
@@ -900,11 +912,13 @@
   function poner(fx, fy) {
     if (pegar(fx, fy)) return;
     var it = I.juego.barra[I.juego.elegido];
-    // el nenúfar y el balde vacío apuntan al agua
-    var h = tocarBloque(fx, fy, it && (it.id === 111 || (it.id === 325 && !it.m)));
-    if (!h) return;
+    // el nenúfar, el balde vacío y la botella apuntan al agua
+    var h = tocarBloque(fx, fy, it && (it.id === 111 || it.id === 374 || (it.id === 325 && !it.m)));
+    // lo que se usa sin un bloque (ponerse la armadura)
+    if (!h) { if (it) usarEnElAire(it); return; }
     if (!J.agachado && usar(h)) return;
     if (!it) return;
+    if (usarObjeto(h, it)) return;
     // un huevo: el bicho aparece arriba de la cara tocada
     var bicho = O.bichoDe(it);
     if (bicho) {
@@ -967,6 +981,217 @@
     I.sucio();
   }
 
+  // ------------------------------------------------------------------------------------------
+  // Usar objetos (lo que cada uno hace en Item.onItemUse, como la 1.2): el balde, el encendedor y la
+  // carga de fuego, la azada, el polvo de hueso, la botella, la armadura; y la cama
+  // ------------------------------------------------------------------------------------------
+  // lo que hay en la mano pasa a ser otra cosa (el balde lleno a vacío...); en creativo queda igual
+  function cambiarEnMano(id, m) {
+    if (!supervivencia()) return;
+    var it = inv.barra[I.juego.elegido];
+    if (it && it.n > 1) { it.n--; var c = Inventario.cosa(id, m || 0, 1); if (Inventario.agregar(inv, c) > 0) tirarObjeto(c); }
+    else inv.barra[I.juego.elegido] = Inventario.cosa(id, m || 0, 1);
+    I.sucio();
+  }
+  function desgastarMano(n) {
+    if (!supervivencia()) return;
+    if (Inventario.desgastar(inv, I.juego.elegido, n || 1)) Sonido.tocar('random.break', 0.8, 0.8 + Math.random() * 0.4);
+    I.sucio();
+  }
+  function usarObjeto(h, it) {
+    var id = it.id, d = Items.def[id];
+    if (id === 325) return usarBalde(h, it);
+    if (id === 259 || id === 385) return prender(h, it);
+    if (d && d.herr === 'azada') return arar(h);
+    if (id === 351 && it.m === 15) return abonar(h);
+    if (id === 374) return llenarBotella(h);
+    if (d && d.arm !== undefined) return ponerseArmadura(it);
+    return false;
+  }
+  function usarEnElAire(it) {
+    var d = Items.def[it.id];
+    if (d && d.arm !== undefined) return ponerseArmadura(it);
+    return false;
+  }
+  // el balde vacío levanta una fuente de agua o de lava; el lleno la vuelca al lado de la cara tocada
+  function usarBalde(h, it) {
+    if (aventura()) return true;
+    if (!it.m) {
+      var agua = h.id === 8 || h.id === 9, lava = h.id === 10 || h.id === 11;
+      if (!(agua || lava) || (Mundo.meta(h.x, h.y, h.z) & 15) !== 0) return true;
+      ponerBloque(h.x, h.y, h.z, 0, 0);
+      Sonido.tocar(agua ? 'bucket.fill_water' : 'bucket.fill_lava', 1, 1, h.x + 0.5, h.y + 0.5, h.z + 0.5);
+      cambiarEnMano(325, agua ? 8 : 10);
+      golpe();
+      return true;
+    }
+    if (it.m !== 8 && it.m !== 10) return false;
+    var x = h.x, y = h.y, z = h.z;
+    if (!O.reemplazable(h.id) || h.id === 51) { x += h.nx; y += h.ny; z += h.nz; }
+    var b = Mundo.bloque(x, y, z);
+    if (b < 0 || y < 0 || y >= C.ALTO || !O.reemplazable(b)) return true;
+    ponerBloque(x, y, z, it.m === 8 ? 9 : 11, 0);
+    Sonido.tocar(it.m === 8 ? 'bucket.empty_water' : 'bucket.empty_lava', 1, 1, x + 0.5, y + 0.5, z + 0.5);
+    cambiarEnMano(325, 0);
+    golpe();
+    return true;
+  }
+  // el encendedor (se gasta) y la carga de fuego (se va): prenden fuego al lado o la TNT
+  function prender(h, it) {
+    if (aventura()) return true;
+    if (h.id === 46) {
+      ponerBloque(h.x, h.y, h.z, 0, 0);
+      prenderTnt(h.x, h.y, h.z, 80);
+    } else {
+      var x = h.x + h.nx, y = h.y + h.ny, z = h.z + h.nz;
+      if (Mundo.bloque(x, y, z) !== 0) return true;
+      ponerBloque(x, y, z, 51, 0);
+      Sonido.tocar(it.id === 385 ? 'mob.ghast.fireball' : 'fire.ignite', 1, Math.random() * 0.4 + 0.8, x + 0.5, y + 0.5, z + 0.5);
+    }
+    if (it.id === 259) desgastarMano(1); else gastarElegido();
+    golpe();
+    return true;
+  }
+  // la azada: el pasto, la tierra y el camino se vuelven tierra de cultivo (la tierra gruesa, tierra)
+  function arar(h) {
+    if (aventura() || h.ny < 0 || Mundo.bloque(h.x, h.y + 1, h.z) !== 0) return false;
+    var m = Mundo.meta(h.x, h.y, h.z), nuevo = null;
+    if (h.id === 2 || h.id === 198 || (h.id === 3 && m === 0)) nuevo = [60, 0];
+    else if (h.id === 3 && m === 1) nuevo = [3, 0];
+    if (!nuevo) return false;
+    ponerBloque(h.x, h.y, h.z, nuevo[0], nuevo[1]);
+    Sonido.tocar('step.gravel', 1, 0.8, h.x + 0.5, h.y + 0.5, h.z + 0.5);
+    desgastarMano(1);
+    golpe();
+    return true;
+  }
+  // el polvo de hueso (ItemDye.applyBonemeal): los cultivos y los tallos de 2 a 5 pasos, el retoño
+  // 45 % de crecer, el pasto echa pasto alto y flores alrededor, el cacao madura, el pasto alto se
+  // hace doble y las flores dobles se duplican
+  function abonar(h) {
+    var id = h.id, m = Mundo.meta(h.x, h.y, h.z), hizo = false;
+    function entre(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+    if ((id === 59 || id === 141 || id === 142 || id === 244 || id === 104 || id === 105) && (m & 7) < 7) {
+      ponerBloque(h.x, h.y, h.z, id, Math.min(7, (m & 7) + entre(2, 5))); hizo = true;
+    } else if (id === 6) {
+      if (Math.random() < 0.45) {
+        if (!(m & 8)) ponerBloque(h.x, h.y, h.z, 6, m | 8);
+        else if (trab && partida && partida.local) trab.postMessage({ t: 'arbol', x: h.x, y: h.y, z: h.z, m: m });
+      }
+      hizo = true;
+    } else if (id === 127 && (m >> 2) < 2) { ponerBloque(h.x, h.y, h.z, 127, m + 4); hizo = true; }
+    else if (id === 31 && (m === 1 || m === 2) && Mundo.bloque(h.x, h.y + 1, h.z) === 0) {
+      ponerBloque(h.x, h.y, h.z, 175, m === 1 ? 2 : 3); ponerBloque(h.x, h.y + 1, h.z, 175, 8); hizo = true;
+    } else if (id === 175) {
+      var abajo = (m & 8) ? Mundo.meta(h.x, h.y - 1, h.z) & 7 : m & 7;
+      if (abajo !== 2 && abajo !== 3) { Tirados.deBloque(Inventario.cosa(175, abajo, 1), h.x, h.y, h.z); hizo = true; }
+    } else if (id === 2) {
+      // 128 intentos de una caminata al azar sobre el pasto (BlockGrass.grow)
+      for (var i = 0; i < 128; i++) {
+        var x = h.x, y = h.y + 1, z = h.z, j = 0;
+        for (;;) {
+          if (j >= i / 16) {
+            if (Mundo.bloque(x, y, z) === 0 && Mundo.bloque(x, y - 1, z) === 2) {
+              if (Math.random() < 1 / 8) ponerBloque(x, y, z, Math.random() < 0.5 ? 37 : 38, 0);
+              else ponerBloque(x, y, z, 31, 1);
+            }
+            break;
+          }
+          x += entre(-1, 1); y += Math.floor(entre(-1, 1) * entre(0, 2) / 2); z += entre(-1, 1);
+          var ab = Mundo.bloque(x, y - 1, z), aqui = Mundo.bloque(x, y, z);
+          if (ab !== 2 || (aqui > 0 && C.SOLIDO[aqui] && C.OPACO[aqui])) break;
+          j++;
+        }
+      }
+      hizo = true;
+    }
+    if (!hizo) return false;
+    if (opciones.particulas) Render.chispas(h.x + 0.5, h.y + 0.5, h.z + 0.5, [0.4, 1, 0.4], 15);
+    gastarElegido();
+    golpe();
+    return true;
+  }
+  // la botella vacía se llena tocando agua
+  function llenarBotella(h) {
+    if (h.id !== 8 && h.id !== 9) return false;
+    Sonido.tocar('bucket.fill_water', 1, 1, h.x + 0.5, h.y + 0.5, h.z + 0.5);
+    cambiarEnMano(373, 0);
+    golpe();
+    return true;
+  }
+  // la armadura en la mano se pone (si ese lugar está vacío)
+  function ponerseArmadura(it) {
+    var d = Items.def[it.id];
+    if (!d || d.arm === undefined || inv.armadura[d.arm]) return false;
+    inv.armadura[d.arm] = Inventario.cosa(it.id, it.m, 1, it.d || 0);
+    if (supervivencia()) Inventario.gastar(inv, I.juego.elegido, 1);
+    else inv.barra[I.juego.elegido] = it;
+    Sonido.tocar('step.cloth', 1, 1);
+    golpe();
+    I.sucio();
+    return true;
+  }
+  // la otra mitad de la cama (la cabecera está hacia donde mira el meta)
+  function otraMitadCama(x, y, z, m) { var d = O.DIR_CAMA[m & 3], s = (m & 8) ? -1 : 1; return [x + d[0] * s, y, z + d[1] * s]; }
+
+  // ------------------------------------------------------------------------------------------
+  // Dormir (EntityPlayer.trySleep): sólo de noche (o con tormenta), cerca, sin monstruos a 8 bloques;
+  // queda como punto de aparición. A los 100 pasos dormido se hace de día y para la lluvia
+  // ------------------------------------------------------------------------------------------
+  var durmiendo = null;
+  function aviso(texto) { if (hudPan && hudPan.aviso) hudPan.aviso(texto); else chat(texto); }
+  function usarCama(h) {
+    var m = Mundo.meta(h.x, h.y, h.z), x = h.x, z = h.z;
+    // la cabecera
+    if (!(m & 8)) { var o = otraMitadCama(h.x, h.y, h.z, m); if (Mundo.bloque(o[0], o[1], o[2]) === 26) { x = o[0]; z = o[2]; } }
+    var t = ((Math.floor(partida.tiempo) % 24000) + 24000) % 24000, tormenta = partida.clima === 'thunder';
+    if (!partida.local || (!tormenta && (t < 12541 || t > 23458))) { aviso(I.t('tile.bed.noSleep', 'You can only sleep at night')); return true; }
+    if (Math.abs(J.x - (x + 0.5)) > 3 || Math.abs(J.y - h.y) > 2 || Math.abs(J.z - (z + 0.5)) > 3) { aviso(I.t('tile.bed.tooFar', 'Bed is too far away')); return true; }
+    var hay = B.todos().some(function (e) {
+      var T = B.TIPOS[e.tipo];
+      return T && T.hostil && !(e.muerte > 0) && Math.abs(e.x - (x + 0.5)) <= 8 && Math.abs(e.y - h.y) <= 5 && Math.abs(e.z - (z + 0.5)) <= 8;
+    });
+    if (hay) { aviso(I.t('tile.bed.notSafe', 'You may not rest now, there are monsters nearby')); return true; }
+    durmiendo = { x: x, y: h.y, z: z, dir: m & 3, t: 0 };
+    // la cama es el punto de aparición de acá en más
+    partida.cama = [x, h.y, z];
+    J.ubicar(x + 0.5, h.y + 0.5625, z + 0.5);
+    J.yaw = Math.atan2(-O.DIR_CAMA[m & 3][0], O.DIR_CAMA[m & 3][1]); J.pitch = -0.35;
+    abrirPantalla('cama');
+    return true;
+  }
+  // levantarse: al lado de la cama (BlockBed.getSafeExitLocation)
+  function despertar(dia) {
+    if (!durmiendo) return;
+    var c = durmiendo;
+    durmiendo = null; I.juego.oscuro = 0;
+    if (dia) {
+      partida.tiempo = Math.floor(partida.tiempo / 24000) * 24000 + 24000;
+      partida.clima = 'clear';
+    }
+    var lugar = salidaCama(c.x, c.y, c.z) || [c.x + 0.5, c.y + 0.6, c.z + 0.5];
+    J.ubicar(lugar[0], lugar[1], lugar[2]);
+    if (I.pantalla === 'jui' && Pantallas.nombre() === 'cama') { Pantallas.vaciar(); I.ir('juego'); }
+    I.sucio();
+  }
+  function salidaCama(x, y, z) {
+    for (var r = 1; r <= 2; r++) for (var dx = -r; dx <= r; dx++) for (var dz = -r; dz <= r; dz++) {
+      var b0 = Mundo.bloque(x + dx, y - 1, z + dz), b1 = Mundo.bloque(x + dx, y, z + dz), b2 = Mundo.bloque(x + dx, y + 1, z + dz);
+      if (b0 > 0 && C.SOLIDO[b0] && !(b1 > 0 && C.SOLIDO[b1]) && !(b2 > 0 && C.SOLIDO[b2]) && b1 !== 26) return [x + dx + 0.5, y, z + dz + 0.5];
+    }
+    return null;
+  }
+  function pasoDormir() {
+    if (!durmiendo) return;
+    var c = durmiendo;
+    J.ubicar(c.x + 0.5, c.y + 0.5625, c.z + 0.5);
+    c.t++;
+    // la pantalla se oscurece de a poco (GuiIngame: hasta 220/255 a los 100 pasos)
+    I.juego.oscuro = Math.min(1, c.t / 100) * 0.86;
+    if (Mundo.bloque(c.x, c.y, c.z) !== 26) { despertar(false); return; }
+    if (c.t >= 100) despertar(true);
+  }
+
   // el bloque que pone un objeto ([id, meta]) o null: las semillas (y la papa y la zanahoria) su
   // cultivo, según items.json; el balde de agua o de lava, el líquido; las puertas, la cama, la
   // torta... el suyo
@@ -991,6 +1216,11 @@
     s.cosas.forEach(function (c) { Tirados.deBloque({ id: c[0], m: c[1], n: c[2] }, x, y, z); });
     if (s.xp > 0) Tirados.orbes(x + 0.5, y + 0.5, z + 0.5, s.xp);
   }
+  function soltarMundo(id, m, x, y, z) {
+    if (!partida || !partida.local || partida.soltarBloques === false) return;
+    var s2 = Minar.suelta(id, m, null);
+    s2.cosas.forEach(function (c) { Tirados.deBloque({ id: c[0], m: c[1], n: c[2] }, x, y, z); });
+  }
   function romper(h, item) {
     var id = h.id, m = Mundo.meta(h.x, h.y, h.z);
     ponerBloque(h.x, h.y, h.z, 0, 0);
@@ -1009,6 +1239,13 @@
       if (Mundo.bloque(h.x, otro, h.z) === id) {
         if (m & 8) soltarBloque(id, Mundo.meta(h.x, otro, h.z), h.x, otro, h.z, item);
         ponerBloque(h.x, otro, h.z, 0, 0);
+      }
+    }
+    if (id === 26) {
+      var oc = otraMitadCama(h.x, h.y, h.z, m);
+      if (Mundo.bloque(oc[0], oc[1], oc[2]) === 26) {
+        if (m & 8) soltarBloque(26, Mundo.meta(oc[0], oc[1], oc[2]), oc[0], oc[1], oc[2], item);
+        ponerBloque(oc[0], oc[1], oc[2], 0, 0);
       }
     }
     // lo que estaba apoyado arriba (plantas, antorchas paradas, nieve fina, puertas) se cae
@@ -1217,9 +1454,9 @@
       if (ea && ea.dur > 0 && sup.vida < antes && !muerto && I.juego.conVida) darEfecto(Efectos.id(ea.nombre), ea.dur * 20, 0);
     }
   };
-  B.explosion = function (x, y, z, r, jug, quien) {
+  B.explosion = function (x, y, z, r, jug, quien, fuego) {
     Sonido.tocar('random.explode', 1, 0.9 + Math.random() * 0.2, x, y, z);
-    var nombreQ = quien && quien.tipo ? I.t('entity.' + quien.tipo + '.name', quien.tipo) : I.t('entity.creeper.name', 'Creeper');
+    var nombreQ = quien && quien.tipo ? I.t('entity.' + quien.tipo + '.name', quien.tipo) : quien && quien.tnt ? I.t('tile.tnt.name', 'TNT') : I.t('entity.creeper.name', 'Creeper');
     for (var k = 0; k < jug.length; k++) {
       var j = jug[k], d = Math.sqrt((j.x - x) * (j.x - x) + (j.y - y) * (j.y - y) + (j.z - z) * (j.z - z)), imp = 1 - d / (r * 2);
       if (imp > 0) {
@@ -1228,18 +1465,85 @@
         else recibirDano(dano, quien ? nombreQ : '', [dx, dz], 'explosion');
       }
     }
-    // el pozo de la explosión (como el juego, menos la roca madre y la obsidiana); en un servidor,
-    // todos los bloques en un solo mensaje
-    var rotos = [];
-    for (var bx = -r; bx <= r; bx++) for (var by = -r; by <= r; by++) for (var bz = -r; bz <= r; bz++) {
-      if (bx * bx + by * by + bz * bz > r * r + 0.5) continue;
-      var X = Math.floor(x) + bx, Y = Math.floor(y) + by, Z = Math.floor(z) + bz, b = Mundo.bloque(X, Y, Z);
-      if (b <= 0 || b === 7 || b === 49 || b === 8 || b === 9 || b === 10 || b === 11) continue;
-      if (Mundo.poner(X, Y, Z, 0, 0)) rotos.push(X, Y, Z, 0, 0);
-      if (opciones.particulas && Math.random() < 0.3) Render.romper(X, Y, Z, b, 0);
+    // el pozo (Explosion.doExplosionA): 16×16×16 rayos desde el centro, cada uno con fuerza de
+    // poder × (0,7 a 1,3) que se gasta de a 0,3 bloques con la resistencia de lo que cruza; lo que
+    // rompe suelta lo suyo 1 de cada "poder" veces y la TNT de alrededor se prende con mecha corta.
+    // En un servidor, todos los bloques en un solo mensaje
+    var rotos = [], vistos = new Set(), tntCerca = [];
+    for (var i = 0; i < 16; i++) for (var j = 0; j < 16; j++) for (var k = 0; k < 16; k++) {
+      if (i !== 0 && i !== 15 && j !== 0 && j !== 15 && k !== 0 && k !== 15) continue;
+      var dx2 = i / 15 * 2 - 1, dy2 = j / 15 * 2 - 1, dz2 = k / 15 * 2 - 1, l = Math.sqrt(dx2 * dx2 + dy2 * dy2 + dz2 * dz2);
+      dx2 /= l; dy2 /= l; dz2 /= l;
+      var f = r * (0.7 + Math.random() * 0.6), px = x, py = y, pz = z;
+      for (; f > 0; f -= 0.22500001) {
+        var X = Math.floor(px), Y = Math.floor(py), Z = Math.floor(pz), b = Mundo.bloque(X, Y, Z);
+        if (b < 0) break;
+        if (b > 0) f -= (resistencia(b) + 0.3) * 0.3;
+        if (f > 0 && b > 0 && Y >= 0 && Y < C.ALTO) {
+          var kk = X + ',' + Y + ',' + Z;
+          if (!vistos.has(kk)) { vistos.add(kk); rotos.push(X, Y, Z, b, Mundo.meta(X, Y, Z)); }
+        }
+        px += dx2 * 0.3; py += dy2 * 0.3; pz += dz2 * 0.3;
+      }
     }
-    if (partida && !partida.local) Red.bloques(rotos);
+    var cambios = [];
+    for (var q = 0; q < rotos.length; q += 5) {
+      var bX = rotos[q], bY = rotos[q + 1], bZ = rotos[q + 2], bb = rotos[q + 3], bm = rotos[q + 4];
+      if (bb === 8 || bb === 9 || bb === 10 || bb === 11) continue;
+      if (bb === 46 && partida && partida.local) { tntCerca.push([bX, bY, bZ]); Mundo.poner(bX, bY, bZ, 0, 0); cambios.push(bX, bY, bZ, 0, 0); continue; }
+      if (Mundo.poner(bX, bY, bZ, 0, 0)) cambios.push(bX, bY, bZ, 0, 0);
+      if (partida && partida.local) {
+        if (Math.random() < 1 / r && supervivencia()) soltarBloque(bb, bm, bX, bY, bZ, null);
+        Contenedores.quitar(bX, bY, bZ).forEach(function (c) { Tirados.deBloque(c, bX, bY, bZ); });
+      }
+      if (opciones.particulas && Math.random() < 0.3) Render.romper(bX, bY, bZ, bb, 0);
+    }
+    // la TNT alcanzada se prende con una mecha de 10 a 30 pasos
+    tntCerca.forEach(function (t) { prenderTnt(t[0], t[1], t[2], 10 + Math.floor(Math.random() * 20), true); });
+    // la bola de fuego del ghast: fuego en un tercio de lo que quedó vacío sobre algo firme
+    if (fuego && partida && partida.local) {
+      for (q = 0; q < rotos.length; q += 5) {
+        var fx = rotos[q], fy = rotos[q + 1], fz = rotos[q + 2], deb = Mundo.bloque(fx, fy - 1, fz);
+        if (Mundo.bloque(fx, fy, fz) === 0 && deb > 0 && C.SOLIDO[deb] && C.OPACO[deb] && Math.random() < 1 / 3) { Mundo.poner(fx, fy, fz, 51, 0); cambios.push(fx, fy, fz, 51, 0); }
+      }
+    }
+    if (partida && !partida.local) Red.bloques(cambios);
   };
+  // la resistencia a las explosiones (Block.getExplosionResistance: la de setResistance × 3 / 5, o la
+  // dureza si es mayor): la piedra y los ladrillos 6, la obsidiana 1200, la roca madre no se rompe
+  var RESISTENCIA = { 1: 6, 4: 6, 7: 3600000, 14: 3, 15: 3, 16: 3, 21: 3, 22: 3, 24: 0.8, 41: 6, 42: 6, 43: 6, 44: 6, 45: 6,
+    48: 6, 49: 1200, 56: 3, 57: 6, 61: 3.5, 62: 3.5, 67: 6, 73: 3, 74: 3, 87: 0.4, 89: 0.3, 98: 6, 101: 6, 108: 6, 109: 6,
+    112: 6, 113: 6, 114: 6, 116: 1200, 120: 3600000, 121: 9, 129: 3, 130: 600, 133: 6, 138: 3, 139: 6, 145: 1200, 152: 6,
+    153: 3, 155: 0.8, 156: 0.8, 168: 6, 172: 4.2, 159: 4.2, 179: 0.8, 201: 6, 206: 9, 8: 100, 9: 100, 10: 100, 11: 100,
+    5: 3, 53: 3, 85: 3, 134: 3, 135: 3, 136: 3, 157: 3, 158: 3, 163: 3, 164: 3, 17: 2, 162: 2, 54: 2.5, 58: 2.5, 47: 1.5, 46: 0 };
+  function resistencia(b) { return RESISTENCIA[b] !== undefined ? RESISTENCIA[b] : Math.max(0, Minar.dureza ? Minar.dureza(b) : 1); }
+
+  // ------------------------------------------------------------------------------------------
+  // La TNT prendida (EntityTNTPrimed): salta un poco para un lado, cae, y a los 80 pasos (4 s; la
+  // alcanzada por otra explosión, 10 a 30) explota con poder 4
+  // ------------------------------------------------------------------------------------------
+  var tnts = [];
+  function prenderTnt(x, y, z, mecha, sinSonido) {
+    if (!partida || !partida.local) return;
+    var a = Math.random() * Math.PI * 2;
+    tnts.push({ x: x + 0.5, y: y, z: z + 0.5, px: x + 0.5, py: y, pz: z + 0.5, vx: -Math.sin(a) * 0.02, vy: 0.2, vz: -Math.cos(a) * 0.02,
+      mecha: mecha || 80, enPiso: false });
+    if (!sinSonido) Sonido.tocar('random.fuse', 1, 1, x + 0.5, y + 0.5, z + 0.5);
+  }
+  function pasoTnt() {
+    for (var i = tnts.length - 1; i >= 0; i--) {
+      var t = tnts[i];
+      t.px = t.x; t.py = t.y; t.pz = t.z;
+      t.vy -= 0.04;
+      Tirados.mover(t, 0.49, 0.98);
+      t.vx *= 0.98; t.vy *= 0.98; t.vz *= 0.98;
+      if (t.enPiso) { t.vx *= 0.7; t.vz *= 0.7; t.vy *= -0.5; }
+      if (--t.mecha <= 0) {
+        tnts.splice(i, 1);
+        B.explosionEn(t.x, t.y + 0.49, t.z, 4, false, { tnt: true });
+      }
+    }
+  }
   var pedidoLuces = 0, esperaLuces = null;
   function pedirLuces() {
     if (!trab || esperaLuces) return;
@@ -1289,7 +1593,17 @@
     if (J.enAgua || J.volando || Mundo.bloque(Math.floor(J.x), Math.floor(J.y), Math.floor(J.z)) === 65 ||
       Mundo.bloque(Math.floor(J.x), Math.floor(J.y), Math.floor(J.z)) === 106) caida = 0;
     // (el salto mejorado achica la caída: un bloque por nivel)
-    if (J.enPiso && !antesPiso) { var cd = caida - 3 - Efectos.nivel(sup.efectos, 8); if (cd > 0.2) recibirDano(Math.ceil(cd), '', null, 'fall'); caida = 0; }
+    if (J.enPiso && !antesPiso) {
+      var fx0 = Math.floor(J.x), fy0 = Math.floor(J.y - 0.2), fz0 = Math.floor(J.z);
+      if (Mundo.bloque(fx0, fy0, fz0) === 60 && caida > 0.5 && Math.random() < caida - 0.5 && !aventura()) {
+        var arriba = Mundo.bloque(fx0, fy0 + 1, fz0);
+        if (arriba > 0 && O.necesitaSuelo(arriba)) { soltarBloque(arriba, Mundo.meta(fx0, fy0 + 1, fz0), fx0, fy0 + 1, fz0, null); ponerBloque(fx0, fy0 + 1, fz0, 0, 0); }
+        ponerBloque(fx0, fy0, fz0, 3, 0);
+      }
+      var cd = caida - 3 - Efectos.nivel(sup.efectos, 8);
+      if (cd > 0.2) recibirDano(Math.ceil(cd), '', null, 'fall');
+      caida = 0;
+    }
     var X = Math.floor(J.x), Z = Math.floor(J.z), bp = Mundo.bloque(X, Math.floor(J.y + 0.2), Z), bc = Mundo.bloque(X, Math.floor(J.y + 1.62), Z);
     var bm = Mundo.bloque(X, Math.floor(J.y + 0.9), Z);
     var danos = Supervivencia.paso(sup, { tick: pasosLuz, cabezaEnAgua: bc === 8 || bc === 9,
@@ -1365,6 +1679,17 @@
     B.paso(jugs, luzDelDia());
     // lo tirado en el piso y los orbes (se levantan al pasar)
     Tirados.paso({ x: J.x, y: J.y, z: J.z, vivo: !muerto }, ganchosTirados);
+    if (tnts.length) pasoTnt();
+    pasoDormir();
+    // al trabajador: cuánto le resta la noche a la luz del cielo (World.calculateSkylightSubtracted),
+    // la lluvia y la dificultad (para crecer y para el fuego), una vez por segundo
+    if (trab && partida && partida.local && pasosLuz % 20 === 0) {
+      var ang = Render.anguloSol(((partida.tiempo % 24000) + 24000) % 24000), f1 = 1 - (Math.cos(ang * Math.PI * 2) * 2 + 0.5);
+      f1 = 1 - Math.max(0, Math.min(1, f1));
+      f1 *= 1 - (mundo.lluvia || 0) * 5 / 16;
+      trab.postMessage({ t: 'clima', resta: Math.floor((1 - f1) * 11), lluvia: (mundo.lluvia || 0) > 0.2 && partida.clima !== 'clear',
+        dificultad: Math.max(0, DIFICULTADES.indexOf(B.dificultad)) });
+    }
     // los hornos cocinan solos (y se prenden y se apagan)
     Contenedores.paso(cambiarHorno);
     if (pasosLuz % 5 === 2) pedirLuces();
@@ -1518,7 +1843,7 @@
     mundo.temperatura = tb === undefined ? 0.8 : tb;
     // lo que se dibuja además del mundo: los bichos y los otros jugadores (con su nombre arriba)
     var ents = B.paraDibujar(alfa), nombres = [];
-    mundo.tirados = Tirados.lista; mundo.alfa = alfa;
+    mundo.tirados = Tirados.lista; mundo.alfa = alfa; mundo.tnts = tnts;
     if (partida && !partida.local) {
       var tam = I.tam();
       Red.remotos.forEach(function (j) {
@@ -2013,6 +2338,8 @@
     vecesReceta: function (e) { return vecesEntrada(inv, e); },
     ponerReceta: function (e, tam, muchas) { return ponerReceta(inv, e, tam, muchas); },
     tirarObjeto: function (c) { tirarObjeto(c); },
+    despertar: function () { despertar(false); },
+    abrirChat: function () { if (I.acciones.abrirChat) { I.ir('juego'); I.acciones.abrirChat(); } },
     // el HUD: la vida, la comida, el aire y la experiencia (en creativo no se muestran)
     estadoJugador: function () {
       var pt = I.juego.parpadeoTick || 0;

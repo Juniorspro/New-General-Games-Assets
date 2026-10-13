@@ -215,6 +215,8 @@ var Tirados = (function () {
     });
   };
   // cuántas copias se dibujan según cuántas hay (RenderEntityItem: 1, 2, 3, 4 o 5)
+  // (la TNT prendida usa la misma física: una caja de 0,98)
+  T.mover = mover;
   T.copias = function (n) { return n > 48 ? 5 : n > 32 ? 4 : n > 16 ? 3 : n > 1 ? 2 : 1; };
   return T;
 })();

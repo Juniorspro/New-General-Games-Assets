@@ -382,92 +382,98 @@ var Gen = (function () {
       for (var dz = -1; dz <= 1; dz++) {
         var lista = this.arbolesDe(cx + dx, cz + dz);
         for (var a = 0; a < lista.length; a++) {
-          var t = lista[a], az = new C.Azar(t.s), x = t.x, y = t.y, z = t.z, h, i, j, k, r;
-          if (t.tipo === 'roble' || t.tipo === 'abedul' || t.tipo === 'pantano') {
-            var mt = t.tipo === 'abedul' ? 2 : 0;
-            h = (t.tipo === 'abedul' ? 5 : 4) + az.ent(3);
-            for (k = y + h - 3; k <= y + h; k++) {
-              r = k >= y + h - 1 ? 1 : 2;
-              if (t.tipo === 'pantano') r += 1;
-              for (i = -r; i <= r; i++) for (j = -r; j <= r; j++) {
-                if (Math.abs(i) === r && Math.abs(j) === r && (k === y + h || az.sig() < 0.5)) continue;
-                hojas(x + i, k, z + j, mt);
-              }
-            }
-            for (k = 0; k < h; k++) poner(x, y + k, z, B.tronco, mt);
-            poner(x, y - 1, z, B.tierra, 0);
-            if (t.tipo === 'pantano') {
-              for (i = 0; i < 6; i++) {
-                var vx = x + az.ent(7) - 3, vz = z + az.ent(7) - 3;
-                for (k = 0; k < 3; k++) poner(vx, y + h - 3 - k, vz, B.enredadera, 1 << az.ent(4), true);
-              }
-            }
-          } else if (t.tipo === 'abeto') {
-            h = 6 + az.ent(4);
-            var radio = 0, maxr = 2 + az.ent(2);
-            for (k = y + h; k >= y + 2; k--) {
-              for (i = -radio; i <= radio; i++) for (j = -radio; j <= radio; j++) {
-                if (radio > 0 && Math.abs(i) === radio && Math.abs(j) === radio) continue;
-                hojas(x + i, k, z + j, 1);
-              }
-              radio = radio >= maxr || (radio > 0 && az.sig() < 0.35) ? (radio > 1 ? 0 : radio + 1) : radio + 1;
-              if (radio > maxr) radio = 1;
-            }
-            hojas(x, y + h + 1, z, 1);
-            for (k = 0; k < h; k++) poner(x, y + k, z, B.tronco, 1);
-          } else if (t.tipo === 'jungla') {
-            h = 8 + az.ent(8);
-            for (k = y + h - 3; k <= y + h + 1; k++) {
-              r = k >= y + h ? 2 : 3;
-              for (i = -r; i <= r; i++) for (j = -r; j <= r; j++) {
-                if (i * i + j * j > r * r + 1) continue;
-                hojas(x + i, k, z + j, 3);
-              }
-            }
-            for (k = 0; k < h; k++) {
-              poner(x, y + k, z, B.tronco, 3);
-              if (az.sig() < 0.3) poner(x + 1, y + k, z, B.enredadera, 8, true);
-              if (az.sig() < 0.3) poner(x - 1, y + k, z, B.enredadera, 2, true);
-            }
-          } else if (t.tipo === 'arbusto') {
-            poner(x, y, z, B.tronco, 3);
-            for (k = y; k <= y + 2; k++) {
-              r = 2 - (k - y);
-              for (i = -r; i <= r; i++) for (j = -r; j <= r; j++) {
-                if (Math.abs(i) === r && Math.abs(j) === r && az.sig() < 0.5) continue;
-                hojas(x + i, k, z + j, 0);
-              }
-            }
-          } else if (t.tipo === 'acacia') {
-            h = 5 + az.ent(3);
-            var dir = az.ent(4), ddx = [1, -1, 0, 0][dir], ddz = [0, 0, 1, -1][dir], bx = x, bz = z;
-            for (k = 0; k < h; k++) {
-              if (k >= h - 2) { bx += ddx; bz += ddz; }
-              poner(bx, y + k, bz, B.tronco2, 0);
-            }
-            for (i = -3; i <= 3; i++) for (j = -3; j <= 3; j++) {
-              if (Math.abs(i) + Math.abs(j) > 4) continue;
-              hojas(bx + i, y + h - 1, bz + j, 0, B.hojas2);
-              if (Math.abs(i) + Math.abs(j) <= 2) hojas(bx + i, y + h, bz + j, 0, B.hojas2);
-            }
-          } else if (t.tipo === 'oscuro') {
-            h = 6 + az.ent(3);
-            for (k = y + h - 2; k <= y + h + 1; k++) {
-              r = k === y + h + 1 ? 2 : 3;
-              for (i = -r; i <= r + 1; i++) for (j = -r; j <= r + 1; j++) {
-                if ((i === -r || i === r + 1) && (j === -r || j === r + 1)) continue;
-                hojas(x + i, k, z + j, 1, B.hojas2);
-              }
-            }
-            for (k = 0; k < h; k++) {
-              poner(x, y + k, z, B.tronco2, 1); poner(x + 1, y + k, z, B.tronco2, 1);
-              poner(x, y + k, z + 1, B.tronco2, 1); poner(x + 1, y + k, z + 1, B.tronco2, 1);
-            }
-          }
+          trazarArbol(lista[a], poner, hojas);
         }
       }
     }
   };
+  // un árbol ({ x, y, z, tipo, s }: la base del tronco, el tipo y su azar) con poner(x, y, z, id, m,
+  // soloAire) y hojas(x, y, z, m, id): lo usan la generación y los retoños que crecen
+  function trazarArbol(t, poner, hojas) {
+    var az = new C.Azar(t.s), x = t.x, y = t.y, z = t.z, h, i, j, k, r;
+    if (t.tipo === 'roble' || t.tipo === 'abedul' || t.tipo === 'pantano') {
+      var mt = t.tipo === 'abedul' ? 2 : 0;
+      h = (t.tipo === 'abedul' ? 5 : 4) + az.ent(3);
+      for (k = y + h - 3; k <= y + h; k++) {
+        r = k >= y + h - 1 ? 1 : 2;
+        if (t.tipo === 'pantano') r += 1;
+        for (i = -r; i <= r; i++) for (j = -r; j <= r; j++) {
+          if (Math.abs(i) === r && Math.abs(j) === r && (k === y + h || az.sig() < 0.5)) continue;
+          hojas(x + i, k, z + j, mt);
+        }
+      }
+      for (k = 0; k < h; k++) poner(x, y + k, z, B.tronco, mt);
+      poner(x, y - 1, z, B.tierra, 0);
+      if (t.tipo === 'pantano') {
+        for (i = 0; i < 6; i++) {
+          var vx = x + az.ent(7) - 3, vz = z + az.ent(7) - 3;
+          for (k = 0; k < 3; k++) poner(vx, y + h - 3 - k, vz, B.enredadera, 1 << az.ent(4), true);
+        }
+      }
+    } else if (t.tipo === 'abeto') {
+      h = 6 + az.ent(4);
+      var radio = 0, maxr = 2 + az.ent(2);
+      for (k = y + h; k >= y + 2; k--) {
+        for (i = -radio; i <= radio; i++) for (j = -radio; j <= radio; j++) {
+          if (radio > 0 && Math.abs(i) === radio && Math.abs(j) === radio) continue;
+          hojas(x + i, k, z + j, 1);
+        }
+        radio = radio >= maxr || (radio > 0 && az.sig() < 0.35) ? (radio > 1 ? 0 : radio + 1) : radio + 1;
+        if (radio > maxr) radio = 1;
+      }
+      hojas(x, y + h + 1, z, 1);
+      for (k = 0; k < h; k++) poner(x, y + k, z, B.tronco, 1);
+    } else if (t.tipo === 'jungla') {
+      h = 8 + az.ent(8);
+      for (k = y + h - 3; k <= y + h + 1; k++) {
+        r = k >= y + h ? 2 : 3;
+        for (i = -r; i <= r; i++) for (j = -r; j <= r; j++) {
+          if (i * i + j * j > r * r + 1) continue;
+          hojas(x + i, k, z + j, 3);
+        }
+      }
+      for (k = 0; k < h; k++) {
+        poner(x, y + k, z, B.tronco, 3);
+        if (az.sig() < 0.3) poner(x + 1, y + k, z, B.enredadera, 8, true);
+        if (az.sig() < 0.3) poner(x - 1, y + k, z, B.enredadera, 2, true);
+      }
+    } else if (t.tipo === 'arbusto') {
+      poner(x, y, z, B.tronco, 3);
+      for (k = y; k <= y + 2; k++) {
+        r = 2 - (k - y);
+        for (i = -r; i <= r; i++) for (j = -r; j <= r; j++) {
+          if (Math.abs(i) === r && Math.abs(j) === r && az.sig() < 0.5) continue;
+          hojas(x + i, k, z + j, 0);
+        }
+      }
+    } else if (t.tipo === 'acacia') {
+      h = 5 + az.ent(3);
+      var dir = az.ent(4), ddx = [1, -1, 0, 0][dir], ddz = [0, 0, 1, -1][dir], bx = x, bz = z;
+      for (k = 0; k < h; k++) {
+        if (k >= h - 2) { bx += ddx; bz += ddz; }
+        poner(bx, y + k, bz, B.tronco2, 0);
+      }
+      for (i = -3; i <= 3; i++) for (j = -3; j <= 3; j++) {
+        if (Math.abs(i) + Math.abs(j) > 4) continue;
+        hojas(bx + i, y + h - 1, bz + j, 0, B.hojas2);
+        if (Math.abs(i) + Math.abs(j) <= 2) hojas(bx + i, y + h, bz + j, 0, B.hojas2);
+      }
+    } else if (t.tipo === 'oscuro') {
+      h = 6 + az.ent(3);
+      for (k = y + h - 2; k <= y + h + 1; k++) {
+        r = k === y + h + 1 ? 2 : 3;
+        for (i = -r; i <= r + 1; i++) for (j = -r; j <= r + 1; j++) {
+          if ((i === -r || i === r + 1) && (j === -r || j === r + 1)) continue;
+          hojas(x + i, k, z + j, 1, B.hojas2);
+        }
+      }
+      for (k = 0; k < h; k++) {
+        poner(x, y + k, z, B.tronco2, 1); poner(x + 1, y + k, z, B.tronco2, 1);
+        poner(x, y + k, z + 1, B.tronco2, 1); poner(x + 1, y + k, z + 1, B.tronco2, 1);
+      }
+    }
+  }
+  Gen.trazarArbol = trazarArbol;
 
   return Gen;
 })();

@@ -182,6 +182,7 @@ var Objetos = (function () {
   // hacia dónde mira el jugador. Devuelve [[dx, dy, dz, id, meta], ...] (las celdas que ocupa, la
   // primera es la tocada + la normal) o null si ahí no va
   // ------------------------------------------------------------------------------------------
+  O.DIR_CAMA = [[0, 1], [-1, 0], [0, -1], [1, 0]];
   function rumbo(yaw) {
     // 0 este, 1 sur, 2 oeste, 3 norte (como las puertas del juego)
     var fx = Math.sin(yaw), fz = -Math.cos(yaw);
@@ -215,7 +216,9 @@ var Objetos = (function () {
       return [[0, 0, 0, id, r], [0, 1, 0, id, 8]];
     }
     if (id === 175) return [[0, 0, 0, id, m & 7], [0, 1, 0, id, 8]];
-    if (id === 26) return [[0, 0, 0, id, r]];
+    // la cama: los pies donde se toca y la cabecera hacia donde se mira (el meta: 0 sur, 1 oeste,
+    // 2 norte, 3 este; la cabecera con el 8)
+    if (id === 26) { var dc = (r + 3) % 4, dd = O.DIR_CAMA[dc]; return [[0, 0, 0, id, dc], [dd[0], 0, dd[1], id, dc | 8]]; }
     if (f === F.riel) return [[0, 0, 0, id, r === 0 || r === 2 ? 1 : 0]];
     return [[0, 0, 0, id, m]];
   };

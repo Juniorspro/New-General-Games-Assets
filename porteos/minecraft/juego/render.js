@@ -591,6 +591,7 @@ var Render = (function () {
     dibujarParticulas(cam);
     if (mundo.entidades && mundo.entidades.length) dibujarEntidades(mundo.entidades, cam);
     if (mundo.tirados && mundo.tirados.length) dibujarTirados(mundo.tirados, cam, mundo.alfa === undefined ? 1 : mundo.alfa);
+    if (mundo.tnts && mundo.tnts.length) dibujarTnts(mundo.tnts, cam, mundo.alfa === undefined ? 1 : mundo.alfa);
     gl.bindTexture(gl.TEXTURE_2D, atlas);
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -1031,12 +1032,25 @@ var Render = (function () {
         vida: 4 / (Math.random() * 0.9 + 0.1), edad: 0, tam: 0.05 * (Math.random() * 0.5 + 0.5), u0: u, v0: v, u1: u + du, v1: v + dv, c: tinte });
     }
   };
+  // las chispas (el polvo de hueso: las verdes del aldeano contento): cuadraditos de un color que
+  // suben despacio
+  R.chispas = function (x, y, z, color, n) {
+    var r = R.rectCara(35, 'side', 0);
+    if (!r) return;
+    var du = (r[2] - r[0]) / 8, dv = (r[3] - r[1]) / 8;
+    for (var i = 0; i < n; i++) {
+      if (part.length > 400) part.shift();
+      part.push({ x: x + (Math.random() - 0.5) * 0.9, y: y + (Math.random() - 0.3) * 0.8, z: z + (Math.random() - 0.5) * 0.9,
+        vx: (Math.random() - 0.5) * 0.02, vy: 0.02 + Math.random() * 0.03, vz: (Math.random() - 0.5) * 0.02, vida: 10 + Math.random() * 20, edad: 0,
+        tam: 0.04 + Math.random() * 0.03, u0: r[0], v0: r[1], u1: r[0] + du, v1: r[1] + dv, c: color, flota: true });
+    }
+  };
   // un paso de 1/20 s de las partículas (gravedad y roce del juego; chocan con el piso)
   R.pasoParticulas = function () {
     for (var i = part.length - 1; i >= 0; i--) {
       var p = part[i];
       if (++p.edad >= p.vida) { part.splice(i, 1); continue; }
-      p.vy -= 0.04;
+      if (!p.flota) p.vy -= 0.04;
       var ny = p.y + p.vy, b = Mundo.bloque(Math.floor(p.x), Math.floor(ny), Math.floor(p.z));
       if (b !== 0 && b !== -1 && C.SOLIDO[b]) { p.vy = 0; p.vx *= 0.7; p.vz *= 0.7; } else p.y = ny;
       p.x += p.vx; p.z += p.vz;
@@ -1273,6 +1287,32 @@ var Render = (function () {
     }
     gl.bindVertexArray(null);
     if (hayOrbes && R.texOrbe) dibujarOrbes(l, cam, alfa);
+  }
+  // la TNT prendida (RenderTNTPrimed): el bloque entero; los últimos 10 pasos se infla y cada 5
+  // pasos titila en blanco
+  function dibujarTnts(l, cam, alfa) {
+    if (!simple || !l.length) return;
+    usar(simple);
+    var mm = mallaTirada({ id: 46, m: 0, n: 1 });
+    if (!mm.n) return;
+    gl.bindTexture(gl.TEXTURE_2D, atlas);
+    gl.bindVertexArray(mm.vao);
+    for (var i = 0; i < l.length; i++) {
+      var e = l[i], x = e.px + (e.x - e.px) * alfa, y = e.py + (e.y - e.py) * alfa, z = e.pz + (e.z - e.pz) * alfa;
+      var mecha = e.mecha - alfa + 1, esc = 1;
+      if (mecha < 10) { var f = Math.max(0, Math.min(1, 1 - mecha / 10)); f = f * f; f = f * f; esc = 1 + f * 0.3; }
+      var luz = colorLuz(e.luz === undefined ? R.luzJugador : e.luz), blanco = (Math.floor(e.mecha / 5) % 2) === 0 ? 1.8 : 1;
+      gl.uniform4f(simple.u.CURRENT_COLOR, luz[0] * blanco, luz[1] * blanco, luz[2] * blanco, 1);
+      var m = mTir;
+      m.set(GL.mat4());
+      GL.trasladar(m, x - cam.x, y - cam.y + 0.49, z - cam.z);
+      var s = GL.mat4(); s[0] = s[5] = s[10] = 0.98 * esc;
+      GL.mult(m, m, s);
+      GL.mult(mvpTir, vp, m);
+      gl.uniformMatrix4fv(simple.u.WORLDVIEWPROJ, false, mvpTir);
+      gl.drawArrays(gl.TRIANGLES, 0, mm.n);
+    }
+    gl.bindVertexArray(null);
   }
   function dibujarOrbes(l, cam, alfa) {
     var n = l.length * 60;
