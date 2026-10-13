@@ -5,10 +5,10 @@ import { GLTFLoader } from './vendor/GLTFLoader.js';
 
 // ---------------------------------------------------------------- DirtyTom
 // Sin luces: el pelaje, la ropa encima con su alfa, la suciedad (uv1), el color o el reflejo
-// "custom" (uv1) y el modo noche (gris y teñido). El pelaje y la ropa salen de la primera UV salvo
-// con FUR_UV_SET_2 / UV_SET_2 (sin keywords, Unity usa las primeras de cada multi_compile:
-// UV_SET_1 y FUR_UV_SET_1, como muestran los íconos del ropero). Unity en espacio gamma: los
-// colores van tal cual, sin conversiones.
+// "custom" (uv1) y el modo noche (gris y teñido). Las variantes del shader son UV_SET_2|UV_SET_1 ×
+// FUR_UV_SET_1|FUR_UV_SET_2 (no hay una sin keywords): sin keywords Unity usa la primera de cada
+// multi_compile, UV_SET_2 (la ropa de la segunda UV, como la ropa de siempre: musculosa y short) y
+// FUR_UV_SET_1 (el pelaje de la primera). Unity en espacio gamma: los colores van tal cual.
 const VERT_TOM = /* glsl */ `
 #include <common>
 #include <skinning_pars_vertex>
@@ -54,10 +54,10 @@ void main() {
 #endif
   float d = texture2D(_DirtMask, vUv1).w;
   vec3 c2 = (_NightColor.x < 1.0) ? (c0 - vec3(d)) + d * _DirtColor.xyz : c0;
-#ifdef UV_SET_2
-  vec4 tela = texture2D(_MainTexCloth, vUv1);
-#else
+#ifdef UV_SET_1
   vec4 tela = texture2D(_MainTexCloth, vUv0);
+#else
+  vec4 tela = texture2D(_MainTexCloth, vUv1);   // UV_SET_2, y también sin keyword (es la primera del multi_compile)
 #endif
   c2 = tela.w * (tela.xyz - c2) + c2;
   float cust = texture2D(_CustomTex, vUv1).w;
@@ -196,7 +196,8 @@ export async function cargarTom(base, tam /* 's' | 'm' | 'l' */) {
 // Viste a Tom como TomsPrefabTexturedSlotItem.UpdateSlot: el material del cuerpo es el del pelaje
 // (tom-fur-*); si hay ropa (tom-cloth-*), le pone encima la tela y su alfa, y la tela sale de la
 // segunda UV si el shader de la ropa es *_UV2 (UV_SET_2) o de la primera si no (UV_SET_1); sin ropa
-// apaga las dos keywords (queda UV_SET_1). El pelaje sale de la segunda UV si el nombre de su
+// apaga las dos keywords y queda la de siempre del pelaje (Tom_Body_DefaultOutfit, en la segunda UV).
+// El pelaje sale de la segunda UV si el nombre de su
 // material tiene "_UV2" (FUR_UV_SET_2). El pijama copia además su _CustomTex y el emperador su
 // reflejo dorado (_CustomCubeMap, _CustomColor, _CustomTex, modo 1).
 export function vestir(tom, base, pieles, ropero, { fur = 'tom-fur-default', cloth = null, eyes = 'tom-eyes-green' } = {}) {
