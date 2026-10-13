@@ -15,6 +15,7 @@ var Bichos = (function () {
   B.lista = lista;
   var remotos = new Map();    // "dueño/id" → bicho de otro jugador
   var proyectiles = [];
+  B.proyectiles = proyectiles;
   var proximoId = 1;
   var D = { entidades: {}, sonidos: { defaults: {}, entities: {} }, variantes: {}, huevos: [] };
   var NOMBRES = [];           // los tipos de bichos (el índice viaja por la red)
@@ -435,6 +436,8 @@ var Bichos = (function () {
       if (e.invulnerable > 0) { nacerWither(e); continue; }
       liquidos(e);
       e.quiereSaltar = false;
+      pasoEfectosBicho(e);
+      if (e.muerte > 0) continue;
       Conducta.paso(e, ctx);
       if (!lista[i] || lista[i] !== e) continue;        // explotó
       fisica(e);
@@ -613,6 +616,50 @@ var Bichos = (function () {
     if (B.explosion) B.explosion(x, y, z, Math.round(poder), jugadoresRef(), quien, fuego);
   }
   B.explosionEn = explosionEn;
+
+  // ------------------------------------------------------------------------------------------
+  // Los efectos en los bichos (efectos.js): los muertos vivientes al revés con la curación y el
+  // daño instantáneos y sin veneno ni regeneración; las arañas sin veneno
+  // ------------------------------------------------------------------------------------------
+  function familia(e, f) { var T = B.TIPOS[e.tipo]; return !!(T && T.familias.indexOf(f) >= 0); }
+  function ganchosDe(e) {
+    return {
+      curar: function (n) { if (e.vida > 0 && !(e.muerte > 0)) e.vida = Math.min(e.vidaMax || e.vida, e.vida + n); },
+      danar: function (n, causa) { herir(e, n, causa || 'magic', null); },
+      cansar: function () {}, comer: function () {},
+      vida: function () { return e.vida; }
+    };
+  }
+  B.darEfecto = function (e, id, dur, amp) {
+    if (!id || e.muerte > 0) return;
+    var muerto = familia(e, 'undead');
+    if ((id === 19 || id === 25 || id === 10) && (muerto || (id !== 10 && familia(e, 'spider')))) return;
+    if (Efectos.INSTANTANEO[id]) {
+      var real = muerto && (id === 6 || id === 7) ? (id === 6 ? 7 : 6) : id;
+      Efectos.instantaneo(real, amp, ganchosDe(e), 1);
+      return;
+    }
+    if (!e.efectos) e.efectos = Efectos.nuevo();
+    Efectos.dar(e.efectos, id, dur, amp);
+  };
+  function pocionEnBicho(e, m, mult, tipo, quien) {
+    var pc = Efectos.pocion(m);
+    if (!pc) return;
+    var muerto = familia(e, 'undead');
+    if (Efectos.INSTANTANEO[pc[0]]) {
+      var real = muerto && (pc[0] === 6 || pc[0] === 7) ? (pc[0] === 6 ? 7 : 6) : pc[0];
+      if (real === 7) herir(e, Math.floor((6 << pc[2]) * mult), 'magic', quien);
+      else if (real === 6) e.vida = Math.min(e.vidaMax || e.vida, e.vida + (4 << pc[2]) * mult);
+      return;
+    }
+    var dur = pc[1] * (tipo === 'linger' ? 0.25 : 0.75) * mult;
+    if (dur > 20) B.darEfecto(e, pc[0], dur, pc[2]);
+  }
+  function pasoEfectosBicho(e) {
+    if (!e.efectos || !e.efectos.lista.length) { e.multVel = 1; return; }
+    Efectos.paso(e.efectos, ganchosDe(e));
+    e.multVel = Math.max(0, (1 + 0.2 * Efectos.nivel(e.efectos, 1)) * (1 - 0.15 * Efectos.nivel(e.efectos, 2)));
+  }
   function jugadoresRef() { return jugadores.map(function (j) { return j.ref; }); }
 
   // ------------------------------------------------------------------------------------------
@@ -637,17 +684,48 @@ var Bichos = (function () {
       vx: (dx / l + gauss() * inc) * potencia, vy: (dy / l + gauss() * inc) * potencia, vz: (dz / l + gauss() * inc) * potencia,
       vida: 0, luz: 0xF0, tiempo: 0
     };
+    if (p.tipo === 'splash_potion' && e.tipo === 'witch') p.pocion = pocionBruja(e, o);
     proyectiles.push(p);
     B.disparados[p.tipo] = (B.disparados[p.tipo] || 0) + 1;
     sonido(e, 'shoot', 1, tipo === 'arrow' ? 'random.bow' : tipo === 'snowball' ? 'random.bow' : null);
     if (tipo === 'fireball' || tipo === 'small_fireball') sonido(e, 'shoot', 1, tipo === 'fireball' ? 'mob.ghast.fireball' : 'mob.blaze.shoot');
+  }
+  // lo que tira el jugador (EntityThrowable, EntityArrow): sale de los ojos hacia (dx, dy, dz) a
+  // velocidad v, con el desvío del juego (0,0075 por un azar gaussiano). op: { critico, pocion,
+  // persistente, recoger (la flecha se levanta del piso) }
+  B.lanzar = function (tipo, x, y, z, dx, dy, dz, v, op) {
+    var def = Conducta.def(tipo), pr = def && def.c['minecraft:projectile'] ? def.c['minecraft:projectile'] : { power: 1.5, gravity: 0.03 };
+    if (tipo === 'arrow' && def && def.g && def.g['minecraft:player_arrow']) pr = def.g['minecraft:player_arrow']['minecraft:projectile'] || pr;
+    op = op || {};
+    var p = { tipo: PROYECTIL[tipo] || tipo, def: pr, dueno: jugadores[0] || null, deJugador: true, x: x, y: y, z: z,
+      vx: (dx + gauss() * 0.0075) * v, vy: (dy + gauss() * 0.0075) * v, vz: (dz + gauss() * 0.0075) * v, vida: 0, luz: 0xF0, tiempo: 0,
+      critico: !!op.critico, pocion: op.pocion, persistente: !!op.persistente, recoger: !!op.recoger };
+    proyectiles.push(p);
+    B.disparados[p.tipo] = (B.disparados[p.tipo] || 0) + 1;
+    return p;
+  };
+  // la poción de la bruja (EntityWitch.attackEntityWithRangedAttack): lentitud de lejos, veneno si
+  // tiene vida, debilidad de cerca a veces; si no, daño
+  function pocionBruja(e, o) {
+    var d = Math.sqrt(dist2(e, o)), ef = function (id) { return B.tieneEfecto ? B.tieneEfecto(o, id) : false; };
+    if (d >= 8 && !ef(2)) return 17;
+    if ((o.vida === undefined || o.vida >= 8) && !ef(19)) return 25;
+    if (d <= 3 && !ef(18) && Math.random() < 0.25) return 34;
+    return 23;
   }
   function gauss() { return (Math.random() + Math.random() + Math.random() - 1.5) * 0.8; }
   function pasoProyectiles() {
     for (var i = proyectiles.length - 1; i >= 0; i--) {
       var p = proyectiles[i], d = p.def;
       p.tiempo++;
-      if (p.clavado) { if (++p.vida > 600) proyectiles.splice(i, 1); continue; }
+      if (p.clavado) {
+        // la flecha del jugador clavada se levanta al pasar (EntityArrow.onCollideWithPlayer)
+        var jj = jugadores[0];
+        if (p.recoger && jj && jj.vivo && Math.abs(jj.x - p.x) < 1 && Math.abs(jj.z - p.z) < 1 && p.y > jj.y - 0.5 && p.y < jj.y + 2.3 &&
+            B.alRecogerFlecha && B.alRecogerFlecha()) { proyectiles.splice(i, 1); continue; }
+        if (++p.vida > 1200) proyectiles.splice(i, 1);
+        continue;
+      }
       if (++p.vida > 400) { proyectiles.splice(i, 1); continue; }
       // la bala del shulker sigue al objetivo
       if (d.homing && p.objetivo) {
@@ -682,7 +760,7 @@ var Bichos = (function () {
     }
     for (var k = 0; k < jugadores.length; k++) {
       var j = jugadores[k];
-      if (!j.vivo) continue;
+      if (!j.vivo || (p.deJugador && !j.id && p.vida < 5)) continue;
       if (x > j.x - 0.45 && x < j.x + 0.45 && z > j.z - 0.45 && z < j.z + 0.45 && y > j.y - 0.1 && y < j.y + 1.9) return j;
     }
     return null;
@@ -693,9 +771,16 @@ var Bichos = (function () {
   function impacto(p, choco, i) {
     var hit = p.def.onHit || {};
     var o = choco.entidad;
+    if (o && p.deJugador && !o.esJugador) o.golpeJugador = tick;
     if (o && hit.impact_damage) {
       var id = hit.impact_damage, dn = id.damage;
       var dano = Array.isArray(dn) ? dn[0] + Math.floor(Math.random() * (dn[1] - dn[0] + 1)) : (dn || 1);
+      // la flecha del jugador lastima según su velocidad (EntityArrow: velocidad × 2, hacia arriba;
+      // la crítica, con el arco tenso del todo, suma al azar hasta la mitad + 2)
+      if (p.deJugador && p.tipo === 'arrow') {
+        dano = Math.ceil(Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz) * 2);
+        if (p.critico) dano += Math.floor(Math.random() * (dano / 2 + 2));
+      }
       // la bola de nieve sólo lastima al blaze
       if (id.filter && !(o.tipo && o.tipo === id.filter)) dano = 0;
       if (dano > 0) {
@@ -718,16 +803,50 @@ var Bichos = (function () {
       return;
     }
     if (p.tipo === 'splash_potion') {
-      // la poción de la bruja: daño a todos alrededor
+      // la poción (EntityPotion.applySplash): a todos a menos de 4 bloques, más cuanto más cerca (al
+      // que le pegó, entera); sin poción conocida, el daño de antes
       [].concat(lista, jugadores).forEach(function (x) {
-        if (dist2(x, p) < 16 && x !== p.dueno) {
+        var d2 = dist2(x, p);
+        if (d2 >= 16 || (x === p.dueno && !p.deJugador)) return;
+        var mult = x === o ? 1 : 1 - Math.sqrt(d2) / 4;
+        if (p.pocion === undefined) {
           if (x.esJugador) { if (B.golpear && x.atacable) B.golpear(x, 6, p.dueno || p, 'magic'); } else herir(x, 6, 'magic', p.dueno);
-        }
+        } else if (x.esJugador) { if (!x.id && B.alPocion) B.alPocion(p.pocion, mult, p.persistente ? 'linger' : 'splash', p.dueno && p.dueno.tipo ? p.dueno : null); }
+        else pocionEnBicho(x, p.pocion, mult, p.persistente ? 'linger' : 'splash', p.dueno);
       });
-      if (B.sonido) B.sonido('random.glass', p, 1, 1);
+      if (B.sonido) B.sonido('random.glass', p, 1, 0.9 + Math.random() * 0.1);
+      if (B.chispas) B.chispas(p.x, p.y, p.z, p.pocion);
       proyectiles.splice(i, 1);
       return;
     }
+    // el huevo: 1 de 8 veces un pollito (y 1 de 32 de esas, cuatro)
+    if (p.tipo === 'egg') {
+      var sc = hit.spawn_chance || {};
+      if (Math.random() < 1 / (sc.firstSpawnChance || 8)) {
+        var nh = Math.random() < 1 / (sc.secondSpawnChance || 32) ? (sc.secondSpawnCount || 4) : (sc.firstSpawnCount || 1);
+        for (var q = 0; q < nh; q++) B.crear('chicken', p.x, p.y, p.z, { bebe: true });
+      }
+      if (B.chispas) B.chispas(p.x, p.y, p.z, -1);
+      proyectiles.splice(i, 1);
+      return;
+    }
+    // la perla: lleva al dueño adonde cayó (y a veces sale un endermite)
+    if (p.tipo === 'ender_pearl') {
+      if (p.deJugador && B.alPerla) B.alPerla(p.x, p.y, p.z);
+      if (Math.random() < 0.05) B.crear('endermite', p.x, p.y, p.z);
+      proyectiles.splice(i, 1);
+      return;
+    }
+    // la botella de experiencia: de 3 a 11 de experiencia en orbes
+    if (p.tipo === 'xp_bottle') {
+      var gx = hit.grant_xp || {}, mn = gx.minXP || 3, mx = gx.maxXP || 11;
+      if (B.alExperiencia) B.alExperiencia(p.x, p.y, p.z, mn + Math.floor(Math.random() * (mx - mn + 1)));
+      if (B.sonido) B.sonido('random.glass', p, 1, 0.9 + Math.random() * 0.1);
+      if (B.chispas) B.chispas(p.x, p.y, p.z, 0);
+      proyectiles.splice(i, 1);
+      return;
+    }
+    if (p.tipo === 'snowball' && B.chispas) B.chispas(p.x, p.y, p.z, -2);
     if (choco.bloque && hit.stick_in_ground) {
       p.clavado = true; p.vida = 0;
       if (B.sonido) B.sonido('random.bowhit', p, 0.5, 1.2);

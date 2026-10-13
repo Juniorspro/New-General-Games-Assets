@@ -900,6 +900,23 @@
       Sonido.tocar((m & 4) ? 'random.door_close' : 'random.door_open', 1, 0.9 + Math.random() * 0.1, h.x + 0.5, h.y + 0.5, h.z + 0.5);
       return true;
     }
+    // los portones de cerca se abren y se cierran (BlockFenceGate: el 4 es "abierto")
+    if (id === 107 || (id >= 183 && id <= 187)) {
+      var mg = Mundo.meta(h.x, h.y, h.z);
+      ponerBloque(h.x, h.y, h.z, id, mg ^ 4);
+      Sonido.tocar((mg & 4) ? 'random.door_close' : 'random.door_open', 1, 0.9 + Math.random() * 0.1, h.x + 0.5, h.y + 0.5, h.z + 0.5);
+      return true;
+    }
+    // la torta: una porción (2 de comida) por toque si hay hambre; a la séptima se termina
+    if (id === 92) {
+      if (!supervivencia() || sup.comida >= 20) return false;
+      var mc = Mundo.meta(h.x, h.y, h.z);
+      sup.comida = Math.min(20, sup.comida + 2); sup.saturacion = Math.min(sup.comida, sup.saturacion + 0.4);
+      ponerBloque(h.x, h.y, h.z, mc >= 6 ? 0 : 92, mc >= 6 ? 0 : mc + 1);
+      Sonido.tocar('random.burp', 0.5, Math.random() * 0.1 + 0.9);
+      I.sucio();
+      return true;
+    }
     if (id === 96) {
       var mt = Mundo.meta(h.x, h.y, h.z);
       ponerBloque(h.x, h.y, h.z, id, mt ^ 4);
@@ -912,6 +929,8 @@
   function poner(fx, fy) {
     if (pegar(fx, fy)) return;
     var it = I.juego.barra[I.juego.elegido];
+    // lo que se tira (bolas de nieve, huevos, perlas, botellas de experiencia, pociones arrojadizas)
+    if (it && Items.def[it.id] && Items.def[it.id].uso === 'tirar') { tirar(it, rayoDesde(fx, fy)); return; }
     // el nenúfar, el balde vacío y la botella apuntan al agua
     var h = tocarBloque(fx, fy, it && (it.id === 111 || it.id === 374 || (it.id === 325 && !it.m)));
     // lo que se usa sin un bloque (ponerse la armadura)
@@ -1133,6 +1152,86 @@
   }
   // la otra mitad de la cama (la cabecera está hacia donde mira el meta)
   function otraMitadCama(x, y, z, m) { var d = O.DIR_CAMA[m & 3], s = (m & 8) ? -1 : 1; return [x + d[0] * s, y, z + d[1] * s]; }
+
+  // ------------------------------------------------------------------------------------------
+  // Tirar cosas (ItemSnowball, ItemEgg, ItemEnderPearl, ItemExpBottle, ItemSplashPotion): desde los
+  // ojos hacia donde se toca; las botellas salen 20° más arriba y más despacio
+  // ------------------------------------------------------------------------------------------
+  function direccion(d, subir) {
+    var yaw = Math.atan2(d[0], -d[2]), pitch = -Math.asin(Math.max(-1, Math.min(1, d[1]))) - subir * Math.PI / 180, cp = Math.cos(pitch);
+    return [Math.sin(yaw) * cp, -Math.sin(pitch), -Math.cos(yaw) * cp];
+  }
+  function tirar(it, d) {
+    if (aventura() && it.id !== 384) return;
+    var tipo = Items.def[it.id].tira, botella = tipo === 'xp_bottle' || tipo === 'splash_potion';
+    var v = tipo === 'xp_bottle' ? 0.7 : tipo === 'splash_potion' ? 0.5 : 1.5, dd = botella ? direccion(d, 20) : d;
+    B.lanzar(tipo, cam.x, cam.y - 0.1, cam.z, dd[0], dd[1], dd[2], v,
+      { pocion: it.id === 438 || it.id === 441 ? it.m : undefined, persistente: it.id === 441 });
+    // (más la velocidad del jugador, como el juego)
+    Sonido.tocar('random.bow', 0.5, 0.4 / (Math.random() * 0.4 + 0.8));
+    gastarElegido();
+    golpe();
+  }
+  // el arco (ItemBow): la fuerza sale de cuánto se tensó (f = t/20 s; (f² + 2f)/3, hasta 1); la
+  // flecha va a 3 × f bloques por paso, crítica si está tenso del todo; gasta una flecha (en
+  // creativo no) y 1 de durabilidad
+  var arco = null;
+  function arcoEnMano() { var it = I.juego.barra[I.juego.elegido]; return !!(it && it.id === 261) && !muerto; }
+  function buscarFlecha() {
+    var l = [inv.barra, inv.mochila];
+    for (var k = 0; k < 2; k++) for (var i = 0; i < l[k].length; i++) if (l[k][i] && l[k][i].id === 262) return [l[k], i];
+    return null;
+  }
+  function puedeTirarFlecha() { return !supervivencia() || !!buscarFlecha(); }
+  function fuerzaArco(ahora) {
+    var f = Math.max(0, ahora - arco.t0) / 1000;
+    f = (f * f + f * 2) / 3;
+    return Math.min(1, f);
+  }
+  function soltarArco(ahora) {
+    var a = arco, f = fuerzaArco(ahora);
+    arco = null; estadoMano.arco = 0;
+    if (f < 0.1 || !a.dedo || !arcoEnMano() || I.pantalla !== 'juego') return;
+    var fl = supervivencia() ? buscarFlecha() : null;
+    if (supervivencia() && !fl) return;
+    var d = rayoDesde(a.dedo[0], a.dedo[1]);
+    B.lanzar('arrow', cam.x, cam.y - 0.1, cam.z, d[0], d[1], d[2], f * 3, { critico: f >= 1, recoger: supervivencia() });
+    Sonido.tocar('random.bow', 1, 1 / (Math.random() * 0.4 + 1.2) + f * 0.5);
+    if (fl) { fl[0][fl[1]].n--; if (fl[0][fl[1]].n <= 0) fl[0][fl[1]] = null; }
+    desgastarMano(1);
+    golpe();
+    I.sucio();
+  }
+  // lo que avisa bichos.js: la perla (teletransporta y lastima 5), la experiencia de la botella, la
+  // poción que cayó cerca, la flecha que se levanta
+  B.alPerla = function (x, y, z) {
+    if (muerto || !partida) return;
+    J.ubicar(x, Math.max(y, Math.floor(y) + 0.01), z);
+    caida = 0;
+    Sonido.tocar('mob.endermen.portal', 1, 1);
+    if (supervivencia()) recibirDano(5, '', null, 'fall');
+  };
+  B.alExperiencia = function (x, y, z, n) { if (partida && partida.local) Tirados.orbes(x, y, z, n); };
+  B.alPocion = function (m, mult, tipo, quien) {
+    if (muerto) return;
+    var nombre = quien ? (O.nombreBicho ? O.nombreBicho(quien.tipo) : quien.tipo) : '';
+    var g = Object.create(ganchosEfectos);
+    if (nombre) g.danar = function (n, causa) { recibirDano(n, nombre, null, causa); };
+    Efectos.dePocion(sup.efectos, m, tipo, g, mult);
+  };
+  B.tieneEfecto = function (o, id) { return !o.id && !!Efectos.de(sup.efectos, id); };
+  B.alRecogerFlecha = function () {
+    if (!partida || !partida.local || Inventario.agregar(inv, Inventario.cosa(262, 0, 1)) > 0) return false;
+    Sonido.tocar('random.pop', 0.2, ((Math.random() - Math.random()) * 0.7 + 1) * 2);
+    I.sucio();
+    return true;
+  };
+  // las chispas de los impactos: de la poción (su color), blancas del huevo y de la nieve
+  B.chispas = function (x, y, z, m) {
+    if (!opciones.particulas) return;
+    var c = m === -1 ? [1, 1, 0.9] : m === -2 ? [1, 1, 1] : m === 0 ? [0.4, 1, 0.4] : (function () { var k = Efectos.colorPocion(m); return [(k >> 16 & 255) / 255, (k >> 8 & 255) / 255, (k & 255) / 255]; })();
+    Render.chispas(x, y, z, c, 20);
+  };
 
   // ------------------------------------------------------------------------------------------
   // Dormir (EntityPlayer.trySleep): sólo de noche (o con tormenta), cerca, sin monstruos a 8 bloques;
@@ -1394,6 +1493,14 @@
       if (I.pantalla === 'juego') poner(t[0], t[1]);
     }
     mundo.apuntado = null; mundo.rompiendo = 0; hayObjetivo = false;
+    // el arco: mantener lo tensa, soltar dispara (hacia el último lugar del dedo)
+    if (arco && (!c.rompiendo || I.pantalla !== 'juego' || !arcoEnMano())) { soltarArco(ahora); }
+    if (c.rompiendo && I.pantalla === 'juego' && arcoEnMano() && (arco || puedeTirarFlecha())) {
+      if (!arco) arco = { t0: ahora };
+      arco.dedo = c.rompiendo.slice();
+      minando = null;
+      return;
+    }
     if (c.rompiendo && I.pantalla === 'juego') {
       // con comida en la mano (y hambre) se come en vez de romper
       var cm = comidaEnMano();
@@ -1809,6 +1916,8 @@
     // el campo de visión se abre un poco al correr y con la velocidad (y se cierra con la lentitud),
     // como AbstractClientPlayer.getFovModifier
     var fovObj = opciones.fov * Math.PI / 180 * (J.corriendo ? 1.12 : 1) * ((J.velMult || 1) + 1) / 2;
+    // tensando el arco se acerca (hasta 15 %)
+    if (arco) { var fa = Math.min(1, (t - arco.t0) / 1000); fovObj *= 1 - fa * fa * 0.15; }
     fovActual = fovActual ? fovActual + (fovObj - fovActual) * Math.min(1, dt * 10) : fovObj;
     cam.fov = fovActual;
     Sonido.oyente(cam.x, cam.y, cam.z);
@@ -1870,6 +1979,12 @@
     var g = golpeDesde < 0 ? 0 : (t - golpeDesde) / 300;
     if (g >= 1) { g = 0; golpeDesde = -1; }
     estadoMano.item = it && !O.esHuevo(it) ? it : null; estadoMano.golpe = g; estadoMano.equipo = equipo;
+    // el arco tensándose: sus tres dibujos (bow_pulling) según cuánto (0,65 y 0,9 del segundo)
+    if (arco && it && it.id === 261) {
+      var tens = Math.min(1, (t - arco.t0) / 1000);
+      estadoMano.item = { id: 261, m: tens >= 0.9 ? 102 : tens >= 0.65 ? 101 : 100, n: 1 };
+      estadoMano.arco = tens;
+    } else estadoMano.arco = 0;
     estadoMano.bamboleo[0] = Math.sin(fase) * ab * 0.4; estadoMano.bamboleo[1] = -Math.abs(Math.cos(fase)) * ab * 0.6;
     if ((I.pantalla === 'juego' || I.pantalla === 'inventario') && !opciones.ocultarInterfaz) Render.dibujarMano(estadoMano);
     I.dibujar();

@@ -35,7 +35,8 @@ var Jugador = (function () {
     else if (f === F.alfombra) sal.push([0, 0, 0, 1, 1 / 16, 1]);
     else if (f === F.bajo) sal.push([0, 0, 0, 1, 15 / 16, 1]);
     else if (f === F.cactus) sal.push([1 / 16, 0, 1 / 16, 15 / 16, 1, 15 / 16]);
-    else if (f === F.cerca || f === F.muro) sal.push([0.375, 0, 0.375, 0.625, 1.5, 0.625]);
+    // (los portones abiertos no frenan)
+    else if (f === F.cerca || f === F.muro) { if (!((id === 107 || (id >= 183 && id <= 187)) && (m & 4))) sal.push([0.375, 0, 0.375, 0.625, 1.5, 0.625]); }
     else if (f === F.panel) sal.push([0.4375, 0, 0.4375, 0.5625, 1, 0.5625]);
     else if (f === F.puerta) {
       // como la dibuja el trabajador: una tabla de 3/16 del lado que corresponde (la mitad de arriba

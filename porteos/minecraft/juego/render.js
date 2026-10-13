@@ -1191,6 +1191,16 @@ var Render = (function () {
       multRot(m, f3 * 10 * Math.PI / 180, 1, 0, 0);
       multRot(m, f3 * 30 * Math.PI / 180, 0, 0, 1);
     }
+    // tensando el arco (ItemRenderer, EnumAction.BOW): al medio, inclinado, y tiembla al final
+    if (estado.arco > 0) {
+      var fa = estado.arco, f6 = Math.min(1, (fa * fa + fa * 2) / 3);
+      GL.trasladar(m, -0.2785682, 0.18344387, 0.15731531);
+      multRot(m, -13.935 * Math.PI / 180, 1, 0, 0);
+      multRot(m, 35.3 * Math.PI / 180, 0, 1, 0);
+      multRot(m, -9.785 * Math.PI / 180, 0, 0, 1);
+      if (f6 > 0.1) GL.trasladar(m, 0, Math.sin((fa * 20 - 0.1) * 1.3) * (f6 - 0.1) * 0.004, 0);
+      GL.trasladar(m, 0, 0, f6 * 0.04);
+    }
     var g = estado.comer ? 0 : estado.golpe, rg = Math.sqrt(g);
     GL.trasladar(m, 0.56 + estado.bamboleo[0] - 0.4 * Math.sin(rg * Math.PI), -0.52 + estado.bamboleo[1] - (1 - estado.equipo) * 0.6 + 0.2 * Math.sin(rg * Math.PI * 2),
       -0.72 - 0.2 * Math.sin(g * Math.PI));

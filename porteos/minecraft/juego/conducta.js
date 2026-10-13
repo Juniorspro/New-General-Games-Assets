@@ -378,7 +378,7 @@ var Conducta = (function () {
   // Las metas de movimiento: puede (empezar), sigue (continuar), paso, inicio, fin. "mira": la
   // meta maneja la cabeza
   // ------------------------------------------------------------------------------------------
-  function vel(e, mult) { return e.velBase * (mult || 1); }
+  function vel(e, mult) { return e.velBase * (mult || 1) * (e.multVel || 1); }
   function lejosDeJugadores(e, ctx) { return !ctx.jugadorCerca(e, 32); }
   var META = {};
   K.META = META;

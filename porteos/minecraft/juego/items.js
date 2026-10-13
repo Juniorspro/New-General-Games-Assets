@@ -272,6 +272,8 @@ var Items = (function () {
     if (!d) return null;
     var tx = d.tx, ti = d.ti, v = variante(id, m);
     if (v) { tx = v[1]; ti = v[2]; }
+    // el arco tensándose (sólo para la mano: 100, 101, 102 son los tres dibujos de bow_pulling)
+    if (id === 261 && m >= 100) { tx = 'bow_pulling'; ti = m - 100; }
     if (d.pocion) ti = (POCIONES[m] || POCIONES[0])[0];
     var l = tex[tx];
     if (!l || !l.length) return null;
