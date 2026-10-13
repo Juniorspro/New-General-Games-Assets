@@ -76,7 +76,8 @@ var Conducta = (function () {
     e.caida = fd ? (typeof fd.value === 'number' ? fd.value : 1) : 1;
     var at = c['minecraft:attack'];
     e.ataqueBase = at ? at.damage : 0;
-    e.efectoAtaque = at && at.effect_name ? { nombre: at.effect_name, dur: at.effect_duration || 5 } : null;
+    // (la araña de cueva en fácil tiene "effect_duration": 0: no envenena)
+    e.efectoAtaque = at && at.effect_name ? { nombre: at.effect_name, dur: typeof at.effect_duration === 'number' ? at.effect_duration : 5 } : null;
     e.enojo = c['minecraft:angry'] || null;
     if (e.enojo && !e.enojoHasta) e.enojoHasta = e.tiempo + (e.enojo.duration || 25) * 20;
     if (!e.enojo) e.enojoHasta = 0;
@@ -302,7 +303,7 @@ var Conducta = (function () {
       var x = candidatos[i];
       if (x === e || !vivo(x) || (x.esJugador && !x.atacable)) continue;
       for (var k = 0; k < ts.length; k++) {
-        var t = ts[k], max = t.max_dist || radio || 16;
+        var t = ts[k], max = (t.max_dist || radio || 16) * (x.vis || 1);
         var d = dist2(e, x);
         if (d > max * max || d >= md) continue;
         if (!filtro(e, t.filters, x, ctx)) continue;

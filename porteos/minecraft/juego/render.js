@@ -387,7 +387,9 @@ var Render = (function () {
   var TABLA = [];
   for (var i = 0; i <= 15; i++) { var f1 = 1 - i / 15; TABLA[i] = (1 - f1) / (f1 * 3 + 1); }
   var parpadeo = 0, parpadeoV = 0;
-  function actualizarMapaLuz(brillo) {
+  // vn: la visión nocturna (0 a 1): cada color se lleva hasta que su canal más fuerte llegue a 1
+  // (EntityRenderer.updateLightmap)
+  function actualizarMapaLuz(brillo, vn) {
     parpadeoV += (Math.random() - Math.random()) * Math.random() * Math.random();
     parpadeoV *= 0.9;
     parpadeo += (parpadeoV - parpadeo);
@@ -398,6 +400,7 @@ var Render = (function () {
       var bg = b * ((b * 0.6 + 0.4) * 0.6 + 0.4), bb = b * (b * b * 0.6 + 0.4);
       var r = sr + b, g = sg + bg, bl = s + bb;
       r = r * 0.96 + 0.03; g = g * 0.96 + 0.03; bl = bl * 0.96 + 0.03;
+      if (vn > 0) { var mv = 1 / Math.max(r, g, bl); r = r * (1 - vn) + r * mv * vn; g = g * (1 - vn) + g * mv * vn; bl = bl * (1 - vn) + bl * mv * vn; }
       r = r > 1 ? 1 : r; g = g > 1 ? 1 : g; bl = bl > 1 ? 1 : bl;
       var ir = 1 - r, ig = 1 - g, ib = 1 - bl;
       ir = 1 - ir * ir * ir * ir; ig = 1 - ig * ig * ig * ig; ib = 1 - ib * ib * ib * ib;
@@ -421,6 +424,23 @@ var Render = (function () {
     }
   }
 
+  // R(a) · escala(sx, 1, 1) · R(−a), con R el giro alrededor del eje (0, 1, 1) (en columnas, como GL)
+  function matNausea(a, sx) {
+    var c = Math.cos(a), sn = Math.sin(a), t = 1 - c, x = 0, y = Math.SQRT1_2, z = Math.SQRT1_2;
+    var R = [t * x * x + c, t * x * y + sn * z, t * x * z - sn * y,
+      t * x * y - sn * z, t * y * y + c, t * y * z + sn * x,
+      t * x * z + sn * y, t * y * z - sn * x, t * z * z + c];
+    // M = R · S · Rᵀ (las columnas de R son R[0..2], R[3..5], R[6..8])
+    var m = GL.mat4();
+    for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++) {
+      var v = 0;
+      for (var q = 0; q < 3; q++) v += R[q * 3 + i] * (q === 0 ? sx : 1) * R[q * 3 + j];
+      m[j * 4 + i] = v;
+    }
+    m[15] = 1;
+    return m;
+  }
+
   // ------------------------------------------------------------------------------------------
   // Un cuadro
   // ------------------------------------------------------------------------------------------
@@ -440,6 +460,12 @@ var Render = (function () {
         var r0 = vista[rk * 4], r1 = vista[rk * 4 + 1];
         vista[rk * 4] = rolC * r0 - rolS * r1; vista[rk * 4 + 1] = rolS * r0 + rolC * r1;
       }
+    }
+    // la náusea (como el portal): la vista se estira y gira (EntityRenderer.setupCameraTransform)
+    if (cam.nausea > 0) {
+      var nf = cam.nausea, f2 = 5 / (nf * nf + 5) - nf * 0.04;
+      f2 *= f2;
+      GL.mult(vista, matNausea(cam.ticks * 7 * Math.PI / 180, 1 / f2), vista);
     }
     GL.mult(vp, proy, vista);
     calcularPlanos(vp);
@@ -471,7 +497,11 @@ var Render = (function () {
       }
     }
     if (mundo.bajoAgua) { niebla = [0.02 * luzCielo + 0.02, 0.02 * luzCielo + 0.04, 0.2 * luzCielo + 0.08]; }
-    actualizarMapaLuz(brillo);
+    // la visión nocturna aclara la niebla; la ceguera la vuelve negra (updateFogColor)
+    var vn = mundo.visionNocturna || 0, ceg = mundo.ceguera || 0;
+    if (vn > 0) { var mx = Math.max(niebla[0], niebla[1], niebla[2]) || 1; for (k = 0; k < 3; k++) niebla[k] = niebla[k] * (1 - vn) + niebla[k] / mx * vn; }
+    if (ceg > 0) for (k = 0; k < 3; k++) { niebla[k] *= 1 - ceg; cielo[k] *= 1 - ceg; }
+    actualizarMapaLuz(brillo, vn);
 
     gl.clearColor(niebla[0], niebla[1], niebla[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -481,6 +511,8 @@ var Render = (function () {
     var tiempoS = mundo.reloj;
     // controles de la niebla: claro, lluvia (el shader de Tito los reconoce por FOG_CONTROL.x) o bajo el agua
     var fog = mundo.bajoAgua ? [0.0, 0.25] : lluvia > 0.2 ? [0.3, 0.9] : [0.75, 1.0];
+    // con ceguera no se ve más allá de 5 bloques (setupFog: de 1,25 a 5)
+    if (ceg > 0) { var fc = Math.max(0.02, 5 / dist); fog = [fog[0] + (fc * 0.25 - fog[0]) * ceg, fog[1] + (fc - fog[1]) * ceg]; }
     uFrame = { niebla: niebla, fog: fog, dist: dist, t: tiempoS, cam: cam, cielo: cielo };
 
     // 1. el cielo
@@ -499,6 +531,7 @@ var Render = (function () {
     estrellasB = Math.min(1, Math.max(0, estrellasB));
     estrellasB = estrellasB * estrellasB * 0.5 * (1 - lluvia);
     if (!hermosos) estrellasB = 0;
+    estrellasB *= 1 - ceg;
     gl.enable(gl.BLEND);
     var rot = GL.mat4();
     GL.mult(rot, vp, rotacionSol(ang));
@@ -511,7 +544,7 @@ var Render = (function () {
     }
     usar(M.solLuna);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-    var alfa = 1 - lluvia;
+    var alfa = (1 - lluvia) * (1 - ceg);
     gl.uniform4f(M.solLuna.u.CURRENT_COLOR, 1, 1, 1, alfa);
     // sol: 30 de lado a 100 de distancia, arriba en el eje rotado
     var ms = GL.mat4(); ms.set(rot);
@@ -569,7 +602,7 @@ var Render = (function () {
     gl.disable(gl.POLYGON_OFFSET_FILL);
     capa(M.mezcla, alReves, 3, true);
     // 4. las nubes
-    if (mundo.nubes === false) { gl.bindVertexArray(null); R.stats.quads = quads; R.stats.llamadas = llamadas; return; }
+    if (mundo.nubes === false || ceg > 0.5) { gl.bindVertexArray(null); R.stats.quads = quads; R.stats.llamadas = llamadas; return; }
     var cn = [0.9 + 0.1 * luzCielo, 0.9 + 0.1 * luzCielo, 0.85 + 0.15 * luzCielo];
     if (M.tipoNubes === 'cajas' && mascara) dibujarNubes3D(mundo, ccx, ccy, ccz, cn, luzCielo);
     else {

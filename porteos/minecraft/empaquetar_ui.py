@@ -194,8 +194,14 @@ def armar(apk, paquete, salida, jsonc, idiomas):
               "armor_full", "armor_half", "armor_empty", "bubble", "bubble_pop", "selected_hotbar_slot",
               "hotbar_0", "hotbar_1", "hotbar_2", "hotbar_3", "hotbar_4", "hotbar_5", "hotbar_6", "hotbar_7", "hotbar_8",
               "hotbar_start_cap", "hotbar_end_cap", "horse_heart", "horse_heart_half", "horse_heart_flash",
-              "horse_heart_flash_half", "mob_effect_background", "hud_mob_effect_background"):
+              "horse_heart_flash_half", "mob_effect_background", "hud_mob_effect_background", "horse_jump_empty",
+              "horse_jump_full"):
         nombres.add("textures/ui/" + n)
+    # los dibujos de los efectos (el HUD y la lista de efectos los eligen desde el código)
+    for n in ("speed", "slowness", "haste", "mining_fatigue", "strength", "jump_boost", "nausea", "regeneration",
+              "resistance", "fire_resistance", "water_breathing", "invisibility", "blindness", "night_vision", "hunger",
+              "weakness", "poison", "wither", "health_boost", "absorption", "levitation"):
+        nombres.add("textures/ui/" + n + "_effect")
     tabla = atlas(apk, paquete, nombres, salida)
     d = {"globales": globales, "espacios": espacios, "texturas": tabla,
          "textos": textos(apk, paquete, idiomas), "emoticonos": glifos(apk, paquete, salida)}

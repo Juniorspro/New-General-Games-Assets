@@ -308,8 +308,11 @@ var Items = (function () {
   };
   // la comida (de items.json): { nutrition, saturation_modifier, using_converts_to, effects... } y
   // cuánto tarda (use_duration, en pasos)
+  // lo que la 1.2 tiene en código y no en items.json: la fruta del coro (4 de comida, saturación
+  // baja, siempre se come y teletransporta)
+  var COMIDA_CODIGO = { chorus_fruit: { use_duration: 32, food: { nutrition: 4, saturation_modifier: 'low', can_always_eat: true } } };
   IT.comida = function (id) {
-    var d = def[id], j = d && comida[d.n];
+    var d = def[id], j = d && (comida[d.n] || COMIDA_CODIGO[d.n]);
     return j && j.food ? { f: j.food, t: j.use_duration || 32 } : null;
   };
   // la semilla: { crop_result, plant_at } (de items.json)

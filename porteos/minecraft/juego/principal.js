@@ -317,7 +317,7 @@
     window.prueba = { cam: cam, mundo: mundo, render: Render, jugador: J, partida: function () { return partida; }, abrir: abrirMundo, crear: crearMundo,
       cuenta: cuenta, bichos: B, red: Red, publico: entrarPublico, pantallas: Pantallas, jui: Jui, comando: function (t) { comando(t); }, inventario: function () { return inv; },
       supervivencia: function () { return sup; }, muerto: function () { return muerto; }, tirados: function () { return tirados; }, hudPan: function () { return hudPan; },
-      pegar: function (fx, fy) { return pegar(fx, fy); },
+      pegar: function (fx, fy) { return pegar(fx, fy); }, darEfecto: function (id, dur, amp) { return darEfecto(id, dur, amp); },
       rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, ms: function () { return msCuadro; },
       diag: null, pedirDiag: function () { if (trab) trab.postMessage({ t: 'diag' }); }, listo: true };
   }
@@ -482,6 +482,12 @@
       hudPan = Pantallas.hud();
       I.hud = hudPan ? function (cx) { Jui.dibujarSuelta(cx, hudPan); } : null;
       I.tocarHud = hudPan ? function (x, y) { return Jui.tocarSuelta(hudPan, x, y); } : null;
+      I.tocarEfectos = function (x, y) {
+        var z = Pantallas.zonaEfectos();
+        if (!z || x < z.x - 2 || x > z.x + z.w + 2 || y < z.y - 2 || y > z.y + z.h + 2) return false;
+        abrirPantalla('efectos');
+        return true;
+      };
       antesXZ = [J.x, J.z];
       if (!m.local) {
         Red.reiniciarCambios();
@@ -743,6 +749,50 @@
     },
     sonido: function (ev, vol, tono, x, y, z) { Sonido.tocar(ev, vol, tono, x, y, z); }
   };
+  // ------------------------------------------------------------------------------------------
+  // Los efectos (efectos.js): dar uno (la absorción llena sus corazones amarillos al empezar o al
+  // renovarse, como PotionAbsorption), lo que hacen en cada paso y lo que cambian del jugador
+  // ------------------------------------------------------------------------------------------
+  function darEfecto(id, dur, amp) {
+    var antes = Efectos.de(sup.efectos, id), ampAntes = antes ? antes.amp : -1;
+    var e = Efectos.dar(sup.efectos, id, dur, amp);
+    if (e && id === 22) sup.absorcion = Math.max(0, sup.absorcion - (ampAntes >= 0 ? 4 * (ampAntes + 1) : 0)) + 4 * (e.amp + 1);
+    I.sucio();
+    return e;
+  }
+  var ganchosEfectos = {
+    curar: function (n) { if (sup.vida > 0 && !muerto) { Supervivencia.curar(sup, n); vida = sup.vida; I.juego.vida = vida; } },
+    danar: function (n, causa) { recibirDano(n, '', null, causa); },
+    cansar: function (x) { Supervivencia.cansar(sup, x); },
+    comer: function (n, sat) { sup.comida = Math.min(20, sup.comida + n); sup.saturacion = Math.min(sup.comida, sup.saturacion + sat); },
+    vida: function () { return sup.vida; },
+    dar: function (id, dur, amp) { darEfecto(id, dur, amp); },
+    alTerminar: function (e) {
+      if (e.id === 22) sup.absorcion = Math.max(0, sup.absorcion - 4 * (e.amp + 1));
+      I.sucio();
+    }
+  };
+  // la náusea: lo que el juego llama "timeInPortal" (sube de a 1/150 mientras dura y baja de a 0,01)
+  var nausea = 0, firmaEfectos = '';
+  function pasoEfectos() {
+    var ef = sup.efectos;
+    if (ef.lista.length) Efectos.paso(ef, ganchosEfectos);
+    // la velocidad (+20 % por nivel) y la lentitud (−15 %), el salto (+0,1 por nivel), la levitación
+    var vel = Efectos.nivel(ef, 1), len = Efectos.nivel(ef, 2);
+    J.velMult = Math.max(0, (1 + 0.2 * vel) * (1 - 0.15 * len));
+    J.saltoExtra = 0.1 * Efectos.nivel(ef, 8);
+    J.levitar = Efectos.nivel(ef, 24);
+    // la vida extra: 2 corazones por nivel mientras dura (al irse, la vida no pasa del máximo)
+    var max = 20 + 4 * Efectos.nivel(ef, 21);
+    if (sup.max !== max) { sup.max = max; if (sup.vida > max) { sup.vida = max; vida = max; I.juego.vida = max; } I.sucio(); }
+    var nz = Efectos.de(ef, 9);
+    nausea = nz && nz.dur > 60 ? Math.min(1, nausea + 1 / 150) : Math.max(0, nausea - 0.01);
+    // el HUD se vuelve a dibujar cuando cambian los íconos (y en los últimos 10 s, que titilan)
+    var f = '';
+    for (var k = 0; k < ef.lista.length; k++) { var e = ef.lista[k]; f += e.id + ':' + e.amp + (e.dur <= 200 ? ':' + e.dur : '') + ','; }
+    f += '|' + sup.absorcion + '|' + sup.max + (Efectos.de(ef, 10) && I.juego.conVida ? '|' + pasosLuz : '');
+    if (f !== firmaEfectos) { firmaEfectos = f; I.sucio(); }
+  }
   function reaparecer() {
     Supervivencia.reaparecer(sup);
     muerto = false; vida = sup.vida; I.juego.vida = vida; ultimoAtacante = ''; ultimaCausa = ''; caida = 0;
@@ -786,8 +836,10 @@
     var kx = Math.sin(J.yaw) * 0.4, kz = -Math.cos(J.yaw) * 0.4;
     if (!(jug && (!mejor || tj < mejor.t)) && !mejor) return false;
     var it = I.juego.barra[I.juego.elegido], d = it && Items.def[it.id], dano = d && d.dano ? d.dano : 1;
-    // el golpe crítico: cayendo (EntityPlayer.attackTargetEntityWithCurrentItem)
-    if (!J.enPiso && J.vy < 0 && !J.enAgua && !J.volando && !J.enEscalera) dano *= 1.5;
+    // la fuerza suma 3 por nivel y la debilidad resta 4 (los modificadores del ataque)
+    dano = Math.max(0, dano + 3 * Efectos.nivel(sup.efectos, 5) - 4 * Efectos.nivel(sup.efectos, 18));
+    // el golpe crítico: cayendo y sin ceguera (EntityPlayer.attackTargetEntityWithCurrentItem)
+    if (!J.enPiso && J.vy < 0 && !J.enAgua && !J.volando && !J.enEscalera && !Efectos.de(sup.efectos, 15)) dano *= 1.5;
     if (jug && (!mejor || tj < mejor.t)) Red.golpear(jug.id, dano, kx, kz);
     else if (mejor.remoto) Red.golpearBicho(mejor.e.dueno, mejor.e.mid, dano, kx, kz);
     else B.golpe(mejor.e, dano, kx, kz);
@@ -988,7 +1040,8 @@
     var dt = Math.min(250, ahora - minando.ultimo);
     minando.ultimo = ahora;
     if (ahora < esperaMinar) return;
-    var av = Minar.avance(h.id, it, { bajoAgua: J.cabezaEnAgua, enAire: !J.enPiso && !J.volando && !J.enAgua });
+    var av = Minar.avance(h.id, it, { bajoAgua: J.cabezaEnAgua && !Efectos.de(sup.efectos, 13), enAire: !J.enPiso && !J.volando && !J.enAgua,
+      prisa: Efectos.nivel(sup.efectos, 3), fatiga: Efectos.nivel(sup.efectos, 4) });
     if (av <= 0) return;
     minando.prog += av >= 1 ? 1 : av * dt / 50;
     if (ahora - minando.sonido >= 200) {
@@ -1012,33 +1065,73 @@
   // comer siempre), los pasos de items.json ("use_duration"); suena cada 4 pasos y al terminar suma la
   // comida y la saturación (y deja el tazón del guiso)
   var comiendo = null;
+  // lo que se come aunque no haya hambre (el juego los marca "always edible")
+  var SIEMPRE = { 322: 1, 466: 1, 432: 1 };
   function comidaEnMano() {
-    var it = I.juego.barra[I.juego.elegido], cm = it && Items.comida(it.id);
-    if (!cm || !supervivencia() || muerto) return null;
-    if (sup.comida >= 20 && !cm.f.can_always_eat) return null;
+    var it = I.juego.barra[I.juego.elegido];
+    if (!it || muerto) return null;
+    // las pociones y la leche se toman también en creativo (y sin gastarse)
+    if (it.id === 373) return { f: { nutrition: 0 }, t: 32, bebida: 'pocion' };
+    if (it.id === 325 && it.m === 1) return { f: { nutrition: 0 }, t: 32, bebida: 'leche' };
+    var cm = Items.comida(it.id);
+    if (!cm || !supervivencia()) return null;
+    if (sup.comida >= 20 && !cm.f.can_always_eat && !SIEMPRE[it.id]) return null;
     return cm;
+  }
+  // lo que queda en la mano después de comer o tomar (el tazón, la botella, el balde)
+  function dejarEnMano(id, m) {
+    var cosa = Inventario.cosa(id, m || 0, 1);
+    if (!inv.barra[I.juego.elegido]) inv.barra[I.juego.elegido] = cosa;
+    else if (Inventario.agregar(inv, cosa) > 0) tirarObjeto(cosa);
   }
   function comerPaso(cm, ahora) {
     var it = I.juego.barra[I.juego.elegido], clave = it.id + ':' + it.m;
     if (!comiendo || comiendo.clave !== clave) comiendo = { clave: clave, t0: ahora, total: cm.t * 50, sonido: 0 };
     var t = ahora - comiendo.t0;
-    estadoMano.comer = { quedan: Math.max(0, (comiendo.total - t) / 50), total: cm.t };
+    estadoMano.comer = { quedan: Math.max(0, (comiendo.total - t) / 50), total: cm.t, tomar: !!cm.bebida };
     if (t > 350 && ahora - comiendo.sonido >= 200) {
       comiendo.sonido = ahora;
-      Sonido.tocar('random.eat', 0.5 + 0.5 * Math.round(Math.random()), (Math.random() - Math.random()) * 0.2 + 1);
+      if (cm.bebida) Sonido.tocar('random.drink', 0.5, Math.random() * 0.1 + 0.9);
+      else Sonido.tocar('random.eat', 0.5 + 0.5 * Math.round(Math.random()), (Math.random() - Math.random()) * 0.2 + 1);
     }
     if (t < comiendo.total) return;
-    Supervivencia.comer(sup, cm.f);
-    Sonido.tocar('random.burp', 0.5, Math.random() * 0.1 + 0.9);
-    var queda = cm.f.using_converts_to ? Botin.numero(cm.f.using_converts_to) : undefined;
-    Inventario.gastar(inv, I.juego.elegido, 1);
-    if (queda !== undefined) {
-      var cosa = Inventario.cosa(queda, 0, 1);
-      if (!inv.barra[I.juego.elegido]) inv.barra[I.juego.elegido] = cosa;
-      else if (Inventario.agregar(inv, cosa) > 0) tirarObjeto(cosa);
+    var gasta = supervivencia();
+    if (cm.bebida === 'pocion') {
+      Efectos.dePocion(sup.efectos, it.m, 'potion', ganchosEfectos);
+      if (gasta) { Inventario.gastar(inv, I.juego.elegido, 1); dejarEnMano(374, 0); }
+    } else if (cm.bebida === 'leche') {
+      // la leche saca todos los efectos (y deja el balde vacío)
+      Efectos.limpiar(sup.efectos); sup.absorcion = 0;
+      if (gasta) { Inventario.gastar(inv, I.juego.elegido, 1); dejarEnMano(325, 0); }
+    } else {
+      Supervivencia.comer(sup, cm.f);
+      // los efectos de la comida (items.json: manzanas doradas, pescado globo, carne podrida...)
+      Efectos.deComida(sup.efectos, cm.f.effects, ganchosEfectos);
+      if (it.id === 432) teletransportarAlAzar();
+      Sonido.tocar('random.burp', 0.5, Math.random() * 0.1 + 0.9);
+      var queda = cm.f.using_converts_to ? Botin.numero(cm.f.using_converts_to) : undefined;
+      Inventario.gastar(inv, I.juego.elegido, 1);
+      if (queda !== undefined) dejarEnMano(queda, 0);
     }
     comiendo = null; estadoMano.comer = null;
     I.sucio();
+  }
+  // la fruta del coro (ItemChorusFruit): hasta 16 intentos de un lugar al azar a 8 bloques con piso
+  function teletransportarAlAzar() {
+    for (var k = 0; k < 16; k++) {
+      var x = J.x + (Math.random() - 0.5) * 16, z = J.z + (Math.random() - 0.5) * 16;
+      var y = Math.max(1, Math.min(C.ALTO - 2, Math.floor(J.y + Math.floor(Math.random() * 16) - 8)));
+      for (; y > 1 && !C.SOLIDO[Mundo.bloque(Math.floor(x), y - 1, Math.floor(z))]; y--) { /* bajar hasta el piso */ }
+      var X = Math.floor(x), Z = Math.floor(z), a = Mundo.bloque(X, y, Z), b = Mundo.bloque(X, y + 1, Z);
+      if (C.SOLIDO[Mundo.bloque(X, y - 1, Z)] && !(a > 0 && C.SOLIDO[a]) && !(b > 0 && C.SOLIDO[b]) && a !== 10 && a !== 11) {
+        Sonido.tocar('mob.endermen.portal', 1, 1, J.x, J.y, J.z);
+        J.ubicar(X + 0.5, y, Z + 0.5);
+        caida = 0;
+        Sonido.tocar('mob.endermen.portal', 1, 1);
+        return true;
+      }
+    }
+    return false;
   }
   // en creativo con una espada en la mano no se rompe (como el juego)
   function espadaEnMano() { var it = I.juego.barra[I.juego.elegido], d = it && Items.def[it.id]; return !!(d && d.herr === 'espada'); }
@@ -1115,7 +1208,14 @@
     var dx = obj.x - e.x, dz = obj.z - e.z, l = Math.sqrt(dx * dx + dz * dz) || 1, kx = dx / l * 0.4, kz = dz / l * 0.4;
     var nombre = O.nombreBicho ? O.nombreBicho(e.tipo) : I.t('entity.' + e.tipo + '.name', e.tipo);
     if (obj.id) Red.accion({ type: 'hit_player', targetId: obj.id, dmg: dano, byName: nombre, kx: +kx.toFixed(3), kz: +kz.toFixed(3) });
-    else recibirDano(dano, nombre, [kx, kz], causa || 'mob');
+    else {
+      var antes = sup.vida;
+      recibirDano(dano, nombre, [kx, kz], causa || 'mob');
+      // lo que el ataque contagia ("effect_name" de minecraft:attack: veneno de la araña de cueva,
+      // hambre del husk, wither del esqueleto wither) si el golpe entró
+      var ea = causa !== 'projectile' && e.efectoAtaque;
+      if (ea && ea.dur > 0 && sup.vida < antes && !muerto && I.juego.conVida) darEfecto(Efectos.id(ea.nombre), ea.dur * 20, 0);
+    }
   };
   B.explosion = function (x, y, z, r, jug, quien) {
     Sonido.tocar('random.explode', 1, 0.9 + Math.random() * 0.2, x, y, z);
@@ -1188,13 +1288,15 @@
     if (!J.enPiso && !J.volando && !J.enAgua && J.y < antesY) caida += antesY - J.y;
     if (J.enAgua || J.volando || Mundo.bloque(Math.floor(J.x), Math.floor(J.y), Math.floor(J.z)) === 65 ||
       Mundo.bloque(Math.floor(J.x), Math.floor(J.y), Math.floor(J.z)) === 106) caida = 0;
-    if (J.enPiso && !antesPiso) { if (caida > 3.2) recibirDano(Math.ceil(caida - 3), '', null, 'fall'); caida = 0; }
+    // (el salto mejorado achica la caída: un bloque por nivel)
+    if (J.enPiso && !antesPiso) { var cd = caida - 3 - Efectos.nivel(sup.efectos, 8); if (cd > 0.2) recibirDano(Math.ceil(cd), '', null, 'fall'); caida = 0; }
     var X = Math.floor(J.x), Z = Math.floor(J.z), bp = Mundo.bloque(X, Math.floor(J.y + 0.2), Z), bc = Mundo.bloque(X, Math.floor(J.y + 1.62), Z);
     var bm = Mundo.bloque(X, Math.floor(J.y + 0.9), Z);
     var danos = Supervivencia.paso(sup, { tick: pasosLuz, cabezaEnAgua: bc === 8 || bc === 9,
       enAgua: bp === 8 || bp === 9 || bm === 8 || bm === 9, enLava: bp === 10 || bp === 11 || bm === 10 || bm === 11,
       enFuego: bp === 51 || bm === 51, vacio: J.y < VACIO, asfixia: !J.volando && bc > 0 && C.OPACO[bc] === 1 && C.SOLIDO[bc] === 1,
-      dificultad: sinHambre ? 'sinHambre' : B.dificultad, regenerar: partida.regenerar !== false });
+      dificultad: sinHambre ? 'sinHambre' : B.dificultad, regenerar: partida.regenerar !== false,
+      respiraBajoAgua: !!Efectos.de(sup.efectos, 13) });
     if (danos) for (var dd = 0; dd < danos.length && !muerto; dd++) recibirDano(danos[dd][0], '', null, danos[dd][1]);
     // el cansancio de moverse (correr 0,1 por bloque, nadar 0,01) y de saltar
     var mx = J.x - antesXZ[0], mz = J.z - antesXZ[1], dist = Math.sqrt(mx * mx + mz * mz);
@@ -1217,7 +1319,9 @@
     e.subir = activo && c.subir;
     e.bajar = activo && c.bajar;
     J.agachado = activo && c.agachar && !J.volando;
-    J.corriendo = activo && (c.correr || corriendoTactil) && e.adelante > 0 && !J.agachado;
+    // no se corre con ceguera ni con 6 de comida o menos (EntityPlayerSP.onLivingUpdate)
+    J.corriendo = activo && (c.correr || corriendoTactil) && e.adelante > 0 && !J.agachado && !Efectos.de(sup.efectos, 15) &&
+      (!I.juego.conVida || sinHambre || sup.comida > 6);
     var antesY = J.y, antesPiso = J.enPiso;
     caminadoAntes = J.caminado;
     if (!muerto) J.paso();
@@ -1236,6 +1340,7 @@
     // vacío, como en el juego
     if (golpeTicks > 0) golpeTicks--;
     if (muerto) muerteTicks++; else muerteTicks = 0;
+    if (!muerto && partida) pasoEfectos();
     if (!muerto && partida) {
       if (I.juego.conVida) pasoVida(antesY, antesPiso);
       else {
@@ -1253,7 +1358,9 @@
     if (J.enAgua && !antesEnAgua && antesY - J.y > 0.1) Sonido.tocar('random.splash', 0.3, 1 + (Math.random() - Math.random()) * 0.4);
     antesEnAgua = J.enAgua;
     // los bichos
-    var jugs = [{ x: J.x, y: J.y, z: J.z, id: null, vivo: !muerto }];
+    // (con invisibilidad los monstruos lo ven de más cerca: 7 % de la distancia sin armadura)
+    var piezas = inv.armadura.filter(Boolean).length;
+    var jugs = [{ x: J.x, y: J.y, z: J.z, id: null, vivo: !muerto, vis: Efectos.de(sup.efectos, 14) ? 0.7 * Math.max(0.1, piezas / 4) : 1 }];
     Red.remotos.forEach(function (j) { jugs.push({ x: j.x, y: j.y, z: j.z, id: j.id, vivo: j.hp > 0 }); });
     B.paso(jugs, luzDelDia());
     // lo tirado en el piso y los orbes (se levantan al pasar)
@@ -1374,8 +1481,9 @@
     var fg = golpeTicks > 0 ? Math.max(0, golpeTicks - alfa) / 10 : 0;
     cam.rol = fg > 0 ? -Math.sin(fg * fg * fg * fg * Math.PI) * 14 * Math.PI / 180 : 0;
     if (muerto) cam.rol = (40 - 8000 / (Math.min(20, muerteTicks + alfa) + 200)) * Math.PI / 180;
-    // el campo de visión se abre un poco al correr (como el juego)
-    var fovObj = opciones.fov * Math.PI / 180 * (J.corriendo ? 1.12 : 1);
+    // el campo de visión se abre un poco al correr y con la velocidad (y se cierra con la lentitud),
+    // como AbstractClientPlayer.getFovModifier
+    var fovObj = opciones.fov * Math.PI / 180 * (J.corriendo ? 1.12 : 1) * ((J.velMult || 1) + 1) / 2;
     fovActual = fovActual ? fovActual + (fovObj - fovActual) * Math.min(1, dt * 10) : fovObj;
     cam.fov = fovActual;
     Sonido.oyente(cam.x, cam.y, cam.z);
@@ -1400,6 +1508,12 @@
     mundo.tiempo = partida.tiempo + (partida.local && !partida.siempreDia ? alfa : 0);
     var ojo = Mundo.bloque(Math.floor(cam.x), Math.floor(cam.y), Math.floor(cam.z));
     mundo.bajoAgua = ojo === 8 || ojo === 9;
+    // los efectos que se ven: visión nocturna (en los últimos 10 s titila), ceguera (al irse, la
+    // niebla se abre en un segundo) y náusea
+    var efv = Efectos.de(sup.efectos, 16), efc = Efectos.de(sup.efectos, 15);
+    mundo.visionNocturna = efv ? (efv.dur > 200 ? 1 : 0.7 + Math.sin((efv.dur - alfa) * Math.PI * 0.2) * 0.3) : 0;
+    mundo.ceguera = efc ? (efc.dur < 20 ? efc.dur / 20 : 1) : 0;
+    cam.nausea = nausea; cam.ticks = pasosLuz + alfa;
     var tb = TEMPERATURA[Mundo.bioma(Math.floor(cam.x), Math.floor(cam.z))];
     mundo.temperatura = tb === undefined ? 0.8 : tb;
     // lo que se dibuja además del mundo: los bichos y los otros jugadores (con su nombre arriba)
@@ -1643,9 +1757,45 @@
         chat(Tc('commands.summon.success', 'Object successfully summoned'));
         return;
       }
+      case 'effect': {
+        // /effect <jugador|@s|@p> <efecto|clear> [segundos] [nivel] (como la 1.2)
+        if (!partida.local) { chat(Tc('commands.generic.disabled', 'Cheats are not enabled'), '#ff8080'); return; }
+        var ne = (a[2] || '').toLowerCase().replace(/^minecraft:/, '');
+        if (ne === 'clear') {
+          if (!sup.efectos.lista.length) { chat(Tc('commands.effect.failure.notActive.all', '', opciones.nombre), '#ff8080'); return; }
+          Efectos.limpiar(sup.efectos); sup.absorcion = 0; I.sucio();
+          chat(Tc('commands.effect.success.removed.all', 'Took all effects from %1$s', opciones.nombre));
+          return;
+        }
+        var ide = Efectos.id(ne) || (parseInt(ne, 10) > 0 && parseInt(ne, 10) < Efectos.lista.length ? parseInt(ne, 10) : 0);
+        if (!ide) { chat(Tc('commands.effect.notFound', 'There is no such mob effect with ID %s', a[2] || ''), '#ff8080'); return; }
+        var seg = a[3] !== undefined ? parseInt(a[3], 10) : 30, amp = a[4] !== undefined ? parseInt(a[4], 10) : 0;
+        if (isNaN(seg) || isNaN(amp) || seg < 0) { malo(); return; }
+        var nom = I.t('potion.' + Efectos.lista[ide][1], ne);
+        if (seg === 0) {
+          if (!Efectos.de(sup.efectos, ide)) { chat(Tc('commands.effect.failure.notActive', '', nom, opciones.nombre), '#ff8080'); return; }
+          Efectos.quitar(sup.efectos, ide); I.sucio();
+          chat(Tc('commands.effect.success.removed', 'Took %1$s from %2$s', nom, opciones.nombre));
+          return;
+        }
+        if (Efectos.INSTANTANEO[ide]) Efectos.instantaneo(ide, amp, ganchosEfectos);
+        else darEfecto(ide, seg * 20, Math.max(0, Math.min(255, amp)));
+        chat(Tc('commands.effect.success', 'Gave %1$s * %2$d to %3$s for %4$d seconds', nom, amp, opciones.nombre, seg));
+        return;
+      }
+      case 'xp': {
+        if (!partida.local) { chat(Tc('commands.generic.disabled', 'Cheats are not enabled'), '#ff8080'); return; }
+        var q = a[1] || '', niv = /l$/i.test(q), nx = parseInt(q, 10);
+        if (isNaN(nx)) { malo(); return; }
+        if (niv) { sup.nivel = Math.max(0, sup.nivel + nx); if (nx < 0 && sup.nivel === 0) sup.progreso = 0; chat(Tc(nx < 0 ? 'commands.xp.success.negative.levels' : 'commands.xp.success.levels', '', Math.abs(nx), opciones.nombre)); }
+        else if (nx >= 0) { ganchosTirados.xp(nx); chat(Tc('commands.xp.success', 'Gave %1$d experience to %2$s', nx, opciones.nombre)); }
+        else { chat(Tc('commands.xp.failure.widthdrawXp', ''), '#ff8080'); return; }
+        I.sucio();
+        return;
+      }
       case 'help': case '?':
         chat('/time set <day|noon|sunset|night|midnight|sunrise|n>, /weather <clear|rain|thunder>, /gamemode <c|s>, ' +
-          '/tp <x y z|jugador>, /summon <bicho>, /kill, /seed, /say, /me');
+          '/tp <x y z|jugador>, /summon <bicho>, /effect <jugador> <efecto|clear> [s] [nivel], /xp <n>[L], /kill, /seed, /say, /me');
         return;
     }
     chat(Tc('commands.generic.unknown', 'Unknown command: %s', c), '#ff8080');
@@ -1868,7 +2018,9 @@
       var pt = I.juego.parpadeoTick || 0;
       return { creativo: !I.juego.conVida, vida: sup.vida, vidaAntes: I.juego.vidaAntes || 0, comida: sup.comida, saturacion: sup.saturacion,
         aire: sup.aire, bajoAgua: sup.aire < 300, titila: pt > pasosLuz && ((pt - pasosLuz) / 3 | 0) % 2 === 1, tick: pasosLuz,
-        nivel: sup.nivel, progreso: sup.progreso, veneno: false, wither: false, hambre: false };
+        nivel: sup.nivel, progreso: sup.progreso, max: sup.max, absorcion: sup.absorcion, efectos: sup.efectos.lista,
+        veneno: !!(Efectos.de(sup.efectos, 19) || Efectos.de(sup.efectos, 25)), wither: !!Efectos.de(sup.efectos, 20),
+        hambre: !!Efectos.de(sup.efectos, 17), regenera: !!Efectos.de(sup.efectos, 10) };
     },
     elegido: function () { return I.juego.elegido; },
     // el ícono de guardado del HUD: mientras se guarda (y un poco más, para que se vea)

@@ -8,10 +8,11 @@ var Supervivencia = (function () {
   var S = {};
   S.nuevo = function () {
     return { vida: 20, max: 20, comida: 20, saturacion: 5, cansancio: 0, aire: 300, nivel: 0, progreso: 0, totalXp: 0,
-      quemando: 0, invulnerable: 0, pasoComida: 0, ultimoDano: 0, ultimaCausa: '' };
+      quemando: 0, invulnerable: 0, pasoComida: 0, ultimoDano: 0, ultimaCausa: '', efectos: Efectos.nuevo(), absorcion: 0 };
   };
   S.guardar = function (s) {
-    return { v: s.vida, c: s.comida, s: +s.saturacion.toFixed(2), k: +s.cansancio.toFixed(3), a: s.aire, n: s.nivel, p: +s.progreso.toFixed(4), t: s.totalXp };
+    return { v: s.vida, c: s.comida, s: +s.saturacion.toFixed(2), k: +s.cansancio.toFixed(3), a: s.aire, n: s.nivel, p: +s.progreso.toFixed(4), t: s.totalXp,
+      e: Efectos.guardar(s.efectos), b: s.absorcion, m: s.max };
   };
   S.cargar = function (g) {
     var s = S.nuevo();
@@ -24,6 +25,9 @@ var Supervivencia = (function () {
     if (typeof g.n === 'number') s.nivel = g.n;
     if (typeof g.p === 'number') s.progreso = g.p;
     if (typeof g.t === 'number') s.totalXp = g.t;
+    s.efectos = Efectos.cargar(g.e);
+    if (typeof g.b === 'number') s.absorcion = g.b;
+    if (typeof g.m === 'number') s.max = g.m;
     return s;
   };
 
@@ -83,19 +87,29 @@ var Supervivencia = (function () {
   // segundo de invulnerabilidad salvo que el golpe nuevo sea más fuerte. Devuelve lo que se perdió
   // ------------------------------------------------------------------------------------------
   var SIN_ARMADURA = { starve: 1, drown: 1, outOfWorld: 1, inWall: 1, onFire: 1, magic: 1, wither: 1, fall: 1 };
+  // lo que es fuego (la resistencia al fuego lo anula del todo: EntityLivingBase.attackEntityFrom)
+  var FUEGO = { lava: 1, inFire: 1, onFire: 1, fireball: 1, hotFloor: 1 };
   S.danar = function (s, n, causa, armadura) {
     if (n <= 0 || s.vida <= 0) return 0;
+    if (FUEGO[causa] && Efectos.de(s.efectos, 12)) return 0;
     if (s.invulnerable > 10 && n <= s.ultimoDano) return 0;
     var real = n;
     if (s.invulnerable > 10) real = n - s.ultimoDano;
     if (!SIN_ARMADURA[causa] && armadura > 0) real = real * (1 - Math.min(20, armadura) / 25);
+    // la resistencia: 20 % menos por nivel (salvo el vacío); después la absorción se come lo que
+    // pueda (applyPotionDamageCalculations y damageEntity)
+    var res = Efectos.de(s.efectos, 11);
+    if (res && causa !== 'outOfWorld') real = real * Math.max(0, 25 - (res.amp + 1) * 5) / 25;
     real = Math.max(0, real);
+    var golpe = real;
+    if (s.absorcion > 0) { var a = Math.min(s.absorcion, real); s.absorcion -= a; real -= a; }
     s.ultimoDano = n; s.ultimaCausa = causa || '';
     if (s.invulnerable <= 10) s.invulnerable = 20;
     // la vida va en medios corazones: el juego guarda los decimales; acá se redondea al medio
     s.vida = Math.max(0, Math.round((s.vida - real) * 2) / 2);
     S.cansar(s, 0.1);
-    return real;
+    // (lo que pegó, aunque la absorción se lo haya comido: igual duele)
+    return golpe;
   };
   S.curar = function (s, n) { s.vida = Math.min(s.max, s.vida + n); };
   // comer: la comida y la saturación de items.json ("saturation_modifier": poor 0,1, low 0,3, normal
@@ -123,6 +137,7 @@ var Supervivencia = (function () {
   S.xpAlMorir = function (s) { return Math.min(100, s.nivel * 7); };
   S.morir = function (s) { s.nivel = 0; s.progreso = 0; s.totalXp = 0; };
   S.reaparecer = function (s) {
+    Efectos.limpiar(s.efectos); s.absorcion = 0; s.max = 20;
     s.vida = s.max; s.comida = 20; s.saturacion = 5; s.cansancio = 0; s.aire = 300; s.quemando = 0; s.invulnerable = 0;
   };
   return S;

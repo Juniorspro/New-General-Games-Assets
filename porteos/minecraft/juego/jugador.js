@@ -14,6 +14,8 @@ var Jugador = (function () {
   J.autoSalto = true;               // el "salto automático" de MCPE en pantallas táctiles (viene prendido)
   J.entrada = { adelante: 0, costado: 0, saltar: false, bajar: false, subir: false };
   J.caminado = 0;                   // para los pasos (sonido) y el bamboleo de la cámara
+  // lo que cambian los efectos (efectos.js): la velocidad al caminar, el salto, la levitación
+  J.velMult = 1; J.saltoExtra = 0; J.levitar = 0;
 
   // las cajas de choque de un bloque (en coordenadas del bloque)
   function cajas(id, m, sal, x, y, z) {
@@ -168,7 +170,7 @@ var Jugador = (function () {
       J.enPiso = r[4] && J.vy < 0;
     } else {
       var roce = J.enPiso ? 0.546 : 0.91;
-      var f = J.enPiso ? 0.1 * (0.16277136 / (roce * roce * roce)) : 0.02;
+      var f = J.enPiso ? 0.1 * J.velMult * (0.16277136 / (roce * roce * roce)) : 0.02;
       if (J.corriendo) f *= 1.3;
       empujar(f);
       if (enEscalera()) {
@@ -177,7 +179,7 @@ var Jugador = (function () {
         if (J.agachado && J.vy < 0) J.vy = 0;
       }
       if (e.saltar && J.enPiso) {
-        J.vy = 0.42;
+        J.vy = 0.42 + J.saltoExtra;
         if (J.corriendo) { J.vx += sin * 0.2; J.vz -= cos * 0.2; }
       }
       var antes = J.vy;
@@ -187,11 +189,13 @@ var Jugador = (function () {
       if (r[4]) J.vy = 0;
       if (r[3]) J.vx = 0;
       if (r[5]) J.vz = 0;
-      J.vy -= 0.08; J.vy *= 0.98;
+      // la levitación sube de a poco en vez de caer (EntityLivingBase.travel)
+      if (J.levitar) J.vy += (0.05 * J.levitar - J.vy) * 0.2;
+      else { J.vy -= 0.08; J.vy *= 0.98; }
       J.vx *= roce; J.vz *= roce;
       // salto automático: caminando contra un escalón de un bloque con lugar arriba, salta solo (el
       // salto sale en el paso siguiente, como si se hubiera apretado saltar)
-      if (J.autoSalto && (r[3] || r[5]) && J.enPiso && len > 0 && !J.agachado && escalonAdelante(fwd, str, sin, cos)) J.vy = 0.42;
+      if (J.autoSalto && (r[3] || r[5]) && J.enPiso && len > 0 && !J.agachado && escalonAdelante(fwd, str, sin, cos)) J.vy = 0.42 + J.saltoExtra;
     }
     var dx = J.x - J.px, dz = J.z - J.pz;
     if (J.enPiso) J.caminado += Math.sqrt(dx * dx + dz * dz);

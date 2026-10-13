@@ -120,6 +120,9 @@ var Minar = (function () {
     if (h < 0) return 0;
     if (h === 0) return 1;
     var v = velocidad(id, item);
+    // la prisa: +20 % por nivel; la fatiga minera: ×0,3 por nivel (EntityPlayer.getDigSpeed)
+    if (o && o.prisa) v *= 1 + o.prisa * 0.2;
+    if (o && o.fatiga) v *= [0.3, 0.09, 0.0027, 0.00081][Math.min(4, o.fatiga) - 1];
     if (o && o.bajoAgua) v /= 5;
     if (o && o.enAire) v /= 5;
     return v / h / (puedeCosechar(id, item) ? 30 : 100);

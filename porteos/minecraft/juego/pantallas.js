@@ -61,6 +61,7 @@ var Pantallas = (function () {
     Jui.renderers.hunger_renderer = comida;
     Jui.renderers.bubbles_renderer = burbujas;
     Jui.renderers.hotbar_renderer = casillaBarra;
+    Jui.renderers.mob_effects_renderer = efectosHud;
     ['hud_player_renderer', 'hotbar_cooldown_renderer', 'horse_heart_renderer', 'horse_jump_renderer', 'mob_effects_renderer',
       'vignette_renderer', 'cursor_renderer', 'debug_overlay_renderer', 'progress_indicator_renderer', 'camera_renderer'].forEach(function (r) {
       if (!Jui.renderers[r]) Jui.renderers[r] = function () { /* lo dibuja el juego por su cuenta o no hace falta */ };
@@ -138,12 +139,20 @@ var Pantallas = (function () {
   function fila(ctx, k, x, y, dibujo, i, dx, dy) {
     Jui.textura(ctx, 'textures/ui/' + dibujo, (x + i * 8 + (dx || 0)) * k, (y + (dy || 0)) * k, 9 * k, 9 * k);
   }
+  // las filas de corazones (GuiIngame): con vida extra o absorción hay más de una y se aprietan
+  // (cada fila 10 − (filas − 2) unidades más abajo, nunca menos de 3)
+  function filasCorazones(e) {
+    var total = Math.ceil(((e.max || 20) + Math.ceil(e.absorcion || 0)) / 2), filas = Math.ceil(total / 10);
+    return { total: total, filas: filas, alto: Math.max(10 - (filas - 2), 3) };
+  }
   // la armadura: en el HUD debajo de los corazones (si hay puesta); en el inventario, siempre
   function barraArmadura(ctx, c, k) {
     var p = G.puntosArmadura ? G.puntosArmadura() : 0, enHud = c.pantalla && c.pantalla.esHud;
     if (enHud && p <= 0) return;
-    // (en el inventario el control está 5 unidades arriba, sobre el título)
+    // (en el inventario el control está 5 unidades arriba, sobre el título; en el HUD va debajo de
+    // la última fila de corazones)
     var y = c.y + (enHud ? 10 : 7);
+    if (enHud) { var e = G.estadoJugador ? G.estadoJugador() : null, fc = e && filasCorazones(e); if (fc && fc.filas > 1) y += (fc.filas - 1) * fc.alto; }
     for (var i = 0; i < 10; i++) fila(ctx, k, c.x, y, p >= i * 2 + 2 ? 'armor_full' : p === i * 2 + 1 ? 'armor_half' : 'armor_empty', i);
   }
   // el azar de un paso: el juego siembra su Random con el número de paso, así que lo que tiembla en un
@@ -151,20 +160,55 @@ var Pantallas = (function () {
   function azar(t, i, n) { var x = Math.sin(t * 12.9898 + i * 78.233) * 43758.5453; return Math.floor((x - Math.floor(x)) * n); }
   // los corazones (GuiIngame): con 4 de vida o menos tiemblan; al lastimarse titilan cada 3 pasos y
   // muestran en blanco lo que se perdió; con veneno verdes y con el wither negros
+  // con la absorción, los corazones amarillos van después de los de la vida; con la regeneración
+  // una ola levanta un corazón por paso (en el HUD de bolsillo las filas de más van hacia abajo)
   function corazones(ctx, c, k) {
     var e = G.estadoJugador ? G.estadoJugador() : null;
     if (!e || e.creativo) return;
     var vida = Math.ceil(e.vida), antes = Math.ceil(e.vidaAntes || 0), titila = e.titila, pre = e.veneno ? 'poison_' : e.wither ? 'wither_' : '';
-    for (var i = 9; i >= 0; i--) {
-      var dy = vida <= 4 ? azar(e.tick, i, 2) : 0;
-      fila(ctx, k, c.x, c.y, titila ? 'heart_blink' : 'heart_background', i, 0, dy);
-      if (titila) {
-        if (i * 2 + 1 < antes) fila(ctx, k, c.x, c.y, pre + 'heart_flash', i, 0, dy);
-        else if (i * 2 + 1 === antes) fila(ctx, k, c.x, c.y, pre + 'heart_flash_half', i, 0, dy);
+    var fc = filasCorazones(e), abs = Math.ceil(e.absorcion || 0), resto = abs, max = e.max || 20;
+    var ola = e.regenera ? e.tick % Math.ceil(max + 5) : -1;
+    for (var i = fc.total - 1; i >= 0; i--) {
+      var f = Math.ceil((i + 1) / 10) - 1, x = i % 10, dy = f * fc.alto + (vida <= 4 ? azar(e.tick, i, 2) : 0) - (i === ola ? 2 : 0);
+      fila(ctx, k, c.x, c.y, titila ? 'heart_blink' : 'heart_background', x, 0, dy);
+      if (i * 2 >= max) {
+        // los de la absorción (el primero a la mitad si es impar)
+        if (resto > 0) {
+          if (resto === abs && abs % 2 === 1) { fila(ctx, k, c.x, c.y, 'absorption_heart_half', x, 0, dy); resto -= 1; }
+          else { fila(ctx, k, c.x, c.y, 'absorption_heart', x, 0, dy); resto -= 2; }
+        }
+        continue;
       }
-      if (i * 2 + 1 < vida) fila(ctx, k, c.x, c.y, pre + 'heart', i, 0, dy);
-      else if (i * 2 + 1 === vida) fila(ctx, k, c.x, c.y, pre + 'heart_half', i, 0, dy);
+      if (titila) {
+        if (i * 2 + 1 < antes) fila(ctx, k, c.x, c.y, pre + 'heart_flash', x, 0, dy);
+        else if (i * 2 + 1 === antes) fila(ctx, k, c.x, c.y, pre + 'heart_flash_half', x, 0, dy);
+      }
+      if (i * 2 + 1 < vida) fila(ctx, k, c.x, c.y, pre + 'heart', x, 0, dy);
+      else if (i * 2 + 1 === vida) fila(ctx, k, c.x, c.y, pre + 'heart_half', x, 0, dy);
     }
+  }
+  // los efectos en el HUD (mob_effects_renderer): una columna a la derecha, cada uno en su cuadrito;
+  // en los últimos 10 s titilan (GuiIngame.renderPotionEffects). Tocarlos abre la lista
+  var zonaEfectos = null;
+  P.zonaEfectos = function () { return zonaEfectos; };
+  function efectosHud(ctx, c, k) {
+    var e = G.estadoJugador ? G.estadoJugador() : null, l = (e && e.efectos) || [];
+    l = l.filter(function (x) { return Efectos.lista[x.id] && Efectos.lista[x.id][2]; });
+    if (!l.length) { zonaEfectos = null; return; }
+    var x = c.x + c.w - 24, y0 = c.y, a0 = ctx.globalAlpha;
+    for (var i = 0; i < l.length; i++) {
+      var ef = l[i], y = y0 + i * 24, a = 1;
+      if (ef.dur <= 200) {
+        var j = 10 - Math.floor(ef.dur / 20);
+        a = Math.max(0, Math.min(0.5, ef.dur / 10 / 5 * 0.5)) + Math.cos(ef.dur * Math.PI / 5) * Math.max(0, Math.min(0.25, j / 10 * 0.25));
+      }
+      ctx.globalAlpha = a0;
+      Jui.textura(ctx, 'textures/ui/hud_mob_effect_background', x * k, y * k, 22 * k, 22 * k);
+      ctx.globalAlpha = a0 * Math.max(0, Math.min(1, a));
+      Jui.textura(ctx, 'textures/ui/' + Efectos.lista[ef.id][2] + '_effect', (x + 2) * k, (y + 2) * k, 18 * k, 18 * k);
+    }
+    ctx.globalAlpha = a0;
+    zonaEfectos = { x: x, y: y0, w: 24, h: l.length * 24 };
   }
   // la comida: de derecha a izquierda desde la esquina; sin saturación tiembla de a ratos (más seguido
   // cuanto menos comida); con hambre (el efecto) verde
@@ -267,7 +311,7 @@ var Pantallas = (function () {
     desconectado: 'disconnect.disconnect_screen', inventario: 'crafting_pocket.survival_inventory_screen_pocket',
     inventarioCreativo: 'crafting_pocket.creative_inventory_screen_pocket', mesa: 'crafting_pocket.crafting_screen_pocket',
     horno: 'furnace.furnace_screen', cofre: 'chest.small_chest_screen', cofreGrande: 'chest.large_chest_screen',
-    cofreEnder: 'chest.ender_chest_screen'
+    cofreEnder: 'chest.ender_chest_screen', efectos: 'mob_effect.mob_effect_screen'
   };
   // variables de plataforma de cada pantalla ($is_pregame: fuera del mundo; sin elegir una imagen
   // propia para la skin: el botón "Aspecto nuevo" no aparece)
@@ -1249,6 +1293,30 @@ var Pantallas = (function () {
       }
     };
   }
+  // la lista de efectos (mob_effect_screen): el dibujo, el nombre con su nivel y lo que queda
+  CTRL.efectos = function () {
+    function lista() {
+      var e = G.estadoJugador();
+      return ((e && e.efectos) || []).filter(function (x) { return Efectos.lista[x.id] && Efectos.lista[x.id][2]; });
+    }
+    return {
+      vars: { '$mob_effect_screen_size': ['90%', '100% - 8px'], '$is_left_handed': false },
+      binding: function (n) { if (n === '#mob_effect_grid_size') return [1, lista().length]; },
+      longitud: function (col) { return col === 'mob_effects_collection' ? lista().length : 0; },
+      coleccion: function (col, i, n) {
+        if (col !== 'mob_effects_collection') return undefined;
+        var ef = lista()[i];
+        if (!ef) return undefined;
+        var L = Efectos.lista[ef.id];
+        if (n === '#mob_effect_name') return t('potion.' + L[1]) + (ef.amp > 0 ? ' ' + t('potion.potency.' + ef.amp) : '');
+        if (n === '#mob_effect_timer') return Efectos.tiempo(ef.dur);
+        if (n === '#texture') return 'textures/ui/' + L[2] + '_effect';
+      },
+      boton: function (id) {
+        if (id === 'button.menu_continue' || id === 'button.menu_cancel' || id === 'button.menu_exit' || id === 'button.mobeffects') G.seguir();
+      }
+    };
+  };
   CTRL.horno = ctrlContenedor;
   CTRL.cofre = ctrlContenedor;
   CTRL.cofreGrande = ctrlContenedor;

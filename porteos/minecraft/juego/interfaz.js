@@ -1135,6 +1135,8 @@ var Interfaz = (function () {
           pulsados[cr] = true; actualizarCruceta(); sucio = true;
           return;
         }
+        // los íconos de los efectos (a la derecha): la lista de efectos
+        if (I.tocarEfectos && !(I.opc && I.opc.ocultarInterfaz) && I.tocarEfectos(x / Jui.escala, y / Jui.escala)) { dedos.set(e.pointerId, { tipo: 'boton' }); return; }
         var bh = I.tocarHud && !(I.opc && I.opc.ocultarInterfaz) ? I.tocarHud(x / Jui.escala, y / Jui.escala) : null;
         if (bh) {
           // una casilla de la barra: mantenerla un segundo tira lo que tiene (como la 1.2 de bolsillo)

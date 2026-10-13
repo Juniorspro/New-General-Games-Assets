@@ -408,7 +408,7 @@ var Bichos = (function () {
     diaActual = dia;
     jugadores = jug.map(function (j) {
       return { x: j.x, y: j.y, z: j.z, id: j.id, vivo: j.vivo !== false, esJugador: true, atacable: B.conVida && j.vivo !== false,
-        ancho: 0.6, alto: 1.8, enMano: j.enMano || null, ref: j };
+        ancho: 0.6, alto: 1.8, enMano: j.enMano || null, ref: j, vis: j.vis || 1 };
     });
     ctx.dificultad = B.dificultad;
     var yo = jugadores[0];
