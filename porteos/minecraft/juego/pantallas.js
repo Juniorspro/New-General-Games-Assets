@@ -62,6 +62,8 @@ var Pantallas = (function () {
     Jui.renderers.bubbles_renderer = burbujas;
     Jui.renderers.hotbar_renderer = casillaBarra;
     Jui.renderers.mob_effects_renderer = efectosHud;
+    Jui.renderers.horse_heart_renderer = corazonesMontura;
+    Jui.renderers.horse_jump_renderer = saltoMontura;
     ['hud_player_renderer', 'hotbar_cooldown_renderer', 'horse_heart_renderer', 'horse_jump_renderer', 'mob_effects_renderer',
       'vignette_renderer', 'cursor_renderer', 'debug_overlay_renderer', 'progress_indicator_renderer', 'camera_renderer'].forEach(function (r) {
       if (!Jui.renderers[r]) Jui.renderers[r] = function () { /* lo dibuja el juego por su cuenta o no hace falta */ };
@@ -187,6 +189,30 @@ var Pantallas = (function () {
       else if (i * 2 + 1 === vida) fila(ctx, k, c.x, c.y, pre + 'heart_half', x, 0, dy);
     }
   }
+  // montado: los corazones del bicho donde iba la comida (de derecha a izquierda, en filas de 10) y
+  // la barra del salto del caballo arriba de la barra (GuiIngame.renderHorseJumpBar)
+  function corazonesMontura(ctx, c, k) {
+    var m = G.montado ? G.montado() : null;
+    if (!m) return;
+    var vida = Math.ceil(m.vida), total = Math.ceil(m.max / 2), x0 = c.x + c.w - 9;
+    for (var i = 0; i < total; i++) {
+      var f = Math.floor(i / 10), x = x0 - (i % 10) * 8, y = c.y + f * 10;
+      Jui.textura(ctx, 'textures/ui/heart_background', x * k, y * k, 9 * k, 9 * k);
+      if (i * 2 + 1 < vida) Jui.textura(ctx, 'textures/ui/horse_heart', x * k, y * k, 9 * k, 9 * k);
+      else if (i * 2 + 1 === vida) Jui.textura(ctx, 'textures/ui/horse_heart_half', x * k, y * k, 9 * k, 9 * k);
+    }
+  }
+  function saltoMontura(ctx, c, k) {
+    var m = G.montado ? G.montado() : null;
+    if (!m || !m.salta) return;
+    var x = c.x + c.w / 2 - 91, y = c.y - 5;
+    Jui.textura(ctx, 'textures/ui/horse_jump_empty', x * k, y * k, 182 * k, 5 * k);
+    if (m.carga > 0) {
+      ctx.save(); ctx.beginPath(); ctx.rect(x * k, y * k, Math.round(182 * m.carga) * k, 5 * k); ctx.clip();
+      Jui.textura(ctx, 'textures/ui/horse_jump_full', x * k, y * k, 182 * k, 5 * k);
+      ctx.restore();
+    }
+  }
   // los efectos en el HUD (mob_effects_renderer): una columna a la derecha, cada uno en su cuadrito;
   // en los últimos 10 s titilan (GuiIngame.renderPotionEffects). Tocarlos abre la lista
   var zonaEfectos = null;
@@ -214,7 +240,7 @@ var Pantallas = (function () {
   // cuanto menos comida); con hambre (el efecto) verde
   function comida(ctx, c, k) {
     var e = G.estadoJugador ? G.estadoJugador() : null;
-    if (!e || e.creativo) return;
+    if (!e || e.creativo || (G.montado && G.montado())) return;
     var x0 = c.x + c.w - 9, ef = e.hambre ? 'hunger_effect_' : 'hunger_', n = e.comida;
     var tiembla = e.saturacion <= 0 && e.tick % (n * 3 + 1) === 0;
     for (var i = 0; i < 10; i++) {
@@ -1356,8 +1382,8 @@ var Pantallas = (function () {
           case '#hotbar_elipses_right_visible': return true;
           case '#hotbar_elipses_left_visible': return false;
           case '#paper_doll_visible': case '#paper_doll_visible_living_room': case '#vr_riding': case '#vr_non_riding': return false;
-          case '#is_riding': return false;
-          case '#is_not_riding': return true;
+          case '#is_riding': return !!(G.montado && G.montado());
+          case '#is_not_riding': return !(G.montado && G.montado());
           case '#player_position_visible': return false;
           case '#boss_grid_dimension': return [1, 0];
           case '#hud_visible': return true;
@@ -1390,10 +1416,13 @@ var Pantallas = (function () {
     var pan = Jui.suelta('hud.hud_screen', ctrl, { '$is_pregame': false, '$touch': true });
     if (!pan) return null;
     pan.esHud = true;
-    pan.nombre = function (texto, creativo) {
+    // (con el botón de interactuar a la vista, el nombre va 10 más arriba: los "_above_interact_button")
+    pan.nombre = function (texto, creativo, conBoton) {
       nombre = texto || '';
       if (ultimoNombre) Jui.quitar(ultimoNombre);
-      ultimoNombre = nombre ? Jui.fabricar(pan, 'item_text_factory', creativo ? 'creative_item_text' : 'survival_item_text') : null;
+      var id = creativo ? (conBoton ? 'create_item_text_above_interact_button' : 'creative_item_text') :
+        (conBoton ? 'survival_item_text_above_interact_button' : 'survival_item_text');
+      ultimoNombre = nombre ? Jui.fabricar(pan, 'item_text_factory', id) : null;
     };
     // los avisos de arriba de la barra (hud_actionbar_text: "Solo se puede dormir de noche"...)
     var ultimoAviso = null;

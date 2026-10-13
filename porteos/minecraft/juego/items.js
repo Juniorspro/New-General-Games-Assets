@@ -319,6 +319,21 @@ var Items = (function () {
   };
   // la semilla: { crop_result, plant_at } (de items.json)
   IT.semilla = function (id) { var d = def[id], j = d && comida[d.n]; return j && j.seed ? j.seed : null; };
+  // ¿la cosa (it: { id, m }) es la de un nombre de los JSON del behavior pack? ("wheat",
+  // "minecraft:bucket:0", "dye:8", "tile.hay_block", "muttonRaw"): los objetos por su nombre (sin
+  // la variante: "dye.black" es "dye"), los bloques por el de blocks.json; ":n" pide esa variante
+  IT.coincide = function (spec, it) {
+    if (!it || spec === undefined || spec === null) return false;
+    if (typeof spec === 'object') spec = spec.item;
+    var p = String(spec).replace(/^minecraft:/, '').split(':'), n = p[0].replace(/^tile\./, '');
+    if (p.length > 1 && p[1] !== '' && +p[1] !== (it.m | 0)) return false;
+    if (it.id < 256) { var b = C.bloques[it.id]; return !!(b && b.nombre === n); }
+    var d = def[it.id];
+    if (!d) return false;
+    if (d.n === n || d.n.split('.')[0] === n) return true;
+    var v = variante(it.id, it.m);
+    return !!(v && v[0] === n);
+  };
   IT.brillo = function (id) { var d = def[id], j = d && comida[d.n]; return !!(d && (d.brillo || (j && j.foil))); };
   return IT;
 })();

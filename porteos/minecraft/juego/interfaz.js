@@ -442,6 +442,18 @@ var Interfaz = (function () {
       // la vida (en los servidores, donde se pelea)
       if (j.conVida && !oculta) corazones(bx, by - 11 * E, j.vida, ahora < j.parpadeoHasta);
     }
+    // el botón de interactuar (el de la 1.2 de bolsillo): arriba de la barra, al medio, gris
+    // transparente con el texto ("Alimentar", "Esquilar", "Montar"...)
+    if (j.interaccion && !oculta) {
+      var tx2 = j.interaccion.texto, tw2 = I.anchoTexto(tx2) + 16 * E, th2 = 16 * E;
+      var ix = Math.round(W / 2 - tw2 / 2), iy = Math.round(by - (j.conVida ? 33 : 22) * E - th2 / 2 + 4 * E);
+      ctx.fillStyle = apretadoInteractuar ? 'rgba(80,80,80,0.75)' : 'rgba(30,30,30,0.6)';
+      ctx.fillRect(ix, iy, Math.round(tw2), th2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = Math.max(1, E * 0.6);
+      ctx.strokeRect(ix + 0.5, iy + 0.5, Math.round(tw2) - 1, th2 - 1);
+      I.texto(tx2, W / 2, iy + 4 * E, '#ffffff', E, 'centro');
+      I.botones.push({ x: ix - 4 * E, y: iy - 4 * E, w: Math.round(tw2) + 8 * E, h: th2 + 8 * E, accion: 'interactuar' });
+    }
     // pausa y chat: arriba al medio (las esquinas de arriba son de los corazones y la comida, como
     // en la 1.2 de bolsillo)
     var pw = 18 * E, px = conHud ? Math.round(W / 2 + 2 * E) : W - pw - 4 * E;
@@ -1001,7 +1013,7 @@ var Interfaz = (function () {
     }
   }
 
-  var ultimoFps = -1, ultimoMouse = false, animando = false;
+  var ultimoFps = -1, ultimoMouse = false, animando = false, apretadoInteractuar = false;
   function hayQueDibujarJuego() {
     var j = I.juego, ahora = performance.now();
     var anima = ahora < j.nombreHasta + 100 || ahora < j.mensajeHasta + 100 || !!j.anillo || j.dano > 0 || j.nombres.length > 0 ||
@@ -1253,7 +1265,7 @@ var Interfaz = (function () {
     // principio de cada cuadro, así que ahí ya se sabe si se movió
     function mouseAbajo(e) {
       if (e.button === 0) I.control.rompiendo = [0.5, 0.5];
-      else if (e.button === 2) I.control.toque = [0.5, 0.5];
+      else if (e.button === 2) I.control.toque = [0.5, 0.5, 'mouse'];
     }
     objetivo.addEventListener('pointerup', function (e) { if (e.pointerType === 'mouse' && e.button === 0 && document.pointerLockElement) I.control.rompiendo = null; });
     objetivo.addEventListener('contextmenu', function (e) { e.preventDefault(); });

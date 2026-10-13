@@ -61,7 +61,8 @@ var Conducta = (function () {
       }
     }
     e.variante = c['minecraft:variant'] ? c['minecraft:variant'].value || 0 : 0;
-    e.colorLana = c['minecraft:color'] ? c['minecraft:color'].value || 0 : 0;
+    // (el color que le dio un tinte queda aunque cambien sus grupos)
+    e.colorLana = e.colorFijo !== undefined ? e.colorFijo : c['minecraft:color'] ? c['minecraft:color'].value || 0 : 0;
     e.esquilada = !!c['minecraft:is_sheared'];
     e.domado = !!c['minecraft:is_tamed'];
     e.ensillado = !!c['minecraft:is_saddled'];
@@ -172,14 +173,25 @@ var Conducta = (function () {
     var v = f.value, op = f.operator;
     switch (f.test) {
       case 'is_family': return comparar(familias(sujeto).indexOf(v) >= 0, op === '!=' ? '!=' : '==', true) ;
-      case 'has_component': return comparar(!!(sujeto && sujeto.c && sujeto.c[v]), op === '!=' ? '!=' : '==', true);
+      case 'has_component': {
+        // "minecraft:effect.weakness": un efecto (el aldeano zombi se cura con debilidad)
+        var hay = String(v).indexOf('minecraft:effect.') === 0 ? !!(sujeto && sujeto.efectos && Efectos.de(sujeto.efectos, Efectos.id(String(v).slice(17)))) :
+          !!(sujeto && sujeto.c && sujeto.c[v]);
+        return comparar(hay, op === '!=' ? '!=' : '==', true);
+      }
       case 'is_daytime': return comparar(ctx ? ctx.dia > 0.5 : true, op, v !== false);
       case 'is_brightness': return comparar(ctx ? ctx.brillo(e) : 1, op, v);
       case 'is_biome': return comparar(ctx ? ctx.bioma(e) === v : false, op === '!=' ? '!=' : '==', true);
       case 'is_snow_covered': return comparar(ctx ? ctx.nieve(e) : false, op === '!=' ? '!=' : '==', v !== false);
       case 'is_underground': return comparar(ctx ? ctx.bajoTierra(e) : false, op === '!=' ? '!=' : '==', v !== false);
       case 'is_difficulty': return comparar(ctx ? ctx.dificultad : 'normal', op, v);
-      case 'has_equipment': return false;
+      // lo que tiene en la mano (el jugador: { enMano: { id, m } })
+      case 'has_equipment': {
+        var eq = sujeto && sujeto.enMano;
+        var tiene = !!(eq && (typeof eq === 'object' ? Items.coincide(v, eq) : eq === String(v).split(':')[0]));
+        return op === '!=' || op === 'not' ? !tiene : tiene;
+      }
+      case 'has_ability': return comparar(!!(sujeto && v === 'instabuild' && sujeto.creativo), op === '!=' ? '!=' : '==', true);
       case 'is_game_rule': return true;
       case 'in_caravan': return false;
       case 'has_damage': return comparar(e.ultimoDano || 'none', op, v);
@@ -252,6 +264,9 @@ var Conducta = (function () {
     // los objetivos (cada tanto, como el juego, que no busca en cada paso)
     if (e.objetivo && (!vivo(e.objetivo) || dist2(e, e.objetivo) > 48 * 48 || (e.objetivo.esJugador && !e.objetivo.atacable))) soltarObjetivo(e, ctx);
     if (e.tiempo % 10 === (e.id % 10)) buscarObjetivo(e, ctx);
+    // las que no mueven pero hacen algo solas (el enderman que se lleva bloques, el lobo que pide)
+    var metas0 = e.metas || [];
+    for (var s0 = 0; s0 < metas0.length; s0++) { var M0 = META[metas0[s0].n]; if (M0.siempre) M0.puede(e, metas0[s0].p, ctx); }
     // la meta de movimiento: la de más prioridad que puede, o seguir con la que está
     var actual = e.meta, metas = e.metas || [];
     for (var i = 0; i < metas.length; i++) {
@@ -511,6 +526,62 @@ var Conducta = (function () {
     sigue: function (e, p, ctx, m) { return m.t < 200 && e.padre && vivo(e.padre) && dist2(e, e.padre) > 9; },
     paso: function (e, p, ctx) { ctx.irA(e, e.padre, vel(e, p.speed_multiplier || 1.1)); }
   };
+  // criar (EntityAIMate): el enamorado busca a otro enamorado que le sirva (breedsWith) a 8 bloques,
+  // va hasta él y, juntos 3 segundos, nace la cría
+  META.breed = {
+    mueve: true, mira: true,
+    puede: function (e, p, ctx) {
+      if (!(e.amor > 0)) return false;
+      var l = ctx.cerca(e, 8), mejor = null, md = 1e9;
+      l.forEach(function (o) { if (o.tipo && Trato.pareja(e, o)) { var d = dist2(e, o); if (d < md) { md = d; mejor = o; } } });
+      e.pareja = mejor; e.cria = 0;
+      return !!mejor;
+    },
+    sigue: function (e) { return e.amor > 0 && e.pareja && e.pareja.amor > 0 && !(e.pareja.muerte > 0) && e.cria < 60; },
+    paso: function (e, p, ctx) {
+      var o = e.pareja;
+      ctx.mirarA(e, o, 0.3);
+      ctx.irA(e, o, vel(e, p.speed_multiplier || 1));
+      if (dist2(e, o) < 9 && ++e.cria >= 60 && e.id < o.id) ctx.criar(e, o);
+    }
+  };
+  // seguir al dueño (EntityAIFollowOwner): lejos de "start_distance" va hasta "stop_distance"; a más
+  // de 12 bloques aparece al lado
+  META.follow_owner = {
+    mueve: true,
+    puede: function (e, p, ctx) {
+      if (!e.dueno || e.sentado) return false;
+      var d = ctx.dueno(e);
+      if (!d) return false;
+      var a = p.start_distance || 10;
+      e.duenoRef = d;
+      return dist2(e, d) > a * a;
+    },
+    sigue: function (e, p) { var d = e.duenoRef, b = p.stop_distance || 2; return !e.sentado && !!d && dist2(e, d) > b * b; },
+    paso: function (e, p, ctx) {
+      var d = e.duenoRef;
+      ctx.mirarA(e, d, 0.3);
+      if (dist2(e, d) > 144) { ctx.alLado(e, d); return; }
+      ctx.irA(e, d, vel(e, p.speed_multiplier || 1));
+    }
+  };
+  // sentado: quieto (EntityAISit)
+  META.stay_while_sitting = {
+    mueve: true,
+    puede: function (e) { return !!e.sentado; },
+    sigue: function (e) { return !!e.sentado; },
+    paso: function (e, p, ctx) { ctx.frenar(e); e.objetivo = null; }
+  };
+  // el lobo mira al que tiene un hueso (EntityAIBeg)
+  META.beg = {
+    mueve: false, siempre: true,
+    puede: function (e, p, ctx) {
+      var j = ctx.jugadorCerca(e, p.look_distance || 8);
+      if (j && p.items && ctx.tieneEnMano(j, p.items)) { ctx.mirarA(e, j, 0.3); e.pidiendo = true; } else e.pidiendo = false;
+      return false;
+    },
+    paso: function () {}
+  };
   // seguir al jugador que tiene en la mano lo que le gusta (trigo a las vacas, zanahorias a los cerdos)
   META.tempt = {
     mueve: true,
@@ -700,15 +771,15 @@ var Conducta = (function () {
   };
   // el enderman se lleva y deja bloques
   META.enderman_take_block = {
-    mueve: false, puede: function (e, p, ctx) { if (!e.bloqueLlevado && Math.random() < 0.0025) ctx.agarrarBloque(e); return false; }, paso: function () {}
+    mueve: false, siempre: true, puede: function (e, p, ctx) { if (!e.bloqueLlevado && Math.random() < 0.0025) ctx.agarrarBloque(e); return false; }, paso: function () {}
   };
   META.enderman_leave_block = {
-    mueve: false, puede: function (e, p, ctx) { if (e.bloqueLlevado && Math.random() < 0.0015) ctx.dejarBloque(e); return false; }, paso: function () {}
+    mueve: false, siempre: true, puede: function (e, p, ctx) { if (e.bloqueLlevado && Math.random() < 0.0015) ctx.dejarBloque(e); return false; }, paso: function () {}
   };
   // lo que se lee pero no hace falta mover (o que llega con los objetos y las aldeas)
   ['nearest_attackable_target', 'hurt_by_target', 'look_at_player', 'random_look_around', 'look_at_entity', 'look_at_target',
-    'break_door', 'mount_pathing', 'flee_sun', 'restrict_sun', 'breed', 'follow_owner', 'stay_while_sitting', 'owner_hurt_by_target',
-    'owner_hurt_target', 'beg', 'player_ride_tamed', 'run_around_like_crazy', 'find_mount', 'move_through_village', 'move_indoors',
+    'break_door', 'mount_pathing', 'flee_sun', 'restrict_sun', 'owner_hurt_by_target',
+    'owner_hurt_target', 'player_ride_tamed', 'run_around_like_crazy', 'find_mount', 'move_through_village', 'move_indoors',
     'restrict_open_door', 'open_door', 'look_at_trading_player', 'trade_with_player', 'make_love', 'receive_love', 'play',
     'pickup_items', 'harvest_farm_block', 'share_items', 'take_flower', 'offer_flower', 'defend_village_target', 'move_towards_target',
     'follow_caravan', 'follow_mob', 'raid_garden', 'send_event', 'silverfish_merge_with_stone', 'silverfish_wake_up_friends',

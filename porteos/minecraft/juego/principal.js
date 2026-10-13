@@ -320,7 +320,7 @@
       pegar: function (fx, fy) { return pegar(fx, fy); }, darEfecto: function (id, dur, amp) { return darEfecto(id, dur, amp); },
       azar: function (x, y, z, n) { trab.postMessage({ t: 'pruebaAzar', x: x, y: y, z: z, n: n }); }, tnts: function () { return tnts; },
       leerTrabajador: function (p) { trab.postMessage({ t: 'leer', p: p }); },
-      durmiendo: function () { return durmiendo; },
+      durmiendo: function () { return durmiendo; }, montado: function () { return montado ? { tipo: montado.e.tipo, id: montado.e.id } : null; },
       rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, ms: function () { return msCuadro; },
       diag: null, pedirDiag: function () { if (trab) trab.postMessage({ t: 'diag' }); }, listo: true };
   }
@@ -705,6 +705,7 @@
     return T('death.attack.generic');
   }
   function morir() {
+    if (montado) bajar();
     muerto = true;
     I.soltarTodo();
     I.muerte.texto = mensajeMuerte();
@@ -853,7 +854,7 @@
     if (!J.enPiso && J.vy < 0 && !J.enAgua && !J.volando && !J.enEscalera && !Efectos.de(sup.efectos, 15)) dano *= 1.5;
     if (jug && (!mejor || tj < mejor.t)) Red.golpear(jug.id, dano, kx, kz);
     else if (mejor.remoto) Red.golpearBicho(mejor.e.dueno, mejor.e.mid, dano, kx, kz);
-    else B.golpe(mejor.e, dano, kx, kz);
+    else { B.golpe(mejor.e, dano, kx, kz); B.duenoAtaco(mejor.e); }
     if (supervivencia()) {
       // la espada se gasta 1 por golpe, las demás herramientas 2
       if (d && d.dur && Inventario.desgastar(inv, I.juego.elegido, d.herr === 'espada' ? 1 : 2)) Sonido.tocar('random.break', 0.8, 0.8 + Math.random() * 0.4);
@@ -926,9 +927,27 @@
     return false;
   }
 
-  function poner(fx, fy) {
-    if (pegar(fx, fy)) return;
+  function poner(fx, fy, deMouse) {
     var it = I.juego.barra[I.juego.elegido];
+    // montado en el cerdo con la zanahoria con palo: el impulso (boostable), que gasta el palo
+    if (montado) {
+      var bo = montado.e.c['minecraft:boostable'];
+      if (bo && it && manejaConCosa(montado.e) && !(montado.impulso > 0)) {
+        var bi = [].concat(bo.boost_items || [])[0] || {};
+        montado.impulso = Math.round((bo.duration || 3) * 20);
+        B.sonar(montado.e, 'boost', 1, 'mob.pig.boost');
+        if (supervivencia()) {
+          var dd = Items.def[it.id];
+          it.d = (it.d || 0) + (bi.item_damage || 2);
+          if (dd && dd.dur && it.d >= dd.dur) inv.barra[I.juego.elegido] = Inventario.cosa(bi.replaceItem ? Botin.numero(bi.replaceItem) || 346 : 346, 0, 1);
+          I.sucio();
+        }
+      }
+      return;
+    }
+    // con mouse, el botón derecho sobre un bicho interactúa (no pega)
+    if (deMouse) { if (interactuarAhora()) return; }
+    else if (pegar(fx, fy)) return;
     // lo que se tira (bolas de nieve, huevos, perlas, botellas de experiencia, pociones arrojadizas)
     if (it && Items.def[it.id] && Items.def[it.id].uso === 'tirar') { tirar(it, rayoDesde(fx, fy)); return; }
     // el nenúfar, el balde vacío y la botella apuntan al agua
@@ -1234,6 +1253,149 @@
   };
 
   // ------------------------------------------------------------------------------------------
+  // Tratar con los bichos (trato.js): el botón de interactuar del juego aparece arriba de la barra
+  // cuando se mira (el medio de la pantalla) a un bicho con el que se puede hacer algo con lo que
+  // se tiene en la mano; con mouse, el botón derecho
+  // ------------------------------------------------------------------------------------------
+  var SONIDO_TRATO = { milk: 'mob.cow.milk', shear: 'mob.sheep.shear', saddle: 'mob.horse.leather', armor: 'mob.horse.armor', ignite: 'fire.ignite', eat: 'random.eat' };
+  Trato.iniciar({
+    gastar: function (n) { if (supervivencia()) { Inventario.gastar(inv, I.juego.elegido, n || 1); I.sucio(); } },
+    cambiar: function (id, m) { cambiarEnMano(id, m); },
+    desgastar: function (n) { desgastarMano(n); },
+    sonar: function (e, ev) { B.sonar(e, ev, 1, SONIDO_TRATO[ev] || null); },
+    chispas: function (e, tipo) {
+      if (!opciones.particulas) return;
+      var c = tipo === 'corazon' ? [1, 0.25, 0.35] : tipo === 'humo' ? [0.45, 0.45, 0.45] : [0.4, 1, 0.4];
+      Render.chispas(e.x, e.y + e.alto * 0.9, e.z, c, tipo === 'humo' ? 12 : 7);
+    },
+    soltar: function (cosas, x, y, z) {
+      (cosas || []).forEach(function (c) { Tirados.cosa(c, x, y, z, Math.random() * 0.2 - 0.1, 0.25, Math.random() * 0.2 - 0.1, 10); });
+    },
+    xp: function (x, y, z, n) { if (partida && partida.local) Tirados.orbes(x, y, z, n); },
+    nombre: function () { return opciones.nombre || 'Steve'; },
+    agachado: function () { return J.agachado; },
+    montar: function (e, tm) { montar(e, tm); },
+    comerciar: function (e, t) { abrirComercio(e, t); }
+  });
+  B.corazones = function (e) { if (opciones.particulas) Render.chispas(e.x, e.y + e.alto + 0.2, e.z, [1, 0.25, 0.35], 2); };
+  B.ponerHuevo = function (e, nombre) {
+    var id = Botin.numero(nombre);
+    if (id !== undefined && partida && partida.local) Tirados.cosa(Inventario.cosa(id, 0, 1), e.x, e.y + 0.2, e.z, 0, 0.1, 0, 10);
+  };
+  function buscarInteraccion() {
+    var antes = I.juego.interaccion, op = null, m = null;
+    if (partida && partida.local && !muerto && !montado && I.pantalla === 'juego') {
+      var d = J.mirada(), h = Mundo.rayo(cam.x, cam.y, cam.z, d[0], d[1], d[2], 4, false), tb = h ? h.t : 1e9;
+      m = B.rayo(cam.x, cam.y, cam.z, d[0], d[1], d[2], Math.min(3.5, tb));
+      if (m && !m.remoto) op = Trato.opcion(m.e, I.juego.barra[I.juego.elegido], { x: J.x, y: J.y, z: J.z, creativo: !!partida.creativo });
+    }
+    I.juego.interaccion = op ? { texto: Jui.t(op.texto), hacer: op.hacer, e: m.e } : null;
+    if (!antes !== !I.juego.interaccion || (antes && I.juego.interaccion && antes.texto !== I.juego.interaccion.texto)) {
+      I.sucio();
+      // el nombre de lo elegido sube para dejarle lugar al botón
+      if (hudPan && I.juego.nombreItem && performance.now() < I.juego.nombreHasta) hudPan.nombre(I.juego.nombreItem, !I.juego.conVida, !!I.juego.interaccion);
+    }
+  }
+  function interactuarAhora() {
+    var x = I.juego.interaccion;
+    if (!x) return false;
+    x.hacer();
+    golpe();
+    I.juego.interaccion = null;
+    buscarInteraccion();
+    I.sucio();
+    return true;
+  }
+
+  // ------------------------------------------------------------------------------------------
+  // Montar (rideable): el jugador va en el asiento del bicho. Con "input_ground_controlled" (el
+  // caballo ensillado) se maneja con la cruceta y salta cargando el salto; con "item_controllable"
+  // (el cerdo ensillado) va adonde se mira si se tiene la zanahoria con palo (y tocando, el
+  // impulso de "boostable"); si no, el bicho anda solo. Agacharse baja. El caballo sin domar
+  // (tamemount) a veces se deja según su temple y si no tira al jugador (EntityAIRunAroundLikeCrazy)
+  // ------------------------------------------------------------------------------------------
+  var montado = null;
+  function abrirComercio(e, t) { if (window.Comercio) Comercio.abrir(e, t); }
+  function montar(e, tm) {
+    if (montado || !e || e.muerte > 0) return;
+    montado = { e: e, domando: tm && !e.domado ? tm : null, carga: 0, cargando: false, impulso: 0 };
+    e.jinete = true; e.persiste = true; e.objetivo = null;
+    J.volando = false; I.juego.volando = false; caida = 0;
+    B.sonar(e, 'saddle', 0.5, null);
+    ponerEnAsiento(true);
+    I.sucio();
+  }
+  function bajar() {
+    if (!montado) return;
+    var e = montado.e;
+    e.jinete = false; e.control = null;
+    montado = null;
+    // al costado del bicho, donde haya lugar
+    var a = e.yaw + Math.PI / 2, r = e.ancho / 2 + 0.6;
+    var x = e.x + Math.sin(a) * r, z = e.z - Math.cos(a) * r, y = e.y + 0.1;
+    var b0 = Mundo.bloque(Math.floor(x), Math.floor(y), Math.floor(z)), b1 = Mundo.bloque(Math.floor(x), Math.floor(y + 1), Math.floor(z));
+    if ((b0 > 0 && C.SOLIDO[b0]) || (b1 > 0 && C.SOLIDO[b1])) { x = e.x; z = e.z; y = e.y + e.alto; }
+    J.ubicar(x, y, z);
+    caida = 0;
+    I.sucio();
+  }
+  // el asiento (seats.position: en el marco del bicho, z hacia adelante); los pies del jugador
+  // quedan 0,35 abajo (como Entity.getYOffset del jugador)
+  function ponerEnAsiento(salto) {
+    var e = montado.e, r = e.c['minecraft:rideable'], st = r && r.seats ? (Array.isArray(r.seats) ? r.seats[0] : r.seats) : null;
+    var p = st && st.position ? st.position : [0, e.alto * 0.75, 0], sy = Math.sin(e.yaw), cy = Math.cos(e.yaw);
+    var x = e.x + p[0] * cy + p[2] * sy, y = e.y + p[1] * (e.escala || 1) - 0.35, z = e.z + p[0] * sy - p[2] * cy;
+    if (salto) { J.px = J.x = x; J.py = J.y = y; J.pz = J.z = z; }
+    else { J.px = J.x; J.py = J.y; J.pz = J.z; J.x = x; J.y = y; J.z = z; }
+    J.vx = J.vy = J.vz = 0; J.enPiso = true;
+  }
+  function manejaConCosa(e) {
+    var ic = e.c['minecraft:item_controllable'], it = I.juego.barra[I.juego.elegido];
+    return !!(ic && it && [].concat(ic.control_items || []).some(function (x) { return Items.coincide(x, it); }));
+  }
+  function pasoMontado() {
+    var e = montado.e, c = I.control;
+    if (e.muerte > 0 || !B.todos().includes(e)) { bajar(); return; }
+    if (c.agachar && I.pantalla === 'juego') { I.control.agachar = false; I.control.agacharTactil = false; bajar(); return; }
+    var maneja = e.c['minecraft:input_ground_controlled'], conCosa = manejaConCosa(e);
+    if (maneja || conCosa) {
+      var ctrl = e.control || (e.control = {});
+      ctrl.yaw = J.yaw; ctrl.pitch = J.pitch;
+      ctrl.adelante = conCosa ? 1 : (I.pantalla === 'juego' ? c.adelante : 0); ctrl.costado = conCosa ? 0 : (I.pantalla === 'juego' ? c.costado : 0);
+      // el impulso de la zanahoria (boostable): el doble de rápido 3 s
+      ctrl.vel = conCosa ? (montado.impulso > 0 ? 2 : 1) * 0.9 : 1.2;
+      if (montado.impulso > 0) montado.impulso--;
+      // el salto del caballo: mantener carga (hasta 1 s), soltar salta (horse.jump_strength)
+      if (e.c['minecraft:can_power_jump']) {
+        if (c.saltar && I.pantalla === 'juego') { montado.cargando = true; montado.carga = Math.min(1, montado.carga + 0.05); }
+        else if (montado.cargando) {
+          var js = e.c['minecraft:horse.jump_strength'], fuerza = js ? (typeof js.value === 'number' ? js.value : e.fuerzaSalto || (e.fuerzaSalto = js.value.range_min + Math.random() * (js.value.range_max - js.value.range_min))) : 0.5;
+          ctrl.salto = fuerza * (0.4 + 0.6 * montado.carga) * 1.2; ctrl.impulso = 0.4 * montado.carga;
+          montado.cargando = false; montado.carga = 0;
+          B.sonar(e, 'jump', 0.4, null);
+        }
+      } else if (c.saltar && e.enPiso) ctrl.salto = 0.5;
+    } else e.control = null;
+    // el caballo sin domar: cada tanto se decide (1 en 50 pasos)
+    if (montado.domando && Math.random() < 1 / 50) {
+      var tm = montado.domando, max = tm.maxTemper || 100;
+      if (Math.random() * max < (e.temple || 0)) {
+        Conducta.disparar(e, tm.tame_event || 'minecraft:on_tame', null, null);
+        e.dueno = opciones.nombre || 'Steve';
+        montado.domando = null;
+        if (opciones.particulas) Render.chispas(e.x, e.y + e.alto, e.z, [1, 0.25, 0.35], 8);
+      } else {
+        e.temple = Math.min(max, (e.temple || 0) + 5);
+        B.sonar(e, 'mad', 1, null);
+        if (opciones.particulas) Render.chispas(e.x, e.y + e.alto, e.z, [0.45, 0.45, 0.45], 10);
+        bajar();
+        return;
+      }
+    }
+    ponerEnAsiento(false);
+  }
+
+  // ------------------------------------------------------------------------------------------
   // Dormir (EntityPlayer.trySleep): sólo de noche (o con tormenta), cerca, sin monstruos a 8 bloques;
   // queda como punto de aparición. A los 100 pasos dormido se hace de día y para la lluvia
   // ------------------------------------------------------------------------------------------
@@ -1490,7 +1652,7 @@
     var c = I.control;
     if (c.toque) {
       var t = c.toque; c.toque = null;
-      if (I.pantalla === 'juego') poner(t[0], t[1]);
+      if (I.pantalla === 'juego') poner(t[0], t[1], t[2] === 'mouse');
     }
     mundo.apuntado = null; mundo.rompiendo = 0; hayObjetivo = false;
     // el arco: mantener lo tensa, soltar dispara (hacia el último lugar del dedo)
@@ -1539,7 +1701,7 @@
     if (!partida || !partida.local || e.bebe) return;
     var tabla = e.c && e.c['minecraft:loot'] && e.c['minecraft:loot'].table;
     if (tabla && partida.botinBichos !== false) {
-      Botin.tirar(tabla, { jugador: porJugador, fuego: e.quema > 0, dificultad: B.dificultad, color: e.variante || 0 }).forEach(function (c) {
+      Botin.tirar(tabla, { jugador: porJugador, fuego: e.quema > 0, dificultad: B.dificultad, color: e.tipo === 'sheep' ? e.colorLana || 0 : e.variante || 0 }).forEach(function (c) {
         Tirados.cosa(c, e.x, e.y + 0.5, e.z, Math.random() * 0.2 - 0.1, 0.2, Math.random() * 0.2 - 0.1, 10);
       });
     }
@@ -1555,6 +1717,7 @@
     else {
       var antes = sup.vida;
       recibirDano(dano, nombre, [kx, kz], causa || 'mob');
+      if (sup.vida < antes) B.duenoHerido(e);
       // lo que el ataque contagia ("effect_name" de minecraft:attack: veneno de la araña de cueva,
       // hambre del husk, wither del esqueleto wither) si el golpe entró
       var ea = causa !== 'projectile' && e.efectoAtaque;
@@ -1745,7 +1908,7 @@
       (!I.juego.conVida || sinHambre || sup.comida > 6);
     var antesY = J.y, antesPiso = J.enPiso;
     caminadoAntes = J.caminado;
-    if (!muerto) J.paso();
+    if (!muerto && !montado) J.paso();
     Render.pasoParticulas();
     if (trab && ++pasosLuz % 5 === 0) trab.postMessage({ t: 'luz', x: Math.floor(cam.x), y: Math.floor(cam.y), z: Math.floor(cam.z) });
     if (partida) {
@@ -1781,9 +1944,13 @@
     // los bichos
     // (con invisibilidad los monstruos lo ven de más cerca: 7 % de la distancia sin armadura)
     var piezas = inv.armadura.filter(Boolean).length;
-    var jugs = [{ x: J.x, y: J.y, z: J.z, id: null, vivo: !muerto, vis: Efectos.de(sup.efectos, 14) ? 0.7 * Math.max(0.1, piezas / 4) : 1 }];
+    B.nombreLocal = opciones.nombre || 'Steve';
+    var jugs = [{ x: J.x, y: J.y, z: J.z, id: null, vivo: !muerto, vis: Efectos.de(sup.efectos, 14) ? 0.7 * Math.max(0.1, piezas / 4) : 1,
+      enMano: I.juego.barra[I.juego.elegido] || null }];
     Red.remotos.forEach(function (j) { jugs.push({ x: j.x, y: j.y, z: j.z, id: j.id, vivo: j.hp > 0 }); });
     B.paso(jugs, luzDelDia());
+    if (montado) pasoMontado();
+    buscarInteraccion();
     // lo tirado en el piso y los orbes (se levantan al pasar)
     Tirados.paso({ x: J.x, y: J.y, z: J.z, vivo: !muerto }, ganchosTirados);
     if (tnts.length) pasoTnt();
@@ -2025,7 +2192,7 @@
     var it = I.juego.barra[I.juego.elegido];
     I.juego.nombreItem = it ? O.nombre(it.id, it.m) : '';
     I.juego.nombreHasta = performance.now() + (hudPan ? 2000 : 1500);
-    if (hudPan && hudPan.nombre) hudPan.nombre(I.juego.nombreItem, !I.juego.conVida);
+    if (hudPan && hudPan.nombre) hudPan.nombre(I.juego.nombreItem, !I.juego.conVida, !!I.juego.interaccion);
   }
   // un campo de texto de verdad sobre el botón (abre el teclado del teléfono; prompt() no anda dentro
   // de un cuadro de otro sitio)
@@ -2454,6 +2621,8 @@
     ponerReceta: function (e, tam, muchas) { return ponerReceta(inv, e, tam, muchas); },
     tirarObjeto: function (c) { tirarObjeto(c); },
     despertar: function () { despertar(false); },
+    // montado: la vida del bicho (los corazones del caballo) y la carga del salto
+    montado: function () { return montado ? { vida: montado.e.vida, max: montado.e.vidaMax || 20, carga: montado.carga, salta: !!montado.e.c['minecraft:can_power_jump'] } : null; },
     abrirChat: function () { if (I.acciones.abrirChat) { I.ir('juego'); I.acciones.abrirChat(); } },
     // el HUD: la vida, la comida, el aire y la experiencia (en creativo no se muestran)
     estadoJugador: function () {
@@ -2573,6 +2742,7 @@
       if (document.pointerLockElement) document.exitPointerLock();
     },
     cerrarInv: function () { I.ir('juego'); },
+    interactuar: function () { interactuarAhora(); },
     abrirChat: function () { if (I.pantalla === 'juego') { I.soltarTodo(); Pantallas.ir('chat'); I.ir('jui'); if (document.pointerLockElement) document.exitPointerLock(); } },
     cerrarChat: function () { I.ir('juego'); },
     escribirChat: function () {

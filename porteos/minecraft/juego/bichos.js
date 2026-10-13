@@ -354,7 +354,20 @@ var Bichos = (function () {
     tieneEnMano: function (j, items) {
       if (!j || !j.enMano) return false;
       var l = Array.isArray(items) ? items : [items];
-      return l.some(function (it) { return String(it).replace('minecraft:', '').split(':')[0] === j.enMano; });
+      return l.some(function (it) { return Items.coincide(it, j.enMano); });
+    },
+    // criar: los dos enamorados juntos (trato.js hace la cría)
+    criar: function (a, b) { Trato.criar(a, b); },
+    // el dueño de un domesticado, si es el jugador de acá y está vivo
+    dueno: function (e) { var j = jugadores[0]; return j && j.vivo && e.dueno && e.dueno === B.nombreLocal ? j : null; },
+    // aparecer al lado del dueño (EntityAIFollowOwner: en un lugar con piso a 2 bloques)
+    alLado: function (e, d) {
+      for (var k = 0; k < 10; k++) {
+        var x = Math.floor(d.x) + ((Math.random() * 5) | 0) - 2, z = Math.floor(d.z) + ((Math.random() * 5) | 0) - 2, y = Math.floor(d.y);
+        if (Math.abs(x - d.x) < 1.5 && Math.abs(z - d.z) < 1.5) continue;
+        var ab = Mundo.bloque(x, y - 1, z), a0 = Mundo.bloque(x, y, z), a1 = Mundo.bloque(x, y + 1, z);
+        if (ab > 0 && C.SOLIDO[ab] && !(a0 > 0 && C.SOLIDO[a0]) && !(a1 > 0 && C.SOLIDO[a1])) { e.x = e.px = x + 0.5; e.y = e.py = y; e.z = e.pz = z + 0.5; e.vx = e.vy = e.vz = 0; return; }
+      }
     },
     explotar: function (e, poder, fuego) { explotar(e, poder, fuego); }
   };
@@ -436,9 +449,23 @@ var Bichos = (function () {
       if (e.invulnerable > 0) { nacerWither(e); continue; }
       liquidos(e);
       e.quiereSaltar = false;
+      // enamorado: corazones cada medio segundo y se le pasa a los 30 s; después de criar, 5 min
+      if (e.amor > 0) { e.amor--; if (e.amor % 10 === 0 && B.corazones) B.corazones(e); }
+      if (e.esperaCria > 0) e.esperaCria--;
+      // la gallina pone un huevo cada 5 a 10 minutos (minecraft:spawn_entity)
+      var se = e.c['minecraft:spawn_entity'];
+      if (se && !e.bebe) {
+        if (e.esperaHuevo === undefined) e.esperaHuevo = Math.round(((se.min_wait_time || 300) + Math.random() * ((se.max_wait_time || 600) - (se.min_wait_time || 300))) * 20);
+        if (--e.esperaHuevo <= 0) {
+          e.esperaHuevo = undefined;
+          if (B.ponerHuevo) B.ponerHuevo(e, se.spawn_item || 'egg');
+          sonido(e, se.spawn_sound || 'plop', 1, 'mob.chicken.plop');
+        }
+      }
       pasoEfectosBicho(e);
       if (e.muerte > 0) continue;
-      Conducta.paso(e, ctx);
+      if (e.control) conducir(e, e.control);
+      else Conducta.paso(e, ctx);
       if (!lista[i] || lista[i] !== e) continue;        // explotó
       fisica(e);
       danos(e);
@@ -452,6 +479,24 @@ var Bichos = (function () {
     pasoColmillos();
     pasoAgenda();
   };
+  // el bicho montado y manejado por el jugador: mira para donde mira él y anda con lo que aprieta
+  // (c: { yaw, pitch, adelante, costado, vel (multiplicador), salto (velocidad hacia arriba) })
+  function conducir(e, c) {
+    var d = c.yaw - e.yaw;
+    while (d > PI) d -= PI * 2;
+    while (d < -PI) d += PI * 2;
+    e.yaw += d * 0.5;
+    e.cabezaYaw = 0; e.cabezaPitch = (c.pitch || 0) * 0.5;
+    var len = Math.sqrt(c.adelante * c.adelante + c.costado * c.costado);
+    if (len > 0.01) {
+      var a = c.yaw + Math.atan2(c.costado, c.adelante), v = e.velBase * (c.vel || 1) * (e.multVel || 1);
+      empujar(e, v * v * Math.min(1, len) * 2, a);
+    }
+    if (c.salto && e.enPiso) { e.vy = c.salto; e.saltando = true; if (c.impulso) { e.vx += Math.sin(e.yaw) * c.impulso; e.vz -= Math.cos(e.yaw) * c.impulso; } }
+    c.salto = 0; c.impulso = 0;
+    e.meta = null;
+  }
+  B.sonar = function (e, ev, vol, directo) { sonido(e, ev, vol || 1, directo); };
   function fisica(e) {
     var vuela = e.vuela && (e.tipo !== 'parrot' || (e.meta && e.meta.n === 'random_fly'));
     var nada = (e.nada || e.tipo === 'squid') && e.enAgua;
@@ -616,6 +661,16 @@ var Bichos = (function () {
     if (B.explosion) B.explosion(x, y, z, Math.round(poder), jugadoresRef(), quien, fuego);
   }
   B.explosionEn = explosionEn;
+  // los domesticados del jugador defienden al dueño: van contra el que lo lastimó y contra lo que él
+  // ataca (salvo otros domesticados suyos)
+  B.duenoHerido = function (quien) {
+    if (!quien || !quien.tipo) return;
+    lista.forEach(function (e) { if (e.dueno === B.nombreLocal && !e.sentado && e.c['minecraft:behavior.owner_hurt_by_target'] && e !== quien) Conducta.tomarObjetivo(e, quien, ctx); });
+  };
+  B.duenoAtaco = function (victima) {
+    if (!victima || !victima.tipo || victima.dueno === B.nombreLocal) return;
+    lista.forEach(function (e) { if (e.dueno === B.nombreLocal && !e.sentado && e.c['minecraft:behavior.owner_hurt_target'] && e !== victima) Conducta.tomarObjetivo(e, victima, ctx); });
+  };
 
   // ------------------------------------------------------------------------------------------
   // Los efectos en los bichos (efectos.js): los muertos vivientes al revés con la curación y el
@@ -1155,14 +1210,39 @@ var Bichos = (function () {
   // se guardan, como al dormir)
   B.paraGuardar = function () {
     return lista.filter(function (e) { return (B.TIPOS[e.tipo].pasivo || e.persiste) && e.muerte === 0; })
-      .map(function (e) { return [e.tipo, +e.x.toFixed(2), +e.y.toFixed(2), +e.z.toFixed(2), e.grupos, Math.round(e.vida)]; });
+      .map(function (e) {
+        var r = [e.tipo, +e.x.toFixed(2), +e.y.toFixed(2), +e.z.toFixed(2), e.grupos, Math.round(e.vida)], o = {};
+        // lo que no sale de los grupos: el dueño, sentado, el temple, el color que le dieron, la
+        // variante, los efectos, la espera para criar y lo que lleva (montura, cofre)
+        if (e.dueno) o.d = e.dueno;
+        if (e.sentado) o.s = 1;
+        if (e.temple) o.t = e.temple;
+        if (e.colorFijo !== undefined) o.c = e.colorFijo;
+        if (e.collar !== undefined) o.k = e.collar;
+        if (e.variante) o.v = e.variante;
+        if (e.esperaCria > 0) o.e = e.esperaCria;
+        if (e.efectos && e.efectos.lista.length) o.f = Efectos.guardar(e.efectos);
+        if (e.equipo) o.q = e.equipo;
+        if (Object.keys(o).length) r.push(o);
+        return r;
+      });
   };
   B.cargar = function (l) {
     (l || []).forEach(function (r) {
       if (!B.TIPOS[r[0]]) return;
       // (los mundos de antes guardaban sólo si la oveja era gris)
       var extra = Array.isArray(r[4]) ? { grupos: r[4], vida: r[5] } : null;
-      B.crear(r[0], r[1], r[2], r[3], extra);
+      var e = B.crear(r[0], r[1], r[2], r[3], extra), o = r[6];
+      if (!e || !o) return;
+      if (o.d) { e.dueno = o.d; e.persiste = true; }
+      if (o.s) e.sentado = true;
+      if (o.t) e.temple = o.t;
+      if (o.c !== undefined) { e.colorFijo = o.c; e.colorLana = o.c; }
+      if (o.k !== undefined) e.collar = o.k;
+      if (o.v) e.variante = o.v;
+      if (o.e) e.esperaCria = o.e;
+      if (o.f) e.efectos = Efectos.cargar(o.f);
+      if (o.q) e.equipo = o.q;
     });
   };
   return B;
