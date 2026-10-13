@@ -50,7 +50,7 @@ var C = {};
     141: [F.surcos, 0, 1, 0, 0], 142: [F.surcos, 0, 1, 0, 0], 244: [F.surcos, 0, 1, 0, 0],
     115: [F.surcos, 0, 1, 0, 0], 104: [F.tallo, 0, 1, 0, 0, 2], 105: [F.tallo, 0, 1, 0, 0, 2],
     50: [F.antorcha, 0, 1, 14, 0], 76: [F.antorcha, 0, 1, 7, 0], 75: [F.antorcha, 0, 1, 0, 0],
-    51: [F.fuego, 0, 1, 15, 0], 90: [F.cubo, 0, 3, 11, 0],
+    51: [F.fuego, 0, 1, 15, 0], 90: [F.portal, 0, 3, 11, 0],
     89: [F.cubo, 1, 0, 15, 15], 91: [F.cubo, 1, 0, 15, 15], 124: [F.cubo, 1, 0, 15, 15],
     246: [F.cubo, 1, 0, 12, 15], 74: [F.cubo, 1, 0, 9, 15], 62: [F.cubo, 1, 0, 13, 15],
     138: [F.cubo, 1, 0, 15, 15],
@@ -182,10 +182,12 @@ var C = {};
     h = Math.imul(h ^ (h >>> 12), 0x297a2d39) >>> 0;
     return (h ^ (h >>> 15)) >>> 0;
   };
-  // generador de números (mulberry32) con estado propio
-  C.Azar = function (s) { this.s = s >>> 0; };
+  // generador de números (mulberry32) con estado propio. El estado va como entero con signo: sin
+  // signo pasa de 2³¹ y cada paso crea un número nuevo en memoria (era 15 veces más lento); los bits
+  // y lo que devuelve son los mismos
+  C.Azar = function (s) { this.s = s | 0; };
   C.Azar.prototype.sig = function () {
-    var t = (this.s = (this.s + 0x6D2B79F5) >>> 0);
+    var t = (this.s = (this.s + 0x6D2B79F5) | 0);
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;

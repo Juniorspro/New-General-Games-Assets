@@ -179,16 +179,20 @@
       lista.forEach(function (r) { s.put(r); });
       return fin(t);
     };
+    // (con los trozos de sus otras dimensiones: "id~1" el Nether, "id~2" el End)
     D.borrar = function (id) {
+      var ids = [id, id + '~1', id + '~2'];
       if (!db) {
         mem.mundos.delete(id);
-        mem.trozos.forEach(function (r, k) { if (r.mundo === id) mem.trozos.delete(k); });
+        mem.trozos.forEach(function (r, k) { if (ids.indexOf(r.mundo) >= 0) mem.trozos.delete(k); });
         return Promise.resolve();
       }
       var t = db.transaction(['mundos', 'trozos'], 'readwrite');
       t.objectStore('mundos').delete(id);
-      var c = t.objectStore('trozos').index('mundo').openKeyCursor(IDBKeyRange.only(id));
-      c.onsuccess = function () { var k = c.result; if (k) { t.objectStore('trozos').delete(k.primaryKey); k.continue(); } };
+      ids.forEach(function (i) {
+        var c = t.objectStore('trozos').index('mundo').openKeyCursor(IDBKeyRange.only(i));
+        c.onsuccess = function () { var k = c.result; if (k) { t.objectStore('trozos').delete(k.primaryKey); k.continue(); } };
+      });
       return fin(t);
     };
     return D;
@@ -326,6 +330,8 @@
       leerTrabajador: function (p) { trab.postMessage({ t: 'leer', p: p }); },
       durmiendo: function () { return durmiendo; }, montado: function () { return montado ? { tipo: montado.e.tipo, id: montado.e.id } : null; },
       rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, ms: function () { return msCuadro; },
+      dimension: function () { return dimension(); }, cambiarDimension: function (d, x, y, z, ll) { return cambiarDimension(d, x, y, z, ll); },
+      portales: function (d) { return partida ? partida[campo('portales', d)] || [] : []; }, cargando: function () { return cargando; },
       diag: null, pedirDiag: function () { if (trab) trab.postMessage({ t: 'diag' }); }, listo: true };
   }
   function irAlTitulo() {
@@ -424,14 +430,43 @@
     listaCreativa = null;
     I.sucio();
   }
+  // ------------------------------------------------------------------------------------------
+  // Las dimensiones: 0 el mundo de arriba, 1 el Nether, 2 el End. Cada una guarda lo suyo aparte:
+  // los trozos (el mundo "id~1", "id~2"), los bichos, lo tirado, los contenedores y los portales
+  // (los campos "_1", "_2"); lo que lleva el jugador es uno solo
+  // ------------------------------------------------------------------------------------------
+  function idDim(m) { var d = m.dim | 0; return d ? m.id + '~' + d : m.id; }
+  function campo(n, d) { if (d === undefined) d = partida ? partida.dim | 0 : 0; return d ? n + '_' + d : n; }
+  function dimension() { return partida ? partida.dim | 0 : 0; }
+  var cambiandoDim = false;
+  // ir a otra dimensión: se guarda la de ahora y se abre la otra con el jugador en (x, y, z).
+  // llegada: { portal: true } (buscar o hacer el portal al llegar), { reaparecer: true } (en la cama
+  // o donde se aparece)
+  function cambiarDimension(dim, x, y, z, llegada) {
+    if (!partida || !partida.local || cambiandoDim) return Promise.resolve();
+    cambiandoDim = true;
+    var m = partida;
+    return guardar().then(function () {
+      m.dim = dim;
+      m.jugador = { x: x, y: y, z: z, yaw: J.yaw, pitch: J.pitch, volando: J.volando && m.creativo };
+      m.llegada = llegada || null;
+      return BD.guardarMundo(m);
+    }).then(function () { return abrirMundo(m); }).then(function () { cambiandoDim = false; }, function (e) {
+      cambiandoDim = false;
+      console.error('dimensión: ' + (e && e.message || e));
+    });
+  }
   function abrirMundo(m) {
     Red.dejarDeMirar();
-    I.cargandoTexto = I.t('progressScreen.generating', I.tp('cargando')); I.cargandoParte = 0;
+    I.cargandoTexto = m.llegada ? I.t('progressScreen.message.building', I.tp('cargando')) : I.t('progressScreen.generating', I.tp('cargando'));
+    I.cargandoParte = 0;
     cargando = true;
     I.soltarTodo();
     Pantallas.ir('carga');
     I.ir('jui');
-    var guardadosP = m.local ? BD.trozos(m.id) : Promise.resolve([]);
+    var dim = m.local ? m.dim | 0 : 0;
+    if (!m.local) m.dim = 0;
+    var guardadosP = m.local ? BD.trozos(idDim(m)) : Promise.resolve([]);
     return guardadosP.then(function (regs) {
       return Promise.all(regs.map(function (r) {
         return descomprimir(r.d, r.z).then(function (u) {
@@ -458,8 +493,10 @@
       J.creativo = m.creativo;
       J.vx = J.vy = J.vz = 0;
       var lugar = m.tipo === 'plano' ? [0, 3, 0] : lugarDeAparicion(m.semilla);
-      aparicion = [lugar[0] + 0.5, lugar[1] + 1, lugar[2] + 0.5];
+      aparicion = m.aparicion0 || [lugar[0] + 0.5, lugar[1] + 1, lugar[2] + 0.5];
       var p = m.jugador;
+      if (!p && dim) { p = { x: 0.5, y: 70, z: 0.5, yaw: 0, pitch: 0 }; m.llegada = { portal: true }; }
+      Render.dimension = dim; B.dimension = dim; mundo.dimension = dim;
       if (p) {
         J.ubicar(p.x, p.y, p.z); J.yaw = p.yaw; J.pitch = p.pitch; J.volando = !!p.volando && m.creativo;
         esperandoSuelo = false;
@@ -502,13 +539,14 @@
         Red.entrar(m.sala, ganchosRed);
       } else {
         I.juego.red = null;
-        B.cargar(m.bichos_lista);
+        B.cargar(m[campo('bichos_lista', dim)]);
       }
-      Tirados.cargar(m.local ? m.tirados : null);
-      Contenedores.cargar(m.local ? m.contenedores : null);
+      Tirados.cargar(m.local ? m[campo('tirados', dim)] : null);
+      Contenedores.cargar(m.local ? m[campo('contenedores', dim)] : null);
+      enPortal = 0; tiempoPortal = 0; tiempoPortalAntes = 0;
       minando = null;
       ultimoCentro = [Math.floor(J.x / 16), Math.floor(J.z / 16), Math.floor((J.y + 1.62) / 16)];
-      trab.postMessage({ t: 'ini', azar: !!m.local, bloques: datos.bloques, uv: datos.atlas.uv, semilla: m.semilla, dist: opciones.dist, tipo: m.tipo,
+      trab.postMessage({ t: 'ini', azar: !!m.local, bloques: datos.bloques, uv: datos.atlas.uv, semilla: m.semilla, dist: opciones.dist, tipo: m.tipo, dim: dim,
         suave: opciones.suave, hojas: opciones.hojas, cx: ultimoCentro[0], cz: ultimoCentro[1], sy: ultimoCentro[2] });
       J.camara(1, cam);
       jugando = true;
@@ -542,7 +580,10 @@
     if (d.t === 'diag') { window.prueba.diag = d; return; }
     if (d.t === 'malla') { Render.malla(d); columnas.add(d.cx + ',' + d.cz); }
     else if (d.t === 'trozo') Mundo.recibir(d);
-    else if (d.t === 'bloques') Mundo.aplicar(d.lista);
+    else if (d.t === 'bloques') {
+      Mundo.aplicar(d.lista);
+      for (var q = 0; q + 4 < d.lista.length; q += 5) if (d.lista[q + 3] === 51 && partida && partida.local) prenderPortal(d.lista[q], d.lista[q + 1], d.lista[q + 2]);
+    }
     else if (d.t === 'fuera') { Render.quitar(d.cx, d.cz); Mundo.quitar(d.cx, d.cz); }
     else if (d.t === 'soltar') { for (var i = 0; i + 4 < d.lista.length; i += 5) soltarMundo(d.lista[i + 3], d.lista[i + 4], d.lista[i], d.lista[i + 1], d.lista[i + 2]); }
     else if (d.t === 'tnt') { for (var k = 0; k + 2 < d.lista.length; k += 3) prenderTnt(d.lista[k], d.lista[k + 1], d.lista[k + 2], 80); }
@@ -566,15 +607,16 @@
     m.barra = I.juego.barra.map(function (c) { return c ? { id: c.id, m: c.m } : null; }); m.elegido = I.juego.elegido; m.jugado = Date.now();
     m.inventario = Inventario.guardar(inv);
     m.supervivencia = Supervivencia.guardar(sup);
-    m.bichos_lista = B.paraGuardar();
-    m.tirados = Tirados.guardar();
-    m.contenedores = Contenedores.guardar();
-    var claves = Array.from(Mundo.sucios);
+    m[campo('bichos_lista')] = B.paraGuardar();
+    m[campo('tirados')] = Tirados.guardar();
+    m[campo('contenedores')] = Contenedores.guardar();
+    if (!dimension()) m.aparicion0 = aparicion.slice();
+    var claves = Array.from(Mundo.sucios), idm = idDim(m);
     Mundo.sucios.clear();
     var regs = claves.map(function (k) {
       var t = Mundo.modificados.get(k), u = new Uint8Array(t.ids.length * 2);
       u.set(t.ids); u.set(t.meta, t.ids.length);
-      return { k: m.id + '|' + k, mundo: m.id, cx: t.cx, cz: t.cz, u: u };
+      return { k: idm + '|' + k, mundo: idm, cx: t.cx, cz: t.cz, u: u };
     });
     guardandoAhora = Promise.all(regs.map(function (r) {
       return comprimir(r.u).then(function (c) { return { k: r.k, mundo: r.mundo, cx: r.cx, cz: r.cz, d: c, z: c !== r.u }; });
@@ -648,7 +690,29 @@
   function ponerBloque(x, y, z, id, m) {
     if (!Mundo.poner(x, y, z, id, m)) return false;
     if (partida && !partida.local) Red.bloque(x, y, z, id, m | 0);
+    // un portal del Nether al lado: si se le rompió el marco, se apaga entero
+    if (!tocandoPortal && dimension() !== 2) { tocandoPortal = true; try { Portal.revisar(MP, x, y, z); } finally { tocandoPortal = false; } }
     return true;
+  }
+  // el mundo como lo ve portal.js (lo que pone pasa por ponerBloque, sin volver a revisar)
+  var tocandoPortal = false;
+  var MP = { bloque: function (x, y, z) { return Mundo.bloque(x, y, z); }, meta: function (x, y, z) { return Mundo.meta(x, y, z); },
+    poner: function (x, y, z, id, m) { ponerBloque(x, y, z, id, m); } };
+  // el fuego adentro de un marco de obsidiana prende el portal (no en el End); se anota en la lista
+  // de portales de la dimensión (para encontrarlo del otro lado)
+  function prenderPortal(x, y, z) {
+    if (dimension() === 2 || tocandoPortal) return false;
+    tocandoPortal = true;
+    var s;
+    try { s = Portal.prender(MP, x, y, z); } finally { tocandoPortal = false; }
+    if (s) anotarPortal(s);
+    return !!s;
+  }
+  function anotarPortal(s) {
+    if (!partida) return;
+    var c = campo('portales'), l = partida[c] || (partida[c] = []), lg = Portal.lugar(s);
+    for (var i = 0; i < l.length; i++) if (Math.abs(l[i][0] - lg[0]) < 4 && Math.abs(l[i][1] - lg[1]) < 4 && Math.abs(l[i][2] - lg[2]) < 4) { l[i] = lg; return; }
+    l.push(lg);
   }
 
   // ------------------------------------------------------------------------------------------
@@ -807,6 +871,12 @@
   function reaparecer() {
     Supervivencia.reaparecer(sup);
     muerto = false; vida = sup.vida; I.juego.vida = vida; ultimoAtacante = ''; ultimaCausa = ''; caida = 0;
+    // muerto en el Nether o el End: se reaparece arriba (en la cama o donde se aparece)
+    if (dimension() !== 0 && partida.local) {
+      Pantallas.vaciar();
+      cambiarDimension(0, aparicion[0], aparicion[1], aparicion[2], { reaparecer: true });
+      return;
+    }
     // en la cama si sigue ahí (si no: "Faltaba tu cama o estaba obstruida")
     var cama = partida && partida.cama, lugar = null;
     if (cama && Mundo.bloque(cama[0], cama[1], cama[2]) === 26) lugar = salidaCama(cama[0], cama[1], cama[2]);
@@ -1089,6 +1159,13 @@
     if (!O.reemplazable(h.id) || h.id === 51) { x += h.nx; y += h.ny; z += h.nz; }
     var b = Mundo.bloque(x, y, z);
     if (b < 0 || y < 0 || y >= C.ALTO || !O.reemplazable(b)) return true;
+    if (it.m === 8 && dimension() === 1) {
+      Sonido.tocar('random.fizz', 0.5, 2.6 + (Math.random() - Math.random()) * 0.8, x + 0.5, y + 0.5, z + 0.5);
+      if (opciones.particulas) Render.chispas(x + 0.5, y + 0.3, z + 0.5, [0.35, 0.35, 0.35], 8);
+      cambiarEnMano(325, 0);
+      golpe();
+      return true;
+    }
     ponerBloque(x, y, z, it.m === 8 ? 9 : 11, 0);
     Sonido.tocar(it.m === 8 ? 'bucket.empty_water' : 'bucket.empty_lava', 1, 1, x + 0.5, y + 0.5, z + 0.5);
     cambiarEnMano(325, 0);
@@ -1106,6 +1183,7 @@
       if (Mundo.bloque(x, y, z) !== 0) return true;
       ponerBloque(x, y, z, 51, 0);
       Sonido.tocar(it.id === 385 ? 'mob.ghast.fireball' : 'fire.ignite', 1, Math.random() * 0.4 + 0.8, x + 0.5, y + 0.5, z + 0.5);
+      prenderPortal(x, y, z);
     }
     if (it.id === 259) desgastarMano(1); else gastarElegido();
     golpe();
@@ -1466,6 +1544,14 @@
     var m = Mundo.meta(h.x, h.y, h.z), x = h.x, z = h.z;
     // la cabecera
     if (!(m & 8)) { var o = otraMitadCama(h.x, h.y, h.z, m); if (Mundo.bloque(o[0], o[1], o[2]) === 26) { x = o[0]; z = o[2]; } }
+    // en el Nether y el End la cama explota (fuerza 5, con fuego)
+    if (dimension() !== 0 && partida.local) {
+      var oc = otraMitadCama(h.x, h.y, h.z, m);
+      ponerBloque(h.x, h.y, h.z, 0, 0);
+      if (Mundo.bloque(oc[0], oc[1], oc[2]) === 26) ponerBloque(oc[0], oc[1], oc[2], 0, 0);
+      B.explosion(h.x + 0.5, h.y + 0.5, h.z + 0.5, 5, null, null, true);
+      return true;
+    }
     var t = ((Math.floor(partida.tiempo) % 24000) + 24000) % 24000, tormenta = partida.clima === 'thunder';
     if (!partida.local || (!tormenta && (t < 12541 || t > 23458))) { aviso(I.t('tile.bed.noSleep', 'You can only sleep at night')); return true; }
     if (Math.abs(J.x - (x + 0.5)) > 3 || Math.abs(J.y - h.y) > 2 || Math.abs(J.z - (z + 0.5)) > 3) { aviso(I.t('tile.bed.tooFar', 'Bed is too far away')); return true; }
@@ -1976,7 +2062,7 @@
       if (!partida.local) partida.tiempo = (Date.now() / 50) % 24000;      // en los servidores, la misma hora para todos
       else if (partida.siempreDia) partida.tiempo = 6000; else partida.tiempo += 1;
       // el clima (/weather, las opciones de anfitrión): el cielo se nubla y se aclara de a poco
-      var meta = partida.clima === 'rain' || partida.clima === 'thunder' ? 1 : 0;
+      var meta = (partida.clima === 'rain' || partida.clima === 'thunder') && !dimension() ? 1 : 0;
       mundo.lluvia += Math.max(-0.01, Math.min(0.01, meta - (mundo.lluvia || 0)));
     }
     if (I.juego.volando !== J.volando) { I.juego.volando = J.volando; I.sucio(); }
@@ -1986,6 +2072,7 @@
     if (golpeTicks > 0) golpeTicks--;
     if (muerto) muerteTicks++; else muerteTicks = 0;
     if (!muerto && partida) pasoEfectos();
+    if (partida) pasoPortal();
     if (!muerto && partida) {
       if (I.juego.conVida) pasoVida(antesY, antesPiso);
       else {
@@ -2097,7 +2184,8 @@
     }
     if (cargando) {
       if (esperandoSuelo) buscarSuelo();
-      if (!esperandoSuelo && listoParaEntrar()) { cargando = false; Pantallas.vaciar(); I.ir('juego'); acum = 0; entradaJuego = t; }
+      if (!esperandoSuelo && listoParaEntrar() && partida.llegada) llegar();
+      if (!esperandoSuelo && !partida.llegada && listoParaEntrar()) { cargando = false; Pantallas.vaciar(); I.ir('juego'); acum = 0; entradaJuego = t; }
       else { Render.dibujarPanorama(t / 1000 * 0.03, -0.04); I.dibujar(); return; }
     }
     if (esperandoSuelo) buscarSuelo();
@@ -2175,7 +2263,9 @@
     var efv = Efectos.de(sup.efectos, 16), efc = Efectos.de(sup.efectos, 15);
     mundo.visionNocturna = efv ? (efv.dur > 200 ? 1 : 0.7 + Math.sin((efv.dur - alfa) * Math.PI * 0.2) * 0.3) : 0;
     mundo.ceguera = efc ? (efc.dur < 20 ? efc.dur / 20 : 1) : 0;
-    cam.nausea = nausea; cam.ticks = pasosLuz + alfa;
+    var tp = tiempoPortalAntes + (tiempoPortal - tiempoPortalAntes) * alfa;
+    cam.nausea = Math.max(nausea, tp); cam.velNausea = tp > nausea ? 20 : 7; cam.ticks = pasosLuz + alfa;
+    mundo.velo = tp > 0 ? (tp < 1 ? tp * tp * tp * tp * 0.8 + 0.2 : 1) : 0;
     var tb = TEMPERATURA[Mundo.bioma(Math.floor(cam.x), Math.floor(cam.z))];
     mundo.temperatura = tb === undefined ? 0.8 : tb;
     // lo que se dibuja además del mundo: los bichos y los otros jugadores (con su nombre arriba)
@@ -2190,6 +2280,7 @@
       });
       mundo.entidades = ents;
       Render.dibujar(cam, mundo);
+      Render.dibujarVelo(mundo.velo);
       Red.remotos.forEach(function (j) {
         var d2 = (j.x - cam.x) * (j.x - cam.x) + (j.z - cam.z) * (j.z - cam.z);
         if (d2 > 64 * 64) return;
@@ -2199,6 +2290,7 @@
     } else {
       mundo.entidades = ents;
       Render.dibujar(cam, mundo);
+      Render.dibujarVelo(mundo.velo);
     }
     I.juego.nombres = nombres;
     // la mano: el golpe dura 0,3 s; al cambiar de cosa baja y vuelve a subir
@@ -2221,6 +2313,90 @@
     msCuadro += (performance.now() - t0cuadro - msCuadro) * 0.05;
   }
   var msCuadro = 0, t0cuadro = 0;
+
+  // ------------------------------------------------------------------------------------------
+  // Pasar por el portal: parado adentro 4 s (en creativo, enseguida) se va a la otra dimensión; al
+  // llegar hay que salir y volver a entrar (Entity.setPortal: la espera se renueva mientras se esté
+  // adentro). Mientras tanto, el velo violeta y la vista que se retuerce como con náusea, más rápido
+  // (GuiIngame.renderPortal, EntityRenderer.setupCameraTransform)
+  // ------------------------------------------------------------------------------------------
+  var enPortal = 0, tiempoPortal = 0, tiempoPortalAntes = 0, esperaPortal = 0;
+  function tocaPortal() {
+    var w = 0.3, x0 = Math.floor(J.x - w), x1 = Math.floor(J.x + w), y0 = Math.floor(J.y), y1 = Math.floor(J.y + 1.79);
+    var z0 = Math.floor(J.z - w), z1 = Math.floor(J.z + w);
+    for (var x = x0; x <= x1; x++) for (var y = y0; y <= y1; y++) for (var z = z0; z <= z1; z++) if (Mundo.bloque(x, y, z) === Portal.ID) return true;
+    return false;
+  }
+  function pasoPortal() {
+    tiempoPortalAntes = tiempoPortal;
+    var dentro = !muerto && !montado && !cambiandoDim && partida && partida.local && dimension() !== 2 && tocaPortal();
+    if (dentro) {
+      if (esperaPortal > 0) esperaPortal = 10;
+      else {
+        if (tiempoPortal === 0) Sonido.tocar('portal.trigger', 1, Math.random() * 0.4 + 0.8);
+        tiempoPortal = Math.min(1, tiempoPortal + 0.0125);
+        if (++enPortal >= (partida.creativo ? 1 : 80)) { enPortal = 0; esperaPortal = 10; viajarPorPortal(); }
+      }
+    } else {
+      tiempoPortal = Math.max(0, tiempoPortal - 0.05);
+      enPortal = Math.max(0, enPortal - 4);
+    }
+    if (esperaPortal > 0 && !dentro) esperaPortal--;
+    // los portales de cerca zumban y largan chispas violetas (BlockPortal.randomDisplayTick)
+    var l = partida && partida[campo('portales')];
+    if (l) for (var i = 0; i < l.length; i++) {
+      var p = l[i], dx = p[0] - J.x, dz = p[2] - J.z, d2 = dx * dx + dz * dz;
+      if (d2 > 24 * 24 || Mundo.bloque(Math.floor(p[0]), Math.floor(p[1]), Math.floor(p[2])) !== Portal.ID) continue;
+      if (Math.random() < 0.006) Sonido.tocar('portal.portal', 0.5, Math.random() * 0.4 + 0.8, p[0], p[1] + 1.5, p[2]);
+      // (las de muy cerca de la cámara se verían como cuadrados grandes)
+      if (opciones.particulas && d2 > 4 && Math.random() < 0.5) Render.chispas(p[0] + (Math.random() - 0.5) * 2, p[1] + Math.random() * 3, p[2] + (Math.random() - 0.5) * 2, [0.55, 0.25, 0.85], 1, 0.025);
+    }
+  }
+  // del mundo de arriba al Nether las distancias se dividen por 8 (y al revés se multiplican); se
+  // llega al portal anotado más cerca (a menos de 128 arriba, de 16 en el Nether) o se hace uno
+  function viajarPorPortal() {
+    var desde = dimension(), hacia = desde === 1 ? 0 : 1, k = hacia === 1 ? 1 / 8 : 8;
+    var x = J.x * k, z = J.z * k, y = Math.max(1, Math.min(C.ALTO - 2, J.y));
+    var l = partida[campo('portales', hacia)] || [], r = hacia === 1 ? 16 : 128, mejor = null, dm = Infinity;
+    l.forEach(function (p) {
+      var dx = p[0] - x, dz = p[2] - z, d = dx * dx + dz * dz;
+      if (Math.abs(dx) <= r && Math.abs(dz) <= r && d < dm) { dm = d; mejor = p; }
+    });
+    if (mejor) { x = mejor[0]; y = mejor[1]; z = mejor[2]; }
+    cambiarDimension(hacia, x, y, z, { portal: true, anotado: !!mejor });
+  }
+  // al terminar de cargar la otra dimensión: el portal anotado (si sigue ahí) o uno nuevo cerca; o
+  // reaparecer en la cama o donde se aparece
+  function llegar() {
+    var ll = partida.llegada;
+    partida.llegada = null;
+    if (!ll) return;
+    J.vx = J.vy = J.vz = 0; caida = 0;
+    if (ll.reaparecer) {
+      var cama = partida.cama, lugar = null;
+      if (cama && Mundo.bloque(cama[0], cama[1], cama[2]) === 26) lugar = salidaCama(cama[0], cama[1], cama[2]);
+      else if (cama) { partida.cama = null; aviso(I.t('tile.bed.notValid', 'Your home bed was missing or obstructed')); }
+      if (lugar) J.ubicar(lugar[0], lugar[1], lugar[2]);
+      else { J.ubicar(aparicion[0], aparicion[1], aparicion[2]); esperandoSuelo = true; }
+      return;
+    }
+    var s = null, x = Math.floor(J.x), y = Math.floor(J.y), z = Math.floor(J.z);
+    if (ll.anotado) {
+      for (var dy = -2; dy <= 3 && !s; dy++) for (var dx = -2; dx <= 2 && !s; dx++) for (var dz = -2; dz <= 2 && !s; dz++)
+        if (Mundo.bloque(x + dx, y + dy, z + dz) === Portal.ID) s = Portal.deBloque(MP, x + dx, y + dy, z + dz);
+      if (!s) {
+        // ya no está: se borra de la lista
+        var l = partida[campo('portales')] || [];
+        partida[campo('portales')] = l.filter(function (p) { return Math.abs(p[0] - J.x) > 4 || Math.abs(p[1] - J.y) > 4 || Math.abs(p[2] - J.z) > 4; });
+      }
+    }
+    if (!s) {
+      tocandoPortal = true;
+      try { s = Portal.crear(MP, function (b) { return b > 0 && C.SOLIDO[b] === 1; }, J.x, J.y, J.z, C.ALTO, Math.random); } finally { tocandoPortal = false; }
+    }
+    if (s) { anotarPortal(s); var lg = Portal.lugar(s); J.ubicar(lg[0], lg[1], lg[2]); }
+    esperaPortal = 10;
+  }
 
   // un mundo nuevo: el jugador va arriba de lo más alto que haya en su columna (puede ser un árbol)
   function buscarSuelo() {

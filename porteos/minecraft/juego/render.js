@@ -385,22 +385,28 @@ var Render = (function () {
     f *= 1 - lluvia * 5 / 16;
     return f * 0.8 + 0.2;
   }
-  var TABLA = [];
-  for (var i = 0; i <= 15; i++) { var f1 = 1 - i / 15; TABLA[i] = (1 - f1) / (f1 * 3 + 1); }
+  // cuánto ilumina cada nivel de luz (WorldProvider.generateLightBrightnessTable); en el Nether con
+  // un mínimo de 0,1 (WorldProviderHell)
+  var TABLA = [], TABLA_N = [];
+  for (var i = 0; i <= 15; i++) { var f1 = 1 - i / 15; TABLA[i] = (1 - f1) / (f1 * 3 + 1); TABLA_N[i] = TABLA[i] * 0.9 + 0.1; }
   var parpadeo = 0, parpadeoV = 0;
   // vn: la visión nocturna (0 a 1): cada color se lleva hasta que su canal más fuerte llegue a 1
   // (EntityRenderer.updateLightmap)
-  function actualizarMapaLuz(brillo, vn) {
+  function actualizarMapaLuz(brillo, vn, dim) {
     parpadeoV += (Math.random() - Math.random()) * Math.random() * Math.random();
     parpadeoV *= 0.9;
     parpadeo += (parpadeoV - parpadeo);
-    var cielo = brillo * 0.95 + 0.05, gamma = R.brillo;
+    // (en el Nether, a la medianoche de siempre: WorldProviderHell.calculateCelestialAngle)
+    if (dim === 1) brillo = 0.2;
+    var cielo = brillo * 0.95 + 0.05, gamma = R.brillo, T = dim === 1 ? TABLA_N : TABLA;
     for (var k = 0; k < 256; k++) {
-      var s = TABLA[k >> 4] * cielo, b = TABLA[k & 15] * (parpadeo * 0.1 + 1.5);
+      var s = T[k >> 4] * cielo, b = T[k & 15] * (parpadeo * 0.1 + 1.5);
       var sr = s * (brillo * 0.65 + 0.35), sg = s * (brillo * 0.65 + 0.35);
       var bg = b * ((b * 0.6 + 0.4) * 0.6 + 0.4), bb = b * (b * b * 0.6 + 0.4);
       var r = sr + b, g = sg + bg, bl = s + bb;
       r = r * 0.96 + 0.03; g = g * 0.96 + 0.03; bl = bl * 0.96 + 0.03;
+      // el End: una luz pareja verdosa más la de los bloques (EntityRenderer.updateLightmap)
+      if (dim === 2) { r = 0.22 + b * 0.75; g = 0.28 + bg * 0.75; bl = 0.25 + bb * 0.75; }
       if (vn > 0) { var mv = 1 / Math.max(r, g, bl); r = r * (1 - vn) + r * mv * vn; g = g * (1 - vn) + g * mv * vn; bl = bl * (1 - vn) + bl * mv * vn; }
       r = r > 1 ? 1 : r; g = g > 1 ? 1 : g; bl = bl > 1 ? 1 : bl;
       var ir = 1 - r, ig = 1 - g, ib = 1 - bl;
@@ -466,7 +472,7 @@ var Render = (function () {
     if (cam.nausea > 0) {
       var nf = cam.nausea, f2 = 5 / (nf * nf + 5) - nf * 0.04;
       f2 *= f2;
-      GL.mult(vista, matNausea(cam.ticks * 7 * Math.PI / 180, 1 / f2), vista);
+      GL.mult(vista, matNausea(cam.ticks * (cam.velNausea || 7) * Math.PI / 180, 1 / f2), vista);
     }
     GL.mult(vp, proy, vista);
     calcularPlanos(vp);
@@ -497,12 +503,16 @@ var Render = (function () {
         for (k = 0; k < 3; k++) niebla[k] = niebla[k] * (1 - a) + atard[k] * a;
       }
     }
+    // el Nether: sin cielo, todo del color de su niebla (los shaders de Tito lo reconocen por él:
+    // rojo más que azul, rojo bajo y azul muy bajo)
+    var dimN = mundo.dimension | 0;
+    if (dimN === 1) { niebla = [0.2, 0.03, 0.03]; cielo = niebla.slice(); lluvia = 0; }
     if (mundo.bajoAgua) { niebla = [0.02 * luzCielo + 0.02, 0.02 * luzCielo + 0.04, 0.2 * luzCielo + 0.08]; }
     // la visión nocturna aclara la niebla; la ceguera la vuelve negra (updateFogColor)
     var vn = mundo.visionNocturna || 0, ceg = mundo.ceguera || 0;
     if (vn > 0) { var mx = Math.max(niebla[0], niebla[1], niebla[2]) || 1; for (k = 0; k < 3; k++) niebla[k] = niebla[k] * (1 - vn) + niebla[k] / mx * vn; }
     if (ceg > 0) for (k = 0; k < 3; k++) { niebla[k] *= 1 - ceg; cielo[k] *= 1 - ceg; }
-    actualizarMapaLuz(brillo, vn);
+    actualizarMapaLuz(brillo, vn, dimN);
 
     gl.clearColor(niebla[0], niebla[1], niebla[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -511,14 +521,15 @@ var Render = (function () {
 
     var tiempoS = mundo.reloj;
     // controles de la niebla: claro, lluvia (el shader de Tito los reconoce por FOG_CONTROL.x) o bajo el agua
-    var fog = mundo.bajoAgua ? [0.0, 0.25] : lluvia > 0.2 ? [0.3, 0.9] : [0.75, 1.0];
+    var fog = mundo.bajoAgua ? [0.0, 0.25] : dimN === 1 ? [0.2, 0.6] : lluvia > 0.2 ? [0.3, 0.9] : [0.75, 1.0];
     // con ceguera no se ve más allá de 5 bloques (setupFog: de 1,25 a 5)
     if (ceg > 0) { var fc = Math.max(0.02, 5 / dist); fog = [fog[0] + (fc * 0.25 - fog[0]) * ceg, fog[1] + (fc - fog[1]) * ceg]; }
     uFrame = { niebla: niebla, fog: fog, dist: dist, t: tiempoS, cam: cam, cielo: cielo };
 
-    // 1. el cielo
+    // 1. el cielo (sólo en el mundo de arriba)
     gl.disable(gl.DEPTH_TEST);
     gl.depthMask(false);
+    if (!dimN) {
     usar(M.cielo);
     gl.uniformMatrix4fv(M.cielo.u.WORLDVIEWPROJ, false, vp);
     if (M.cielo.u.WORLDVIEW) gl.uniformMatrix4fv(M.cielo.u.WORLDVIEW, false, vista);
@@ -561,6 +572,7 @@ var Render = (function () {
     gl.uniformMatrix4fv(M.solLuna.u.WORLDVIEWPROJ, false, ml);
     gl.bindTexture(gl.TEXTURE_2D, R.texLuna);
     gl.bindVertexArray(solQuad.vao); gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
     gl.disable(gl.BLEND);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
@@ -605,7 +617,7 @@ var Render = (function () {
     gl.disable(gl.POLYGON_OFFSET_FILL);
     capa(M.mezcla, alReves, 3, true);
     // 4. las nubes
-    if (mundo.nubes === false || ceg > 0.5) { gl.bindVertexArray(null); R.stats.quads = quads; R.stats.llamadas = llamadas; return; }
+    if (mundo.nubes === false || ceg > 0.5 || dimN) { gl.bindVertexArray(null); R.stats.quads = quads; R.stats.llamadas = llamadas; return; }
     var cn = [0.9 + 0.1 * luzCielo, 0.9 + 0.1 * luzCielo, 0.85 + 0.15 * luzCielo];
     if (M.tipoNubes === 'cajas' && mascara) dibujarNubes3D(mundo, ccx, ccy, ccz, cn, luzCielo);
     else {
@@ -1036,7 +1048,7 @@ var Render = (function () {
   };
   // las chispas (el polvo de hueso: las verdes del aldeano contento): cuadraditos de un color que
   // suben despacio
-  R.chispas = function (x, y, z, color, n) {
+  R.chispas = function (x, y, z, color, n, tam) {
     var r = R.rectCara(35, 'side', 0);
     if (!r) return;
     var du = (r[2] - r[0]) / 8, dv = (r[3] - r[1]) / 8;
@@ -1044,7 +1056,7 @@ var Render = (function () {
       if (part.length > 400) part.shift();
       part.push({ x: x + (Math.random() - 0.5) * 0.9, y: y + (Math.random() - 0.3) * 0.8, z: z + (Math.random() - 0.5) * 0.9,
         vx: (Math.random() - 0.5) * 0.02, vy: 0.02 + Math.random() * 0.03, vz: (Math.random() - 0.5) * 0.02, vida: 10 + Math.random() * 20, edad: 0,
-        tam: 0.04 + Math.random() * 0.03, u0: r[0], v0: r[1], u1: r[0] + du, v1: r[1] + dv, c: color, flota: true });
+        tam: tam ? tam * (0.7 + Math.random() * 0.6) : 0.04 + Math.random() * 0.03, u0: r[0], v0: r[1], u1: r[0] + du, v1: r[1] + dv, c: color, flota: true });
     }
   };
   // un paso de 1/20 s de las partículas (gravedad y roce del juego; chocan con el piso)
@@ -1463,6 +1475,38 @@ var Render = (function () {
     gl.enable(gl.CULL_FACE);
     gl.bindVertexArray(null);
   }
+
+  // el velo del portal (GuiIngame.renderPortal): el dibujo del portal estirado sobre toda la pantalla,
+  // cada vez menos transparente
+  var veloProg = null, veloBuf = null;
+  R.dibujarVelo = function (alfa) {
+    if (!(alfa > 0) || !R.uv || !R.uv.portal || !R.uv.portal[0]) return;
+    if (!veloProg) {
+      veloProg = GL.programa(
+        '#if __VERSION__ >= 300\n#define attribute in\n#define varying out\n#endif\nattribute POS4 POSITION; attribute vec4 COLOR; attribute vec2 TEXCOORD_0; varying vec2 uv; void main(){ gl_Position = POSITION; uv = TEXCOORD_0; }',
+        '#if __VERSION__ >= 300\n#define varying in\n#define texture2D texture\nout vec4 FragColor;\n#define gl_FragColor FragColor\n#endif\nuniform sampler2D TEXTURE_0; uniform vec4 CURRENT_COLOR; varying vec2 uv; void main(){ vec4 c = texture2D(TEXTURE_0, uv); gl_FragColor = vec4(c.rgb, CURRENT_COLOR.a); }');
+      veloBuf = { vao: gl.createVertexArray(), vbo: gl.createBuffer() };
+      gl.bindVertexArray(veloBuf.vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, veloBuf.vbo);
+      atributosSimple();
+      gl.bindVertexArray(null);
+    }
+    var r = R.uv.portal[0], d = new Float32Array(60), o = 0;
+    [[-1, -1, r[0], r[3]], [1, -1, r[2], r[3]], [1, 1, r[2], r[1]], [-1, -1, r[0], r[3]], [1, 1, r[2], r[1]], [-1, 1, r[0], r[1]]].forEach(function (q) {
+      d[o++] = q[0]; d[o++] = q[1]; d[o++] = 0; d[o++] = 1; d[o++] = 1; d[o++] = 1; d[o++] = 1; d[o++] = 1; d[o++] = q[2]; d[o++] = q[3];
+    });
+    usar(veloProg);
+    gl.uniform4f(veloProg.u.CURRENT_COLOR, 1, 1, 1, Math.min(1, alfa));
+    gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, atlas);
+    gl.bindVertexArray(veloBuf.vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, veloBuf.vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, d, gl.STREAM_DRAW);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.bindVertexArray(null);
+    gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
+  };
 
   R.matrices = function () { return { vp: vp, proy: proy, vista: vista }; };
   R.reiniciar = function () { cols.forEach(borrar); cols.clear(); };

@@ -11,6 +11,9 @@
   var F = C.F, ALTO = C.ALTO;
   var OPACO, FRENA, LUZ, FORMA, CAPA;
   var gen = null, uv = null, BL = null, dist = 6;
+  // la dimensión: 0 el mundo de arriba, 1 el Nether (sin cielo; la lava corre el doble de lejos y
+  // tres veces más rápido, como el juego), 2 el End (sin cielo)
+  var dimension = 0, sinCielo = false, infierno = false;
   var trozos = new Map();     // clave numérica → trozo
   var centro = { cx: 0, cz: 0 };
   var guardados = new Map();  // bloques de trozos guardados (llegan de la página) por clave
@@ -66,11 +69,14 @@
 
   function generar(t) {
     var g = guardados.get(clave(t.cx, t.cz));
-    gen.trozo(t.cx, t.cz, t.ids, t.meta, t.biomas);
+    var r = gen.trozo(t.cx, t.cz, t.ids, t.meta, t.biomas);
     if (g) { t.ids.set(g.ids); t.meta.set(g.meta); }
+    // las cascadas de lava del Nether recién generadas empiezan a correr
+    else if (infierno && r && r.length) t.lavas = r;
     var pa = parches.get(clave(t.cx, t.cz));
     if (pa) pa.forEach(function (v, i) { t.ids[i] = v[0]; t.meta[i] = v[1]; });
     t.gen = true;
+    if (t.lavas) { for (var k = 0; k + 2 < t.lavas.length; k += 3) agendar(t.lavas[k], t.lavas[k + 1], t.lavas[k + 2]); t.lavas = null; }
     // la copia para la página (física, guardar)
     postMessage({ t: 'trozo', cx: t.cx, cz: t.cz, ids: t.ids.slice(), meta: t.meta.slice(), biomas: t.biomas.slice() });
   }
@@ -124,9 +130,9 @@
     llenarRegion(t.cx, t.cz);
     rsky.fill(0); rblk.fill(0);
     var n = 0, x, z, y, i;
-    // el sol baja derecho hasta lo que lo frena
+    // el sol baja derecho hasta lo que lo frena (en el Nether y el End no hay cielo)
     var tope = new Uint8Array(RA);
-    for (z = 1; z < RW - 1; z++) {
+    if (!sinCielo) for (z = 1; z < RW - 1; z++) {
       for (x = 1; x < RW - 1; x++) {
         var c = z * RW + x, s = 15, primero = 0;
         rsky[(RH - 1) * RA + c] = 15;
@@ -143,7 +149,7 @@
     }
     // de dónde puede salir luz de costado: las celdas con sol que están debajo del tope de alguna
     // columna vecina
-    for (z = 1; z < RW - 1; z++) {
+    if (!sinCielo) for (z = 1; z < RW - 1; z++) {
       for (x = 1; x < RW - 1; x++) {
         c = z * RW + x;
         var m = Math.max(tope[c - 1], tope[c + 1], tope[c - RW], tope[c + RW], tope[c]);
@@ -153,7 +159,7 @@
         }
       }
     }
-    propagar(rsky, n);
+    if (n) propagar(rsky, n);
     // los bloques que dan luz
     n = 0;
     for (i = RA; i < (RH - 1) * RA; i++) {
@@ -195,7 +201,7 @@
             for (var x = xa; x <= xb; x++) {
               var li = ly * LA + (lz0 + z - za) * LW + lx0 + x - xa;
               if (!t || y < 0 || y >= ALTO) {
-                lid[li] = y < 0 ? 7 : 0; lme[li] = 0; lsky[li] = y >= ALTO ? 15 : 0; lblk[li] = 0;
+                lid[li] = y < 0 ? 7 : 0; lme[li] = 0; lsky[li] = y >= ALTO && !sinCielo ? 15 : 0; lblk[li] = 0;
                 continue;
               }
               var i = (y << 8) | (z << 4) | x, L = t.luz[i];
@@ -431,6 +437,17 @@
               if (id === 2 && f !== 1) { ttr = ttg = ttb = 1; }    // al pasto sólo se le tiñe arriba
               caraCubo(s, li, x, y, z, f, rect, ttr, ttg, ttb, 255, 1);
             }
+          } else if (forma === F.portal) {
+            // el portal (BlockPortal): una lámina de 4 píxeles en el medio, a lo largo de x (1) o de z
+            // (2), sin las caras contra otro portal (las del borde contra lo opaco las saca caja)
+            var ejeZ = (m & 3) === 2, tp = tex(id, 0, 0), t6 = [];
+            for (f = 0; f < 6; f++) {
+              var vp = lid[li + VEC[f].n], lado = f < 2 || (ejeZ ? f === 2 || f === 3 : f === 4 || f === 5);
+              t6.push(vp === id && lado ? VACIO : tp);
+            }
+            luzPlana(li);
+            if (ejeZ) caja(s, li, x, y, z, 6 / 16, 0, 0, 10 / 16, 1, 1, t6, 1, 1, 1);
+            else caja(s, li, x, y, z, 0, 0, 6 / 16, 1, 1, 10 / 16, t6, 1, 1, 1);
           } else if (forma === F.liquido) {
             var alto = altLiquido(id, m);
             var arriba = lid[li + LA];
@@ -699,7 +716,7 @@
   function agendar(x, y, z) {
     var b = idEn(x, y, z);
     if (!esLiquido(b)) return;
-    var k = ((x + 1048576) * 2097152 + (z + 1048576)) * 128 + y, cuando = tickLiq + (b <= 9 ? 5 : 30);
+    var k = ((x + 1048576) * 2097152 + (z + 1048576)) * 128 + y, cuando = tickLiq + (b <= 9 ? 5 : infierno ? 10 : 30);
     var e = agenda.get(k);
     if (!e || e.t > cuando) agenda.set(k, { x: x, y: y, z: z, t: cuando });
   }
@@ -722,7 +739,7 @@
   function correr(x, y, z) {
     var id = idEn(x, y, z);
     if (!esLiquido(id)) return;
-    var agua = id <= 9, corre = agua ? 8 : 10, decae = agua ? 1 : 2;
+    var agua = id <= 9, corre = agua ? 8 : 10, decae = agua || infierno ? 1 : 2;
     var m = metaEn(x, y, z), fuente = (m & 15) === 0;
     if (!fuente) {
       var minimo = 99, fuentes = 0;
@@ -948,7 +965,8 @@
     if (d.t === 'ini') {
       C.armarBloques(d.bloques);
       OPACO = C.OPACO; FRENA = C.FRENA; LUZ = C.LUZ; FORMA = C.FORMA; CAPA = C.CAPA;
-      uv = d.uv; gen = new Gen(d.semilla, d.tipo); dist = d.dist || 6;
+      dimension = d.dim | 0; sinCielo = dimension !== 0; infierno = dimension === 1;
+      uv = d.uv; gen = infierno ? new GenNether(d.semilla) : new Gen(d.semilla, d.tipo); dist = d.dist || 6;
       if (d.suave !== undefined) suave = !!d.suave;
       if (d.hojas !== undefined) hojasLlamativas = !!d.hojas;
       prepararTexturas();
@@ -1002,7 +1020,7 @@
       // la luz donde está el jugador (para la mano y las partículas): cielo << 4 | bloques
       var tl = trozo(d.x >> 4, d.z >> 4), v = -1;
       if (tl && tl.luzOk && d.y >= 0 && d.y < ALTO) v = tl.luz[(d.y << 8) | ((d.z & 15) << 4) | (d.x & 15)];
-      else if (d.y >= ALTO) v = 0xF0;
+      else if (d.y >= ALTO) v = sinCielo ? 0 : 0xF0;
       postMessage({ t: 'luz', v: v });
     } else if (d.t === 'luces') {
       // la luz en varios lugares (los bichos y los otros jugadores; también dónde podría aparecer
@@ -1010,7 +1028,7 @@
       var v2 = [];
       for (var q = 0; q + 2 < d.p.length; q += 3) {
         var px = d.p[q], py = d.p[q + 1], pz = d.p[q + 2], tq = trozo(px >> 4, pz >> 4);
-        if (py >= ALTO) v2.push(0xF0);
+        if (py >= ALTO) v2.push(sinCielo ? 0 : 0xF0);
         else if (!tq || !tq.luzOk || py < 0) v2.push(-1);
         else v2.push(tq.luz[(py << 8) | ((pz & 15) << 4) | (px & 15)]);
       }

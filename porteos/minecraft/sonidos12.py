@@ -27,7 +27,9 @@ SUELTOS = {"random.click", "random.glass", "random.pop", "random.splash", "rando
            # usar objetos: los baldes, esquilar, ordeñar, la gallina que pone, la correa, la armadura del caballo
            "bucket.fill_water", "bucket.empty_water", "bucket.fill_lava", "bucket.empty_lava", "mob.sheep.shear",
            "mob.cow.milk", "mob.chicken.plop", "leashknot.place", "leashknot.break", "mob.horse.armor",
-           "mob.horse.leather", "mob.pig.boost", "random.pop2", "mob.zombie.remedy", "mob.zombie.unfect"}
+           "mob.horse.leather", "mob.pig.boost", "random.pop2", "mob.zombie.remedy", "mob.zombie.unfect",
+           # el portal del Nether: el zumbido de cerca y el de entrar
+           "portal.portal", "portal.trigger"}
 # lo que no suena en el motor (los zombis rompiendo puertas)
 FUERA = ("mob.zombie.wood",)
 # de cada evento, cuántas variantes como mucho y cuánto de cada una (el rugido del dragón, el

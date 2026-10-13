@@ -36,7 +36,9 @@ var Gen = (function () {
     ['mesa', 0x90814d, 0x9e814d, 12, 0, 1, 0],
     ['llanuraHelada', 0x80b497, 0x60a17b, 10, 0.2, 1, 0],
     ['oceanoProfundo', 0x8eb971, 0x71a74d, 13, 0, 0, 0],
-    ['megaTaiga', 0x86b87f, 0x68a464, 6, 10, 6, 0]
+    ['megaTaiga', 0x86b87f, 0x68a464, 6, 10, 6, 0],
+    // el Nether (nether.js): un solo bioma, sin plantas
+    ['infierno', 0xbfb755, 0xaea42a, 2, 0, 0, 0]
   ];
   var BI = {};
   BIOMAS.forEach(function (b, i) { BI[b[0]] = i; });

@@ -1014,7 +1014,25 @@ var Bichos = (function () {
     return null;
   }
   var GRUPO = { sheep: [2, 4], pig: [2, 4], cow: [2, 4], chicken: [2, 4], horse: [2, 6], donkey: [1, 3], llama: [4, 6], wolf: [4, 4],
-    rabbit: [2, 3], ocelot: [1, 3], parrot: [1, 2], polar_bear: [1, 2], squid: [2, 4], bat: [1, 2] };
+    rabbit: [2, 3], ocelot: [1, 3], parrot: [1, 2], polar_bear: [1, 2], squid: [2, 4], bat: [1, 2],
+    zombie_pigman: [2, 4], magma_cube: [1, 4], enderman: [1, 4] };
+  // el Nether (Biome.Hell): de a 4, a cualquier altura y sin mirar el sol (el ghast una vez cada 20 y
+  // con lugar para él; el enderman, en lo oscuro)
+  var INFIERNO = { ghast: 50, zombie_pigman: 100, magma_cube: 2, enderman: 1 };
+  B.dimension = 0;
+  function candidatoInfierno(yo) {
+    var a = Math.random() * PI * 2, r = 16 + Math.random() * 28;
+    var x = Math.floor(yo.x + Math.cos(a) * r), z = Math.floor(yo.z + Math.sin(a) * r), y = 6 + Math.floor(Math.random() * 116);
+    if (!Mundo.cargado(x, z)) return;
+    for (var k = 0; k < 24 && y > 4; k++, y--) {
+      var b = Mundo.bloque(x, y, z), ab = Mundo.bloque(x, y - 1, z);
+      if (b === 0 && Mundo.bloque(x, y + 1, z) === 0 && ab > 0 && C.SOLIDO[ab] && !esLava(ab)) { candidatos.push({ x: x, y: y, z: z, clase: 'infierno' }); return; }
+    }
+  }
+  function libre(x0, y0, z0, w, h, d) {
+    for (var x = x0; x < x0 + w; x++) for (var y = y0; y < y0 + h; y++) for (var z = z0; z < z0 + d; z++) if (Mundo.bloque(x, y, z) !== 0) return false;
+    return true;
+  }
   var candidatos = [];
   B.candidatos = function (yo, dia, cuantosJug) {
     candidatos = [];
@@ -1022,6 +1040,11 @@ var Bichos = (function () {
     var pas = 0, hos = 0, agua = 0, aire = 0;
     lista.forEach(function (e) { var T = B.TIPOS[e.tipo]; if (T.agua) agua++; else if (e.tipo === 'bat') aire++; else if (T.hostil) hos++; else pas++; });
     var tope = Math.max(2, Math.round(10 / Math.max(1, cuantosJug)));
+    if (B.dimension === 1) {
+      for (var nn = 0; nn < 4 && hos < tope; nn++) candidatoInfierno(yo);
+      return candidatos;
+    }
+    if (B.dimension) return candidatos;
     for (var n = 0; n < 4; n++) {
       var a = Math.random() * PI * 2, r = 22 + Math.random() * 22;
       var x = Math.floor(yo.x + Math.cos(a) * r), z = Math.floor(yo.z + Math.sin(a) * r);
@@ -1062,7 +1085,16 @@ var Bichos = (function () {
       var c = candidatos[i], l = luces[i];
       if (l < 0 || !c.clase) continue;
       var cielo = l >> 4, bloque = l & 15, efectiva = Math.max(bloque, Math.round(cielo * dia));
-      if (c.clase === 'animal') {
+      if (c.clase === 'infierno') {
+        if (B.dificultad === 'peaceful') continue;
+        var tn = elegir(INFIERNO);
+        if (tn === 'ghast') {
+          if (Math.random() < 1 / 20 && libre(c.x - 2, c.y, c.z - 2, 4, 4, 4)) B.crear('ghast', c.x + 0.5, c.y, c.z + 0.5);
+          continue;
+        }
+        if (tn === 'enderman' && bloque > 7) continue;
+        grupo(tn, c);
+      } else if (c.clase === 'animal') {
         if (cielo < 9) continue;
         grupo(elegir(animalesDe(c.bioma)), c);
       } else if (c.clase === 'agua') {
