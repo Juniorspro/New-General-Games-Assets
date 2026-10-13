@@ -332,7 +332,8 @@ var Jui = (function () {
     // los hijos pueden venir en una variable ("controls": "$radio_buttons")
     var hs = def.controls;
     if (typeof hs === 'string' && hs.charCodeAt(0) === 36) hs = s[hs];
-    if (Array.isArray(hs) && c.t !== 'grid') crearHijos(c, hs);
+    // una grilla sin plantilla trae sus elementos escritos (la armadura, la salida de fabricar)
+    if (Array.isArray(hs) && (c.t !== 'grid' || !p.grid_item_template)) crearHijos(c, hs);
     if (p.anims) iniciarAnimaciones(c);
     return c;
   }
@@ -446,6 +447,11 @@ var Jui = (function () {
     if (k.binding) { var v = k.binding(nombre, c); if (v !== undefined) return v; }
     return k[nombre];
   }
+  // la colección y el lugar de un control que está en una grilla: { col, i } o null
+  J.coleccionDe = function (c) {
+    for (var q = c; q; q = q.padre) if (q.itemDe !== undefined) return { col: q.itemDe, i: q.indice };
+    return null;
+  };
   function pedirColeccion(c, col, nombre) {
     var k = ctrlDe(c), i = indiceEn(c, col);
     if (!k || !k.coleccion || i < 0) return undefined;
@@ -560,8 +566,10 @@ var Jui = (function () {
   // Visibilidad y estado
   // ------------------------------------------------------------------------------------------
   function visible(c) {
+    // lo que diga un binding manda sobre el "visible" escrito (las pestañas del inventario arrancan
+    // con "visible": false y las muestra su interruptor)
+    if (c.b['#visible'] !== undefined) return verdad(c.b['#visible']);
     if (c.p.visible !== undefined && !condicion(c.p.visible, c.s, c.b)) return false;
-    if (c.b['#visible'] !== undefined && !verdad(c.b['#visible'])) return false;
     return true;
   }
   function habilitado(c) {
@@ -685,6 +693,9 @@ var Jui = (function () {
       if (n !== undefined) {
         if (gd && p.grid_rescaling_type === 'horizontal') dims = [Math.ceil(n / Math.max(1, gd[1])), gd[1]];
         else if (gd) dims = [gd[0], Math.ceil(n / Math.max(1, gd[0]))];
+        // sin dimensiones y "horizontal": tantas columnas como entren a lo ancho (las grillas del
+        // inventario); se cuentan al armarla, cuando se sabe el ancho
+        else if (p.grid_rescaling_type === 'horizontal') return { col: 0, fil: 0, n: Math.max(0, n), porAncho: true };
         else dims = [1, n];
       } else dims = gd ? [gd[0] | 0, gd[1] | 0] : [0, 0];
     }
@@ -698,10 +709,25 @@ var Jui = (function () {
     var d = dimensionesGrilla(c);
     c.dims = d;
     c.b['#collection_length'] = d.n;
+    if (typeof c.p.grid_item_template !== 'string') {
+      var t = null;
+      // los elementos escritos: su lugar en la colección es el de su "grid_position" (o su orden)
+      if (!c.indizada) {
+        c.indizada = true;
+        var cols = Math.max(1, d.col || 1);
+        for (var e = 0; e < c.hijos.length; e++) {
+          var he = c.hijos[e], gp = he.p.grid_position, ie = Array.isArray(gp) ? gp[1] * cols + gp[0] : e;
+          if (Array.isArray(gp) && d.col === 1) ie = gp[1];
+          he.itemDe = c.p.collection_name || '';
+          propagarIndice(he, ie, he.itemDe);
+          he.indice = ie;
+        }
+      }
+      return;
+    }
     if (c.hijos.length === d.n && c.plantilla === c.p.grid_item_template) return;
     c.plantilla = c.p.grid_item_template;
-    var t = c.plantilla;
-    if (typeof t !== 'string') { c.hijos = []; return; }
+    t = c.plantilla;
     if (t.charAt(0) === '@') t = t.slice(1);
     var nuevos = [];
     for (var i = 0; i < d.n; i++) {
@@ -922,7 +948,10 @@ var Jui = (function () {
   function propio(c, anchoDisp) {
     if (c.t === 'label') {
       var k = escalaFuente(c), txt = textoDe(c);
-      var ls = lineas(txt, anchoDisp > 0 ? anchoDisp / k : 0), w = 0;
+      // una etiqueta de alto fijo de una línea no parte el texto: lo que no entra sobresale (el
+      // "Fabricación" arriba de la grilla de 2x2)
+      var ey = tamExpr(tamDe(c)[1]), unaLinea = !ey[0] && !ey[1] && !ey[5] && !ey[6] && ey[4] > 0 && ey[4] < 18;
+      var ls = lineas(txt, anchoDisp > 0 && !unaLinea ? anchoDisp / k : 0), w = 0;
       for (var i = 0; i < ls.length; i++) w = Math.max(w, anchoTexto(ls[i]));
       var lp = typeof c.p.line_padding === 'number' ? c.p.line_padding : 0;
       c.lineas = ls;
@@ -1118,7 +1147,17 @@ var Jui = (function () {
   }
   function armarGrillaHijos(c, w, h) {
     var d = c.dims || { col: 1, fil: 1 }, hs = c.hijos;
+    if (d.porAncho) {
+      // el tamaño de un elemento dice cuántas columnas entran
+      var h0 = null;
+      for (var q = 0; q < hs.length && !h0; q++) if (hs[q].ver) h0 = hs[q];
+      if (h0) armar(h0, w, h);
+      var ew = h0 ? Math.max(1, h0.w) : 18;
+      d.col = Math.max(1, Math.floor(w / ew));
+      d.fil = Math.ceil(d.n / d.col);
+    }
     var cw = d.col ? w / d.col : w, ch = d.fil ? h / d.fil : h;
+    if (d.porAncho && hs.length) { cw = Math.max(1, hs[0].w); ch = Math.max(1, hs[0].h); }
     var porColumnas = c.p.grid_fill_direction === 'vertical';
     // si la grilla mide por sus hijos, el tamaño de la celda es el del elemento
     var sz = par(c.p.size, '100%', '100%');
@@ -1127,7 +1166,7 @@ var Jui = (function () {
       var hj = hs[i];
       if (!hj.ver) { hj.w = hj.h = 0; continue; }
       armar(hj, ex[1] && !ex[0] ? w : cw, ey[1] && !ey[0] ? h : ch);
-      var cellW = ex[1] && !ex[0] ? hj.w : cw, cellH = ey[1] && !ey[0] ? hj.h : ch;
+      var cellW = ex[1] && !ex[0] && !d.porAncho ? hj.w : cw, cellH = ey[1] && !ey[0] && !d.porAncho ? hj.h : ch;
       var col = porColumnas ? Math.floor(i / Math.max(1, d.fil)) : i % Math.max(1, d.col);
       var fil = porColumnas ? i % Math.max(1, d.fil) : Math.floor(i / Math.max(1, d.col));
       if (Array.isArray(hj.p.grid_position)) { col = hj.p.grid_position[0]; fil = hj.p.grid_position[1]; }
@@ -1161,6 +1200,8 @@ var Jui = (function () {
     for (var i = 0; i < c.hijos.length; i++) {
       var h = c.hijos[i];
       if (!h.ver) continue;
+      // lo que "sigue al cursor" (el objeto agarrado en el inventario) va donde está el dedo
+      if (h.p.follows_cursor && J.cursor) { posicionar(h, J.cursor[0] - h.w / 2, J.cursor[1] - h.h / 2); continue; }
       posicionar(h, x + (h.rx || 0), y + (h.ry || 0));
     }
   }
@@ -1402,6 +1443,7 @@ var Jui = (function () {
   J.dibujar = function (ctx) {
     var pan = J.arriba();
     if (!pan) return;
+    revisarMantener();
     var ahora = performance.now();
     animarArbol(pan.raiz, ahora);
     // los bindings cambian cada cuadro (el texto de una barra de progreso, lo visible): se rearma
@@ -1492,7 +1534,32 @@ var Jui = (function () {
     for (var q = c; q; q = q.padre) if (q.t === 'scroll_view') return q;
     return null;
   }
+  // el botón de un toque mantenido (0,4 s): su "button.menu_secondary_select" (en el inventario,
+  // agarrar la mitad); el doble toque: su "double_pressed" (juntar los iguales)
+  var MANTENER = 400, DOBLE = 300, ultimoToque = null;
+  function mapeo(c, desde, tipo) {
+    var m = c && c.p.button_mappings;
+    if (!Array.isArray(m)) return null;
+    for (var i = 0; i < m.length; i++) if (m[i] && m[i].from_button_id === desde && m[i].mapping_type === tipo && m[i].to_button_id) return m[i].to_button_id;
+    return null;
+  }
+  J.cursor = null;
+  // cuánto lleva apretado un botón que se puede mantener (0 a 1), o -1
+  J.progresoMantener = function () {
+    if (!activo || !arrastre || !arrastre.mantener || arrastre.movido || arrastre.mantenido) return -1;
+    return Math.min(1, (performance.now() - inicio.t) / MANTENER);
+  };
+  function revisarMantener() {
+    if (!activo || !arrastre || !arrastre.mantener || arrastre.movido || arrastre.mantenido || arrastre.objeto) return;
+    if (performance.now() - inicio.t < MANTENER) return;
+    arrastre.mantenido = true;
+    var k = ctrlDe(activo);
+    if (k && k.boton) k.boton(arrastre.mantener, activo);
+    activo.apretado = false;
+    J.sucio();
+  }
   J.bajar = function (x, y, raton) {
+    J.cursor = [x, y];
     if (cerrarDesplegablesFuera(x, y)) { activo = null; inicio = null; arrastre = null; return true; }
     var en = enPunto(x, y);
     if (foco && (!en.length || en[0] !== foco)) cerrarTeclado();
@@ -1506,6 +1573,7 @@ var Jui = (function () {
       var sv = panelDesplazable(c) || (c.t === 'scroll_view' ? c : null);
       arrastre = { sv: sv, desp0: sv ? sv.desp : 0, movido: false, c: c };
       if (c.t === 'button' || c.t === 'toggle') { c.apretado = true; c.encima = true; }
+      if (c.t === 'button') arrastre.mantener = mapeo(c, 'button.menu_secondary_select', 'pressed');
       if (c.t === 'slider') moverDeslizador(c, x);
       if (c.t === 'scrollbar_box' || c.t === 'scroll_track') arrastre.barra = true;
       if (c.p.gesture_tracking_button) arrastre.gesto = { x0: x };
@@ -1514,6 +1582,7 @@ var Jui = (function () {
     return !!c;
   };
   J.mover = function (x, y, raton) {
+    if (!raton || inicio) J.cursor = [x, y];
     if (raton && !inicio) {
       // el ratón sin apretar: el estado "encima" de botones e interruptores
       var en = enPunto(x, y), c = en[0] || null;
@@ -1535,7 +1604,20 @@ var Jui = (function () {
       arrastre.gesto.x0 = x;
       return;
     }
-    var sv = arrastre.sv;
+    // arrastrar un objeto del inventario: de costado en una lista (para arriba y abajo se desliza
+    // la lista) o en cualquier dirección fuera de una; agarra lo del casillero y lo suelta donde se
+    // levante el dedo
+    var kk = a && ctrlDe(a), sv = arrastre.sv;
+    if (arrastre.objeto) { J.sucio(); return; }
+    if (a && a.t === 'button' && !arrastre.movido && kk && kk.arrastrable && (Math.abs(dx) > 6 || Math.abs(dy) > 6) &&
+        (!sv || Math.abs(dx) > Math.abs(dy)) && kk.arrastrable(a)) {
+      arrastre.objeto = true;
+      a.apretado = false; a.encima = false;
+      var tomar = mapeo(a, 'button.menu_select', 'pressed');
+      if (tomar && kk.boton) kk.boton(tomar, a);
+      J.sucio();
+      return;
+    }
     if (sv && (Math.abs(dy) > 3 || arrastre.movido)) {
       arrastre.movido = true;
       if (a && a.apretado) { a.apretado = false; a.encima = false; }
@@ -1556,10 +1638,32 @@ var Jui = (function () {
     activo = null; inicio = null;
     if (!a) { arrastre = null; return false; }
     var den = x >= a.x && y >= a.y && x <= a.x + a.w && y <= a.y + a.h;
+    if (arrastre && arrastre.objeto) {
+      // se suelta lo arrastrado en el casillero de abajo del dedo (si hay)
+      var dest = enPunto(x, y, function (c) { return c.t === 'button' && !!mapeo(c, 'button.menu_select', 'pressed'); })[0];
+      if (dest && dest !== a) apretar(dest);
+      arrastre = null;
+      J.sucio();
+      return true;
+    }
+    if (arrastre && arrastre.mantenido) { a.apretado = false; arrastre = null; J.sucio(); return true; }
     if (a.t === 'button') {
       a.apretado = false;
       if (!raton) a.encima = false;
-      if (den && !mov && habilitado(a)) apretar(a);
+      if (den && !mov && habilitado(a)) {
+        // el segundo toque seguido en el mismo casillero es otra cosa (juntar los iguales en lo que
+        // agarró el primero), no un toque más
+        var ahora = performance.now(), doble = mapeo(a, 'button.menu_select', 'double_pressed');
+        if (doble && ultimoToque && ultimoToque.c === a && ahora - ultimoToque.t < DOBLE) {
+          var kd = ctrlDe(a);
+          suena();
+          if (kd && kd.boton) kd.boton(doble, a);
+          ultimoToque = null;
+        } else {
+          apretar(a);
+          ultimoToque = { c: a, t: ahora };
+        }
+      }
     } else if (a.t === 'toggle') {
       a.apretado = false;
       if (!raton) a.encima = false;

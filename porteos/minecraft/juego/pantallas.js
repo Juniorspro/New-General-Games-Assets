@@ -52,7 +52,10 @@ var Pantallas = (function () {
     Jui.renderers.paper_doll_renderer = muñeco;
     Jui.renderers.progress_bar_renderer = barraDeProgreso;
     Jui.renderers.gradient_renderer = degrade;
-    Jui.renderers.inventory_item_renderer = function (ctx, c, k) { if (G.dibujarItem) G.dibujarItem(ctx, c, k); };
+    Jui.renderers.inventory_item_renderer = dibujarObjeto;
+    Jui.renderers.hover_text_renderer = textoFlotante;
+    Jui.renderers.armor_renderer = barraArmadura;
+    Jui.renderers.live_player_renderer = jugadorVivo;
     Jui.renderers.name_tag_renderer = function (ctx, c, k) {
       var n = c.b['#playername'] || G.nombre();
       var w = Jui.anchoTexto(n);
@@ -104,7 +107,65 @@ var Pantallas = (function () {
     Jui.escribir(ctx, s, -w / 2, -8 * kk, kk, [1, 1, 0], true);
     ctx.restore();
   }
+  // ------------------------------------------------------------------------------------------
+  // Las cosas en los casilleros (inventory_item_renderer): el ícono de "#item_id_aux" (número del
+  // objeto × 65536 + su variante, como el juego), atenuado si está inactivo
+  // ------------------------------------------------------------------------------------------
+  function dibujarObjeto(ctx, c, k) {
+    var v = c.b['#item_id_aux'];
+    if (typeof v !== 'number' || v <= 0) return;
+    var id = Math.floor(v / 65536), m = v % 65536;
+    var x = c.x * k, y = c.y * k, w = c.w * k;
+    // centrado en su panel (el "$item_renderer_offset" de los casilleros de bolsillo lo compensa el
+    // código del juego: así quedan en el medio de la celda, con la barra de durabilidad abajo)
+    var pp = c.padre;
+    if (pp && pp.w > c.w && pp.h > c.h && Array.isArray(c.p.offset)) { x = (pp.x + (pp.w - c.w) / 2) * k; y = (pp.y + (pp.h - c.h) / 2) * k; }
+    if (c.b['#disabled_filter_visible']) ctx.globalAlpha *= 0.4;
+    Interfaz.iconoEn(ctx, id, m, x, y, Math.round(w));
+  }
+  // la barra de armadura (diez pecheras de icons.png: llena, media, vacía) con los puntos puestos
+  function barraArmadura(ctx, c, k) {
+    var im = Interfaz.imagen('iconos'), p = G.puntosArmadura ? G.puntosArmadura() : 0;
+    if (!im) return;
+    for (var i = 0; i < 10; i++) {
+      var u = p >= i * 2 + 2 ? 34 : p === i * 2 + 1 ? 25 : 16;
+      // (el control está 5 unidades arriba, sobre el título: el juego dibuja la fila debajo)
+      ctx.drawImage(im, u, 9, 9, 9, Math.round((c.x + i * 8) * k), Math.round((c.y + 7) * k), Math.round(9 * k), Math.round(9 * k));
+    }
+  }
+  // el jugador en la pestaña de armadura (sobre el fondo negro), con su skin
+  function jugadorVivo(ctx, c, k) {
+    if (!window.Muneco) return;
+    var f = c.padre || c, skin = G.skin ? G.skin() : 'steve';
+    Muneco.dibujar(ctx, skin, f.x * k, (f.y + f.h * 0.06) * k, f.w * k, f.h * 0.88 * k, 0.45 + (G.muñecoYaw ? G.muñecoYaw() - 0.45 : 0), performance.now() / 50);
+  }
+  // el nombre de la cosa (el cartelito violeta de Minecraft) arriba del lugar del control
+  function textoFlotante(ctx, c, k) {
+    var s = c.b['#hover_text'];
+    if (typeof s !== 'string' || !s) return;
+    var w = Jui.anchoTexto(s), x = Math.round((c.x + c.w / 2 - w / 2 - 3) * k), y = Math.round((c.y - 16) * k);
+    var W = Math.round((w + 6) * k), H = Math.round(13 * k);
+    if (x < 0) x = 0;
+    ctx.fillStyle = 'rgba(16,0,16,0.94)'; ctx.fillRect(x, y, W, H);
+    ctx.strokeStyle = 'rgba(80,0,255,0.6)'; ctx.lineWidth = Math.max(1, k * 0.8);
+    ctx.strokeRect(x + k, y + k, W - 2 * k, H - 2 * k);
+    Jui.escribir(ctx, s, x + 3 * k, y + 2.5 * k, k, [1, 1, 1], true);
+  }
   function barraDeProgreso(ctx, c, k) {
+    // la durabilidad de una herramienta y el "mantener" del inventario: barras de los bindings
+    if (c.b['#progress_bar_visible'] !== undefined || (c.p.property_bag && c.p.property_bag.is_durability)) {
+      if (!c.b['#progress_bar_visible']) return;
+      var tot = c.b['#progress_bar_total_amount'] || 1, act = c.b['#progress_bar_current_amount'] || 0, fr = Math.max(0, Math.min(1, act / tot));
+      var bx = Math.round(c.x * k), by = Math.round(c.y * k), bw = Math.round(c.w * k), bh = Math.max(1, Math.round(c.h * k));
+      ctx.fillStyle = '#000000'; ctx.fillRect(bx, by, bw, bh + Math.round(k));
+      if (c.p.property_bag && c.p.property_bag.is_durability) {
+        // de verde a rojo según lo que queda (como el juego)
+        var r = Math.round(255 * (1 - fr)), g = Math.round(255 * fr);
+        ctx.fillStyle = 'rgb(' + r + ',' + g + ',0)';
+      } else ctx.fillStyle = '#ffffff';
+      ctx.fillRect(bx, by, Math.round(bw * fr), bh);
+      return;
+    }
     var v = c.b['#progress_percentage'] !== undefined ? c.b['#progress_percentage'] : G.cargaParte();
     if (typeof v !== 'number') return;
     var x = Math.round(c.x * k), y = Math.round(c.y * k), w = Math.round(c.w * k), h = Math.max(1, Math.round(c.h * k));
@@ -142,7 +203,8 @@ var Pantallas = (function () {
     servidorEditar: 'add_external_server.add_external_server_screen_edit', carga: 'progress.world_loading_progress_screen',
     guardando: 'progress.world_saving_progress_screen', pausa: 'pause.pause_screen', chat: 'chat.chat_screen',
     muerte: 'death.death_screen', skins: 'skin_picker.skin_picker_screen', comoJugar: 'how_to_play.how_to_play_screen',
-    desconectado: 'disconnect.disconnect_screen'
+    desconectado: 'disconnect.disconnect_screen', inventario: 'crafting_pocket.survival_inventory_screen_pocket',
+    inventarioCreativo: 'crafting_pocket.creative_inventory_screen_pocket', mesa: 'crafting_pocket.crafting_screen_pocket'
   };
   // variables de plataforma de cada pantalla ($is_pregame: fuera del mundo; sin elegir una imagen
   // propia para la skin: el botón "Aspecto nuevo" no aparece)
@@ -173,6 +235,7 @@ var Pantallas = (function () {
       return v === undefined ? comun(n) : v;
     };
     var vars = { '$is_pregame': !G.jugando(), '$image_picking_not_supported': true };
+    if (ctrl.vars) for (var kv in ctrl.vars) vars[kv] = ctrl.vars[kv];
     var pan = encima ? Jui.abrir(REFS[nombre], ctrl, vars) : Jui.cambiar(REFS[nombre], ctrl, vars);
     if (pan) pan.nombre = nombre;
     G.pantallaAbierta(nombre);
@@ -857,6 +920,146 @@ var Pantallas = (function () {
   // ------------------------------------------------------------------------------------------
   // Muerte
   // ------------------------------------------------------------------------------------------
+  // ------------------------------------------------------------------------------------------
+  // El inventario (crafting_pocket): a la izquierda las pestañas de la 1.2 (en creativo, todo lo que
+  // hay; en supervivencia, el libro de recetas y la mochila), a la derecha fabricar y la armadura,
+  // abajo la barra. Los casilleros son colecciones; tocar, mantener y tocar dos veces hacen lo de
+  // Inventario.tocar / mitad / juntar con lo agarrado (que sigue al dedo)
+  // ------------------------------------------------------------------------------------------
+  // el lugar de cada pestaña (las variables que pone el código del juego)
+  var PESTANA = { '$search_index': 0, '$construction_index': 1, '$equipment_index': 2, '$items_index': 3, '$nature_index': 4,
+    '$survival_index': 5, '$crafting_index': 0, '$armor_index': 1 };
+  // las colecciones de la izquierda → la pestaña de Objetos.creativo (construcción 0, naturaleza 1,
+  // equipo 2, objetos 3)
+  var LISTA_CREATIVA = { recipe_construction: 0, recipe_nature: 1, recipe_equipment: 2, recipe_items: 3 };
+  function ctrlInventario(datos) {
+    var inv = G.inventario(), creativo = G.creativo(), mesa = !!datos.mesa;
+    var todos = G.listaCreativa(), porTab = {}, busqueda = '';
+    function lista(tab) {
+      if (!porTab[tab]) porTab[tab] = todos.filter(function (it) { return it.tab === tab; });
+      return porTab[tab];
+    }
+    function buscados() {
+      var q = busqueda.trim().toLowerCase();
+      return q ? todos.filter(function (it) { return Objetos.nombre(it.id, it.m).toLowerCase().indexOf(q) >= 0; }) : todos;
+    }
+    // la lista de una colección (los casilleros del jugador) o null si es de las creativas
+    function casilleros(col) {
+      switch (col) {
+        case 'inventory_items': return inv.mochila;
+        case 'hotbar_items': return inv.barra;
+        case 'armor_items': return inv.armadura;
+        case 'offhand_items': return inv.mano2;
+        case 'crafting_input_items': return inv.fabricar;
+      }
+      return null;
+    }
+    function creativaDe(col) {
+      if (col === 'recipe_search') return creativo ? buscados() : [];
+      var tab = LISTA_CREATIVA[col];
+      return tab === undefined ? null : (creativo ? lista(tab) : []);
+    }
+    var tamFabricar = creativo || mesa ? 9 : 4;
+    function cosaEn(col, i) {
+      var l = casilleros(col);
+      if (l) return col === 'crafting_input_items' && i >= tamFabricar ? null : l[i];
+      if (col === 'crafting_output_items') return G.resultadoFabricar ? G.resultadoFabricar(inv, tamFabricar) : null;
+      var cr = creativaDe(col);
+      return cr && cr[i] ? Inventario.cosa(cr[i].id, cr[i].m, 1) : null;
+    }
+    function idAux(c) { return c ? c.id * 65536 + c.m : 0; }
+    function cerrar() {
+      Inventario.devolver(inv, G.tirarObjeto);
+      P.cerrar();
+      G.cerrarInventario();
+    }
+    return {
+      vars: PESTANA,
+      grupoInicial: function (n) {
+        if (n === 'navigation_tab') return creativo ? PESTANA['$construction_index'] : PESTANA['$survival_index'];
+        if (n === 'right_inventory_navigation_tab') return PESTANA['$crafting_index'];
+      },
+      binding: function (n) {
+        var h = inv.mano;
+        switch (n) {
+          case '#inventory_selected_item': return idAux(h);
+          case '#inventory_selected_item_stack_count': return h && h.n > 1 && !creativo ? String(h.n) : '';
+          case '#hover_text': return h ? Objetos.nombre(h.id, h.m) : '';
+          case '#recipe_item_name': { var r = cosaEn('crafting_output_items', 0); return r ? Objetos.nombre(r.id, r.m) : ''; }
+          case '#progress_bar_visible': return Jui.progresoMantener() >= 0;
+          case '#progress_bar_total_amount': return 1;
+          case '#progress_bar_current_amount': return Math.max(0, Jui.progresoMantener());
+          case '#selected_item_durability_visible': { var dh = h && Items.def[h.id]; return !!(dh && dh.dur && h.d); }
+          case '#selected_item_durability_total_amount': { var dt = h && Items.def[h.id]; return dt && dt.dur ? dt.dur : 1; }
+          case '#selected_item_durability_current_amount': { var dc = h && Items.def[h.id]; return dc && dc.dur ? dc.dur - (h.d || 0) : 0; }
+          case '#is_creative_mode': return creativo;
+          case '#is_survival_mode': return !creativo;
+        }
+      },
+      longitud: function (col) {
+        var l = casilleros(col);
+        if (l) return col === 'crafting_input_items' ? tamFabricar : l.length;
+        if (col === 'crafting_output_items') return 1;
+        var cr = creativaDe(col);
+        return cr ? cr.length : undefined;
+      },
+      coleccion: function (col, i, n) {
+        var c = cosaEn(col, i), d = c && Items.def[c.id], cr = !casilleros(col) && col !== 'crafting_output_items';
+        switch (n) {
+          case '#item_id_aux': return idAux(c);
+          case '#show_item': return !!c;
+          case '#inventory_stack_count': case '#recipe_craftable_count': return c && c.n > 1 && !creativo && !cr ? String(c.n) : '';
+          case '#item_durability_visible': return !!(d && d.dur && c.d);
+          case '#item_durability_total_amount': return d && d.dur ? d.dur : 1;
+          case '#item_durability_current_amount': return d && d.dur ? d.dur - (c.d || 0) : 0;
+          case '#hover_text': return c ? Objetos.nombre(c.id, c.m) : '';
+          case '#inactive_item': return false;
+          case '#container_item_background': return 0;
+          case '#container_item_modifier': return 0;
+          case '#empty_armor_image_visible': return !c;
+          case '#item_custom_color': return 0;
+        }
+      },
+      arrastrable: function (c) {
+        var q = Jui.coleccionDe(c);
+        return !!(q && cosaEn(q.col, q.i));
+      },
+      boton: function (id, c) {
+        var q = c ? Jui.coleccionDe(c) : null;
+        if (id === 'button.menu_exit' || id === 'button.menu_cancel' || id === 'button.try_menu_exit') { cerrar(); return; }
+        if (!q) {
+          // tocar fuera de los casilleros con algo agarrado: en creativo se borra; si no, se tira
+          if (id === 'button.cursor_drop_all' || id === 'button.cursor_destroy_all') {
+            if (inv.mano && !creativo && G.tirarObjeto) G.tirarObjeto(inv.mano);
+            inv.mano = null;
+          }
+          return;
+        }
+        var l = casilleros(q.col);
+        if (id === 'button.coalesce_stack') { if (l) Inventario.juntar(inv); return; }
+        if (q.col === 'crafting_output_items') { if (G.fabricar) G.fabricar(inv, tamFabricar, id !== 'button.crafting_output_primary'); return; }
+        if (!l) {
+          // de la lista creativa: una (tocar) o una pila entera (mantener); si ya se tenía algo
+          // distinto, se cambia
+          var nueva = cosaEn(q.col, q.i);
+          if (!nueva) return;
+          if (id === 'button.recipe_secondary') nueva.n = Inventario.pila(nueva);
+          if (inv.mano && Inventario.iguales(inv.mano, nueva) && id !== 'button.recipe_secondary') inv.mano.n = Math.min(Inventario.pila(nueva), inv.mano.n + 1);
+          else inv.mano = nueva;
+          return;
+        }
+        if (id === 'button.container_take_half_place_one') Inventario.mitad(inv, l, q.i);
+        else Inventario.tocar(inv, l, q.i);
+        if (q.col === 'hotbar_items' || q.col === 'armor_items') G.inventarioCambio();
+      },
+      texto: function (nombre, v) { busqueda = v || ''; },
+      textoInicial: function () { return busqueda; }
+    };
+  }
+  CTRL.inventario = ctrlInventario;
+  CTRL.inventarioCreativo = ctrlInventario;
+  CTRL.mesa = function (d) { d.mesa = true; return ctrlInventario(d); };
+
   CTRL.muerte = function () {
     return {
       binding: function (n) { if (n === '#death_message' || n === '#text') return G.mensajeMuerte(); },

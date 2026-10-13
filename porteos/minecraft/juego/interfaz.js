@@ -361,12 +361,16 @@ var Interfaz = (function () {
       });
     }
   };
-  function icono(id, m, x, y, lado) {
+  function icono(id, m, x, y, lado) { I.iconoEn(ctx, id, m, x, y, lado); }
+  // el ícono de una cosa en cualquier lienzo (el de la interfaz JSON también)
+  I.iconoEn = function (cx, id, m, x, y, lado) {
     var p = iconosPos[id + ':' + m] || iconosPos[id + ':0'];
-    if (!p || !iconos) return;
-    ctx.drawImage(iconos, p[0], p[1], LADO, LADO, Math.round(x), Math.round(y), lado, lado);
-  }
+    if (!p || !iconos) return false;
+    cx.drawImage(iconos, p[0], p[1], LADO, LADO, Math.round(x), Math.round(y), lado, lado);
+    return true;
+  };
   I.icono = icono;
+  I.imagen = function (n) { return img[n]; };
 
   // ------------------------------------------------------------------------------------------
   // Tamaño y escala (un píxel de la interfaz = E píxeles de la pantalla, como la escala del juego)

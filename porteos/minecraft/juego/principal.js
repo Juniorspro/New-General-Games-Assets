@@ -311,7 +311,7 @@
     // la primera vez: el idioma y después con o sin shaders (sobre el menú)
     irAlTitulo();
     window.prueba = { cam: cam, mundo: mundo, render: Render, jugador: J, partida: function () { return partida; }, abrir: abrirMundo, crear: crearMundo,
-      cuenta: cuenta, bichos: B, red: Red, publico: entrarPublico, pantallas: Pantallas, jui: Jui, comando: function (t) { comando(t); },
+      cuenta: cuenta, bichos: B, red: Red, publico: entrarPublico, pantallas: Pantallas, jui: Jui, comando: function (t) { comando(t); }, inventario: function () { return inv; },
       rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, ms: function () { return msCuadro; },
       diag: null, pedirDiag: function () { if (trab) trab.postMessage({ t: 'diag' }); }, listo: true };
   }
@@ -435,7 +435,10 @@
         J.ubicar(aparicion[0], aparicion[1], aparicion[2]); J.yaw = 0; J.pitch = 0; J.volando = false;
         esperandoSuelo = true;
       }
-      I.juego.barra = (m.barra || O.barraInicial()).slice(0, 9);
+      // lo que lleva el jugador: la barra (la de siempre de los mundos viejos) y el resto
+      inv = Inventario.nuevo((m.barra || O.barraInicial()).slice(0, 9));
+      Inventario.cargar(inv, m.inventario);
+      I.juego.barra = inv.barra;
       I.juego.elegido = m.elegido || 0;
       I.juego.creativo = m.creativo; I.juego.volando = J.volando;
       I.juego.chat = []; I.juego.nombres = [];
@@ -506,7 +509,8 @@
     if (guardandoAhora) return guardandoAhora.then(guardar);
     var m = partida;
     m.jugador = { x: J.x, y: J.y, z: J.z, yaw: J.yaw, pitch: J.pitch, volando: J.volando };
-    m.barra = I.juego.barra.slice(); m.elegido = I.juego.elegido; m.jugado = Date.now();
+    m.barra = I.juego.barra.map(function (c) { return c ? { id: c.id, m: c.m } : null; }); m.elegido = I.juego.elegido; m.jugado = Date.now();
+    m.inventario = Inventario.guardar(inv);
     m.bichos_lista = B.paraGuardar();
     var claves = Array.from(Mundo.sucios);
     Mundo.sucios.clear();
@@ -1328,6 +1332,8 @@
   // ------------------------------------------------------------------------------------------
   // el muñeco del título y la pausa arranca un poco girado hacia los botones (como en la 1.2)
   var muñecoYaw = 0.45;
+  // lo que lleva el jugador (ver inventario.js); I.juego.barra es inv.barra
+  var inv = Inventario.nuevo(null), listaCreativa = null;
   var G = {
     opciones: function () { return opciones; },
     guardarOpciones: guardarOpciones,
@@ -1382,6 +1388,13 @@
     mensajeMuerte: function () { return I.muerte.texto || ''; },
     comando: function (texto) { comando(texto); },
     trucos: function () { return !!(partida && partida.local); },
+    // el inventario
+    inventario: function () { return inv; },
+    creativo: function () { return !!(partida && partida.creativo); },
+    listaCreativa: function () { if (!listaCreativa) listaCreativa = O.creativo(); return listaCreativa; },
+    cerrarInventario: function () { Pantallas.vaciar(); I.ir('juego'); mostrarNombre(); I.sucio(); },
+    inventarioCambio: function () { I.sucio(); },
+    puntosArmadura: function () { return Inventario.puntosArmadura(inv); },
     girarMuñeco: function (dx) { muñecoYaw += dx * 0.02; },
     muñecoYaw: function () { return muñecoYaw; },
     skin: function () { return opciones.skin === 'alex' ? 'alex' : 'steve'; }
@@ -1477,7 +1490,14 @@
     },
     reaparecer: function () { reaparecer(); },
     listoOpciones: function () { guardarOpciones(); aplicarOpciones(); if (I.enJuego) I.ir('pausa'); else irAlTitulo(); },
-    inventario: function () { if (I.pantalla === 'juego') { I.soltarTodo(); I.ir('inventario'); if (document.pointerLockElement) document.exitPointerLock(); } },
+    // el inventario de la 1.2 (su JSON): el creativo o el de supervivencia
+    inventario: function () {
+      if (I.pantalla !== 'juego') return;
+      I.soltarTodo();
+      Pantallas.ir(partida && partida.creativo ? 'inventarioCreativo' : 'inventario');
+      I.ir('jui');
+      if (document.pointerLockElement) document.exitPointerLock();
+    },
     cerrarInv: function () { I.ir('juego'); },
     abrirChat: function () { if (I.pantalla === 'juego') { I.soltarTodo(); Pantallas.ir('chat'); I.ir('jui'); if (document.pointerLockElement) document.exitPointerLock(); } },
     cerrarChat: function () { I.ir('juego'); },
