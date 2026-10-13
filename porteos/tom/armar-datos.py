@@ -538,12 +538,75 @@ def _tiene(go, tipo):
     return False
 
 
+def _extras_casa(d, nombre_evento):
+    """Lo del juego que va en los extras de cada nodo de la casa: el sonido al tocarlo (AudioList), la
+    acción que dispara (RoomItemAction), el resplandor de la lámpara (LampHideGlow), la almohada con y
+    sin la sombra de Tom (PillowShadowController), las zzz (SleepingZZZFX) y el cofre de la cama
+    (BedroomGuiController). Los colisionadores y las partículas los pone gltf.py."""
+    def evento(o, eo):
+        r = eo and eo.get('AudioEventData')
+        x = referido(d, o, r) if r else None
+        n = x is not None and nombre_evento.get((x.assets_file.name, x.path_id))
+        if not n:
+            return None
+        s = {'evento': n}
+        for k, kk, defecto in (('Volume', 'vol', 1), ('Pitch', 'pitch', 1), ('Delay', 'demora', 0)):
+            if round(eo.get(k, defecto), 4) != defecto:
+                s[kk] = round(eo[k], 4)
+        return s
+
+    def nombre_go(o, ref):
+        x = referido(d, o, ref)
+        if x is None:
+            return None
+        y = x.read()
+        return (y.m_GameObject.read() if hasattr(y, 'm_GameObject') else y).m_Name
+
+    def textura(ex, o, ref):
+        x = referido(d, o, ref)
+        return ex.textura_archivo(x.read()) if x is not None and x.type.name == 'Texture2D' else None
+
+    clases = ('AudioList', 'RoomItemAction', 'LampHideGlow', 'PillowShadowController', 'SleepingZZZFX',
+              'BedroomGuiController')
+
+    def extras(ex, go):
+        out = {}
+        for c in go.m_Component:
+            try:
+                o = c.component.deref()
+            except Exception:
+                continue
+            if o.type.name != 'MonoBehaviour' or d.clase(o) not in clases:
+                continue
+            clase, x = d.clase(o), o.read_typetree()
+            if clase == 'AudioList':
+                s = {'base': evento(o, x.get('FallbackSound'))}
+                mats = {m['MaterialName']: evento(o, m['AudioEventObject']) for m in x.get('AudioMaterials') or []}
+                if any(mats.values()):
+                    s['materiales'] = {k: v for k, v in mats.items() if v}
+                out['sonidoToque'] = s
+            elif clase == 'RoomItemAction':
+                out['accion'] = x['gameAction']
+            elif clase == 'LampHideGlow':
+                out['lampara'] = {'resplandor': nombre_go(o, x.get('Renderer')), 'ocultar': nombre_go(o, x.get('ObjectToHide'))}
+            elif clase == 'PillowShadowController':
+                out['almohada'] = {'conSombra': textura(ex, o, x.get('shadowedTex')),
+                                   'sinSombra': textura(ex, o, x.get('notShadowedTex'))}
+            elif clase == 'SleepingZZZFX':
+                out['zzz'] = True
+            elif clase == 'BedroomGuiController':
+                out['dormitorio'] = {'cofre': nombre_go(o, x.get('BedFrameChest'))}
+        return out
+    return extras
+
+
 def casa(d, salida):
     """Los cuatro cuartos (sus objetos raíz menos la interfaz) y los muebles del catálogo, en glb con
     los materiales del juego como extras; las texturas en casa/tex; los shaders traducidos en
     casa/shaders.json."""
     base = os.path.join(salida, 'casa')
     sal = Salidas(os.path.join(base, 'tex'))
+    sal.ex.extras_go = _extras_casa(d, nombres_eventos(d)[1])
     for nombre, nivel in CUARTOS.items():
         f = d.b.files[nivel]
         raices = [t for t in _raices(f) if not _tiene(t.m_GameObject.read(), 'Canvas')]
@@ -735,6 +798,36 @@ def _evento(x, clip_de):
     return e
 
 
+def nombres_eventos(d):
+    """Los AudioEventData del paquete con el nombre que llevan en sonido/eventos.json (el m_Name; si se
+    repite, m_Name~path_id). Devuelve [(objeto, typetree, nombre)] y (archivo, path_id) → nombre."""
+    lista, nombre_evento, vistos = [], {}, set()
+    for f in d.b.files.values():
+        for o in (getattr(f, 'objects', {}) or {}).values():
+            if o.type.name != 'MonoBehaviour' or d.clase(o) != 'AudioEventData':
+                continue
+            x = o.read_typetree()
+            n = x['m_Name']
+            if n in vistos:
+                n = f'{n}~{o.path_id}'
+            vistos.add(n)
+            lista.append((o, x, n))
+            nombre_evento[(o.assets_file.name, o.path_id)] = n
+    return lista, nombre_evento
+
+
+def referido(d, o, ref):
+    """El objeto al que apunta un PPtr ({m_FileID, m_PathID}) de un objeto leído con typetree."""
+    if not ref or not ref.get('m_PathID'):
+        return None
+    f = o.assets_file
+    if ref['m_FileID']:
+        f = d.b.files.get(f.externals[ref['m_FileID'] - 1].name)
+        if f is None:
+            return None
+    return f.objects.get(ref['m_PathID'])
+
+
 def sonido(d, salida):
     """Los 622 AudioClip a Opus y los eventos de sonido (AudioEventData) con su tabla por animación."""
     import concurrent.futures
@@ -759,22 +852,14 @@ def sonido(d, salida):
         return nombre_clip(o) if o is not None else None
 
     eventos, por_animacion, avisos = {}, {}, []
-    nombre_evento = {}
+    lista, nombre_evento = nombres_eventos(d)
+    for o, x, n in lista:
+        eventos[n] = _evento(x, clip_de)
+        if any(cl['clip'] is None for cl in eventos[n]['clips']):
+            avisos.append(n)
     for f in d.b.files.values():
         for o in (getattr(f, 'objects', {}) or {}).values():
-            if o.type.name != 'MonoBehaviour':
-                continue
-            c = d.clase(o)
-            if c == 'AudioEventData':
-                x = o.read_typetree()
-                n = x['m_Name']
-                if n in eventos:
-                    n = f'{n}~{o.path_id}'
-                eventos[n] = _evento(x, clip_de)
-                nombre_evento[(o.assets_file.name, o.path_id)] = n
-                if any(cl['clip'] is None for cl in eventos[n]['clips']):
-                    avisos.append(n)
-            elif c == 'AnimationAudioData':
+            if o.type.name == 'MonoBehaviour' and d.clase(o) == 'AnimationAudioData':
                 por_animacion, f_aad = o.read_typetree(), o.assets_file
     # AnimationAudioData: campo (PokeHeadFall, ChewFoodLoop…) → evento
     tabla = {}

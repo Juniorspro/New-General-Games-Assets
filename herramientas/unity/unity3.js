@@ -114,6 +114,15 @@ export class Unity {
     return m;
   }
 
+  // Una copia de un material del juego que sigue mirando los valores globales del motor (_Time,
+  // _NightColor…): clone() copia los uniforms y la copia dejaría de enterarse.
+  clonar(m) {
+    const c = m.clone();
+    for (const k of Object.keys(this.motor)) if (c.uniforms && c.uniforms[k]) c.uniforms[k] = this.motor[k];
+    c.userData = { ...m.userData };
+    return c;
+  }
+
   estado(m, e, laCola) {
     const T = this.T;
     const [src, dst, srcA, dstA] = e.blend;
@@ -154,6 +163,7 @@ export class Unity {
       if (o.userData && o.userData.activo === false) o.visible = false;
       if (!o.isMesh) return;
       const mats = Array.isArray(o.material) ? o.material : [o.material];
+      if (mats[0] && mats[0].name && !o.userData.materialUnity) o.userData.materialUnity = mats[0].name;   // el nombre del material del juego
       const nuevos = mats.map((m) => (m && m.userData && m.userData.shader !== undefined ? this.material(m.userData) : null));
       if (nuevos.every((m) => !m)) { o.visible = false; return; }
       this.prepararGeometria(o.geometry);

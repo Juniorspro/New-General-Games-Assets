@@ -17,8 +17,21 @@ import { UI, cargarFuentes } from './ui.js';
 import { Animadores } from './animui.js';
 import { Hud, registrarMateriales } from './hud.js';
 import { InterfazPrincipal, Monedas } from './interfaz.js';
+import { Noche, Dormitorio, EstadoDormitorio, LUZ } from './dormitorio.js';
+import { InteraccionCuarto } from './interaccion.js';
 
 const BOTON_DE = { living: 'btn_livingroom', kitchen: 'btn_kitchen', bathroom: 'btn_toilet', bedroom: 'btn_bedroom' };
+
+// RoomInteractivityTouchController de cada cuarto (initSlotMapping): lo que se toca, lo de adelante y
+// lo que tiene una función propia
+const TOCABLE = {
+  living: { slots: ['SLOT_Livingroom_Wallpaper', 'SLOT_Livingroom_Picture', 'SLOT_Chair', 'SLOT_Livingroom_Floor', 'SLOT_Gadget',
+    'LivingroomWindow_Fixed_001_MESH'] },
+  kitchen: { slots: ['SLOT_Fridge', 'SLOT_Kitchen_Wallpaper', 'SLOT_Window', 'Kitchen_Fixed_001'], frente: ['SLOT_Table'] },
+  bathroom: { slots: ['SLOT_Tiles', 'SLOT_Toilet_Wallpaper', 'SLOT_WC', 'SLOT_Toilet_Rug', 'ToiletWindow_Fixed_001'], frente: ['SLOT_Doors'] },
+  bedroom: { slots: ['SLOT_Bedframe', 'SLOT_Lamp', 'SLOT_Bedroom_Picture', 'SLOT_Bedroom_Wallpaper', 'BedroomProps_Fixed_001_MESH'],
+    frente: ['SLOT_Bedframe', 'SLOT_Bedspread'] },
+};
 
 export class Juego {
   // op: datos (carpeta), tam ('s'|'m'|'l'), cuarto, mic (bool), ui (bool), clip (un clip suelto),
@@ -56,6 +69,7 @@ export class Juego {
     vestir(tom, D + 'tom/pieles/', pieles, ropero, { fur: op.fur || 'tom-fur-default', cloth: op.cloth });
     tom.raiz.traverse((o) => { if (o.isMesh) o.renderOrder = 2500; });   // después del cuarto, como CAM_Tom
     this.escena.add(tom.raiz);
+    this.nocheEnTom();
     this.anims = new Animaciones(indice, bin);
     this.rt = new Retarget(tom.raiz, retarget[tam]);
     this.zonas = new Zonas(tom.raiz, retarget[tam].zonas);
@@ -66,6 +80,9 @@ export class Juego {
       ['funMeter', 'foodMeter', 'toiletMeter', 'sleepyMeter'].forEach((c, i) =>
         n.setMeter(c, ['FunMeter', 'FoodMeter', 'ToiletMeter', 'SleepyMeter'][i], op.medidores[i]));
     }
+    // NightController: el color de la noche es uno solo para todos los shaders (Shader.SetGlobalColor)
+    this.noche = new Noche(this.u.motor._NightColor.value, n,
+      (campo) => this.sonido.tocar(this.sonido.deAnimacion(campo)));
     // el primer cuarto
     await this.irA(op.cuarto || 'living', true);
     if (op.clip) {
@@ -84,7 +101,12 @@ export class Juego {
         rayc.setFromCamera(v2, this.cam);
         return rayc.ray;
       };
+      this.rayo = rayo;
       this.toques = new ToquesTom(this.ctl, this.zonas, rayo, () => innerWidth, () => innerHeight);
+      // aplaudir para apagar la luz: BedroomState.ToggleLightSwitch(false) y la noche
+      this.ctl.alApagarAplaudiendo = () => this.noche.setNight(true);
+      this.ctl.dormitorio = this.cuartoActual.dormitorio || null;
+      if (this.actual === 'bedroom') this.estadoDormitorio.entrar();
       if (op.mic !== false) {
         this.escucha = new Escucha(this.sonido, { cansado: () => n.mustSleep });
         this.ctl.conectarEscucha(this.escucha);
@@ -107,15 +129,35 @@ export class Juego {
       c = await new Cuarto(this.u, this.D + 'casa/').cargar(CUARTO_DE[nombre]);
       for (const item of INICIAL[nombre]) await c.poner(item);
       c.cam = c.camara(innerWidth / innerHeight);
+      if (nombre === 'bedroom') {
+        c.dormitorio = new Dormitorio(THREE, this.u, c);
+        this.estadoDormitorio = new EstadoDormitorio({ logica: this.necesidades, noche: this.noche,
+          ctl: { fireAction: (a) => this.ctl && this.ctl.fireAction(a) }, dormitorio: c.dormitorio });
+      }
+      const t = TOCABLE[nombre];
+      const funciones = nombre === 'bedroom' ? { SLOT_Lamp: () => { this.luz(); return true; } } : {};
+      c.interaccion = new InteraccionCuarto(c, { slots: t.slots, frente: t.frente || [], funciones,
+        tocarSonido: (s) => this.sonido.tocar(s.evento, { vol: s.vol ?? 1, pitch: s.pitch ?? 1, demora: s.demora ?? 0 }),
+        accion: (a) => this.accionDelJuego(a) });
       this.cuartos.set(nombre, c);
     }
     return c;
   }
 
+  // BedroomRoomInteractivity.onLampPress → BedroomState.OnAction(BedroomLightSwitch)
+  luz() {
+    this.estadoDormitorio.luz();
+    this.cuartoActual.dormitorio.lampara(this.necesidades.isDay);
+  }
+
+  // las GameAction que disparan las cosas del cuarto (RoomItemAction): por ahora, sólo se anotan
+  accionDelJuego(a) { this.ultimaAccion = a; }
+
   // Cambiar de cuarto (MttGameStateManager: Livingroom/Kitchen/Toilet/Bedroom)
   async irA(nombre, primero = false) {
     if (this.actual === nombre && !primero) return;
     const c = await this.cuarto(nombre);
+    if (this.actual === 'bedroom' && !primero && this.estadoDormitorio) this.estadoDormitorio.salir();   // BedroomState.OnExit
     if (this.cuartoActual) this.escena.remove(this.cuartoActual.raiz);
     this.escena.add(c.raiz);
     this.cuartoActual = c;
@@ -123,33 +165,67 @@ export class Juego {
     this.cam = c.cam;
     this.medir();
     this.tom.raiz.position.copy(c.corrimientoTom).add(posicionTom(nombre, TAMANO_DE[this.tam]));
+    // CommonRoomState.OnEnter: el estado de animación del cuarto, la noche (sólo el dormitorio a
+    // oscuras) y HandleStateEntry
     if (this.ctl) {
-      this.ctl.cuarto = nombre;
-      this.ctl.currentAnimation = null;
-      this.ctl.estadoCuarto.onEnter();
+      this.ctl.dormitorio = c.dormitorio || null;
+      this.ctl.cambiarCuarto(nombre);
     }
+    if (nombre === 'bedroom') { if (this.ctl) this.estadoDormitorio.entrar(); } else this.noche.setNight(false);
     if (this.hud) this.hud.cuarto(nombre);
+  }
+
+  // Los materiales de Tom miran el mismo _NightColor que el cuarto
+  nocheEnTom() {
+    const g = this.u.motor._NightColor;
+    this.tom.raiz.traverse((o) => {
+      if (!o.isMesh) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        if (m && m.uniforms && m.uniforms._NightColor) m.uniforms._NightColor = g;
+      }
+    });
   }
 
   medir() {
     const w = innerWidth, h = innerHeight;
     this.ren.setSize(w, h, false);
     if (this.cam) { this.cam.aspect = w / h; this.cam.updateProjectionMatrix(); }
+    if (this.cuartoActual && this.cuartoActual.dormitorio) this.cuartoActual.dormitorio.medir(w, h);
     if (this.ui) this.ui.layout();
   }
 
   entrada() {
     const l = this.lienzo;
+    // MainTouchController: si el dedo cae en Tom, es para Tom; si no, para el cuarto
+    const dedoEnCuarto = new Set();
     l.addEventListener('pointerdown', (e) => {
       this.sonido.desbloquear();
       if (this.escucha && !this.escucha.disponible) this.escucha.pedirMicrofono();
-      if (this.toques) { l.setPointerCapture(e.pointerId); this.toques.bajar(e.pointerId, e.clientX, e.clientY); }
-      const d = this.toques && this.toques.dedos.get(e.pointerId);
+      if (!this.toques) return;
+      l.setPointerCapture(e.pointerId);
+      const c = this.cuartoActual;
+      if (!this.toques.tocaTom(e.clientX, e.clientY) && c && c.interaccion) {
+        dedoEnCuarto.add(e.pointerId);
+        c.interaccion.bajar(e.pointerId, this.rayo(e.clientX, e.clientY));
+        window.ultimoToque = null;
+        return;
+      }
+      this.toques.bajar(e.pointerId, e.clientX, e.clientY);
+      const d = this.toques.dedos.get(e.pointerId);
       window.ultimoToque = d ? d.nombre : null;
     });
-    l.addEventListener('pointermove', (e) => { if (this.toques) this.toques.mover(e.pointerId, e.clientX, e.clientY); });
-    l.addEventListener('pointerup', (e) => { if (this.toques) this.toques.soltar(e.pointerId); });
-    l.addEventListener('pointercancel', (e) => { if (this.toques) this.toques.dedos.delete(e.pointerId); });
+    l.addEventListener('pointermove', (e) => {
+      if (!this.toques) return;
+      if (dedoEnCuarto.has(e.pointerId)) this.cuartoActual.interaccion.mover(e.pointerId, this.rayo(e.clientX, e.clientY));
+      else this.toques.mover(e.pointerId, e.clientX, e.clientY);
+    });
+    const soltar = (e, cancelado) => {
+      if (!this.toques) return;
+      if (dedoEnCuarto.delete(e.pointerId)) { if (!cancelado) this.cuartoActual.interaccion.soltar(e.pointerId); return; }
+      if (cancelado) this.toques.dedos.delete(e.pointerId); else this.toques.soltar(e.pointerId);
+    };
+    l.addEventListener('pointerup', (e) => soltar(e, false));
+    l.addEventListener('pointercancel', (e) => soltar(e, true));
     // la app se va o vuelve (MainGameLogic.OnAppPause / OnAppResume)
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) this.necesidades.onAppPause(); else this.necesidades.onAppResume();
@@ -167,6 +243,13 @@ export class Juego {
       this.rt.aplicar(p ? p.name : null, p && p.length ? p.time / p.length : 0, dt, (n, b) => this.anim.escribio(n, b));
       this.ctl.lateUpdate();             // LateUpdate (el respingo de la cabeza)
     } else if (this.rep && this.op.t === undefined) this.rep.update(dt);
+    // el dormitorio: las zzz y lo que se apaga en la lámpara (LampHideGlow mira el modo de la luz)
+    const dorm = this.cuartoActual && this.cuartoActual.dormitorio;
+    if (dorm) {
+      if (dorm.zzz) dorm.zzz.update(dt, this.necesidades.isSleeping, this.cam, this.lienzo.height);
+      const prendida = this.noche.lightMode !== LUZ.NOCHE && this.noche.lightMode !== LUZ.ATENUADA;
+      if (dorm.luzVista !== prendida) { dorm.luzVista = prendida; dorm.lampara(prendida); }
+    }
     if (this.hud) this.hud.cuadro(dt);
     if (this.interfaz) this.interfaz.cuadro(dt);
     if (this.ui) this.ui.cuadro(dt);

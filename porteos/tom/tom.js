@@ -326,10 +326,12 @@ export class Zonas {
     this.s = new THREE.Vector3(); this.q = new THREE.Quaternion();
   }
 
-  // La zona tocada por un THREE.Ray (en coordenadas del mundo), o null.
-  tocar(rayo) {
+  // La zona tocada por un THREE.Ray (en coordenadas del mundo), o null; filtro(hueso): las que cuentan
+  // (TomsTouchController registra y desregistra colisionadores según el cuarto).
+  tocar(rayo, _todas = true, filtro = null) {
     let mejor = null, dmin = Infinity;
     for (const z of this.lista) {
+      if (filtro && !filtro(z.hueso)) continue;
       z.nodo.updateWorldMatrix(true, false);
       const m = z.nodo.matrixWorld;
       m.decompose(this.a, this.q, this.s);

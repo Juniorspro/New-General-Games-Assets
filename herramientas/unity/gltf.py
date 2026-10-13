@@ -138,6 +138,132 @@ def matriz(m):
     return [e[f][c] for c in range(4) for f in range(4)]
 
 
+# --------------------------------------------------------------------------- colisionadores y partículas
+def _r(x, n=4):
+    return round(float(x), n)
+
+
+TIPO_COLISIONADOR = {'BoxCollider': 'caja', 'SphereCollider': 'esfera', 'CapsuleCollider': 'capsula', 'MeshCollider': 'malla'}
+
+
+def colisionador(tipo, c):
+    """Un Collider como extras, en el espacio del nodo (x espejada): caja (centro, tam), esfera (centro,
+    radio), cápsula (centro, radio, alto, eje 0/1/2 = x/y/z) o malla (la del nodo u otra)."""
+    z = {'tipo': TIPO_COLISIONADOR.get(tipo, tipo)}
+    if hasattr(c, 'm_Center'):
+        z['centro'] = [_r(x) for x in pos(c.m_Center)]
+    if hasattr(c, 'm_Size'):
+        z['tam'] = [_r(c.m_Size.x), _r(c.m_Size.y), _r(c.m_Size.z)]
+    for a, k in (('m_Radius', 'radio'), ('m_Height', 'alto')):
+        if hasattr(c, a):
+            z[k] = _r(getattr(c, a))
+    if hasattr(c, 'm_Direction'):
+        z['eje'] = c.m_Direction
+    if getattr(c, 'm_IsTrigger', False):
+        z['disparador'] = True
+    if not getattr(c, 'm_Enabled', True):
+        z['apagado'] = True
+    return z
+
+
+def _claves(curva):
+    return [[_r(k['time']), _r(k['value']), _r(k['inSlope']), _r(k['outSlope'])] for k in curva['m_Curve']]
+
+
+def curva_mm(c):
+    """MinMaxCurve: m = 0 constante (k), 1 curva (k × c), 2 entre dos curvas (k × c0..c), 3 entre dos
+    constantes (k0..k)."""
+    m = c['minMaxState']
+    out = {'m': m, 'k': _r(c['scalar'])}
+    if m == 3:
+        out['k0'] = _r(c['minScalar'])
+    if m in (1, 2):
+        out['c'] = _claves(c['maxCurve'])
+    if m == 2:
+        out['c0'] = _claves(c['minCurve'])
+    return out
+
+
+def _color(c):
+    return [_r(c['r']), _r(c['g']), _r(c['b']), _r(c['a'])]
+
+
+def gradiente(g):
+    """Gradient: claves de color [t, r, g, b] y de alfa [t, a] (t de 0 a 1); modo 0 mezcla, 1 fijo."""
+    return {'col': [[_r(g[f'ctime{i}'] / 65535), *_color(g[f'key{i}'])[:3]] for i in range(g['m_NumColorKeys'])],
+            'alfa': [[_r(g[f'atime{i}'] / 65535), _r(g[f'key{i}']['a'])] for i in range(g['m_NumAlphaKeys'])],
+            'modo': g.get('m_Mode', 0)}
+
+
+def gradiente_mm(c):
+    """MinMaxGradient: m = 0 color, 1 gradiente, 2 entre dos colores, 3 entre dos gradientes, 4 color
+    al azar del gradiente."""
+    m = c['minMaxState']
+    out = {'m': m}
+    if m in (0, 2):
+        out['color'] = _color(c['maxColor'])
+    if m == 2:
+        out['color0'] = _color(c['minColor'])
+    if m in (1, 3, 4):
+        out['grad'] = gradiente(c['maxGradient'])
+    if m == 3:
+        out['grad0'] = gradiente(c['minGradient'])
+    return out
+
+
+def particulas(ps, pr):
+    """Un ParticleSystem (y su ParticleSystemRenderer) como extras, los módulos encendidos con sus
+    curvas tal cual. Los vectores de mundo (fuerza, velocidad en mundo) van con la x espejada; la
+    rotación de cada partícula queda como en Unity (en mano derecha gira al revés)."""
+    def mm(d, *ks):
+        return {k: curva_mm(d[k]) for k in ks if k in d}
+    ini = ps['InitialModule']
+    out = {'dur': _r(ps['lengthInSec']), 'bucle': bool(ps['looping']), 'precalentar': bool(ps['prewarm']),
+           'alEmpezar': bool(ps['playOnAwake']), 'velSim': _r(ps.get('simulationSpeed', 1)),
+           'espacio': ps.get('moveWithTransform', 0), 'escala': ps.get('scalingMode', 0),
+           'demora': curva_mm(ps['startDelay']),
+           'ini': {**mm(ini, 'startLifetime', 'startSpeed', 'startSize', 'startRotation', 'gravityModifier'),
+                   'color': gradiente_mm(ini['startColor']), 'max': ini['maxNumParticles']}}
+    sh = ps['ShapeModule']
+    if sh['enabled']:
+        out['forma'] = {'tipo': sh['type'], 'angulo': _r(sh['angle']), 'largo': _r(sh['length']),
+                        'radio': _r(sh['radius']['value'] if isinstance(sh['radius'], dict) else sh['radius']),
+                        'arco': _r(sh['arc']['value'] if isinstance(sh['arc'], dict) else sh['arc']),
+                        'grosor': _r(sh.get('radiusThickness', 1)),
+                        'pos': [-_r(sh['m_Position']['x']), _r(sh['m_Position']['y']), _r(sh['m_Position']['z'])],
+                        'rot': [_r(sh['m_Rotation'][a]) for a in 'xyz'], 'escala': [_r(sh['m_Scale'][a]) for a in 'xyz']}
+    em = ps['EmissionModule']
+    if em['enabled']:
+        out['emision'] = {**mm(em, 'rateOverTime', 'rateOverDistance'),
+                          'rafagas': [{'t': _r(b['time']), 'n': curva_mm(b['countCurve']) if 'countCurve' in b else b.get('minCount'),
+                                       'ciclos': b.get('cycleCount', 1), 'cada': _r(b.get('repeatInterval', 0))}
+                                      for b in em.get('m_Bursts', [])]}
+    for mod, k, campos in (('SizeModule', 'tam', ('curve',)), ('RotationModule', 'rot', ('curve',)),
+                           ('ForceModule', 'fuerza', ('x', 'y', 'z')), ('VelocityModule', 'vel', ('x', 'y', 'z'))):
+        m = ps.get(mod)
+        if m and m['enabled']:
+            out[k] = mm(m, *campos)
+            if k in ('fuerza', 'vel'):
+                out[k]['mundo'] = bool(m.get('inWorldSpace', False))
+                if out[k]['mundo'] and 'x' in out[k]:
+                    out[k]['x']['k'] = -out[k]['x']['k']
+                    if 'k0' in out[k]['x']:
+                        out[k]['x']['k0'] = -out[k]['x']['k0']
+    co = ps.get('ColorModule')
+    if co and co['enabled']:
+        out['colorVida'] = gradiente_mm(co['gradient'])
+    uv = ps.get('UVModule')
+    if uv and uv['enabled']:
+        out['hoja'] = {'x': uv['tilesX'], 'y': uv['tilesY'], 'filas': uv.get('animationType', 0),
+                       'cuadro': curva_mm(uv['frameOverTime']), 'inicio': curva_mm(uv['startFrame']),
+                       'ciclos': uv.get('cycles', 1)}
+    if pr:
+        out['render'] = {'modo': pr['m_RenderMode'], 'tamMax': _r(pr['m_MaxParticleSize']),
+                         'tamMin': _r(pr['m_MinParticleSize']), 'orden': pr['m_SortMode'],
+                         'alinear': pr.get('m_RenderAlignment', 0)}
+    return out
+
+
 class Exportador:
     """Pasa jerarquías de Unity a un Glb, compartiendo mallas, materiales y texturas ya exportados."""
 
@@ -161,6 +287,9 @@ class Exportador:
         self.nodo_de = {}               # (archivo, path_id del Transform) → nodo
         self.pieles = []                # (nodo de la malla, SkinnedMeshRenderer) a resolver al final
         self.avisos = []
+        # extras_go(exportador, GameObject) → dict: lo propio de cada juego (sus MonoBehaviour) que va
+        # en los extras del nodo
+        self.extras_go = None
 
     @staticmethod
     def clave(obj):
@@ -387,12 +516,48 @@ class Exportador:
             nodo.setdefault('extras', {})['capa'] = go.m_Layer
         i = self.glb.nodo(**nodo)
         self.nodo_de[self.clave(t)] = i
+        mesh_filtro = None
         for c in go.m_Component:
+            try:
+                if c.component.deref().type.name == 'MeshFilter':
+                    mesh_filtro = c.component.read().m_Mesh.path_id
+            except Exception:
+                pass
+        for c in go.m_Component:
+            try:
+                ref = c.component.deref()
+                tipo_ref = ref.type.name
+            except Exception:
+                continue
+            if tipo_ref == 'ParticleSystem':
+                try:
+                    ps = ref.read_typetree()
+                    rend = next((x.component.deref() for x in go.m_Component
+                                 if x.component.deref().type.name == 'ParticleSystemRenderer'), None)
+                    pr = rend.read_typetree() if rend is not None else None
+                    p = particulas(ps, pr)
+                    if rend is not None:
+                        m = rend.read().m_Materials
+                        if m and m[0].path_id:
+                            p['material'] = self.material_unity(m[0].read())
+                    self.glb.j['nodes'][i].setdefault('extras', {})['particulas'] = p
+                except Exception as e:
+                    self.avisos.append(f'partículas {go.m_Name}: {e}')
+                continue
             try:
                 comp = c.component.read()
             except Exception:
                 continue
             tipo = comp.object_reader.type.name if hasattr(comp, 'object_reader') else ''
+            if tipo in TIPO_COLISIONADOR:
+                z = colisionador(tipo, comp)
+                if tipo == 'MeshCollider':
+                    if comp.m_Mesh.path_id == mesh_filtro:
+                        z['malla'] = 'nodo'
+                    elif comp.m_Mesh.path_id:
+                        z['malla'], _ = self.malla(comp.m_Mesh.read(), [], False)
+                self.glb.j['nodes'][i].setdefault('extras', {}).setdefault('colisionadores', []).append(z)
+                continue
             if tipo == 'Camera':
                 r = comp.m_NormalizedViewPortRect
                 c = comp.m_BackGroundColor
@@ -421,6 +586,10 @@ class Exportador:
                 self.glb.j['nodes'][i].setdefault('extras', {})['lightmap'] = [
                     getattr(rend[1], 'm_LightmapIndex', 65535), *[getattr(rend[1].m_LightmapTilingOffset, a, 0) for a in 'xyzw']] \
                     if hasattr(rend[1], 'm_LightmapTilingOffset') else None
+        if self.extras_go:
+            ex = self.extras_go(self, go)
+            if ex:
+                self.glb.j['nodes'][i].setdefault('extras', {}).update(ex)
         hijos = [x for x in (self.jerarquia(h.read(), solo_activos) for h in t.m_Children) if x is not None]
         if hijos:
             self.glb.j['nodes'][i]['children'] = hijos

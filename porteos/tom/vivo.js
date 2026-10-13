@@ -426,6 +426,160 @@ class SwipePursAnimation extends AnimationTracker {
 class ShowFoodBannerAnimation extends MoodBlendAnimation { }
 
 // ------------------------------------------------------------------------------------------------
+// El dormitorio (Animations.AnimationTypes.Bedroom)
+
+// HandClapAnimation: a los 3/4 de la animación avisa que aplaudió (didClap)
+class HandClapAnimation extends MoodBlendAnimation {
+  constructor(ctl, animName, moodTimes, neckTimes) {
+    super(ctl, animName, moodTimes, neckTimes);
+    this.aplaudio = false;
+    this.didClap = null;
+  }
+  play(time = 0) { super.play(time); this.aplaudio = false; }
+  onUpdate() {
+    const s = this.animState;
+    if (this.aplaudio || !s || s.time / s.length <= 0.75) return;
+    this.aplaudio = true;
+    if (this.didClap) this.didClap();
+  }
+}
+
+// LightsOutOnAnimation: con la luz apagada se acuesta a dormir (lightsOutSleepA, que queda quieta al
+// final mientras duerme); al prenderla, o cuando el sueño se llena, se despierta (lightsOnWakeA); después
+// de apagarla aplaudiendo se duerme enseguida (fastSleepA). Todas aditivas sobre la pose feliz.
+class LightsOutOnAnimation extends AnimationTracker {
+  constructor(ctl, lightsOnName, lightsOffName, quickSleepName) {
+    super(ctl, lightsOnName + lightsOffName);
+    this.lightsOnName = lightsOnName;
+    this.lightsOffName = lightsOffName;
+    this.quickSleepName = quickSleepName;
+    this.animStateLightsOff = this.animStateQuickSleep = null;
+    this.blendOutAnimation = new BlendInOutAnimation(ctl, false);
+    this.blendOutNeckAnim = new BlendInOutAnimation(ctl, false);
+    this.blendInAnimation = new BlendInOutAnimation(ctl, true);
+    this.blendInNeckAnim = new BlendInOutAnimation(ctl, true);
+    this.soundsLightOff = this.soundsLightOn = this.soundsQuickSleep = null;
+  }
+  setAnimStates() {
+    const c = this.ctl;
+    const prep = (n, capa) => {
+      const s = c.loadAnimationState(n);
+      if (s) { s.layer = capa; s.wrapMode = CLAMP; s.blendMode = ADDITIVE; }
+      return s;
+    };
+    this.animState = prep(this.lightsOnName, 6);
+    this.animStateLightsOff = prep(this.lightsOffName, 7);
+    this.animStateQuickSleep = prep(this.quickSleepName, 7);
+  }
+  sonar(campo) { if (campo) this.ctl.playSound(campo, 0, 0); }
+  play(lightsOn) {
+    this.setAnimStates();
+    if (lightsOn) this.playWakeUp();
+    else { this.sonar(this.soundsLightOff); this.playToSleep(this.animStateLightsOff); }
+  }
+  // la cara del humor vuelve al final (75–90 %), el cuello entre el 70 y el 80 %
+  playWakeUp() {
+    const c = this.ctl, s = this.animState;
+    if (!s) return;
+    const L = s.length;
+    playBlendInAndOutOfMood(c, this.blendInNeckAnim, [L * 0.75, L * 0.9], this.blendInAnimation, [L * 0.7, L * 0.8], s, true);
+    c.currentAnimation = this;
+    this.sonar(this.soundsLightOn);
+  }
+  // la cara del humor se va en el primer 60 %
+  playToSleep(s) {
+    if (!s) return;
+    const L = s.length;
+    playBlendInAndOutOfMood(this.ctl, this.blendOutAnimation, [0, L * 0.6], this.blendOutNeckAnim, [0, L * 0.6], s, true);
+    this.ctl.currentAnimation = this;
+  }
+  // PlaySleeping: entrar al dormitorio con Tom dormido (ya acostado)
+  playSleeping() {
+    this.setAnimStates();
+    const s = this.animStateLightsOff;
+    this.playToSleep(s);
+    if (s) s.time = s.length;
+  }
+  playQuickSleep() {
+    this.setAnimStates();
+    this.sonar(this.soundsQuickSleep);
+    this.playToSleep(this.animStateQuickSleep);
+  }
+  // PlayStraightWakeUp: de golpe a la pose del humor (si estaba noqueado)
+  playStraightWakeUp() {
+    const c = this.ctl;
+    this.setAnimStates();
+    const s = c.loadAnimationState(c.moodAnimationName());
+    if (!s) return;
+    s.layer = 1; s.blendMode = BLEND; s.wrapMode = CLAMP;
+    c.anim.stop();
+    c.anim.play(s.name, 0);
+    c.currentAnimation = this;
+  }
+  isWakingUp() { const s = this.animState; return !!(s && s.enabled && s.time < s.length); }
+  isPlaying() {
+    return super.isPlaying() || !!(this.animStateLightsOff && this.animStateLightsOff.enabled)
+      || !!(this.animStateQuickSleep && this.animStateQuickSleep.enabled);
+  }
+  // acostado y ya sin sueño (se llenó, o tiene que ir al baño): se despierta solo
+  onUpdate() {
+    const s = this.animStateLightsOff;
+    if (s && s.enabled && s.time > s.length && !this.ctl.logica.isSleeping) this.playWakeUp();
+  }
+  get principal() {
+    for (const s of [this.animState, this.animStateLightsOff, this.animStateQuickSleep]) if (s && s.enabled) return s;
+    return this.animState;
+  }
+}
+
+// HeadPokeSleepAndWakeUp: tocarle la cabeza a oscuras lo noquea (headPokeSleepA); si no le queda
+// sueño, un segundo después de terminar se despierta (lightsOnWakeA)
+class HeadPokeSleepAndWakeUp extends AnimationTracker {
+  constructor(ctl) {
+    super(ctl, null);
+    this.SLEEP_TIME = 1;
+    this.headPokeSleepState = this.wakeUpState = null;
+    this.blendInAnim = new BlendInOutAnimation(ctl, true);
+    this.blendInNeckAnim = new BlendInOutAnimation(ctl, true);
+    this.soundsHeadPokeSleep = this.soundsLightOn = null;
+  }
+  play(time = 0) {
+    const c = this.ctl;
+    const h = this.headPokeSleepState = c.loadAnimationState('headPokeSleepA');
+    this.wakeUpState = c.loadAnimationState('lightsOnWakeA');
+    const base = c.loadAnimationState('happy' + c.animPostfix);
+    if (!h || !base) return;
+    base.layer = 1; base.wrapMode = CLAMP;
+    h.layer = 6; h.wrapMode = CLAMP; h.blendMode = ADDITIVE;
+    c.anim.stop();
+    c.anim.play(base.name, 0);
+    c.anim.play(h.name, 0);
+    h.time = time;
+    if (this.soundsHeadPokeSleep) c.playSound(this.soundsHeadPokeSleep, 0, 0);
+    c.currentAnimation = this;
+  }
+  isKnockoutPlaying() { const s = this.headPokeSleepState; return !!(s && s.enabled && s.time < s.length); }
+  isWakingUp() { const s = this.wakeUpState; return !!(s && s.enabled && s.time < s.length); }
+  isPlaying() {
+    const w = this.wakeUpState, h = this.headPokeSleepState;
+    if (w && w.enabled && w.time > w.length) return false;
+    if (h && h.enabled) return true;
+    return !!(w && w.enabled);
+  }
+  onUpdate() {
+    const h = this.headPokeSleepState;
+    if (h && h.enabled && h.time > h.length + this.SLEEP_TIME && !this.ctl.logica.isSleeping) this.playWakeUp();
+  }
+  playWakeUp() {
+    const c = this.ctl;
+    if (!this.wakeUpState) return;
+    playBlendInAndOutOfMood(c, this.blendInAnim, [1, 1.1], this.blendInNeckAnim, [1, 1.1], this.wakeUpState, true);
+    if (this.soundsLightOn) c.playSound(this.soundsLightOn, 0, 0);
+  }
+  get principal() { const w = this.wakeUpState; return w && w.enabled ? w : this.headPokeSleepState; }
+}
+
+// ------------------------------------------------------------------------------------------------
 // TomsAnimationController
 
 export class ControladorTom {
@@ -465,8 +619,21 @@ export class ControladorTom {
     this.pianoListo = false;           // el piano y sus teclas todavía no están exportados
     this.e = new THREE.Euler(0, 0, 0, 'YXZ');
     this.q = new THREE.Quaternion();
+    this.toquesHabilitados = null;     // TomsTouchController: null = todos; si no, los huesos que valen
+    this.dormitorio = null;            // el Dormitorio (dormitorio.js): las zzz
+    this.alApagarAplaudiendo = null;   // BedroomState.ToggleLightSwitch(false) + la noche, al aplaudir
     this.initAnimations();
-    this.estadoCuarto = new LivingroomAnimationState(this);
+    // el estado de animación de cada cuarto (los que faltan usan el del living por ahora)
+    this.estados = { living: new LivingroomAnimationState(this), bedroom: new BedroomAnimationState(this) };
+    this.estadoCuarto = this.estados[cuarto] || this.estados.living;
+    this.estadoCuarto.onEnter();
+  }
+
+  // set_CurrentAnimationState: sale el del cuarto anterior y entra el nuevo
+  cambiarCuarto(nombre) {
+    if (this.estadoCuarto) this.estadoCuarto.onExit(false);
+    this.cuarto = nombre;
+    this.estadoCuarto = this.estados[nombre] || this.estados.living;
     this.estadoCuarto.onEnter();
   }
 
@@ -546,7 +713,24 @@ export class ControladorTom {
     const reaccion = (n, snd) => { const a = new AdditiveAnimation(this, n); a.sounds = snd; return a; };
     this.animReactionBurp = reaccion('reactionBurpA', 'ReactionBurp');
     this.animReactionMmmm = reaccion('reactionMmmmA', 'ReactionMmmm');
+    // el dormitorio
+    this.animClapHands = new HandClapAnimation(this, 'clapLightsOff' + this.SIZE, [0, 0.1, 0.8, 1.0], [0, 0.2, 0.8, 1.0]);
+    this.animClapHands.sounds = LM ? 'HandClapM' : 'HandClapS';
+    this.animHeadPokeSleepAndWakeUp = new HeadPokeSleepAndWakeUp(this);
+    this.animHeadPokeSleepAndWakeUp.soundsHeadPokeSleep = 'PokeHeadSleep';
+    this.animHeadPokeSleepAndWakeUp.soundsLightOn = 'LightsOnWake';
+    const lo = this.animLightsOutOn = new LightsOutOnAnimation(this, 'lightsOnWakeA', 'lightsOutSleepA', 'fastSleepA');
+    lo.soundsLightOn = 'LightsOnWake'; lo.soundsQuickSleep = 'FastSleep'; lo.soundsLightOff = 'LightsOutSleep';
+    // bedFidgetsA (FidgetAdditiveLoopingAnimation): aditiva sobre la pose del humor, con su sonido
+    this.animBedFidgetsAnimation = idle('bedFidgetsA', { soundsH: 'HoldsCrotchFidgets', soundsS: 'HoldsCrotchFidgets', soundsD: 'HoldsCrotchFidgets' });
+    this.animBedFidgetsAnimation.priority = PRIORITY_NORMAL;
+    this.animBedFidgetsAnimation.canListenDuringAnimation = false;
+    this.animExcited1Bedroom = mb('newRoomItemExcitedBedroom1', [0.1, 0.2, 0.9, 1.0], undefined, LM ? 'Excited1L' : 'Excited1S');
+    this.animExcited2Bedroom = mb('newRoomItemExcitedBedroom2', [0.1, 0.2, 0.9, 1.0], undefined, LM ? 'Excited2L' : 'Excited2S');
   }
+
+  // OnPoke (TomsAnimationController): cuenta para los logros; acá no hace nada
+  onPoke() { }
 
   isTomKnockedDown() {
     const c = this.current;
@@ -752,7 +936,35 @@ class CommonAnimationState {
     this.pokeFallProbability = 0;
     this.ctl.anim.stop();
   }
+  // OnExit: la animación que estaba termina (si es por pausa, sólo si se deja interrumpir)
+  onExit(pause) { this.ctl.setCurrentAnimationInternal(null); }
   canListen() { return true; }
+
+  // en la cama, las ganas de ir al baño son otras
+  fidgets() { return this.ctl.estadoCuarto === this.ctl.estados.bedroom ? this.ctl.animBedFidgetsAnimation : this.ctl.fidgetsAnimation; }
+
+  // PlayBasicNeedAnimationOrIdleAnimation (la acción Idle)
+  playIdle() {
+    const c = this.ctl, l = c.logica;
+    if (c.animWaveHappy.isPlaying() || c.animWaveDisconnected.isPlaying()) return;
+    if (l.mustGoToToilet) {
+      const f = this.fidgets();
+      if (!f.isPlaying()) f.play(0);
+      return;
+    }
+    const prev = c.previousAnimation;
+    if (Math.random() < l.mustEatAnimationProbability && prev !== c.animShowHungry && prev !== c.animShowHungrySD) {
+      this.playShowHungry();
+      return;
+    }
+    if (Math.random() < l.mustSleepAnimationProbability && c.mood === SLEEPY && prev !== c.animYawn) {
+      if (this.playYawn()) return;
+    }
+    if (c.current && c.current.isPlaying()) return;
+    const fuePestaneo = prev === c.animBlinkHappy || prev === c.animBlinkSleepy || prev === c.animBlinkDisconnected;
+    if (!fuePestaneo && Math.random() > 0.5) this.blink();
+    else c.animBreathe.play(0);
+  }
 
   playMoodAnimation() {
     const c = this.ctl, m = c.mood;
@@ -774,19 +986,24 @@ class CommonAnimationState {
     (c.mood === HAPPY ? c.animShowHungry : c.animShowHungrySD).play(0);
   }
   playFidgetsAnimation() {
-    const c = this.ctl;
-    if (!c.fidgetsAnimation.isPlaying()) c.fidgetsAnimation.play(0);
+    const f = this.fidgets();
+    if (!f.isPlaying()) f.play(0);
   }
   playListenAnimation() {
     const c = this.ctl;
     if (c.mood === HAPPY) c.animListen.play(0); else c.animListenMood.play(0);
   }
+  // con sonido, mueve la boca; sin sonido (volumen en 0 o mudo) deja de repetir y asiente o niega
   playTalkAnimation() {
     const c = this.ctl;
-    if (c.sonido.mudo) return;
-    this.currentTalkFrame = this.nextTalkFrame;
-    const m = c.mood, t = m === HAPPY ? c.animTalkHappy : m === SLEEPY ? c.animTalkSleepy : c.animTalkDisconnected;
-    t.play(t.length * this.nextTalkFrame, 0);
+    if (c.sonido.volumen > 0.001 && !c.sonido.mudo) {
+      this.currentTalkFrame = this.nextTalkFrame;
+      const m = c.mood, t = m === HAPPY ? c.animTalkHappy : m === SLEEPY ? c.animTalkSleepy : c.animTalkDisconnected;
+      t.play(t.length * this.nextTalkFrame, 0);
+      return;
+    }
+    c.stopListeningOrRepeating(false);
+    (Math.random() < 0.5 ? c.animShakes : c.animNods).play(0);
   }
 
   triggerSoundOnPoke(byTouch) { this.ctl.playSoundSuelto('Poke'); }
@@ -922,32 +1139,12 @@ class LivingroomAnimationState extends CommonAnimationState {
   playAnimation(a, data) {
     const c = this.ctl, l = c.logica;
     const byTouch = data && data.byTouch !== undefined ? data.byTouch : true;
+    void l;
     switch (a) {
-      case A.Idle: {
-        if (c.animWaveHappy.isPlaying() || c.animWaveDisconnected.isPlaying()) return;
-        if (l.mustGoToToilet) {
-          if (!c.fidgetsAnimation.isPlaying()) this.playFidgetsAnimation();
-          return;
-        }
-        const prev = c.previousAnimation;
-        if (Math.random() < l.mustEatAnimationProbability && prev !== c.animShowHungry && prev !== c.animShowHungrySD) {
-          this.playShowHungry();
-          return;
-        }
-        if (Math.random() < l.mustSleepAnimationProbability && c.mood === SLEEPY && prev !== c.animYawn) {
-          if (this.playYawn()) return;
-        }
-        if (c.current && c.current.isPlaying()) return;
-        const fuePestaneo = prev === c.animBlinkHappy || prev === c.animBlinkSleepy || prev === c.animBlinkDisconnected;
-        if (!fuePestaneo && Math.random() > 0.5) this.blink();
-        else c.animBreathe.play(0);
-        return;
-      }
+      case A.Idle: this.playIdle(); return;
       case A.Mood: this.playMoodAnimation(); return;
       case A.Listen: this.playListenAnimation(); return;
-      case A.Talk:
-        if (!c.sonido.mudo && c.sonido.volumen > 0.001) this.playTalkAnimation();
-        return;
+      case A.Talk: this.playTalkAnimation(); return;
       case A.PokeHead: this.pokeHead(byTouch); return;
       case A.PokeBody: this.pokeBelly(byTouch); return;
       case A.PokeTail: this.pokeTail(byTouch); return;
@@ -957,6 +1154,96 @@ class LivingroomAnimationState extends CommonAnimationState {
       case A.Wave: (c.mood === HAPPY ? c.animWaveHappy : c.animWaveDisconnected).play(0); return;
       default:
     }
+  }
+}
+
+// BedroomAnimationState: en la cama sólo se toca la cabeza; con la luz apagada se duerme, tocarle la
+// cabeza lo noquea, y al prender la luz se despierta (si todavía tiene sueño, a veces aplaude para
+// apagarla otra vez y se duerme enseguida)
+class BedroomAnimationState extends CommonAnimationState {
+  get zzz() { const d = this.ctl.dormitorio; return d && d.zzz; }
+
+  onEnter() {
+    super.onEnter();
+    const c = this.ctl, l = c.logica;
+    c.toquesHabilitados = new Set(['c_head_00_skn']);      // unRegisterAllButHeadColliders
+    if (!l.isDay && l.isSleeping) { c.fireAction(A.SleepingOnBedroomEnter); return; }
+    if (this.zzz) this.zzz.stopNow();
+    c.fireAction(A.Idle);
+  }
+  onExit(pause) {
+    this.ctl.toquesHabilitados = null;                     // vuelven todos los colisionadores
+    super.onExit(pause);
+  }
+
+  playAnimation(a, data) {
+    const c = this.ctl, l = c.logica;
+    void data;
+    switch (a) {
+      case A.Idle: this.playIdle(); return;
+      case A.Mood: this.playMoodAnimation(); return;
+      case A.Listen: this.playListenAnimation(); return;
+      case A.Talk: this.playTalkAnimation(); return;
+      case A.PokeHead: this.pokeHead(true); return;
+      case A.SwipeBody: if (!l.isSleeping) this.swipeBody(); return;
+      case A.LightsOff: this.lightsOff(); return;
+      case A.LightsOn: this.lightsOn(); return;
+      case A.SleepingOnBedroomEnter: c.animLightsOutOn.playSleeping(); return;
+      case A.Excited: this.playExcited(); return;
+      default:
+    }
+  }
+
+  playExcited() {
+    const c = this.ctl;
+    (Math.floor(Math.random() * 2) === 1 ? c.animExcited1Bedroom : c.animExcited2Bedroom).play(0);
+  }
+
+  // a oscuras, tocarle la cabeza lo deja dormido (si puede dormir) o noqueado un rato; con luz, el respingo
+  pokeHead(byTouch) {
+    const c = this.ctl, l = c.logica;
+    if (!l.isDay) {
+      l.enableSleeping(true);
+      c.animHeadPokeSleepAndWakeUp.play(0.03);
+      if (this.zzz) this.zzz.onHeadPoke();
+    } else this.headPokeRecover();
+    c.onPoke();
+    this.triggerSoundOnPoke(byTouch);
+  }
+
+  lightsOff() {
+    const c = this.ctl;
+    if (!c.logica.enableSleeping(true)) return;     // sin sueño (o con ganas de ir al baño) no se acuesta
+    c.animLightsOutOn.play(false);
+  }
+
+  lightsOn() {
+    const c = this.ctl, l = c.logica, lo = c.animLightsOutOn, hp = c.animHeadPokeSleepAndWakeUp;
+    l.enableSleeping(false);
+    if (!lo.isPlaying() && !hp.isPlaying()) return;
+    if (lo.isWakingUp() || hp.isWakingUp()) return;
+    if (hp.isKnockoutPlaying()) { lo.playStraightWakeUp(); return; }
+    lo.play(true);
+    // todavía muerto de sueño: una de cada tres, al despertarse aplaude para apagar la luz
+    lo.animationFinishedAction = l.mustSleep && Math.floor(Math.random() * 3) === 0 ? () => this.playClapHandsAnimation() : null;
+  }
+
+  playClapHandsAnimation() {
+    const c = this.ctl, h = c.animClapHands;
+    h.play(0);
+    h.didClap = () => this.onClapHands();
+    h.animationFinishedAction = () => this.clapHandsFinished();
+  }
+  onClapHands() {
+    const c = this.ctl, l = c.logica;
+    l.turnBedroomLight(false);
+    l.enableSleeping(true);
+    if (c.alApagarAplaudiendo) c.alApagarAplaudiendo();
+  }
+  clapHandsFinished() {
+    const c = this.ctl;
+    if (c.logica.isDay) return;
+    c.animLightsOutOn.playQuickSleep();
   }
 }
 
@@ -978,10 +1265,13 @@ export class ToquesTom {
     this.dedos = new Map();
   }
   colisionador(x, y) {
-    const t = this.zonas.tocar(this.rayo(x, y), true);
+    const h = this.ctl.toquesHabilitados;
+    const t = this.zonas.tocar(this.rayo(x, y), true, h ? (z) => h.has(z) : null);
     if (t) this.ctl.lastHitPoint = t.punto.clone();
     return t ? t.zona : null;
   }
+  // ¿el dedo cae sobre Tom? (para que el cuarto no reciba el toque)
+  tocaTom(x, y) { return !!this.colisionador(x, y); }
   bajar(id, x, y) {
     const t = this.ctl.tiempo;
     this.dedos.set(id, { inicio: t, x0: x, y0: y, nombre: this.colisionador(x, y), evento: false, multi: false,

@@ -314,9 +314,13 @@ export class LogicaJuego {
     this.setSleeping(si);
     return this.isSleeping;
   }
+  // TurnBedroomLight → SetBedroomLight: prender la luz lo despierta
   turnBedroomLight(prendida) {
+    if (this.isDay === prendida) return false;
     this.isDay = prendida;
     this.prefs.escribir('GameState.BedroomLightOn', prendida);
+    if (prendida) this.setSleeping(false);
+    return true;
   }
 
   // OnAppPause / OnAppResume
