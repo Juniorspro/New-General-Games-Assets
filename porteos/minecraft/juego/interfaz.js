@@ -289,6 +289,12 @@ var Interfaz = (function () {
       var ox = (n % cols) * LADO, oy = Math.floor(n / cols) * LADO;
       iconosPos[it.id + ':' + it.m] = [ox, oy];
       if (it.huevo !== undefined) { huevo(x, ox, oy, it.huevo); return; }
+      // un objeto: su dibujo de textures/items (objetos.png)
+      if (Items.es(it.id)) {
+        var d = Items.dibujo(it.id, it.m);
+        if (d && img.objetos) x.drawImage(img.objetos, d[0] * 16, d[1] * 16, 16, 16, ox + 4, oy + 4, LADO - 8, LADO - 8);
+        return;
+      }
       var b = C.bloques[it.id], f = C.FORMA[it.id];
       // las texturas "de mano" (carried) ya traen su color: ésas no se tiñen
       var tn = b.texMano ? 0 : b.tinte;
@@ -878,17 +884,22 @@ var Interfaz = (function () {
     fondoOscuro(0.5);
     var pw = Math.min(W - 12 * E, 330 * E), ph = H - 12 * E, px = (W - pw) / 2, py = 6 * E;
     panel(px, py, pw, ph);
-    var tabs = [['craftingScreen.tab.construction', 'icon_recipe_construction', 'Construction'], ['craftingScreen.tab.nature', 'icon_recipe_nature', 'Nature'],
-      ['craftingScreen.tab.items', 'icon_recipe_item', 'Items']];
-    var tw = 26 * E;
+    // en el orden de la 1.2 (construcción, equipo, objetos, naturaleza); el último número es la
+    // pestaña de Objetos.creativo
+    var tabs = [['craftingScreen.tab.construction', 'icon_recipe_construction', 'Construction', 0],
+      ['craftingScreen.tab.equipment', 'icon_recipe_equipment', 'Equipment', 2], ['craftingScreen.tab.items', 'icon_recipe_item', 'Items', 3],
+      ['craftingScreen.tab.nature', 'icon_recipe_nature', 'Nature', 1]];
+    var tw = 26 * E, activa = tabs[0];
     for (var t = 0; t < tabs.length; t++) {
-      var b = { x: px + 8 * E + t * (tw + 2 * E), y: py + 8 * E, w: tw, h: 22 * E, accion: 'tab', i: t };
+      var b = { x: px + 8 * E + t * (tw + 2 * E), y: py + 8 * E, w: tw, h: 22 * E, accion: 'tab', i: tabs[t][3] };
       I.botones.push(b);
-      if (t === invTab) botonClaro(b.x, b.y, b.w, b.h, '', 2); else botonOscuro(b.x, b.y, b.w, b.h, '', 0);
+      var esta = tabs[t][3] === invTab;
+      if (esta) activa = tabs[t];
+      if (esta) botonClaro(b.x, b.y, b.w, b.h, '', 2); else botonOscuro(b.x, b.y, b.w, b.h, '', 0);
       var ic = UI[tabs[t][1]];
-      if (ic) I.dibujo(tabs[t][1], b.x + (tw - ic[2] * E) / 2, b.y + (22 * E - ic[3] * E) / 2 + (t === invTab ? E : 0));
+      if (ic) I.dibujo(tabs[t][1], b.x + (tw - ic[2] * E) / 2, b.y + (22 * E - ic[3] * E) / 2 + (esta ? E : 0));
     }
-    I.texto(I.t(tabs[invTab][0], tabs[invTab][2]), px + 14 * E + tabs.length * (tw + 2 * E), py + 15 * E, '#ffffff', E);
+    I.texto(I.t(activa[0], activa[2]), px + 14 * E + tabs.length * (tw + 2 * E), py + 15 * E, '#ffffff', E);
     var cb = { x: px + pw - 22 * E, y: py + 8 * E, w: 16 * E, h: 16 * E, accion: 'cerrarInv' };
     I.botones.push(cb);
     I.dibujo(apretadoEs(cb) ? 'x_pressed' : 'x_default', cb.x, cb.y, 16 * E, 16 * E);

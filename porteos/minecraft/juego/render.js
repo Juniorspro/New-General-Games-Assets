@@ -163,6 +163,8 @@ var Render = (function () {
     armarCaja();
     prepararSimple();
     prepararEntidades(imagenes.bichos || {});
+    // los dibujos de los objetos (herramientas, comida...) para la mano y los objetos tirados
+    if (imagenes.objetos) { texObjetos = GL.textura(imagenes.objetos, 'cerca', 0); objW = imagenes.objetos.width; objH = imagenes.objetos.height; }
     R.uv = datos.atlas.uv;
     R.listo = true;
     gl.enable(gl.DEPTH_TEST);
@@ -915,6 +917,36 @@ var Render = (function () {
   // luz del lugar (la del mapa de luz en la celda del jugador, como el juego)
   // ------------------------------------------------------------------------------------------
   var simple = null, part = [], partBuf = null, partDatos = new Float32Array(0), mano = { clave: '', b: null, n: 0 };
+  var texObjetos = null, objW = 512, objH = 256;
+  // un objeto como lo dibuja el juego en la mano y tirado (ItemRenderer.renderItemIn2D): su dibujo
+  // de 16x16 adelante y atrás, y una tira de costado por cada columna y cada fila de píxeles (el
+  // alfa del dibujo recorta lo que sobra), con 1/16 de grueso. r: [u0, v0, u1, v1]
+  function extruido(v, r, tinte) {
+    var g = 1 / 32, u0 = r[0], v0 = r[1], u1 = r[2], v1 = r[3], du = (u1 - u0) / 16, dv = (v1 - v0) / 16, t = tinte || [1, 1, 1];
+    function q(p, uv, sombra) {
+      var ord = [0, 1, 2, 0, 2, 3];
+      for (var k = 0; k < 6; k++) {
+        var a = p[ord[k]], b = uv[ord[k]];
+        v.push(a[0], a[1], a[2], 1, t[0] * sombra, t[1] * sombra, t[2] * sombra, 1, b[0], b[1]);
+      }
+    }
+    q([[-0.5, -0.5, g], [0.5, -0.5, g], [0.5, 0.5, g], [-0.5, 0.5, g]], [[u0, v1], [u1, v1], [u1, v0], [u0, v0]], 1);
+    q([[0.5, -0.5, -g], [-0.5, -0.5, -g], [-0.5, 0.5, -g], [0.5, 0.5, -g]], [[u1, v1], [u0, v1], [u0, v0], [u1, v0]], 0.8);
+    for (var i = 0; i < 16; i++) {
+      var x0 = -0.5 + i / 16, x1 = x0 + 1 / 16, uc = u0 + du * (i + 0.5);
+      q([[x0, -0.5, -g], [x0, -0.5, g], [x0, 0.5, g], [x0, 0.5, -g]], [[uc, v1], [uc, v1], [uc, v0], [uc, v0]], 0.7);
+      q([[x1, -0.5, g], [x1, -0.5, -g], [x1, 0.5, -g], [x1, 0.5, g]], [[uc, v1], [uc, v1], [uc, v0], [uc, v0]], 0.7);
+      var y1 = 0.5 - i / 16, y0 = y1 - 1 / 16, vc = v0 + dv * (i + 0.5);
+      q([[-0.5, y1, g], [0.5, y1, g], [0.5, y1, -g], [-0.5, y1, -g]], [[u0, vc], [u1, vc], [u1, vc], [u0, vc]], 0.9);
+      q([[-0.5, y0, -g], [0.5, y0, -g], [0.5, y0, g], [-0.5, y0, g]], [[u0, vc], [u1, vc], [u1, vc], [u0, vc]], 0.6);
+    }
+  }
+  // el rectángulo de un objeto en objetos.png (en 0..1) o null
+  function rectObjeto(id, m) {
+    var d = Items.dibujo(id, m);
+    if (!d) return null;
+    return [d[0] * 16 / objW, d[1] * 16 / objH, (d[0] + 1) * 16 / objW, (d[1] + 1) * 16 / objH];
+  }
   R.luzJugador = 0xF0;
   function prepararSimple() {
     simple = GL.programa(
@@ -1014,6 +1046,15 @@ var Render = (function () {
     mano.clave = clave; mano.n = 0;
     if (!it) return;
     var id = it.id, m = it.m, f = C.FORMA[id], F = C.F, v = [];
+    mano.objeto = false;
+    if (Items.es(id)) {
+      var ro = rectObjeto(id, m);
+      if (!ro || !texObjetos) return;
+      extruido(v, ro);
+      mano.plano = true; mano.objeto = true;
+      subirMano(v);
+      return;
+    }
     var b = C.bloques[id], tinte = b.tinte === 1 ? [0.57, 0.74, 0.35] : b.tinte === 2 ? [0.47, 0.67, 0.18] : b.tinte === 3 ? [0.25, 0.4, 0.9] : [1, 1, 1];
     var llevada = !!b.texMano;
     function quad(p, r, sombra, tn) {
@@ -1047,6 +1088,9 @@ var Render = (function () {
       quad([[0.5, -0.5, 0.5], [0.5, -0.5, -0.5], [0.5, y1, -0.5], [0.5, y1, 0.5]], corte(lado), 0.6, b.tinte === 2);
       quad([[-0.5, -0.5, -0.5], [-0.5, -0.5, 0.5], [-0.5, y1, 0.5], [-0.5, y1, -0.5]], corte(lado), 0.6, b.tinte === 2);
     }
+    subirMano(v);
+  }
+  function subirMano(v) {
     if (!mano.b) {
       mano.b = { vao: gl.createVertexArray(), vbo: gl.createBuffer() };
       gl.bindVertexArray(mano.b.vao);
@@ -1082,8 +1126,15 @@ var Render = (function () {
     multRot(m, -f * 20 * Math.PI / 180, 0, 1, 0);
     multRot(m, -f1 * 20 * Math.PI / 180, 0, 0, 1);
     multRot(m, -f1 * 80 * Math.PI / 180, 1, 0, 0);
-    if (mano.plano) { multRot(m, -Math.PI / 4, 0, 1, 0); multRot(m, Math.PI / 12, 0, 0, 1); }
-    var e = GL.mat4(); e[0] = e[5] = e[10] = mano.plano ? 0.5 : 0.4;
+    if (mano.plano) {
+      // lo plano (objetos y plantas) como los modelos "item/generated" y "item/handheld" del juego de
+      // PC en la mano derecha: corrido (1,13; 3,2; 1,13)/16, girado -90° en y y 25° en z, al 0,68
+      multRot(m, -Math.PI / 4, 0, 1, 0);
+      GL.trasladar(m, 1.13 / 16, 3.2 / 16, 1.13 / 16);
+      multRot(m, -Math.PI / 2, 0, 1, 0);
+      multRot(m, 25 * Math.PI / 180, 0, 0, 1);
+    }
+    var e = GL.mat4(); e[0] = e[5] = e[10] = mano.plano ? 0.68 : 0.4;
     GL.mult(m, m, e);
     GL.mult(mvpMano, proyMano, m);
     gl.clear(gl.DEPTH_BUFFER_BIT);
@@ -1091,7 +1142,7 @@ var Render = (function () {
     gl.uniformMatrix4fv(simple.u.WORLDVIEWPROJ, false, mvpMano);
     var luz = colorLuz(R.luzJugador);
     gl.uniform4f(simple.u.CURRENT_COLOR, luz[0], luz[1], luz[2], 1);
-    gl.bindTexture(gl.TEXTURE_2D, atlas);
+    gl.bindTexture(gl.TEXTURE_2D, mano.objeto ? texObjetos : atlas);
     gl.bindVertexArray(mano.b.vao);
     if (mano.plano) gl.disable(gl.CULL_FACE);
     gl.drawArrays(gl.TRIANGLES, 0, mano.n);

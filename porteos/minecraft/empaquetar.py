@@ -462,7 +462,7 @@ def interfaz(apk, salida):
 IDIOMAS = {"en": "en_US", "es": "es_MX", "pt": "pt_BR"}
 PREFIJOS_TEXTO = ("menu.", "gui.", "selectWorld.", "tile.", "options.", "deathScreen.", "createWorldScreen.",
                   "generator.", "itemGroup.", "chat.", "multiplayer.player.", "death.", "pauseScreen.",
-                  "playscreen.", "networkWorld.", "addExternalServerScreen.", "entity.", "item.spawn_egg.",
+                  "playscreen.", "networkWorld.", "addExternalServerScreen.", "entity.", "item.", "potion.",
                   "controllerLayoutScreen.", "language.", "hudScreen.", "selectServer.", "disconnectionScreen.",
                   "progressScreen.title", "progressScreen.generating", "progressScreen.saving", "connect.",
                   "settings.", "disconnectionScreen.disconnected", "disconnectionScreen.noReason", "craftingScreen.tab.",
@@ -481,6 +481,9 @@ def textos(apk):
                 continue
             k, v = linea.split("=", 1)
             v = v.split("\t#")[0].rstrip()
+            # de los estandartes, sólo los nombres (no los cientos de diseños por color)
+            if k.startswith("item.banner.") and not k.endswith(".name"):
+                continue
             if k.startswith(PREFIJOS_TEXTO) and not k.startswith(FUERA_TEXTO):
                 t[k] = v
         sal[corto] = t
@@ -542,6 +545,9 @@ def main():
     # todos los bichos de la 1.2 (modelos, entidades del behavior pack, botín, sonidos, huevos)
     import empaquetar_bichos
     bichos, eventos_bichos = empaquetar_bichos.armar(apk, salida, geometrias(apk), guardar_png, PAQUETE)
+    # los objetos que no son bloques: sus dibujos (objetos.png) y la comida de items.json
+    import empaquetar_objetos
+    objetos = empaquetar_objetos.armar(apk, PAQUETE, salida, guardar_png)
     datos = {
         "atlas": {"tam": tam, "uv": uv},
         "bloques": bloques(apk),
@@ -552,6 +558,7 @@ def main():
         "bichos": bichos.pop("modelos"),
         "entidades": bichos,
         "sonidos": sonidos12.sacar(apk, salida, PAQUETE, eventos_bichos),
+        "objetos": objetos,
     }
     (salida / "datos.json").write_text(json.dumps(datos, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print("datos:", (salida / "datos.json").stat().st_size, "bytes")

@@ -236,7 +236,7 @@
 
   async function arrancar() {
     // primero la fuente (pesa poco) para mostrar la carga
-    var chicas = ['fuente', 'gui', 'iconos', 'ui', 'icono', 'huevos'];
+    var chicas = ['fuente', 'gui', 'iconos', 'ui', 'icono', 'huevos', 'objetos'];
     var lista = await Promise.all(chicas.map(function (n) { return cargarImagen('datos/' + n + '.png'); }));
     chicas.forEach(function (n, i) { imgs[n] = lista[i]; });
     I.iniciar(hud, imgs, {});
@@ -284,6 +284,7 @@
     I.cargandoParte = 0.8; I.sucio();
 
     C.armarBloques(datos.bloques);
+    Items.preparar(datos.objetos);
     O.prepararMateriales();
     Modelos.preparar(datos.bichos, (datos.entidades && datos.entidades.variantes) || {});
     Muneco.preparar(datos.bichos, imgs.bichos);
@@ -686,7 +687,8 @@
   function poner(fx, fy) {
     if (pegar(fx, fy)) return;
     var it = I.juego.barra[I.juego.elegido];
-    var h = tocarBloque(fx, fy, it && it.id === 111);
+    // el nenúfar y el balde vacío apuntan al agua
+    var h = tocarBloque(fx, fy, it && (it.id === 111 || (it.id === 325 && !it.m)));
     if (!h) return;
     if (!J.agachado && usar(h)) return;
     if (!it) return;
@@ -698,6 +700,13 @@
       return;
     }
     var id = it.id, m = it.m;
+    // un objeto que no es un bloque: las semillas, las puertas, la cama, el balde lleno... ponen su
+    // bloque; el resto se usa (ver usarObjeto)
+    if (Items.es(id)) {
+      var pb = bloqueDeObjeto(it);
+      if (!pb) return;
+      id = pb[0]; m = pb[1];
+    }
     if (id === 111 && !(h.id === 9 || h.id === 8)) return;
     // dónde tocó en la cara (para losas y escaleras: mitad de arriba o de abajo)
     var py = cam.y + h.d[1] * h.t, fyCara = Math.min(1, Math.max(0, py - h.y));
@@ -729,6 +738,22 @@
     sonar(O.sonidoPoner(id), tx, ty, tz);
     golpe();
     cuenta.puestos++;
+  }
+
+  // el bloque que pone un objeto ([id, meta]) o null: las semillas (y la papa y la zanahoria) su
+  // cultivo, según items.json; el balde de agua o de lava, el líquido; las puertas, la cama, la
+  // torta... el suyo
+  var porNombre = null;
+  function bloquePorNombre(n) {
+    if (!porNombre) { porNombre = {}; C.bloques.forEach(function (b) { if (b.existe) porNombre[b.nombre] = b.id; }); }
+    return porNombre[n];
+  }
+  function bloqueDeObjeto(it) {
+    var s = Items.semilla(it.id);
+    if (s) { var b = bloquePorNombre(s.crop_result); return b ? [b, 0] : null; }
+    if (it.id === 325) return it.m === 8 ? [9, 0] : it.m === 10 ? [11, 0] : null;
+    var d = Items.def[it.id];
+    return d && d.pone && C.FORMA[d.pone] !== C.F.nada ? [d.pone, 0] : null;
   }
 
   function romper(h) {
