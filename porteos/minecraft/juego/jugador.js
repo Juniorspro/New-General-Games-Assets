@@ -195,7 +195,8 @@ var Jugador = (function () {
     }
     var dx = J.x - J.px, dz = J.z - J.pz;
     if (J.enPiso) J.caminado += Math.sqrt(dx * dx + dz * dz);
-    if (J.y < -64) { J.y = 100; J.vy = 0; }
+    // el vacío mata (principal.js); esto es por las dudas, mucho más abajo
+    if (J.y < -512) { J.y = 100; J.vy = 0; }
   };
 
   // la cámara entre dos pasos

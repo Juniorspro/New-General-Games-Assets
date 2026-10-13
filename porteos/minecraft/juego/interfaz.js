@@ -416,10 +416,13 @@ var Interfaz = (function () {
   }
   function dibujarJuego() {
     var j = I.juego, ahora = performance.now();
-    var o = I.opc || {}, oculta = o.ocultarInterfaz;
+    var o = I.opc || {}, oculta = o.ocultarInterfaz, conHud = !!I.hud;
     // barra rápida, abajo al medio ("Ocultar interfaz de juego" la saca, como el juego)
     var bw = 182 * E, bx = Math.round((W - bw) / 2), by = H - 22 * E;
-    if (!oculta) {
+    // el HUD de la 1.2 (hud_screen.json): la barra, la experiencia, los corazones, la armadura, la
+    // comida, las burbujas, el nombre de lo elegido y el chat
+    if (conHud && !oculta) { ctx.save(); I.hud(ctx); ctx.restore(); ctx.imageSmoothingEnabled = false; }
+    if (!oculta && !conHud) {
       barra(bx, by);
       for (var i = 0; i < 9; i++) {
         var it = j.barra[i];
@@ -427,23 +430,27 @@ var Interfaz = (function () {
       }
       I.dibujo('selected_hotbar_slot', bx - E + j.elegido * 20 * E, by - E);
     }
-    I.botones.push({ x: bx, y: by, w: bw, h: 22 * E, accion: 'barra', bx: bx });
-    // "..." el inventario, a la derecha de la barra
-    var tx = bx + bw + 2 * E, tw = 22 * E;
-    if (!oculta) {
-      ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(tx, by, tw, 22 * E);
-      sprite('tres', tx + (tw - 29 * E * 0.6) / 2, by + 9 * E, E * 0.6);
+    if (!conHud) {
+      I.botones.push({ x: bx, y: by, w: bw, h: 22 * E, accion: 'barra', bx: bx });
+      // "..." el inventario, a la derecha de la barra
+      var tx = bx + bw + 2 * E, tw = 22 * E;
+      if (!oculta) {
+        ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(tx, by, tw, 22 * E);
+        sprite('tres', tx + (tw - 29 * E * 0.6) / 2, by + 9 * E, E * 0.6);
+      }
+      I.botones.push({ x: tx, y: by, w: tw, h: 22 * E, accion: 'inventario' });
+      // la vida (en los servidores, donde se pelea)
+      if (j.conVida && !oculta) corazones(bx, by - 11 * E, j.vida, ahora < j.parpadeoHasta);
     }
-    I.botones.push({ x: tx, y: by, w: tw, h: 22 * E, accion: 'inventario' });
-    // la vida (en los servidores, donde se pelea)
-    if (j.conVida && !oculta) corazones(bx, by - 11 * E, j.vida, ahora < j.parpadeoHasta);
-    // pausa y chat, arriba a la derecha (como la 1.2)
-    var pw = 18 * E;
-    sprite('pausa', W - pw - 4 * E, 4 * E);
-    I.botones.push({ x: W - pw - 6 * E, y: 0, w: pw + 6 * E, h: pw + 8 * E, accion: 'pausa' });
+    // pausa y chat: arriba al medio (las esquinas de arriba son de los corazones y la comida, como
+    // en la 1.2 de bolsillo)
+    var pw = 18 * E, px = conHud ? Math.round(W / 2 + 2 * E) : W - pw - 4 * E;
+    sprite('pausa', px, 4 * E);
+    I.botones.push({ x: px - 2 * E, y: 0, w: pw + 6 * E, h: pw + 8 * E, accion: 'pausa' });
     if (j.red) {
-      sprite('chat', W - 2 * pw - 8 * E, 4 * E);
-      I.botones.push({ x: W - 2 * pw - 10 * E, y: 0, w: pw + 4 * E, h: pw + 8 * E, accion: 'abrirChat' });
+      var chx = conHud ? Math.round(W / 2 - pw - 2 * E) : W - 2 * pw - 8 * E;
+      sprite('chat', chx, 4 * E);
+      I.botones.push({ x: chx - 2 * E, y: 0, w: pw + 4 * E, h: pw + 8 * E, accion: 'abrirChat' });
     }
     // los controles táctiles como MCPE: la cruceta abajo a un costado con agacharse (el botón
     // redondo: se prende y se apaga) en el medio, y saltar aparte, grande, abajo del otro costado;
@@ -495,22 +502,27 @@ var Interfaz = (function () {
       I.texto(nn.t, nn.x, nn.y - 9 * E, '#ffffff', E, 'centro', true);
     }
     // el nombre del bloque elegido
-    if (ahora < j.nombreHasta && j.nombreItem) {
+    if (ahora < j.nombreHasta && j.nombreItem && !conHud) {
       ctx.globalAlpha = Math.min(1, (j.nombreHasta - ahora) / 400);
       I.texto(j.nombreItem, W / 2, by - (j.conVida ? 24 : 12) * E, '#ffffff', E, 'centro');
       ctx.globalAlpha = 1;
     }
     if (ahora < j.mensajeHasta && j.mensaje) I.texto(j.mensaje, W / 2, H * 0.3, '#ffffff', E, 'centro');
-    // el chat: los últimos mensajes arriba a la izquierda, se van a los 10 segundos
-    var yc = 4 * E;
+    // el chat: los últimos mensajes arriba a la izquierda, se van a los 10 segundos. Con el HUD de
+    // la 1.2 el estado de la red y los cuadros por segundo van arriba al medio, debajo de pausa
+    var yc = 4 * E, xr = 4 * E;
+    if (conHud) {
+      yc = pw + 10 * E;
+      xr = Math.round(W / 2 - Math.max(j.red ? I.anchoTexto(j.red.texto) + 6 * E : 0, j.mostrarFps ? I.anchoTexto('000 fps') : 0) / 2);
+    }
     if (j.red) {
       var col = j.red.estado === 'enlinea' ? '#55ff55' : j.red.estado === 'conectando' ? '#ffff55' : '#ff5555';
-      ctx.fillStyle = col; ctx.fillRect(4 * E, yc + 2 * E, 4 * E, 4 * E);
-      I.texto(j.red.texto, 10 * E, yc, '#ffffff', E);
+      ctx.fillStyle = col; ctx.fillRect(xr, yc + 2 * E, 4 * E, 4 * E);
+      I.texto(j.red.texto, xr + 6 * E, yc, '#ffffff', E);
       yc += 11 * E;
     }
-    if (j.mostrarFps) { I.texto(j.fps + ' fps', 4 * E, yc, '#ffffff', E); yc += 10 * E; }
-    var vis = j.chat.filter(function (l) { return ahora - l.t < 10000; }).slice(-6);
+    if (j.mostrarFps) { I.texto(j.fps + ' fps', xr, yc, '#ffffff', E); yc += 10 * E; }
+    var vis = conHud ? [] : j.chat.filter(function (l) { return ahora - l.t < 10000; }).slice(-6);
     for (i = 0; i < vis.length; i++) {
       var al = Math.min(1, (10000 - (ahora - vis[i].t)) / 1000);
       ctx.globalAlpha = al * 0.5; ctx.fillStyle = '#000'; ctx.fillRect(2 * E, yc - E, Math.min(W * 0.5, I.anchoTexto(vis[i].s) + 4 * E), 10 * E);
@@ -524,8 +536,9 @@ var Interfaz = (function () {
       ctx.fillStyle = 'rgba(255,255,255,0.8)';
       ctx.fillRect(W / 2 - 5 * E, H / 2 - E / 2, 10 * E, E); ctx.fillRect(W / 2 - E / 2, H / 2 - 5 * E, E, 10 * E);
     }
-    // el golpe: la pantalla se pone roja un instante
-    if (j.dano > 0) { ctx.fillStyle = 'rgba(255,0,0,' + (j.dano * 0.35) + ')'; ctx.fillRect(0, 0, W, H); }
+    // el golpe: con el HUD de la 1.2 la cámara se ladea (como el juego); si no, la pantalla se pone
+    // roja un instante
+    if (j.dano > 0 && !conHud) { ctx.fillStyle = 'rgba(255,0,0,' + (j.dano * 0.35) + ')'; ctx.fillRect(0, 0, W, H); }
   }
 
   // ------------------------------------------------------------------------------------------
@@ -992,7 +1005,8 @@ var Interfaz = (function () {
   function hayQueDibujarJuego() {
     var j = I.juego, ahora = performance.now();
     var anima = ahora < j.nombreHasta + 100 || ahora < j.mensajeHasta + 100 || !!j.anillo || j.dano > 0 || j.nombres.length > 0 ||
-      (j.chat.length && ahora - j.chat[j.chat.length - 1].t < 11000) || ahora < (j.parpadeoHasta || 0) + 100;
+      (j.chat.length && ahora - j.chat[j.chat.length - 1].t < 11000) || ahora < (j.parpadeoHasta || 0) + 100 ||
+      ahora < (j.guardandoHasta || 0) + 100;
     var r = anima || animando || (j.mostrarFps && j.fps !== ultimoFps) || I.conMouse !== ultimoMouse;
     animando = anima;
     return r;
@@ -1119,6 +1133,11 @@ var Interfaz = (function () {
           if ((cr === 'saltar' || cr === 'subir') && I.acciones.saltoDoble) I.acciones.saltoDoble(e.timeStamp);
           dedos.set(e.pointerId, { tipo: 'cruceta', b: cr });
           pulsados[cr] = true; actualizarCruceta(); sucio = true;
+          return;
+        }
+        if (I.tocarHud && !(I.opc && I.opc.ocultarInterfaz) && I.tocarHud(x / Jui.escala, y / Jui.escala)) {
+          dedos.set(e.pointerId, { tipo: 'boton' });
+          sucio = true;
           return;
         }
         var bi = botonEn(x, y);

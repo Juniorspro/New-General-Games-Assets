@@ -56,6 +56,15 @@ var Pantallas = (function () {
     Jui.renderers.hover_text_renderer = textoFlotante;
     Jui.renderers.armor_renderer = barraArmadura;
     Jui.renderers.live_player_renderer = jugadorVivo;
+    // los del HUD
+    Jui.renderers.heart_renderer = corazones;
+    Jui.renderers.hunger_renderer = comida;
+    Jui.renderers.bubbles_renderer = burbujas;
+    Jui.renderers.hotbar_renderer = casillaBarra;
+    ['hud_player_renderer', 'hotbar_cooldown_renderer', 'horse_heart_renderer', 'horse_jump_renderer', 'mob_effects_renderer',
+      'vignette_renderer', 'cursor_renderer', 'debug_overlay_renderer', 'progress_indicator_renderer', 'camera_renderer'].forEach(function (r) {
+      if (!Jui.renderers[r]) Jui.renderers[r] = function () { /* lo dibuja el juego por su cuenta o no hace falta */ };
+    });
     Jui.renderers.name_tag_renderer = function (ctx, c, k) {
       var n = c.b['#playername'] || G.nombre();
       var w = Jui.anchoTexto(n);
@@ -123,15 +132,67 @@ var Pantallas = (function () {
     if (c.b['#disabled_filter_visible']) ctx.globalAlpha *= 0.4;
     Interfaz.iconoEn(ctx, id, m, x, y, Math.round(w));
   }
-  // la barra de armadura (diez pecheras de icons.png: llena, media, vacía) con los puntos puestos
+  // ------------------------------------------------------------------------------------------
+  // Los "renderers" del HUD: filas de diez dibujos de 9×9 cada 8 unidades (como el juego)
+  // ------------------------------------------------------------------------------------------
+  function fila(ctx, k, x, y, dibujo, i, dx, dy) {
+    Jui.textura(ctx, 'textures/ui/' + dibujo, (x + i * 8 + (dx || 0)) * k, (y + (dy || 0)) * k, 9 * k, 9 * k);
+  }
+  // la armadura: en el HUD debajo de los corazones (si hay puesta); en el inventario, siempre
   function barraArmadura(ctx, c, k) {
-    var im = Interfaz.imagen('iconos'), p = G.puntosArmadura ? G.puntosArmadura() : 0;
-    if (!im) return;
-    for (var i = 0; i < 10; i++) {
-      var u = p >= i * 2 + 2 ? 34 : p === i * 2 + 1 ? 25 : 16;
-      // (el control está 5 unidades arriba, sobre el título: el juego dibuja la fila debajo)
-      ctx.drawImage(im, u, 9, 9, 9, Math.round((c.x + i * 8) * k), Math.round((c.y + 7) * k), Math.round(9 * k), Math.round(9 * k));
+    var p = G.puntosArmadura ? G.puntosArmadura() : 0, enHud = c.pantalla && c.pantalla.esHud;
+    if (enHud && p <= 0) return;
+    // (en el inventario el control está 5 unidades arriba, sobre el título)
+    var y = c.y + (enHud ? 10 : 7);
+    for (var i = 0; i < 10; i++) fila(ctx, k, c.x, y, p >= i * 2 + 2 ? 'armor_full' : p === i * 2 + 1 ? 'armor_half' : 'armor_empty', i);
+  }
+  // el azar de un paso: el juego siembra su Random con el número de paso, así que lo que tiembla en un
+  // paso queda igual aunque se dibuje dos veces
+  function azar(t, i, n) { var x = Math.sin(t * 12.9898 + i * 78.233) * 43758.5453; return Math.floor((x - Math.floor(x)) * n); }
+  // los corazones (GuiIngame): con 4 de vida o menos tiemblan; al lastimarse titilan cada 3 pasos y
+  // muestran en blanco lo que se perdió; con veneno verdes y con el wither negros
+  function corazones(ctx, c, k) {
+    var e = G.estadoJugador ? G.estadoJugador() : null;
+    if (!e || e.creativo) return;
+    var vida = Math.ceil(e.vida), antes = Math.ceil(e.vidaAntes || 0), titila = e.titila, pre = e.veneno ? 'poison_' : e.wither ? 'wither_' : '';
+    for (var i = 9; i >= 0; i--) {
+      var dy = vida <= 4 ? azar(e.tick, i, 2) : 0;
+      fila(ctx, k, c.x, c.y, titila ? 'heart_blink' : 'heart_background', i, 0, dy);
+      if (titila) {
+        if (i * 2 + 1 < antes) fila(ctx, k, c.x, c.y, pre + 'heart_flash', i, 0, dy);
+        else if (i * 2 + 1 === antes) fila(ctx, k, c.x, c.y, pre + 'heart_flash_half', i, 0, dy);
+      }
+      if (i * 2 + 1 < vida) fila(ctx, k, c.x, c.y, pre + 'heart', i, 0, dy);
+      else if (i * 2 + 1 === vida) fila(ctx, k, c.x, c.y, pre + 'heart_half', i, 0, dy);
     }
+  }
+  // la comida: de derecha a izquierda desde la esquina; sin saturación tiembla de a ratos (más seguido
+  // cuanto menos comida); con hambre (el efecto) verde
+  function comida(ctx, c, k) {
+    var e = G.estadoJugador ? G.estadoJugador() : null;
+    if (!e || e.creativo) return;
+    var x0 = c.x + c.w - 9, ef = e.hambre ? 'hunger_effect_' : 'hunger_', n = e.comida;
+    var tiembla = e.saturacion <= 0 && e.tick % (n * 3 + 1) === 0;
+    for (var i = 0; i < 10; i++) {
+      var x = x0 - i * 8, dy = tiembla ? azar(e.tick, i, 3) - 1 : 0;
+      Jui.textura(ctx, 'textures/ui/' + (e.hambre ? 'hunger_effect_background' : 'hunger_background'), x * k, (c.y + dy) * k, 9 * k, 9 * k);
+      if (i * 2 + 1 < n) Jui.textura(ctx, 'textures/ui/' + ef + 'full', x * k, (c.y + dy) * k, 9 * k, 9 * k);
+      else if (i * 2 + 1 === n) Jui.textura(ctx, 'textures/ui/' + ef + 'half', x * k, (c.y + dy) * k, 9 * k, 9 * k);
+    }
+  }
+  // las burbujas bajo el agua (debajo de la comida, de derecha a izquierda; la última revienta)
+  function burbujas(ctx, c, k) {
+    var e = G.estadoJugador ? G.estadoJugador() : null;
+    if (!e || e.creativo || !e.bajoAgua) return;
+    var x0 = c.x + c.w - 9, llenas = Math.ceil((e.aire - 2) * 10 / 300), pop = Math.ceil(e.aire * 10 / 300) - llenas;
+    for (var i = 0; i < llenas + pop && i < 10; i++)
+      Jui.textura(ctx, 'textures/ui/' + (i < llenas ? 'bubble' : 'bubble_pop'), (x0 - i * 8) * k, c.y * k, 9 * k, 9 * k);
+  }
+  // el fondo de cada casilla de la barra (hotbar_0 ... hotbar_8)
+  function casillaBarra(ctx, c, k) {
+    var q = Jui.coleccionDe(c), i = q ? q.i : 0;
+    ctx.globalAlpha *= 0.65;
+    Jui.textura(ctx, 'textures/ui/hotbar_' + Math.max(0, Math.min(8, i)), c.x * k, c.y * k, c.w * k, c.h * k);
   }
   // el jugador en la pestaña de armadura (sobre el fondo negro), con su skin
   function jugadorVivo(ctx, c, k) {
@@ -1059,6 +1120,84 @@ var Pantallas = (function () {
   CTRL.inventario = ctrlInventario;
   CTRL.inventarioCreativo = ctrlInventario;
   CTRL.mesa = function (d) { d.mesa = true; return ctrlInventario(d); };
+
+  // ------------------------------------------------------------------------------------------
+  // El HUD (hud.hud_screen): la barra rápida y la de experiencia abajo, los corazones y la armadura
+  // arriba a la izquierda, la comida y las burbujas arriba a la derecha (el estilo "de bolsillo" de
+  // la 1.2). Es una pantalla suelta que se dibuja debajo de todo mientras se juega
+  // ------------------------------------------------------------------------------------------
+  P.hud = function () {
+    // el nombre de lo elegido (arriba de la barra) y los renglones del chat (arriba a la izquierda,
+    // debajo de los corazones): controles nuevos de sus "factory" que se desvanecen solos
+    var nombre = '', ultimoNombre = null, chats = {}, nChat = 0;
+    var ctrl = {
+      binding: function (n) {
+        var e = G.estadoJugador();
+        switch (n) {
+          case '#hud_visible_not_centered': return true;
+          case '#hud_visible_centered': case '#hud_visible_centered_tooltip': case '#hud_visible_centered_ridingvr': return false;
+          case '#is_creative_mode': return e.creativo;
+          case '#is_not_creative_mode': return !e.creativo;
+          case '#hotbar_grid_dimensions': return [9, 1];
+          case '#exp_progress': return 1 - e.progreso;
+          case '#level_number': return String(e.nivel);
+          case '#level_number_visible': return e.nivel > 0;
+          case '#inventory_touch_button': return true;
+          case '#hotbar_elipses_right_visible': return true;
+          case '#hotbar_elipses_left_visible': return false;
+          case '#paper_doll_visible': case '#paper_doll_visible_living_room': case '#vr_riding': case '#vr_non_riding': return false;
+          case '#is_riding': return false;
+          case '#is_not_riding': return true;
+          case '#player_position_visible': return false;
+          case '#boss_grid_dimension': return [1, 0];
+          case '#hud_visible': return true;
+          case '#item_text': return nombre;
+          case '#auto_save_animation_visible': return G.guardando ? G.guardando() : false;
+        }
+      },
+      longitud: function (col) { if (col === 'hotbar_items') return 9; },
+      coleccion: function (col, i, n) {
+        if (col === 'chat_text_grid') return n === '#chat_text' ? chats[i] || '' : undefined;
+        if (col !== 'hotbar_items') return undefined;
+        var c = G.inventario().barra[i], d = c && Items.def[c.id], cr = G.creativo();
+        switch (n) {
+          case '#item_id_aux': return c ? c.id * 65536 + c.m : 0;
+          case '#show_item': return !!c;
+          case '#inventory_stack_count': return c && c.n > 1 && !cr ? String(c.n) : '';
+          case '#stack_count_visible': return !!(c && c.n > 1 && !cr);
+          case '#slot_selected': return i === G.elegido();
+          case '#item_durability_visible': return !!(d && d.dur && c.d);
+          case '#item_durability_total_amount': return d && d.dur ? d.dur : 1;
+          case '#item_durability_current_amount': return d && d.dur ? d.dur - (c.d || 0) : 0;
+          case '#item_custom_color': return 0;
+        }
+      },
+      boton: function (id, c) {
+        if (id === 'button.hotbar_select') { var q = Jui.coleccionDe(c); if (q) G.elegirCasilla(q.i); }
+        else if (id === 'button.hotbar_inventory_button') G.abrirInventario();
+      }
+    };
+    var pan = Jui.suelta('hud.hud_screen', ctrl, { '$is_pregame': false, '$touch': true });
+    if (!pan) return null;
+    pan.esHud = true;
+    pan.nombre = function (texto, creativo) {
+      nombre = texto || '';
+      if (ultimoNombre) Jui.quitar(ultimoNombre);
+      ultimoNombre = nombre ? Jui.fabricar(pan, 'item_text_factory', creativo ? 'creative_item_text' : 'survival_item_text') : null;
+    };
+    // los colores del port en códigos § (los del juego)
+    var COLORES = { '#ff8080': '§c', '#ff5555': '§c', '#ffff55': '§e', '#c0c0c0': '§7', '#55ff55': '§a' };
+    pan.chat = function (texto, color) {
+      var k = nChat++;
+      chats[k] = (COLORES[color] || '') + texto;
+      delete chats[k - 60];
+      var h = Jui.fabricar(pan, 'chat_item_factory', 'chat_item', { '$chat_item_lifetime': 10 });
+      if (h) { h.itemDe = 'chat_text_grid'; h.indice = k; }
+      // como mucho 50 renglones ("max_children_size")
+      if (h && h.padre && h.padre.hijos.length > 50) Jui.quitar(h.padre.hijos[0]);
+    };
+    return pan;
+  };
 
   CTRL.muerte = function () {
     return {

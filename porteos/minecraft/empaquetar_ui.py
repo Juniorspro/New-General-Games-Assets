@@ -182,6 +182,20 @@ def armar(apk, paquete, salida, jsonc, idiomas):
                 "textures/ui/time_1sunrise", "textures/ui/time_2day", "textures/ui/time_3noon",
                 "textures/ui/time_4sunset", "textures/ui/time_5night", "textures/ui/time_6midnight",
                 "textures/ui/weather_clear", "textures/ui/weather_rain", "textures/ui/weather_thunderstorm"}
+    # lo que dibujan los "renderers" del HUD (heart_renderer, hunger_renderer, armor_renderer,
+    # bubbles_renderer, hotbar_renderer): los corazones (y los envenenados, del wither y de
+    # absorción), la comida, la armadura, las burbujas, las casillas de la barra
+    for n in ("heart", "heart_half", "heart_background", "heart_blink", "heart_flash", "heart_flash_half",
+              "poison_heart", "poison_heart_half", "poison_heart_flash", "poison_heart_flash_half",
+              "wither_heart", "wither_heart_half", "wither_heart_flash", "wither_heart_flash_half",
+              "absorption_heart", "absorption_heart_half", "hunger_full", "hunger_half", "hunger_background",
+              "hunger_blink", "hunger_flash_full", "hunger_flash_half", "hunger_effect_full", "hunger_effect_half",
+              "hunger_effect_background", "hunger_effect_flash_full", "hunger_effect_flash_half",
+              "armor_full", "armor_half", "armor_empty", "bubble", "bubble_pop", "selected_hotbar_slot",
+              "hotbar_0", "hotbar_1", "hotbar_2", "hotbar_3", "hotbar_4", "hotbar_5", "hotbar_6", "hotbar_7", "hotbar_8",
+              "hotbar_start_cap", "hotbar_end_cap", "horse_heart", "horse_heart_half", "horse_heart_flash",
+              "horse_heart_flash_half", "mob_effect_background", "hud_mob_effect_background"):
+        nombres.add("textures/ui/" + n)
     tabla = atlas(apk, paquete, nombres, salida)
     d = {"globales": globales, "espacios": espacios, "texturas": tabla,
          "textos": textos(apk, paquete, idiomas), "emoticonos": glifos(apk, paquete, salida)}

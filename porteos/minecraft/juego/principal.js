@@ -74,6 +74,7 @@
   function chat(s, color) {
     I.juego.chat.push({ s: s, c: color, t: performance.now() });
     if (I.juego.chat.length > 60) I.juego.chat.shift();
+    if (hudPan && hudPan.chat) hudPan.chat(s, color);
     I.sucio();
   }
 
@@ -312,6 +313,7 @@
     irAlTitulo();
     window.prueba = { cam: cam, mundo: mundo, render: Render, jugador: J, partida: function () { return partida; }, abrir: abrirMundo, crear: crearMundo,
       cuenta: cuenta, bichos: B, red: Red, publico: entrarPublico, pantallas: Pantallas, jui: Jui, comando: function (t) { comando(t); }, inventario: function () { return inv; },
+      supervivencia: function () { return sup; }, muerto: function () { return muerto; }, tirados: function () { return tirados; }, hudPan: function () { return hudPan; },
       rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, ms: function () { return msCuadro; },
       diag: null, pedirDiag: function () { if (trab) trab.postMessage({ t: 'diag' }); }, listo: true };
   }
@@ -393,6 +395,22 @@
 
   var columnas = new Set(), esperandoSuelo = false, entrando = 0, ultimoCentro = [0, 0, 0], aparicion = [0, 80, 0];
   var vida = 20, caida = 0, invulnerable = 0, muerto = false;
+  // la vida, el hambre, el aire y la experiencia (supervivencia.js); el HUD de la 1.2 (hud_screen)
+  var sup = Supervivencia.nuevo(), sinHambre = false, hudPan = null, antesXZ = [0, 0];
+  var DIFICULTADES = ['peaceful', 'easy', 'normal', 'hard'];
+  // el modo de juego de la partida: creativo (vuela, sin vida), supervivencia o aventura (con vida)
+  function ponerModo(modo) {
+    if (!partida) return;
+    partida.modo = modo;
+    if (!partida.local) return;
+    var cre = modo === 'creativo';
+    partida.creativo = cre;
+    J.creativo = cre; I.juego.creativo = cre;
+    if (!cre) { J.volando = false; I.juego.volando = false; }
+    I.juego.conVida = !cre; B.conVida = !cre;
+    listaCreativa = null;
+    I.sucio();
+  }
   function abrirMundo(m) {
     Red.dejarDeMirar();
     I.cargandoTexto = I.t('progressScreen.generating', I.tp('cargando')); I.cargandoParte = 0;
@@ -423,6 +441,7 @@
         trab.postMessage({ t: 'guardados', lista: guardados }, tr);
       }
       partida = m;
+      if (m.local && m.modo) m.creativo = m.modo === 'creativo';
       J.creativo = m.creativo;
       J.vx = J.vy = J.vz = 0;
       var lugar = m.tipo === 'plano' ? [0, 3, 0] : lugarDeAparicion(m.semilla);
@@ -442,12 +461,22 @@
       I.juego.elegido = m.elegido || 0;
       I.juego.creativo = m.creativo; I.juego.volando = J.volando;
       I.juego.chat = []; I.juego.nombres = [];
-      vida = 20; caida = 0; muerto = false; invulnerable = 0;
+      caida = 0; muerto = false; invulnerable = 0;
+      // supervivencia en los mundos propios; en un servidor (la red: si no anda, se juega igual,
+      // solo) hay vida pero no hambre, y los bichos se comparten
+      sup = Supervivencia.cargar(m.supervivencia);
+      sinHambre = !m.local;
+      vida = sup.vida;
       I.juego.vida = vida;
-      // un servidor: la red (si no anda, se juega igual, solo), la vida y los bichos compartidos
       B.activo = m.bichos !== false;
-      B.conVida = !m.local;
-      I.juego.conVida = !m.local;
+      I.juego.conVida = !m.local || !m.creativo;
+      B.conVida = I.juego.conVida;
+      B.dificultad = DIFICULTADES[typeof m.dificultad === 'number' ? m.dificultad : 2] || 'normal';
+      // el HUD de la 1.2: la barra, los corazones, la comida, la experiencia
+      hudPan = Pantallas.hud();
+      I.hud = hudPan ? function (cx) { Jui.dibujarSuelta(cx, hudPan); } : null;
+      I.tocarHud = hudPan ? function (x, y) { return Jui.tocarSuelta(hudPan, x, y); } : null;
+      antesXZ = [J.x, J.z];
       if (!m.local) {
         Red.reiniciarCambios();
         I.juego.red = { estado: 'conectando', texto: I.tp('red.conectando') };
@@ -508,9 +537,11 @@
     if (!partida || !partida.local) return Promise.resolve();
     if (guardandoAhora) return guardandoAhora.then(guardar);
     var m = partida;
+    I.juego.guardandoHasta = performance.now() + 2500;
     m.jugador = { x: J.x, y: J.y, z: J.z, yaw: J.yaw, pitch: J.pitch, volando: J.volando };
     m.barra = I.juego.barra.map(function (c) { return c ? { id: c.id, m: c.m } : null; }); m.elegido = I.juego.elegido; m.jugado = Date.now();
     m.inventario = Inventario.guardar(inv);
+    m.supervivencia = Supervivencia.guardar(sup);
     m.bichos_lista = B.paraGuardar();
     var claves = Array.from(Mundo.sucios);
     Mundo.sucios.clear();
@@ -566,7 +597,7 @@
     entra: function (j) { chat(I.f(I.t('multiplayer.player.joined', '%s joined the game'), j.name), '#ffff55'); },
     sale: function (j) { chat(I.f(I.t('multiplayer.player.left', '%s left the game'), j.name), '#ffff55'); B.quitarDe(j.id); },
     bloque: function (x, y, z, id, m) { ponerRemoto(x, y, z, id, m); },
-    golpe: function (dano, quien, emp) { recibirDano(dano, quien, emp); },
+    golpe: function (dano, quien, emp) { recibirDano(dano, quien, emp, quien ? 'player' : 'generic'); },
     chat: function (n, s) { chat(I.f(I.t('chat.type.text', '<%s> %s'), n, s)); },
     trozo: function (cx, cz, l) {
       // lo construido que estaba guardado en el broker: ya, si el trozo está; si no, al generarlo
@@ -595,31 +626,92 @@
   // ------------------------------------------------------------------------------------------
   // La vida (en los servidores): golpes de otros jugadores y de los monstruos, caídas, la lava
   // ------------------------------------------------------------------------------------------
-  var ultimoAtacante = '';
-  function recibirDano(dano, quien, emp) {
-    if (!I.juego.conVida || muerto || invulnerable > 0 || dano <= 0) return;
-    invulnerable = 10;
-    vida = Math.max(0, vida - dano);
+  var ultimoAtacante = '', ultimaCausa = '';
+  // causa: la de los mensajes de muerte del juego (fall, drown, lava, inFire, onFire, starve,
+  // outOfWorld, inWall, explosion, mob...)
+  var SIN_DESGASTE = { fall: 1, drown: 1, starve: 1, outOfWorld: 1, inWall: 1, onFire: 1, magic: 1, wither: 1 };
+  // los golpes que la dificultad agranda o achica (EntityPlayer.attackEntityFrom: isDifficultyScaled)
+  var CON_DIFICULTAD = { mob: 1, explosion: 1 };
+  function recibirDano(dano, quien, emp, causa) {
+    if (muerto || dano <= 0) return;
+    if (!I.juego.conVida && causa !== 'outOfWorld') return;
+    causa = causa || (quien ? 'mob' : 'generic');
+    if (CON_DIFICULTAD[causa] && !sinHambre) {
+      if (B.dificultad === 'peaceful') return;
+      if (B.dificultad === 'easy') dano = Math.min(dano / 2 + 1, dano);
+      else if (B.dificultad === 'hard') dano = dano * 3 / 2;
+    }
+    var antes = sup.vida, real = Supervivencia.danar(sup, dano, causa, Inventario.puntosArmadura(inv));
+    if (real <= 0 && sup.vida > 0) return;
+    // los corazones titilan un segundo mostrando en blanco lo que se perdió (GuiIngame) y la cámara se
+    // ladea medio segundo (hurtTime)
+    if (sup.vida < antes) {
+      golpeTicks = 10;
+      if (!((I.juego.parpadeoTick || 0) > pasosLuz)) I.juego.vidaAntes = antes;
+      I.juego.parpadeoTick = pasosLuz + 20;
+    }
+    // la armadura se gasta con los golpes (uno por cada 4 de daño, como el juego)
+    if (!SIN_DESGASTE[causa] && real > 0) {
+      var gasto = Math.max(1, Math.floor(dano / 4));
+      for (var a = 0; a < 4; a++) { var p = inv.armadura[a], d = p && Items.def[p.id]; if (d && d.dur) { p.d = (p.d || 0) + gasto; if (p.d > d.dur) { inv.armadura[a] = null; Sonido.tocar('random.break', 0.8, 0.9); } } }
+    }
+    vida = sup.vida;
     I.juego.vida = vida; I.juego.dano = 1; I.juego.parpadeoHasta = performance.now() + 500;
     if (emp) { J.vx += emp[0]; J.vz += emp[1]; J.vy = Math.max(J.vy, 0.36); }
     if (quien) ultimoAtacante = quien;
+    ultimaCausa = causa;
     Sonido.tocar('game.player.hurt', 1, 0.9 + Math.random() * 0.2);
     if (vida <= 0) morir();
     I.sucio();
   }
+  // el mensaje de muerte del juego para la causa (con quién, si hubo): death.attack.<causa>, con
+  // ".player" cuando alguien lo empujó a eso (death.attack.lava.player: "...to escape %2$s")
+  var CAUSA_TEXTO = { mob: 'mob', entity_attack: 'mob', projectile: 'arrow', player: 'player' };
+  function mensajeMuerte() {
+    var n = opciones.nombre, q = ultimoAtacante, k = CAUSA_TEXTO[ultimaCausa] || ultimaCausa || 'generic';
+    function T(c) { return I.f(I.t(c, '%1$s died'), n, q); }
+    if (k === 'fall') return T(q ? 'death.fell.assist' : 'death.attack.fall');
+    if (k === 'magic' && q) k = 'indirectMagic';
+    // las que necesitan a alguien (mob, arrow, fireball, thrown, indirectMagic, player)
+    var conQuien = { mob: 1, arrow: 1, fireball: 1, thrown: 1, indirectMagic: 1, player: 1 };
+    if (conQuien[k]) return q ? T('death.attack.' + k) : T('death.attack.generic');
+    if (q && I.textos['death.attack.' + k + '.player']) return T('death.attack.' + k + '.player');
+    if (I.textos['death.attack.' + k]) return T('death.attack.' + k);
+    return T('death.attack.generic');
+  }
   function morir() {
     muerto = true;
     I.soltarTodo();
-    I.muerte.texto = ultimoAtacante ? I.f(I.t('death.attack.player', '%1$s was slain by %2$s'), opciones.nombre, ultimoAtacante)
-      : I.f(I.t('death.attack.generic', '%1$s died'), opciones.nombre);
+    I.muerte.texto = mensajeMuerte();
+    // en supervivencia se cae todo lo que se llevaba (salvo la regla "guardar el inventario") y la
+    // experiencia
+    if (partida && partida.local && !partida.creativo && !partida.guardarInventario) {
+      Inventario.devolver(inv, null);
+      [inv.barra, inv.mochila, inv.armadura, inv.mano2].forEach(function (l) {
+        for (var i = 0; i < l.length; i++) if (l[i]) { tirarObjeto(l[i], true); l[i] = null; }
+      });
+      soltarXp(J.x, J.y + 0.5, J.z, Supervivencia.xpAlMorir(sup));
+      Supervivencia.morir(sup);
+    }
     Red.accion({ type: 'muerte', name: opciones.nombre, byName: ultimoAtacante });
     chat(I.muerte.texto, '#ff8080');
     Sonido.tocar('game.player.die', 1, 1);
     Pantallas.ir('muerte');
     I.ir('jui');
   }
+  var tirados = [];
+  function tirarObjeto(c, alMorir) {
+    if (!c || c.n <= 0) return;
+    var a = alMorir ? Math.random() * Math.PI * 2 : J.yaw, v = alMorir ? Math.random() * 0.5 : 0.3;
+    tirados.push({ c: Inventario.copia(c), x: J.x, y: J.y + (alMorir ? 0.5 : 1.3), z: J.z, vx: Math.sin(a) * v, vy: 0.2, vz: -Math.cos(a) * v,
+      edad: 0, espera: alMorir ? 40 : 40 });
+  }
+  function soltarXp(x, y, z, n) {
+    if (n > 0) tirados.push({ xp: n, x: x, y: y, z: z, vx: 0, vy: 0.2, vz: 0, edad: 0, espera: 0 });
+  }
   function reaparecer() {
-    muerto = false; vida = 20; I.juego.vida = 20; ultimoAtacante = '';
+    Supervivencia.reaparecer(sup);
+    muerto = false; vida = sup.vida; I.juego.vida = vida; ultimoAtacante = ''; ultimaCausa = ''; caida = 0;
     J.ubicar(aparicion[0], aparicion[1], aparicion[2]);
     esperandoSuelo = true;
     Pantallas.vaciar();
@@ -638,6 +730,7 @@
     var l = Math.sqrt(dx * dx + dy * dy + dz * dz);
     return [dx / l, dy / l, dz / l];
   }
+  function aventura() { return !!(partida && partida.local && partida.modo === 'aventura'); }
   function alcance() { return partida && partida.creativo ? 6 : 5; }
   function tocarBloque(fx, fy, conLiquidos) {
     var d = rayoDesde(fx, fy), h = Mundo.rayo(cam.x, cam.y, cam.z, d[0], d[1], d[2], alcance(), conLiquidos);
@@ -712,6 +805,7 @@
       id = pb[0]; m = pb[1];
     }
     if (id === 111 && !(h.id === 9 || h.id === 8)) return;
+    if (aventura()) return;
     // dónde tocó en la cara (para losas y escaleras: mitad de arriba o de abajo)
     var py = cam.y + h.d[1] * h.t, fyCara = Math.min(1, Math.max(0, py - h.y));
     // una losa sobre otra igual: la doble
@@ -813,7 +907,7 @@
       if (h) {
         hayObjetivo = true;
         mundo.apuntado = h;
-        if (ahora >= proximoRomper) { romper(h); proximoRomper = ahora + 250; mundo.apuntado = null; }
+        if (ahora >= proximoRomper && !aventura()) { romper(h); proximoRomper = ahora + 250; mundo.apuntado = null; }
       }
     } else {
       proximoRomper = 0;
@@ -832,21 +926,21 @@
     if (Mundo.poner(x, y, z, id, m) && partida && !partida.local) Red.bloques([x, y, z, id, m]);
   };
   B.alMorir = function (e) { if (opciones.particulas) Render.romper(Math.floor(e.x), Math.floor(e.y), Math.floor(e.z), 80, 0); };
-  B.golpear = function (obj, dano, e) {
+  B.golpear = function (obj, dano, e, causa) {
     var dx = obj.x - e.x, dz = obj.z - e.z, l = Math.sqrt(dx * dx + dz * dz) || 1, kx = dx / l * 0.4, kz = dz / l * 0.4;
     var nombre = O.nombreBicho ? O.nombreBicho(e.tipo) : I.t('entity.' + e.tipo + '.name', e.tipo);
     if (obj.id) Red.accion({ type: 'hit_player', targetId: obj.id, dmg: dano, byName: nombre, kx: +kx.toFixed(3), kz: +kz.toFixed(3) });
-    else recibirDano(dano, nombre, [kx, kz]);
+    else recibirDano(dano, nombre, [kx, kz], causa || 'mob');
   };
   B.explosion = function (x, y, z, r, jug, quien) {
     Sonido.tocar('random.explode', 1, 0.9 + Math.random() * 0.2, x, y, z);
     var nombreQ = quien && quien.tipo ? I.t('entity.' + quien.tipo + '.name', quien.tipo) : I.t('entity.creeper.name', 'Creeper');
     for (var k = 0; k < jug.length; k++) {
-      var j = jug[k], d = Math.sqrt((j.x - x) * (j.x - x) + (j.y + 1 - y) * (j.y + 1 - y) + (j.z - z) * (j.z - z));
-      if (d < r * 2) {
-        var dano = Math.round((1 - d / (r * 2)) * 16 * Math.max(1, r / 3)), dx = (j.x - x) / (d || 1), dz = (j.z - z) / (d || 1);
+      var j = jug[k], d = Math.sqrt((j.x - x) * (j.x - x) + (j.y - y) * (j.y - y) + (j.z - z) * (j.z - z)), imp = 1 - d / (r * 2);
+      if (imp > 0) {
+        var dano = Math.floor((imp * imp + imp) / 2 * 7 * r * 2 + 1), dx = (j.x - x) / (d || 1) * imp, dz = (j.z - z) / (d || 1) * imp;
         if (j.id) Red.accion({ type: 'hit_player', targetId: j.id, dmg: dano, byName: nombreQ, kx: dx, kz: dz });
-        else if (B.conVida) recibirDano(dano, nombreQ, [dx, dz]);
+        else recibirDano(dano, quien ? nombreQ : '', [dx, dz], 'explosion');
       }
     }
     // el pozo de la explosión (como el juego, menos la roca madre y la obsidiana); en un servidor,
@@ -895,6 +989,33 @@
   var estadoMano = { item: null, golpe: 0, equipo: 1, bamboleo: [0, 0] };
   function golpe() { golpeDesde = performance.now(); }
   var cuenta = { puestos: 0, rotos: 0, saltos: 0 };
+  // debajo de esto el vacío lastima (el de la 1.2: 40 bloques bajo la roca madre)
+  var VACIO = -40, firmaHud = '', golpeTicks = 0, muerteTicks = 0;
+  function pasoVida(antesY, antesPiso) {
+    if (!J.enPiso && !J.volando && !J.enAgua && J.y < antesY) caida += antesY - J.y;
+    if (J.enAgua || J.volando || Mundo.bloque(Math.floor(J.x), Math.floor(J.y), Math.floor(J.z)) === 65 ||
+      Mundo.bloque(Math.floor(J.x), Math.floor(J.y), Math.floor(J.z)) === 106) caida = 0;
+    if (J.enPiso && !antesPiso) { if (caida > 3.2) recibirDano(Math.ceil(caida - 3), '', null, 'fall'); caida = 0; }
+    var X = Math.floor(J.x), Z = Math.floor(J.z), bp = Mundo.bloque(X, Math.floor(J.y + 0.2), Z), bc = Mundo.bloque(X, Math.floor(J.y + 1.62), Z);
+    var bm = Mundo.bloque(X, Math.floor(J.y + 0.9), Z);
+    var danos = Supervivencia.paso(sup, { tick: pasosLuz, cabezaEnAgua: bc === 8 || bc === 9,
+      enAgua: bp === 8 || bp === 9 || bm === 8 || bm === 9, enLava: bp === 10 || bp === 11 || bm === 10 || bm === 11,
+      enFuego: bp === 51 || bm === 51, vacio: J.y < VACIO, asfixia: !J.volando && bc > 0 && C.OPACO[bc] === 1 && C.SOLIDO[bc] === 1,
+      dificultad: sinHambre ? 'sinHambre' : B.dificultad, regenerar: partida.regenerar !== false });
+    if (danos) for (var dd = 0; dd < danos.length && !muerto; dd++) recibirDano(danos[dd][0], '', null, danos[dd][1]);
+    // el cansancio de moverse (correr 0,1 por bloque, nadar 0,01) y de saltar
+    var mx = J.x - antesXZ[0], mz = J.z - antesXZ[1], dist = Math.sqrt(mx * mx + mz * mz);
+    if (dist < 2) Supervivencia.cansar(sup, J.enAgua ? 0.01 * dist : J.corriendo ? 0.1 * dist : 0);
+    if (antesPiso && !J.enPiso && J.vy > 0.3) Supervivencia.cansar(sup, J.corriendo ? 0.2 : 0.05);
+    if (sup.vida !== vida) { vida = sup.vida; I.juego.vida = vida; }
+    // el HUD se vuelve a dibujar cuando cambia lo que muestra (y en los pasos en que algo tiembla o
+    // titila)
+    var pt = I.juego.parpadeoTick || 0;
+    var f = sup.vida + '|' + sup.comida + '|' + Math.ceil(sup.aire / 30) + '|' + sup.nivel + '|' + Math.round(sup.progreso * 182) + '|' +
+      (sup.vida <= 4 ? pasosLuz : 0) + '|' + (sup.saturacion <= 0 && pasosLuz % (sup.comida * 3 + 1) === 0 ? pasosLuz : 0) + '|' +
+      (pt > pasosLuz ? ((pt - pasosLuz) / 3 | 0) % 2 : -1);
+    if (f !== firmaHud) { firmaHud = f; I.sucio(); }
+  }
   function paso() {
     var c = I.control, e = J.entrada, activo = I.pantalla === 'juego';
     e.adelante = activo ? c.adelante : 0;
@@ -917,16 +1038,19 @@
       mundo.lluvia += Math.max(-0.01, Math.min(0.01, meta - (mundo.lluvia || 0)));
     }
     if (I.juego.volando !== J.volando) { I.juego.volando = J.volando; I.sucio(); }
-    // las caídas (en los servidores, donde hay vida)
-    if (I.juego.conVida && !muerto) {
-      if (!J.enPiso && !J.volando && !J.enAgua && J.y < antesY) caida += antesY - J.y;
-      if (J.enAgua || J.volando) caida = 0;
-      if (J.enPiso && !antesPiso) { if (caida > 3.2) recibirDano(Math.floor(caida - 3), '', null); caida = 0; }
-      var pies = Mundo.bloque(Math.floor(J.x), Math.floor(J.y + 0.2), Math.floor(J.z));
-      if ((pies === 10 || pies === 11) && pasosLuz % 10 === 0) recibirDano(4, '', null);
-      if (J.y < 1 && pasosLuz % 10 === 0) recibirDano(4, '', null);
-      if (invulnerable > 0) invulnerable--;
+    // la vida: caídas, lo que hay alrededor (agua, lava, fuego, quedar adentro de un bloque, el
+    // vacío), el hambre y el cansancio (supervivencia.js). En creativo (un mundo propio) sólo mata el
+    // vacío, como en el juego
+    if (golpeTicks > 0) golpeTicks--;
+    if (muerto) muerteTicks++; else muerteTicks = 0;
+    if (!muerto && partida) {
+      if (I.juego.conVida) pasoVida(antesY, antesPiso);
+      else {
+        if (sup.invulnerable > 0) sup.invulnerable--;
+        if (J.y < VACIO && pasosLuz % 10 === 0) recibirDano(4, '', null, 'outOfWorld');
+      }
     }
+    antesXZ[0] = J.x; antesXZ[1] = J.z;
     // los pasos suenan cada 1,7 bloques caminados (como el juego), no agachado
     if (J.enPiso && !J.agachado && J.caminado * 0.6 > proximoPaso) {
       proximoPaso = Math.floor(J.caminado * 0.6) + 1;
@@ -1049,6 +1173,10 @@
     var fase = (caminadoAntes + (J.caminado - caminadoAntes) * alfa) * 0.6 * Math.PI, ab = bamboleo * 0.06;
     var bx = Math.sin(fase) * ab * 0.5, by = -Math.abs(Math.cos(fase)) * ab;
     cam.x += Math.cos(cam.yaw) * bx; cam.z += Math.sin(cam.yaw) * bx; cam.y += by;
+    // el golpe ladea la cámara hasta 14° y vuelve (sin(f⁴·π)); muriendo se va cayendo de costado
+    var fg = golpeTicks > 0 ? Math.max(0, golpeTicks - alfa) / 10 : 0;
+    cam.rol = fg > 0 ? -Math.sin(fg * fg * fg * fg * Math.PI) * 14 * Math.PI / 180 : 0;
+    if (muerto) cam.rol = (40 - 8000 / (Math.min(20, muerteTicks + alfa) + 200)) * Math.PI / 180;
     // el campo de visión se abre un poco al correr (como el juego)
     var fovObj = opciones.fov * Math.PI / 180 * (J.corriendo ? 1.12 : 1);
     fovActual = fovActual ? fovActual + (fovObj - fovActual) * Math.min(1, dt * 10) : fovObj;
@@ -1144,7 +1272,8 @@
   function mostrarNombre() {
     var it = I.juego.barra[I.juego.elegido];
     I.juego.nombreItem = it ? O.nombre(it.id, it.m) : '';
-    I.juego.nombreHasta = performance.now() + 1500;
+    I.juego.nombreHasta = performance.now() + (hudPan ? 2000 : 1500);
+    if (hudPan && hudPan.nombre) hudPan.nombre(I.juego.nombreItem, !I.juego.conVida);
   }
   // un campo de texto de verdad sobre el botón (abre el teclado del teléfono; prompt() no anda dentro
   // de un cuadro de otro sitio)
@@ -1281,12 +1410,9 @@
         return;
       }
       case 'gamemode': case 'gm': {
-        var g = (a[1] || '').toLowerCase(), cre = { c: 1, creative: 1, '1': 1 }[g], sup = { s: 1, survival: 1, '0': 1 }[g];
-        if (!cre && !sup) { chat(Tc('commands.gamemode.fail.invalid', 'Invalid game mode %1$s', a[1] || ''), '#ff8080'); return; }
-        partida.modo = cre ? 'creativo' : 'supervivencia';
-        partida.creativo = !!cre;
-        J.creativo = !!cre; I.juego.creativo = !!cre;
-        if (!cre) { J.volando = false; I.juego.volando = false; }
+        var g = (a[1] || '').toLowerCase(), cre = { c: 1, creative: 1, '1': 1 }[g], supe = { s: 1, survival: 1, '0': 1 }[g];
+        if (!cre && !supe) { chat(Tc('commands.gamemode.fail.invalid', 'Invalid game mode %1$s', a[1] || ''), '#ff8080'); return; }
+        ponerModo(cre ? 'creativo' : 'supervivencia');
         chat(Tc('commands.gamemode.success.self', 'Set own game mode to %1$s', I.t(cre ? 'createWorldScreen.gameMode.creative' : 'createWorldScreen.gameMode.survival')));
         I.sucio();
         return;
@@ -1377,6 +1503,8 @@
     cambioDePartida: function (k) {
       if (!partida) return;
       if (k === 'mob_spawn') B.activo = partida.bichos !== false;
+      if (k === 'modo') ponerModo(partida.modo);
+      if (k === 'dificultad') B.dificultad = DIFICULTADES[partida.dificultad] || 'normal';
       guardar();
     },
     enviarChat: function (texto) {
@@ -1395,6 +1523,19 @@
     cerrarInventario: function () { Pantallas.vaciar(); I.ir('juego'); mostrarNombre(); I.sucio(); },
     inventarioCambio: function () { I.sucio(); },
     puntosArmadura: function () { return Inventario.puntosArmadura(inv); },
+    tirarObjeto: function (c) { tirarObjeto(c); },
+    // el HUD: la vida, la comida, el aire y la experiencia (en creativo no se muestran)
+    estadoJugador: function () {
+      var pt = I.juego.parpadeoTick || 0;
+      return { creativo: !I.juego.conVida, vida: sup.vida, vidaAntes: I.juego.vidaAntes || 0, comida: sup.comida, saturacion: sup.saturacion,
+        aire: sup.aire, bajoAgua: sup.aire < 300, titila: pt > pasosLuz && ((pt - pasosLuz) / 3 | 0) % 2 === 1, tick: pasosLuz,
+        nivel: sup.nivel, progreso: sup.progreso, veneno: false, wither: false, hambre: false };
+    },
+    elegido: function () { return I.juego.elegido; },
+    // el ícono de guardado del HUD: mientras se guarda (y un poco más, para que se vea)
+    guardando: function () { return performance.now() < (I.juego.guardandoHasta || 0); },
+    elegirCasilla: function (i) { I.acciones.elegir(i); },
+    abrirInventario: function () { I.acciones.inventario(); },
     girarMuñeco: function (dx) { muñecoYaw += dx * 0.02; },
     muñecoYaw: function () { return muñecoYaw; },
     skin: function () { return opciones.skin === 'alex' ? 'alex' : 'steve'; }

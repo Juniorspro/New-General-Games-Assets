@@ -39,11 +39,27 @@ APK de Craftsman PTGI) como opción al empezar, **servidores** para jugar con ot
   los calamares en el agua, los murciélagos en las cuevas) y con los huevos del inventario. En
   creativo los monstruos no atacan al jugador (como el juego); en los servidores, donde hay vida,
   sí;
+- **supervivencia** (el modo se elige al crear el mundo, en sus ajustes o con `/gamemode`; también
+  aventura): la vida, el hambre y la saturación, el aire bajo el agua y la experiencia, con las
+  cuentas del juego (el cansancio de correr, saltar y curarse; la vida que sube sola con la comida
+  llena y baja con hambre según la dificultad; pacífico sin monstruos); el daño de las caídas, la
+  lava, el fuego, ahogarse, quedar dentro de un bloque y el vacío (que también mata en creativo);
+  los golpes de los bichos, sus proyectiles y las explosiones (la cuenta de Explosion del juego),
+  agrandados o achicados por la dificultad; la armadura achica los golpes y se gasta; la cámara se
+  ladea al recibir un golpe; al morir el mensaje del juego para cada causa ("intentó nadar en la
+  lava", "Creeper hizo volar por los aires a..."), se cae lo que se llevaba y la experiencia, y se
+  reaparece;
+- **el HUD de la 1.2** (su `hud_screen.json`, el estilo de bolsillo): los corazones arriba a la
+  izquierda (tiemblan con poca vida, titilan al lastimarse) con la armadura debajo, la comida
+  arriba a la derecha con las burbujas debajo, la barra de experiencia con el nivel sobre la barra
+  rápida y su botón de tres puntos, el nombre de lo elegido que se desvanece, el chat y el ícono de
+  guardado; pausa y chat arriba al medio. En creativo, sólo la barra (como el juego);
 - el mundo infinito con biomas, cuevas, minerales y árboles, día y noche, agua y lava que corren,
   los controles táctiles de MCPE, partículas, los sonidos del juego.
 
-Siempre acostado: con el teléfono parado se gira 90° solo (también adentro de Rezona). Falta la
-supervivencia de verdad (minar con herramientas, fabricar, hambre).
+Siempre acostado: con el teléfono parado se gira 90° solo (también adentro de Rezona). Falta para
+la supervivencia completa: minar con herramientas (lo que sueltan los bloques, los objetos en el
+piso), fabricar, el horno y el cofre, comer y usar objetos.
 
 ## Cómo es
 

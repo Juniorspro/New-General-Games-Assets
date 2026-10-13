@@ -315,7 +315,7 @@ var Jui = (function () {
     if (def.ignored !== undefined && condicion(valor(def.ignored, s), s)) return null;
     if (nombre && nombre.charCodeAt(0) === 36) nombre = s[nombre] || nombre;
     var c = {
-      id: ++uid, n: nombre || '', d: def, s: s, ns: ns, padre: padre, hijos: [], b: Object.create(null),
+      id: ++uid, n: nombre || '', base: base || '', d: def, s: s, ns: ns, padre: padre, hijos: [], b: Object.create(null),
       t: valor(def.type, s) || 'panel', p: {}, x: 0, y: 0, w: 0, h: 0, ver: true
     };
     var p = c.p;
@@ -335,6 +335,11 @@ var Jui = (function () {
     // una grilla sin plantilla trae sus elementos escritos (la armadura, la salida de fabricar)
     if (Array.isArray(hs) && (c.t !== 'grid' || !p.grid_item_template)) crearHijos(c, hs);
     if (p.anims) iniciarAnimaciones(c);
+    // "uv": "@animación" (un flip_book que mueve el pedazo de la textura)
+    if (typeof p.uv === 'string' && p.uv.charAt(0) === '@') {
+      var au = animDe(p.uv, c.ns);
+      if (au) (c.anims || (c.anims = [])).push({ a: au, t0: performance.now(), ns: c.ns, s: c.s });
+    }
     return c;
   }
   function crearHijos(c, lista) {
@@ -376,7 +381,17 @@ var Jui = (function () {
   var pila = [];
   J.pila = pila;
   // abre una pantalla del juego ("start.start_screen") con su controlador encima de las otras
+  // una pantalla que no va en la pila: el HUD del juego, que se dibuja debajo de todo
+  J.suelta = function (ref, ctrl, extra) { return nueva(ref, ctrl, extra); };
   J.abrir = function (ref, ctrl, extra) {
+    var pan = nueva(ref, ctrl, extra);
+    if (!pan) return null;
+    pila.push(pan);
+    if (pan.ctrl.abierta) pan.ctrl.abierta(pan);
+    J.sucio();
+    return pan;
+  };
+  function nueva(ref, ctrl, extra) {
     var e = indice[ref];
     if (!e) { console.warn('jui: no existe ' + ref); return null; }
     var vars = Object.create(raiz);
@@ -388,11 +403,8 @@ var Jui = (function () {
     c.padre = null;
     pan.raiz = c;
     marcarPantalla(c, pan);
-    pila.push(pan);
-    if (pan.ctrl.abierta) pan.ctrl.abierta(pan);
-    J.sucio();
     return pan;
-  };
+  }
   function marcarPantalla(c, pan) {
     c.pantalla = pan;
     for (var i = 0; i < c.hijos.length; i++) marcarPantalla(c.hijos[i], pan);
@@ -413,16 +425,33 @@ var Jui = (function () {
     return J.abrir(ref, ctrl, extra);
   };
   // un control dentro de una "factory" (los carteles emergentes de base_screen, los mensajes del chat)
+  // la "factory" por su nombre: un control "type": "factory" o uno con "factory": { "name": ... }.
+  // Si hay varias (el HUD tiene la barra dos veces: la centrada y la de bolsillo), la que se ve
+  function buscarFabrica(c, nombre, l) {
+    var todas = l || [];
+    if (c.n === nombre || (c.p.factory && c.p.factory.name === nombre)) todas.push(c);
+    for (var i = 0; i < c.hijos.length; i++) buscarFabrica(c.hijos[i], nombre, todas);
+    if (l) return null;
+    for (var k = 0; k < todas.length; k++) {
+      var q = todas[k];
+      while (q && q.ver !== false) q = q.padre;
+      if (!q) return todas[k];
+    }
+    return todas[0] || null;
+  }
   J.fabricar = function (pan, nombreFabrica, idControl, vars) {
-    var f = buscar(pan.raiz, nombreFabrica);
+    var f = buscarFabrica(pan.raiz, nombreFabrica);
     if (!f) return null;
     var ids = f.p.control_ids || (f.p.factory && f.p.factory.control_ids) || {};
     var ref = ids[idControl] || (f.p.factory && f.p.factory.control_name) || idControl;
     if (typeof ref !== 'string') return null;
-    if (ref.charAt(0) === '@') ref = ref.slice(1);
+    // "@base" o "nombre@base" (los renglones del chat: "chat_item@hud.chat_grid_item")
+    var nombre = idControl, arroba = ref.indexOf('@');
+    if (arroba === 0) ref = ref.slice(1);
+    else if (arroba > 0) { nombre = ref.slice(0, arroba); ref = ref.slice(arroba + 1); }
     var s = Object.create(f.s);
     if (vars) for (var k in vars) s[k] = vars[k];
-    var h = crearControl(idControl, ref, null, f.ns, s, f);
+    var h = crearControl(nombre, ref, null, f.ns, s, f);
     if (!h) return null;
     marcarPantalla(h, pan);
     f.hijos.push(h);
@@ -533,6 +562,9 @@ var Jui = (function () {
   // contenido "100%c": si llenaran al padre se pisarían), salvo que tenga un hijo "fill", que
   // necesita el lugar del padre para repartir; lo demás llena al padre
   function tamDe(c) {
+    // una grilla sin tamaño mide lo que sus elementos (la barra rápida del HUD: 9 casillas de 20×22
+    // adentro de una pila que se mide por sus hijos)
+    if (c.t === 'grid' && c.p.size === undefined && c.dims && !c.dims.porAncho) return ['100%c', '100%c'];
     if (c.t === 'label') return par(c.p.size, 'default', 'default');
     if (c.t === 'stack_panel') {
       var horiz = c.p.orientation === 'horizontal', eje = '100%c';
@@ -1234,16 +1266,22 @@ var Jui = (function () {
   function animDe(ref, ns) {
     if (typeof ref !== 'string') return null;
     if (ref.charAt(0) === '@') ref = ref.slice(1);
-    return definicionDe(refDe(ref, ns), raiz, 0);
+    var a = definicionDe(refDe(ref, ns), raiz, 0);
+    // una animación de otro espacio sin nombrarlo (el ícono de guardado del HUD usa la de
+    // auto_save_info): la primera con ese nombre
+    if (!a && ref.indexOf('.') < 0) for (var k in indice) if (k.slice(k.indexOf('.') + 1) === ref) { a = definicionDe(k, raiz, 0); if (a) break; }
+    return a;
   }
   function iniciarAnimaciones(c) {
     var l = Array.isArray(c.p.anims) ? c.p.anims : [c.p.anims];
     c.anims = [];
     for (var i = 0; i < l.length; i++) {
       var a = animDe(l[i], c.ns);
-      if (a) c.anims.push({ a: a, t0: performance.now(), ns: c.ns });
+      if (a) c.anims.push({ a: a, t0: performance.now(), ns: c.ns, s: c.s });
     }
   }
+  // lo de una animación que puede venir en una variable del control ("$chat_item_lifetime")
+  function deAnim(v, an) { return typeof v === 'string' && v.charCodeAt(0) === 36 && an.s ? an.s[v] : v; }
   var FACIL = {
     linear: function (t) { return t; },
     in_quad: function (t) { return t * t; }, out_quad: function (t) { return t * (2 - t); },
@@ -1271,18 +1309,20 @@ var Jui = (function () {
     var hubo = false;
     for (var i = 0; i < c.anims.length; i++) {
       var an = c.anims[i], a = an.a;
-      var dur = (typeof a.duration === 'number' ? a.duration : 0) * 1000;
+      var d0 = deAnim(a.duration, an), dur = (typeof d0 === 'number' ? d0 : 0) * 1000;
       var t = ahora - an.t0;
       var tipo = a.anim_type;
       if (tipo === 'flip_book') {
         var fps = a.fps || 10, n = a.frame_count || 1, paso = a.frame_step || 1;
         var cuadro = Math.floor(t / 1000 * fps) % n;
+        // "reversible": va y vuelve
+        if (a.reversible && n > 1) { cuadro = Math.floor(t / 1000 * fps) % (2 * n - 2); if (cuadro >= n) cuadro = 2 * n - 2 - cuadro; }
         if (cuadro !== c.cuadroFlip) { c.cuadroFlip = cuadro; c.flip = { ini: a.initial_uv || [0, 0], paso: paso, cuadro: cuadro }; hubo = true; }
         continue;
       }
       var f = dur > 0 ? Math.min(1, t / dur) : 1;
       var e = (FACIL[a.easing] || FACIL.linear)(f);
-      var v = interp(a.from, a.to, e);
+      var v = interp(deAnim(a.from, an), deAnim(a.to, an), e);
       if (tipo === 'alpha') { c.animAlpha = v; hubo = true; }
       else if (tipo === 'offset') { c.animOffset = v; hubo = true; }
       else if (tipo === 'size') { c.animSize = v; hubo = true; }
@@ -1291,7 +1331,12 @@ var Jui = (function () {
         if (a.next) {
           var sig = animDe(a.next, an.ns);
           if (sig) { an.a = sig; an.t0 = ahora; }
-        } else if (a.destroy_at_end) { c.destruir = true; }
+        } else if (a.destroy_at_end) {
+          // se va el control que nombra (él o uno de los que lo contienen: el renglón entero del chat)
+          var q = c, de = a.destroy_at_end;
+          while (q && q.n !== de && q.base.slice(q.base.lastIndexOf('.') + 1) !== de) q = q.padre;
+          (q || c).destruir = true;
+        }
       }
     }
     return hubo;
@@ -1329,12 +1374,25 @@ var Jui = (function () {
     if (!img) return null;
     return [img, t[1], t[2], t[3], t[4], t[5], t[6]];
   }
+  // una textura del atlas por su ruta ("textures/ui/heart"), para los renderers del código; x, y,
+  // w, h en píxeles del lienzo. false si no está
+  J.textura = function (ctx, ruta, x, y, w, h) {
+    var t = D.texturas[ruta], img = t && imgs[t[0]];
+    if (!img) return false;
+    ctx.drawImage(img, t[1], t[2], t[3], t[4], Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+    return true;
+  };
   function dibujarImagen(ctx, c, k, alfa) {
     var t = texturaDe(c);
     if (!t) return;
     var im = t[0], sx = t[1], sy = t[2], sw = t[3], sh = t[4], ns = t[5];
     var uv = c.b['#uv'] !== undefined ? c.b['#uv'] : c.p.uv, uvs = c.b['#uv_size'] !== undefined ? c.b['#uv_size'] : c.p.uv_size;
-    if (c.flip && Array.isArray(uvs)) uv = [c.flip.ini[0], c.flip.ini[1] + c.flip.cuadro * c.flip.paso];
+    // los cuadros van para el costado si la textura es una tira horizontal (el ícono de guardado), si
+    // no hacia abajo
+    if (c.flip && Array.isArray(uvs)) {
+      var deCostado = sw >= uvs[0] * 2 && sh < uvs[1] * 2;
+      uv = deCostado ? [c.flip.ini[0] + c.flip.cuadro * c.flip.paso, c.flip.ini[1]] : [c.flip.ini[0], c.flip.ini[1] + c.flip.cuadro * c.flip.paso];
+    } else if (typeof uv === 'string' && Array.isArray(uvs)) uv = [0, 0];
     if (Array.isArray(uv) && Array.isArray(uvs)) { sx += uv[0]; sy += uv[1]; sw = uvs[0]; sh = uvs[1]; ns = 0; }
     var color = c.animColor || (c.b['#color'] !== undefined ? c.b['#color'] : c.p.color);
     var fuenteIm = im;
@@ -1423,7 +1481,7 @@ var Jui = (function () {
   }
   // todo lo que se dibuja, con su capa absoluta (la de los padres + la propia) y su recorte
   var lista = [];
-  function juntar(c, capa, clip, alfa) {
+  function juntar(c, capa, clip, alfa, lista) {
     if (!c.ver) return;
     // lo modal (un desplegable abierto) se dibuja entero, fuera del recorte del panel
     if (c.p.modal) clip = null;
@@ -1438,19 +1496,36 @@ var Jui = (function () {
       clip = clip ? [Math.max(clip[0], r[0]), Math.max(clip[1], r[1]), Math.min(clip[2], r[2]), Math.min(clip[3], r[3])] : r;
     }
     var aHijos = c.p.propagate_alpha ? al : alfa;
-    for (var i = 0; i < c.hijos.length; i++) juntar(c.hijos[i], cp, clip, aHijos);
+    for (var i = 0; i < c.hijos.length; i++) juntar(c.hijos[i], cp, clip, aHijos, lista);
   }
   J.dibujar = function (ctx) {
     var pan = J.arriba();
     if (!pan) return;
     revisarMantener();
+    dibujarPantalla(ctx, pan, lista);
+    sucio = false;
+  };
+  var listaSuelta = [];
+  J.dibujarSuelta = function (ctx, pan) { if (pan) dibujarPantalla(ctx, pan, listaSuelta); };
+  // tocar una pantalla suelta (los casilleros de la barra del HUD): true si había un botón ahí
+  J.tocarSuelta = function (pan, x, y) {
+    if (!pan) return false;
+    var l = [];
+    interactivos(pan.raiz, 0, null, l);
+    l.sort(function (a, b) { return b.capa - a.capa || b.orden - a.orden; });
+    for (var i = 0; i < l.length; i++) {
+      var c = l[i].c;
+      if (c.t === 'button' && x >= c.x && y >= c.y && x <= c.x + c.w && y <= c.y + c.h && habilitado(c)) { apretar(c); return true; }
+    }
+    return false;
+  };
+  function dibujarPantalla(ctx, pan, lista) {
     var ahora = performance.now();
     animarArbol(pan.raiz, ahora);
     // los bindings cambian cada cuadro (el texto de una barra de progreso, lo visible): se rearma
     armarPantalla(pan);
-    sucio = false;
     lista.length = 0;
-    juntar(pan.raiz, 0, null, 1);
+    juntar(pan.raiz, 0, null, 1, lista);
     lista.sort(function (a, b) { return a.capa - b.capa || a.orden - b.orden; });
     var k = J.escala;
     ctx.imageSmoothingEnabled = false;
@@ -1473,7 +1548,7 @@ var Jui = (function () {
       }
       if (e.clip) ctx.restore();
     }
-  };
+  }
   function animarArbol(c, ahora) {
     if (c.anims) animar(c, ahora);
     for (var i = 0; i < c.hijos.length; i++) {

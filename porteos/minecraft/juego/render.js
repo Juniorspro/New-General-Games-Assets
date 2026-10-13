@@ -431,6 +431,15 @@ var Render = (function () {
     var lejos = dist + 256;
     GL.perspectiva(proy, cam.fov, w / h, 0.05, lejos);
     GL.vista(vista, cam.yaw, cam.pitch);
+    // la cámara se ladea al recibir un golpe y al morir (EntityRenderer.hurtCameraEffect): un giro
+    // alrededor del eje de la mirada
+    if (cam.rol) {
+      var rolC = Math.cos(cam.rol), rolS = Math.sin(cam.rol);
+      for (var rk = 0; rk < 4; rk++) {
+        var r0 = vista[rk * 4], r1 = vista[rk * 4 + 1];
+        vista[rk * 4] = rolC * r0 - rolS * r1; vista[rk * 4 + 1] = rolS * r0 + rolC * r1;
+      }
+    }
     GL.mult(vp, proy, vista);
     calcularPlanos(vp);
 

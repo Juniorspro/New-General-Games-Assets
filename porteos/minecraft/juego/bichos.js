@@ -282,9 +282,9 @@ var Bichos = (function () {
       var dn = e.ataqueBase;
       var dano = Array.isArray(dn) ? dn[0] + Math.floor(Math.random() * (dn[1] - dn[0] + 1)) : (typeof dn === 'number' ? dn : (dn && dn.range_min) || 2);
       dano = Math.max(0, Math.round(dano * (mult || 1)));
-      if (B.dificultad === 'easy') dano = Math.max(1, Math.round(dano * 0.5)); else if (B.dificultad === 'hard') dano = Math.round(dano * 1.5);
+      // (la dificultad agranda o achica el golpe sólo contra el jugador: lo hace recibirDano)
       sonido(e, 'attack', 1);
-      if (o.esJugador) { if (B.golpear) B.golpear(o, dano, e); }
+      if (o.esJugador) { if (B.golpear) B.golpear(o, dano, e, 'mob'); }
       else herir(o, dano, 'entity_attack', e, (o.x - e.x) * 0.4, (o.z - e.z) * 0.4);
     },
     disparar: function (e, o) { disparar(e, o); },
@@ -429,6 +429,8 @@ var Bichos = (function () {
       var d2 = yo ? dist2(e, yo) : 0, T = B.TIPOS[e.tipo];
       if (!e.persiste && (d2 > (T.hostil ? 80 * 80 : 128 * 128) || !Mundo.cargado(e.x, e.z))) { lista.splice(i, 1); continue; }
       if (!e.persiste && T.hostil && d2 > 40 * 40 && Math.random() < 1 / 600) { lista.splice(i, 1); continue; }
+      // en pacífico los monstruos se van (EntityMob.onUpdate; el dragón no es un EntityMob)
+      if (B.dificultad === 'peaceful' && T.hostil && e.tipo !== 'ender_dragon') { lista.splice(i, 1); continue; }
       if (e.invulnerable > 0) { nacerWither(e); continue; }
       liquidos(e);
       e.quiereSaltar = false;
@@ -680,6 +682,9 @@ var Bichos = (function () {
     }
     return null;
   }
+  // con qué se murió el jugador (los mensajes death.attack.arrow, .fireball, .thrown)
+  var CAUSA_PROYECTIL = { arrow: 'projectile', small_fireball: 'fireball', fireball: 'fireball', dragon_fireball: 'fireball',
+    snowball: 'thrown', egg: 'thrown', thrown_trident: 'projectile' };
   function impacto(p, choco, i) {
     var hit = p.def.onHit || {};
     var o = choco.entidad;
@@ -689,7 +694,7 @@ var Bichos = (function () {
       // la bola de nieve sólo lastima al blaze
       if (id.filter && !(o.tipo && o.tipo === id.filter)) dano = 0;
       if (dano > 0) {
-        if (o.esJugador) { if (B.golpear && o.atacable) B.golpear(o, dano, p.dueno); }
+        if (o.esJugador) { if (B.golpear && o.atacable) B.golpear(o, dano, p.dueno || p, CAUSA_PROYECTIL[p.tipo] || 'mob'); }
         else herir(o, dano, 'projectile', p.dueno, id.knockback ? p.vx : 0, id.knockback ? p.vz : 0);
         if (id.catchFire && !o.esJugador && !o.sinFuego) o.quema = 100;
       }
@@ -697,7 +702,7 @@ var Bichos = (function () {
     var calavera = p.tipo === 'wither_skull' || p.tipo === 'wither_skull_dangerous';
     if (o && calavera && o !== p.dueno) {
       // EntityWitherSkull.onImpact: 8 de daño (y el wither se cura 5)
-      if (o.esJugador) { if (B.golpear && o.atacable) B.golpear(o, 8, p.dueno); }
+      if (o.esJugador) { if (B.golpear && o.atacable) B.golpear(o, 8, p.dueno || p, 'mob'); }
       else herir(o, 8, 'projectile', p.dueno);
       if (p.dueno && p.dueno.vida > 0 && p.dueno.muerte === 0) p.dueno.vida = Math.min(p.dueno.vidaMax, p.dueno.vida + 5);
     }
@@ -711,7 +716,7 @@ var Bichos = (function () {
       // la poción de la bruja: daño a todos alrededor
       [].concat(lista, jugadores).forEach(function (x) {
         if (dist2(x, p) < 16 && x !== p.dueno) {
-          if (x.esJugador) { if (B.golpear && x.atacable) B.golpear(x, 6, p.dueno); } else herir(x, 6, 'magic', p.dueno);
+          if (x.esJugador) { if (B.golpear && x.atacable) B.golpear(x, 6, p.dueno || p, 'magic'); } else herir(x, 6, 'magic', p.dueno);
         }
       });
       if (B.sonido) B.sonido('random.glass', p, 1, 1);
@@ -738,7 +743,7 @@ var Bichos = (function () {
         // no muerden al evocador ni a los suyos (EntityEvokerFangs.damage: isOnSameTeam)
         if (x === f.dueno || x.tipo === 'vex' || x.tipo === 'vindicator' || x.tipo === 'evocation_illager') return;
         if (Math.abs(x.x - f.x) < 1 && Math.abs(x.z - f.z) < 1 && x.y + (x.alto || 1.8) > f.y && x.y < f.y + 1.5) {
-          if (x.esJugador) { if (B.golpear && x.atacable) B.golpear(x, 6, f.dueno); } else herir(x, 6, 'magic', f.dueno);
+          if (x.esJugador) { if (B.golpear && x.atacable) B.golpear(x, 6, f.dueno || f, 'magic'); } else herir(x, 6, 'magic', f.dueno);
         }
       });
       if (B.sonido) B.sonido('mob.evocation_fangs.attack', f, 1, 1);
@@ -845,7 +850,7 @@ var Bichos = (function () {
         if (efectiva > 3) continue;
         grupo('bat', c);
       } else {
-        if (efectiva > 7 || bloque > 7) continue;
+        if (efectiva > 7 || bloque > 7 || B.dificultad === 'peaceful') continue;
         if (Mundo.bloque(c.x, c.y, c.z) !== 0 || Mundo.bloque(c.x, c.y + 1, c.z) !== 0) continue;
         var tipo = elegir(monstruosDe(c.bioma));
         // el slime del pantano: de noche y en la superficie
