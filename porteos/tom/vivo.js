@@ -18,38 +18,13 @@ export const A = {
   RejectGamesAnimation: 25, PlayHungryWithEnergyPotion: 26, StartFingerFollow: 27, Excited: 28,
   ShakeFoamOff: 29, WaterSplash: 30, GrowUp: 31, BirthdayParty: 32, OpenGift: 33, Wave: 34,
 };
-export const HAPPY = 0, SLEEPY = 1, DISCONNECTED = 2;                // TomMood
+import { HAPPY, SLEEPY, DISCONNECTED } from './logica.js';      // TomMood
+export { HAPPY, SLEEPY, DISCONNECTED };
 const LARGE = 0, MEDIUM = 1, SMALL = 2;                              // AnimationNames.Toms3Sizes
 const CLAMP = 8;                                                     // WrapMode.ClampForever
 const PRIORITY_LOW = 1000, PRIORITY_NORMAL = 2000;
 
 const lerp = (a, b, t) => (b - a) * Math.min(1, Math.max(0, t)) + a;   // BlendAnimation.lerp
-
-// ------------------------------------------------------------------------------------------------
-// MainGameLogic: los medidores (0 a 100) y lo que se deduce de ellos. Living = diversión, cocina =
-// comida, baño = inodoro, cuarto = sueño.
-export class Necesidades {
-  constructor({ fun = 100, food = 100, toilet = 100, sleepy = 100 } = {}) {
-    this.fun = fun; this.food = food; this.toilet = toilet; this.sleepy = sleepy;
-  }
-  get mustEat() { return this.food < 31; }
-  get mustGoToToilet() { return this.toilet < 31; }
-  get canGoToToilet() { return this.toilet < 61; }
-  get mustSleep() { return this.toilet >= 31 && this.sleepy < 31; }
-  get mustEatAnimationProbability() { return this.food < 31 ? ((30 - this.food) / 30) * 0.45 + 0.3 : 0; }
-  get mustSleepAnimationProbability() {
-    return this.toilet > 30 && this.sleepy < 31 ? ((30 - this.sleepy) / 30) * 0.35 + 0.1 : 0;
-  }
-  // TomState.Mood (DISCONNECTED_LIMIT = 60)
-  get mood() {
-    let r = DISCONNECTED;
-    if (this.toilet > 30) {
-      if (this.sleepy < 31) return SLEEPY;
-      r = HAPPY;
-    }
-    return this.fun > 59 ? r : DISCONNECTED;
-  }
-}
 
 // ------------------------------------------------------------------------------------------------
 // Los trackers (Outfit7.MyTalkingTom.Animations.AnimationTypes)
@@ -229,6 +204,23 @@ class AdditiveIdleAnimation extends AnimationTracker {
     const m = c.mood;
     const snd = m === HAPPY ? this.soundsH : m === SLEEPY ? this.soundsS : this.soundsD;
     if (snd) c.playSound(snd, 0, 0);
+  }
+}
+
+// AdditiveAnimation: la pose feliz y encima, aditiva, la reacción (eructo, mmm…)
+class AdditiveAnimation extends AnimationTracker {
+  play(time = 0) {
+    const c = this.ctl, s = this.animState = c.loadAnimationState(this.animName);
+    const base = c.loadAnimationState('happy' + c.animPostfix);
+    if (!s || !base) return;
+    base.layer = 1; base.wrapMode = CLAMP;
+    s.layer = 6; s.wrapMode = CLAMP; s.blendMode = ADDITIVE;
+    c.anim.stop();
+    c.anim.play(base.name, 0);
+    c.anim.play(s.name);
+    s.time = 0.06666667;
+    c.currentAnimation = this;
+    this.playSound(0);
   }
 }
 
@@ -551,6 +543,9 @@ export class ControladorTom {
     this.fidgetsAnimation = new MoodBlendAnimation(this, 'holdsCrotchFidgets' + this.SIZE);
     this.fidgetsAnimation.sounds = 'HoldsCrotchFidgets';
     this.moodChangeAnimation = new MoodChangeAnimation(this);
+    const reaccion = (n, snd) => { const a = new AdditiveAnimation(this, n); a.sounds = snd; return a; };
+    this.animReactionBurp = reaccion('reactionBurpA', 'ReactionBurp');
+    this.animReactionMmmm = reaccion('reactionMmmmA', 'ReactionMmmm');
   }
 
   isTomKnockedDown() {
@@ -851,10 +846,18 @@ class CommonAnimationState {
       s.play(0);
       s.animationFinishedAction = () => this.swipeFinished();
       s.animationInterruptedOrFinishedAction = (bien) => this.swipeFinishedOrInterrupted(bien);
+      if (c.logica.onPettingStart) c.logica.onPettingStart();
     } else s.doOneMoreLoop();
   }
-  swipeFinished() { }
-  swipeFinishedOrInterrupted(bien) { }
+  // con la diversión llena, a la tercera caricia eructa
+  swipeFinished() {
+    const c = this.ctl;
+    if (c.logica.funMeter > 99 && ++this.petting100PCountBurp > 2) {
+      c.animReactionBurp.play(0);
+      c.animReactionBurp.animationFinishedAction = () => { this.petting100PCountBurp = 0; };
+    }
+  }
+  swipeFinishedOrInterrupted(bien) { if (this.ctl.logica.onPettingEnd) this.ctl.logica.onPettingEnd(); }
 
   swipeBody() {
     const c = this.ctl, l = c.logica;

@@ -30,6 +30,20 @@ export const INICIAL = {
     'bedroom-picture-homey-violet', 'bedroom-wall-homey-diamond'],
 };
 
+// Dónde va Tom en cada cuarto (GetTomsPositionInScene de cada estado de animación del juego), según su
+// tamaño 0..8 (bebé 0-2, adolescente 3-5, adulto 6-8). En el living el cuarto y Tom ya calzan: el resto
+// se corre lo que difiere del living (x de Unity espejado).
+const X_LIVING = [0, 0.593, 1.285, -1.314, 0, 1.967, -5.476, -2.7, 0];
+export const TAMANO_DE = { s: 1, m: 4, l: 7 };
+export function posicionTom(cuarto, tamano) {
+  const y0 = -15.747, x0 = X_LIVING[tamano] || 0;
+  let x = x0, y = y0;
+  if (cuarto === 'kitchen') x = tamano < 3 ? 30 : tamano < 6 ? 21 : 6;
+  else if (cuarto === 'bedroom') x = [39, 39, 39, 24, 24, 24, 5.2, 1.96, 0][tamano];
+  else if (cuarto === 'bathroom') y = [-40, -40, -40, -34, -34, -34, -27.76, -27.76, -27.76][tamano];
+  return new THREE.Vector3(-(x - x0), y - y0, 0);
+}
+
 function mundo(o) {
   o.updateWorldMatrix(true, false);
   const p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
@@ -53,7 +67,46 @@ export class Cuarto {
     this.raiz.updateMatrixWorld(true);
     this.camaras = {};
     this.raiz.traverse((o) => { if (o.userData && o.userData.camara) this.camaras[o.name] = o; });
+    this.juntarEspacios();
     return this;
+  }
+
+  // El juego dibuja cada cuarto con varias cámaras corridas 500 unidades entre sí (fondo, Tom, primer
+  // plano: la mesa de la cocina, la colcha; las puertas del baño están del lado de Tom). Acá todo va
+  // al espacio del fondo: cada malla (y cada SLOT, que después recibe su mueble) se corre lo mismo
+  // que la cámara que la ve.
+  juntarEspacios() {
+    const bg = this.camaras.CAM_Background;
+    if (!bg) return;
+    const pos = (o) => mundo(o).p;
+    const pb = pos(bg);
+    const cams = Object.values(this.camaras).filter((c) => !c.userData.camara.orto).map((c) => ({ c, p: pos(c) }));
+    const region = (x) => {
+      let mejor = null;
+      for (const k of cams) if (!mejor || Math.abs(x - k.p.x) < Math.abs(x - mejor.p.x)) mejor = k;
+      return mejor && Math.abs(x - mejor.p.x) < 250 ? mejor : null;
+    };
+    const mover = new Map();
+    const caja = new THREE.Box3(), centro = new THREE.Vector3();
+    this.raiz.updateMatrixWorld(true);
+    this.raiz.traverse((o) => {
+      let x;
+      if (o.isMesh) { caja.setFromObject(o); caja.getCenter(centro); x = centro.x; }
+      else if (/^SLOT_/.test(o.name) && !/anchor$/.test(o.name)) x = pos(o).x;
+      else return;
+      const r = region(x);
+      if (r && r.c !== bg) mover.set(o, pb.clone().sub(r.p));
+    });
+    const inv = new THREE.Matrix4();
+    for (const [o, d] of mover) {
+      let a = o.parent, ya = false;
+      while (a) { if (mover.has(a)) { ya = true; break; } a = a.parent; }
+      if (ya) continue;
+      const w = pos(o).add(d);
+      inv.copy(o.parent.matrixWorld).invert();
+      o.position.copy(w.applyMatrix4(inv));
+      o.updateMatrixWorld(true);
+    }
   }
 
   // La cámara del juego para este cuarto (la del fondo, que ve el cuarto; Tom se corre hasta ahí).

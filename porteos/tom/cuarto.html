@@ -17,137 +17,24 @@
 <canvas id="lienzo"></canvas>
 <div id="ui"></div>
 <script type="module">
-import * as THREE from './vendor/three.module.min.js';
-import { Unity } from './unity3.js';
-import { Cuarto, INICIAL, CUARTO_DE } from './casa.js';
-import { Animaciones, Reproductor, AnimacionUnity } from './anim.js';
-import { ControladorTom, ToquesTom, Necesidades } from './vivo.js';
-import { Escucha } from './escucha.js';
-import { cargarTom, vestir, Retarget, Zonas } from './tom.js';
-import { Sonido } from './sonido.js';
-import { UI, cargarFuentes } from './ui.js';
-import { Animadores } from './animui.js';
-import { Hud, registrarMateriales } from './hud.js';
+import { Juego } from './juego.js';
 
+// cuarto.html?tam=s|m|l&cuarto=living|kitchen|bathroom|bedroom&mic=0&ui=0&medidores=a,b,c,d&clip=…&t=…
 const q = new URLSearchParams(location.search);
-const DATOS = q.get('datos') || 'datos/';
-const cuartoCat = q.get('cuarto') || 'living';          // living | kitchen | bathroom | bedroom
-const lienzo = document.getElementById('lienzo');
-const ren = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true });
-ren.outputColorSpace = THREE.LinearSRGBColorSpace;
-ren.setPixelRatio(Math.min(devicePixelRatio, 2));
-const escena = new THREE.Scene();
-
-const [shaders, indice, bin, pieles, retarget, ropero] = await Promise.all([
-  fetch(DATOS + 'casa/shaders.json').then((r) => r.json()),
-  fetch(DATOS + 'tom/anim.json').then((r) => r.json()),
-  fetch(DATOS + 'tom/anim.bin').then((r) => r.arrayBuffer()),
-  fetch(DATOS + 'tom/pieles.json').then((r) => r.json()),
-  fetch(DATOS + 'tom/retarget.json').then((r) => r.json()),
-  fetch('ropero.json').then((r) => r.json()),
-]);
-const u = new Unity(THREE, shaders, DATOS + 'casa/tex/');
-const cuarto = await new Cuarto(u, DATOS + 'casa/').cargar(CUARTO_DE[cuartoCat]);
-escena.add(cuarto.raiz);
-for (const item of INICIAL[cuartoCat]) await cuarto.poner(item);
-const cam = cuarto.camara(1);
-
-const tam = q.get('tam') || 's';
-const tom = await cargarTom(DATOS + 'tom/', tam);
-vestir(tom, DATOS + 'tom/pieles/', pieles, ropero, { fur: q.get('fur') || 'tom-fur-default', cloth: q.get('cloth') });
-tom.raiz.position.copy(cuarto.corrimientoTom);
-tom.raiz.traverse((o) => { if (o.isMesh) o.renderOrder = 2500; });   // después del cuarto, como CAM_Tom
-escena.add(tom.raiz);
-const anims = new Animaciones(indice, bin);
-const rt = new Retarget(tom.raiz, retarget[tam]);
-const zonas = new Zonas(tom.raiz, retarget[tam].zonas);
-const sonido = new Sonido(DATOS + 'sonido/', await fetch(DATOS + 'sonido/eventos.json').then((r) => r.json()));
-// los medidores (living = diversión, cocina = comida, baño = inodoro, cuarto = sueño)
-const med = (q.get('medidores') || '90,80,70,85').split(',').map(Number);
-const necesidades = new Necesidades({ fun: med[0], food: med[1], toilet: med[2], sleepy: med[3] });
-// ?clip=nombre: un clip suelto (para mirar animaciones); si no, Tom vivo
-const fijo = q.has('t') ? parseFloat(q.get('t')) : null;
-let rep = null, anim = null, ctl = null, toques = null, escucha = null;
-if (q.has('clip')) {
-  rep = new Reproductor(anims, tom.raiz);
-  rep.despues = (c, tn, dt) => rt.aplicar(c, tn, dt);
-  rep.play(q.get('clip'), { bucle: true });
-  if (fijo !== null) rep.update(fijo);
-} else {
-  anim = new AnimacionUnity(anims, tom.raiz);
-  ctl = new ControladorTom({ anim, raiz: tom.raiz, tam, sonido, necesidades, zonas, THREE, cuarto: cuartoCat });
-  const rayc = new THREE.Raycaster(), v2 = new THREE.Vector2();
-  const rayo = (x, y) => {
-    const r = lienzo.getBoundingClientRect();
-    v2.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
-    rayc.setFromCamera(v2, cam);
-    return rayc.ray;
-  };
-  toques = new ToquesTom(ctl, zonas, rayo, () => innerWidth, () => innerHeight);
-  if (q.get('mic') !== '0') {
-    escucha = new Escucha(sonido, { cansado: () => necesidades.mustSleep });
-    ctl.conectarEscucha(escucha);
-  }
-}
-lienzo.addEventListener('pointerdown', (e) => {
-  sonido.desbloquear();
-  if (escucha && !escucha.disponible) escucha.pedirMicrofono();
-  if (toques) { lienzo.setPointerCapture(e.pointerId); toques.bajar(e.pointerId, e.clientX, e.clientY); }
-  window.ultimoToque = toques && toques.dedos.get(e.pointerId) ? toques.dedos.get(e.pointerId).nombre : null;
-});
-lienzo.addEventListener('pointermove', (e) => { if (toques) toques.mover(e.pointerId, e.clientX, e.clientY); });
-lienzo.addEventListener('pointerup', (e) => { if (toques) toques.soltar(e.pointerId); });
-lienzo.addEventListener('pointercancel', (e) => { if (toques) toques.dedos.delete(e.pointerId); });
-
-function medir() {
-  const w = innerWidth, h = innerHeight;
-  ren.setSize(w, h, false);
-  cam.aspect = w / h;
-  cam.updateProjectionMatrix();
-}
-addEventListener('resize', medir);
-medir();
-const reloj = new THREE.Clock();
-let t = 0;
-function cuadro() {
-  const dt = Math.min(reloj.getDelta(), 0.1);
-  t += dt;
-  if (ctl) {
-    ctl.update(dt);                      // Update del juego (decide qué animación suena)
-    anim.update(dt);                     // el componente Animation: avanza, mezcla y mueve los huesos
-    const p = ctl.current && ctl.current.principal;
-    rt.aplicar(p ? p.name : null, p && p.length ? p.time / p.length : 0, dt, (n, b) => anim.escribio(n, b));
-    ctl.lateUpdate();                    // LateUpdate (el respingo de la cabeza)
-  } else if (fijo === null) rep.update(dt);
-  if (window.estado && window.estado.hud) window.estado.hud.cuadro(dt);
-  if (window.estado && window.estado.ui) window.estado.ui.cuadro(dt);
-  u.actualizar(t, dt, lienzo.width, lienzo.height, cam);
-  ren.render(escena, cam);
-  requestAnimationFrame(cuadro);
-}
-cuadro();
-// la interfaz principal encima
-const [sprites, fuentes, textos, principal, controladores, clips] = await Promise.all([
-  fetch(DATOS + 'ui/sprites.json').then((r) => r.json()),
-  fetch(DATOS + 'ui/fuentes.json').then((r) => r.json()),
-  fetch(DATOS + 'datos/textos.json').then((r) => r.json()),
-  fetch(DATOS + 'ui/escenas/principal.json').then((r) => r.json()),
-  fetch(DATOS + 'ui/controladores.json').then((r) => r.json()),
-  fetch(DATOS + 'ui/clips.json').then((r) => r.json()),
-]);
-await cargarFuentes(DATOS + 'ui/', fuentes);
-const ui = new UI(document.getElementById('ui'), DATOS + 'ui/', sprites, textos, 'es');
-registrarMateriales(ui);
-ui.animadores = new Animadores(ui, controladores, clips);
-let pant = null, hud = null;
-if (q.get('ui') !== '0') {
-  pant = ui.armar(principal);
-  hud = new Hud(ui, pant);
-  hud.cuarto(cuartoCat);
-  ['living', 'kitchen', 'bathroom', 'bedroom'].forEach((k, i) => hud.medidores[k] && hud.medidores[k].ponerProgreso(med[i], false));
-}
-addEventListener('resize', () => ui.layout());
-window.estado = { escena, cam, cuarto, tom, u, ui, pant, hud, zonas, sonido, ctl, anim, toques, escucha, necesidades };
+const op = {
+  datos: q.get('datos') || 'datos/', tam: q.get('tam') || 's', cuarto: q.get('cuarto') || 'living',
+  mic: q.get('mic') !== '0', ui: q.get('ui') !== '0', fur: q.get('fur'), cloth: q.get('cloth'),
+  medidores: q.has('medidores') ? q.get('medidores').split(',').map(Number) : null,
+  clip: q.get('clip'), t: q.has('t') ? parseFloat(q.get('t')) : undefined,
+};
+const j = await new Juego(document.getElementById('lienzo'), document.getElementById('ui'), op).cargar();
+// para las pruebas
+window.juego = j;
+window.estado = {
+  get escena() { return j.escena; }, get cam() { return j.cam; }, get cuarto() { return j.cuartoActual; },
+  tom: j.tom, u: j.u, get ui() { return j.ui; }, get pant() { return j.pant; }, get hud() { return j.hud; },
+  zonas: j.zonas, sonido: j.sonido, ctl: j.ctl, anim: j.anim, toques: j.toques, escucha: j.escucha, necesidades: j.necesidades,
+};
 window.listo = true;
 </script>
 </body>

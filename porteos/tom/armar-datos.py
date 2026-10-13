@@ -683,8 +683,16 @@ def datos_juego(d, salida):
         cm[x['Id']] = {'sprite': s and s.get('sprite'), 'ofs': [x['Offset']['x'], x['Offset']['y']]}
     escribir(os.path.join(base, 'comida.json'), json.dumps(cm, ensure_ascii=False, separators=(',', ':')).encode())
     escribir(os.path.join(base, 'minijuegos.json'), json.dumps(minijuegos, ensure_ascii=False, indent=0).encode())
-    print(f'  textos {len(textos)}, catálogo {len(catalogo)}, comida {len(cm)}, minijuegos {len(minijuegos)}',
-          file=sys.stderr)
+    # las monedas (MttCurrency: id y saldo inicial)
+    monedas = {}
+    for f in d.b.files.values():
+        for o in getattr(f, 'objects', {}).values():
+            if o.type.name == 'MonoBehaviour' and d.clase(o) == 'MttCurrency':
+                x = o.read_typetree()
+                monedas[x['id']] = x['initialBalance']
+    escribir(os.path.join(base, 'monedas.json'), json.dumps(monedas, sort_keys=True).encode())
+    print(f'  textos {len(textos)}, catálogo {len(catalogo)}, comida {len(cm)}, minijuegos {len(minijuegos)},'
+          f' monedas {monedas}', file=sys.stderr)
 
 
 # --------------------------------------------------------------------------- sonido
