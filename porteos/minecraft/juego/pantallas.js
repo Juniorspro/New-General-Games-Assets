@@ -374,6 +374,8 @@ var Pantallas = (function () {
     G.pantallaAbierta(nombre);
     return pan;
   }
+  // otra pantalla de la 1.2 manejada desde afuera (el comercio): su referencia y su controlador
+  P.registrar = function (nombre, ref, fn) { REFS[nombre] = ref; CTRL[nombre] = fn; };
   P.ir = function (nombre, datos) {
     var c = CTRL[nombre];
     if (!c) return null;

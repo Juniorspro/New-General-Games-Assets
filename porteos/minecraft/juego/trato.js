@@ -4,12 +4,12 @@
 // de la vaca hongo, ensillar el cerdo, prender el creeper, el cofre del burro...), teñir
 // (is_dyeable), curar (healable), hacer crecer a las crías (ageable), enamorar para criar
 // (breedable), domesticar (tameable), el temple de los caballos (tamemount), sentar y parar
-// (sittable), montar (rideable) y comerciar (trade_table).
+// (sittable), montar (rideable) y comerciar (trade_table). Antes que todo, la correa (leashable).
 var Trato = (function () {
   'use strict';
   var T = {};
   // lo que da la página: gastar(n), cambiar(id, m), desgastar(n), sonar(e, evento), chispas(e, tipo),
-  // soltar(cosas, x, y, z), xp(x, y, z, n), montar(e), comerciar(e), nombre()
+  // soltar(cosas, x, y, z), xp(x, y, z, n), montar(e), comerciar(e), nombre(), atar(e), desatar(e)
   var G = null;
   T.iniciar = function (g) { G = g; };
   function lista(v) { return v === undefined || v === null ? [] : Array.isArray(v) ? v : [v]; }
@@ -174,6 +174,15 @@ var Trato = (function () {
     if (r.crouching_skip_interact && G.agachado && G.agachado()) return null;
     return { texto: r.interact_text || 'action.interact.mount', hacer: function () { G.montar(e, null); } };
   }
+  // la correa (leashable): con una en la mano se lo ata; al que está atado (a uno o a un poste) se lo
+  // desata tocándolo, tenga lo que tenga en la mano
+  function correa(e, it) {
+    if (!e.c['minecraft:leashable']) return null;
+    if (e.atado) return { texto: 'action.interact.unleash', hacer: function () { G.desatar(e); } };
+    if (it && it.id === CORREA && !e.jinete) return { texto: 'action.interact.leash', hacer: function () { G.atar(e); } };
+    return null;
+  }
+  var CORREA = 420;
   // comerciar con los aldeanos adultos que tienen oficio
   function comerciar(e) {
     var t = e.c['minecraft:trade_table'];
@@ -184,7 +193,7 @@ var Trato = (function () {
   // lo que se puede hacer con un bicho (null: nada); jug: { x, y, z, creativo }
   T.opcion = function (e, it, jug) {
     if (!e || e.muerte > 0 || !e.c) return null;
-    var r = interact(e, it, jug);
+    var r = correa(e, it) || interact(e, it, jug);
     // (el caballo sin domar: la comida le sube el temple, además de curarlo)
     if (!r && it && e.c['minecraft:tamemount'] && !e.domado) r = templar(e, it);
     if (!r && it) r = equipar(e, it) || tenir(e, it, jug) || curar(e, it) || crecer(e, it) || enamorar(e, it) || domar(e, it);

@@ -272,6 +272,7 @@
     imgs.grietas = [];
     for (i = 0; i < 10; i++) imgs.grietas.push(await cargarImagen('datos/grieta' + i + '.png'));
     imgs.orbe = await cargarImagen('datos/orbe.png').catch(function () { return null; });
+    imgs.nudo = await cargarImagen('datos/nudo.png').catch(function () { return null; });
     var pano = [];
     for (i = 0; i < 6; i++) pano.push(await cargarImagen('datos/panorama' + i + '.webp'));
     // las texturas de los bichos y los jugadores
@@ -294,6 +295,9 @@
     Muneco.preparar(datos.bichos, imgs.bichos);
     B.iniciar(datos.entidades);
     O.prepararHuevos(B.huevos());
+    // el comercio con los aldeanos: sus tablas y la pantalla de la 1.2
+    Comercio.preparar(datos.entidades && datos.entidades.comercio);
+    Comercio.registrar();
     ajustarTamano();
     // los shaders de Tito se compilan recién cuando se eligen (en un teléfono flojo tardan)
     Render.iniciar(lienzo, datos, imgs, { shaders: opciones.shaders === true, sofisticados: opciones.sofisticados });
@@ -901,6 +905,23 @@
       Sonido.tocar((m & 4) ? 'random.door_close' : 'random.door_open', 1, 0.9 + Math.random() * 0.1, h.x + 0.5, h.y + 0.5, h.z + 0.5);
       return true;
     }
+    // el poste: los atados al jugador (a menos de 7) pasan a un nudo en el cerco; sin ninguno, tocar
+    // el nudo los desata (ItemLead.attachToFence y EntityLeashKnot.processInitialInteract)
+    if (POSTE[id] && partida.local) {
+      var aca = { x: h.x, y: h.y, z: h.z }, cx = h.x + 0.5, cy = h.y + 0.5, cz = h.z + 0.5;
+      var mios = B.atadosA('j').filter(function (e) { return Math.abs(e.x - cx) < 7 && Math.abs(e.y - cy) < 7 && Math.abs(e.z - cz) < 7; });
+      if (mios.length) {
+        mios.forEach(function (e) { e.atado = aca; });
+        Sonido.tocar('leashknot.place', 1, 1, cx, cy, cz);
+        return true;
+      }
+      var alli = B.atadosA(aca);
+      if (alli.length) {
+        alli.forEach(function (e) { B.desatar(e, !partida.creativo); });
+        Sonido.tocar('leashknot.break', 1, 1, cx, cy, cz);
+        return true;
+      }
+    }
     // los portones de cerca se abren y se cierran (BlockFenceGate: el 4 es "abierto")
     if (id === 107 || (id >= 183 && id <= 187)) {
       var mg = Mundo.meta(h.x, h.y, h.z);
@@ -1275,13 +1296,43 @@
     nombre: function () { return opciones.nombre || 'Steve'; },
     agachado: function () { return J.agachado; },
     montar: function (e, tm) { montar(e, tm); },
-    comerciar: function (e, t) { abrirComercio(e, t); }
+    comerciar: function (e, t) { abrirComercio(e, t); },
+    // la correa: atarlo gasta una; desatarlo la devuelve al piso (en creativo no)
+    atar: function (e) { if (B.atar(e, 'j') && supervivencia()) { Inventario.gastar(inv, I.juego.elegido, 1); I.sucio(); } },
+    desatar: function (e) { B.desatar(e, !partida.creativo); }
   });
+  // la otra punta de la correa: el jugador (sus pies) o el nudo del poste, que tiene que seguir siendo
+  // un cerco (si se rompe, se sueltan); un poste que no está cargado aguanta
+  B.puntaCorrea = function (a) {
+    if (a === 'j') return muerto || !partida ? null : { x: J.x, y: J.y, z: J.z };
+    var b = Mundo.bloque(a.x, a.y, a.z);
+    return b === -1 || POSTE[b] ? { x: a.x + 0.5, y: a.y + 0.5, z: a.z + 0.5 } : null;
+  };
+  B.alSoltarCorrea = function (e) { if (partida && partida.local) Tirados.cosa(Inventario.cosa(420, 0, 1), e.x, e.y + e.alto * 0.5, e.z, 0, 0.1, 0, 10); };
   B.corazones = function (e) { if (opciones.particulas) Render.chispas(e.x, e.y + e.alto + 0.2, e.z, [1, 0.25, 0.35], 2); };
   B.ponerHuevo = function (e, nombre) {
     var id = Botin.numero(nombre);
     if (id !== undefined && partida && partida.local) Tirados.cosa(Inventario.cosa(id, 0, 1), e.x, e.y + 0.2, e.z, 0, 0.1, 0, 10);
   };
+  // las correas que se ven: de cada atado hasta la mano del jugador (RenderLiving.renderLeash: 0,7 a
+  // la derecha, 0,5 adelante y a 0,7 de los ojos) o hasta el nudo del poste
+  var POSTE = { 85: 1, 113: 1 }, correasDibujo = [];
+  function correasParaDibujar(ents) {
+    correasDibujo.length = 0;
+    for (var i = 0; i < ents.length; i++) {
+      var d = ents[i], e = d.ref;
+      if (!e || !e.atado) continue;
+      if (e.atado === 'j') {
+        var cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), pie = cam.y - 1.62;
+        correasDibujo.push({ d: d, x: cam.x + cy * 0.7 + sy * 0.5 * cp, y: pie + 1.62 * 0.7 - sp * 0.5 - 0.25, z: cam.z + sy * 0.7 - cy * 0.5 * cp });
+      } else {
+        // (el nudo: EntityLeashKnot.getEyeHeight es -0,0625)
+        var a = e.atado;
+        correasDibujo.push({ d: d, x: a.x + 0.5, y: a.y + 0.5 - 0.0625 * 0.7 + 0.25, z: a.z + 0.5, nudo: [a.x, a.y, a.z] });
+      }
+    }
+    return correasDibujo;
+  }
   function buscarInteraccion() {
     var antes = I.juego.interaccion, op = null, m = null;
     if (partida && partida.local && !muerto && !montado && I.pantalla === 'juego') {
@@ -1315,7 +1366,17 @@
   // (tamemount) a veces se deja según su temple y si no tira al jugador (EntityAIRunAroundLikeCrazy)
   // ------------------------------------------------------------------------------------------
   var montado = null;
-  function abrirComercio(e, t) { if (window.Comercio) Comercio.abrir(e, t); }
+  function abrirComercio(e, t) { Comercio.abrir(e, t); }
+  Comercio.iniciar({
+    inventario: function () { return inv; },
+    tirarObjeto: function (c) { tirarObjeto(c); },
+    xp: function (n) { if (partida && partida.local) Tirados.orbes(J.x, J.y + 0.5, J.z, n); },
+    sonar: function (e, ev) { B.sonar(e, ev, 1, null); },
+    abrir: function () { I.soltarTodo(); I.ir('jui'); if (document.pointerLockElement) document.exitPointerLock(); },
+    cerrar: function () { Pantallas.vaciar(); I.ir('juego'); I.sucio(); },
+    creativo: function () { return !!(partida && partida.creativo); },
+    inventarioCambio: function () { I.sucio(); }
+  });
   function montar(e, tm) {
     if (montado || !e || e.muerte > 0) return;
     montado = { e: e, domando: tm && !e.domado ? tm : null, carga: 0, cargando: false, impulso: 0 };
@@ -2120,6 +2181,7 @@
     // lo que se dibuja además del mundo: los bichos y los otros jugadores (con su nombre arriba)
     var ents = B.paraDibujar(alfa), nombres = [];
     mundo.tirados = Tirados.lista; mundo.alfa = alfa; mundo.tnts = tnts;
+    mundo.correas = correasParaDibujar(ents);
     if (partida && !partida.local) {
       var tam = I.tam();
       Red.remotos.forEach(function (j) {

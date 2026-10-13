@@ -478,7 +478,14 @@ var Jui = (function () {
   }
   // la colección y el lugar de un control que está en una grilla: { col, i } o null
   J.coleccionDe = function (c) {
-    for (var q = c; q; q = q.padre) if (q.itemDe !== undefined) return { col: q.itemDe, i: q.indice };
+    for (var q = c; q; q = q.padre) if (q.itemDe !== undefined) {
+      // una grilla sin "collection_name" con sus elementos escritos (la de compra del comercio):
+      // ahí cada casillero dice el suyo con "$item_collection_name" (arriba lo que pide el
+      // aldeano, abajo dónde se pone), y el índice es su lugar en la grilla
+      var col = q.itemDe;
+      if (!col && c.s && typeof c.s['$item_collection_name'] === 'string') col = c.s['$item_collection_name'];
+      return { col: col, i: q.indice };
+    }
     return null;
   };
   function pedirColeccion(c, col, nombre) {
@@ -1049,12 +1056,13 @@ var Jui = (function () {
     }
     if (maxS) {
       var mxw = sinMaxX ? Infinity : limite(tamExpr(maxS[0]), pw, ph, w, h, extL && extL[0], Infinity);
-      var mxh = sinMaxY ? Infinity : limite(tamExpr(maxS[1]), pw, ph, w, h, extL && extL[1], Infinity);
+      // (el alto, en % del alto del padre)
+      var mxh = sinMaxY ? Infinity : limite(tamExpr(maxS[1]), ph, ph, w, h, extL && extL[1], Infinity);
       if (w > mxw) w = mxw;
       if (h > mxh) h = mxh;
     }
     if (minS) {
-      var mnw = limite(tamExpr(minS[0]), pw, ph, w, h, extL && extL[0], 0), mnh = limite(tamExpr(minS[1]), pw, ph, w, h, extL && extL[1], 0);
+      var mnw = limite(tamExpr(minS[0]), pw, ph, w, h, extL && extL[0], 0), mnh = limite(tamExpr(minS[1]), ph, ph, w, h, extL && extL[1], 0);
       if (w < mnw) w = mnw;
       if (h < mnh) h = mnh;
     }

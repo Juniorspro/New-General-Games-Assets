@@ -435,6 +435,7 @@ var Bichos = (function () {
       if (e.golpe > 0) { e.golpe += 0.15; if (e.golpe >= 1) e.golpe = 0; }
       // muriendo: se da vuelta en un segundo y se va en una nube
       if (e.muerte > 0) {
+        if (e.atado) B.desatar(e, true);
         e.muerte += 0.05;
         if (e.muerte >= 1) { lista.splice(i, 1); morirDel_todo(e); continue; }
         e.vy -= 0.08; mover(e, 0, e.vy, 0);
@@ -465,7 +466,7 @@ var Bichos = (function () {
       pasoEfectosBicho(e);
       if (e.muerte > 0) continue;
       if (e.control) conducir(e, e.control);
-      else Conducta.paso(e, ctx);
+      else if (!(e.atado && correa(e))) Conducta.paso(e, ctx);
       if (!lista[i] || lista[i] !== e) continue;        // explotó
       fisica(e);
       danos(e);
@@ -670,6 +671,47 @@ var Bichos = (function () {
   B.duenoAtaco = function (victima) {
     if (!victima || !victima.tipo || victima.dueno === B.nombreLocal) return;
     lista.forEach(function (e) { if (e.dueno === B.nombreLocal && !e.sentado && e.c['minecraft:behavior.owner_hurt_target'] && e !== victima) Conducta.tomarObjetivo(e, victima, ctx); });
+  };
+
+  // ------------------------------------------------------------------------------------------
+  // La correa (minecraft:leashable): atado al jugador ('j') o a un poste ({ x, y, z } del cerco).
+  // Más lejos que soft_distance camina hacia la otra punta, más que hard_distance además lo
+  // arrastra y más que max_distance se corta y la correa queda en el piso
+  // (EntityCreature.updateLeashedState, con las distancias del behavior pack)
+  // ------------------------------------------------------------------------------------------
+  B.puntaCorrea = null;      // (de la página) dónde está la otra punta de lo que dice e.atado: { x, y, z } o null
+  B.alSoltarCorrea = null;   // (de la página) la correa que queda en el piso
+  B.atar = function (e, a) {
+    var l = e.c['minecraft:leashable'];
+    if (!l || e.muerte > 0) return false;
+    e.atado = a; e.persiste = true;
+    if (l.on_leash) Conducta.disparar(e, l.on_leash, null, null);
+    return true;
+  };
+  B.desatar = function (e, soltar) {
+    if (!e.atado) return;
+    var l = e.c['minecraft:leashable'];
+    e.atado = null;
+    if (l && l.on_unleash) Conducta.disparar(e, l.on_unleash, null, null);
+    if (soltar && B.alSoltarCorrea) B.alSoltarCorrea(e);
+  };
+  // true: esta vez lo mueve la correa (no su conducta)
+  function correa(e) {
+    var l = e.c['minecraft:leashable'], p = l && B.puntaCorrea ? B.puntaCorrea(e.atado) : null;
+    if (!p) { B.desatar(e, true); return false; }
+    var dx = p.x - e.x, dy = p.y - e.y, dz = p.z - e.z, f = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (f > (l.max_distance || 10)) { B.desatar(e, true); return false; }
+    if (e.sentado || f <= (l.soft_distance || 4)) return false;
+    if (f > (l.hard_distance || 6)) {
+      var ux = dx / f, uy = dy / f, uz = dz / f;
+      e.vx += ux * Math.abs(ux) * 0.4; e.vy += uy * Math.abs(uy) * 0.4; e.vz += uz * Math.abs(uz) * 0.4;
+    }
+    e.objetivo = null; e.destino = null;
+    if (e.vuela) ctx.volarA(e, p, e.velBase * (e.multVel || 1)); else ctx.irA(e, p, e.velBase * (e.multVel || 1));
+    return true;
+  }
+  B.atadosA = function (a) {
+    return lista.filter(function (e) { return e.atado && (e.atado === a || (a !== 'j' && e.atado !== 'j' && e.atado.x === a.x && e.atado.y === a.y && e.atado.z === a.z)); });
   };
 
   // ------------------------------------------------------------------------------------------
@@ -1213,7 +1255,8 @@ var Bichos = (function () {
       .map(function (e) {
         var r = [e.tipo, +e.x.toFixed(2), +e.y.toFixed(2), +e.z.toFixed(2), e.grupos, Math.round(e.vida)], o = {};
         // lo que no sale de los grupos: el dueño, sentado, el temple, el color que le dieron, la
-        // variante, los efectos, la espera para criar y lo que lleva (montura, cofre)
+        // variante, los efectos, la espera para criar, lo que lleva (montura, cofre), lo que vende
+        // un aldeano (su nivel y cuánto se usó cada oferta) y la correa
         if (e.dueno) o.d = e.dueno;
         if (e.sentado) o.s = 1;
         if (e.temple) o.t = e.temple;
@@ -1223,6 +1266,8 @@ var Bichos = (function () {
         if (e.esperaCria > 0) o.e = e.esperaCria;
         if (e.efectos && e.efectos.lista.length) o.f = Efectos.guardar(e.efectos);
         if (e.equipo) o.q = e.equipo;
+        if (e.comercio) o.m = e.comercio;
+        if (e.atado) o.a = e.atado === 'j' ? 'j' : [e.atado.x, e.atado.y, e.atado.z];
         if (Object.keys(o).length) r.push(o);
         return r;
       });
@@ -1243,6 +1288,8 @@ var Bichos = (function () {
       if (o.e) e.esperaCria = o.e;
       if (o.f) e.efectos = Efectos.cargar(o.f);
       if (o.q) e.equipo = o.q;
+      if (o.m) e.comercio = o.m;
+      if (o.a) { e.atado = o.a === 'j' ? 'j' : { x: o.a[0], y: o.a[1], z: o.a[2] }; e.persiste = true; }
     });
   };
   return B;

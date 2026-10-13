@@ -572,6 +572,13 @@ var Conducta = (function () {
     sigue: function (e) { return !!e.sentado; },
     paso: function (e, p, ctx) { ctx.frenar(e); e.objetivo = null; }
   };
+  // comerciando: quieto y mirando al que comercia (EntityAITradePlayer y EntityAILookAtTradePlayer)
+  META.trade_with_player = {
+    mueve: true,
+    puede: function (e) { return !!e.comerciando; },
+    sigue: function (e) { return !!e.comerciando; },
+    paso: function (e, p, ctx) { ctx.frenar(e); e.objetivo = null; var j = ctx.jugadorCerca(e, 8); if (j) ctx.mirarA(e, j, 0.3); }
+  };
   // el lobo mira al que tiene un hueso (EntityAIBeg)
   META.beg = {
     mueve: false, siempre: true,

@@ -73,12 +73,35 @@ APK de Craftsman PTGI) como opción al empezar, **servidores** para jugar con ot
   arriba a la derecha con las burbujas debajo, la barra de experiencia con el nivel sobre la barra
   rápida y su botón de tres puntos, el nombre de lo elegido que se desvanece, el chat y el ícono de
   guardado; pausa y chat arriba al medio. En creativo, sólo la barra (como el juego);
+- **los efectos** de la 1.2 (los 25, con las cuentas de MobEffect): las pociones para tomar, las
+  arrojadizas y las persistentes (las 37 de la 1.2, con su color), la leche que los saca, la comida
+  con efectos (la manzana dorada y la encantada, el pescado globo, la carne podrida, la araña), los
+  íconos a la derecha (tocarlos muestra la lista con lo que falta), los corazones de colores
+  (veneno verde, wither negro, absorción dorados), la visión nocturna, la ceguera y la náusea; los
+  bichos también los reciben (los muertos vivos al revés con la curación y el daño);
+- **usar objetos**: los baldes (agua y lava, levantar y volcar, ordeñar), el encendedor (fuego que
+  se esparce y quema lo que arde), la azada, el polvo de hueso (crecer cultivos, retoños que se
+  hacen árbol y pasto con flores), las tijeras, las botellas, ponerse la armadura, los portones, la
+  torta, la **cama** (dormir pasa la noche y es donde se reaparece) y la **TNT** (la mecha, la
+  explosión del juego con la resistencia de cada bloque y la reacción en cadena). El mundo vive solo
+  como en la 1.2: los cultivos crecen, los retoños se hacen árboles, las hojas sin tronco se caen,
+  el fuego se esparce y se apaga, la tierra arada se seca;
+- **el arco** (se tensa manteniendo, con la fuerza y el daño del juego y golpes críticos; la flecha
+  queda clavada y se levanta) y **lo que se tira**: bolas de nieve, huevos (a veces salen pollitos),
+  la perla de ender, la botella de experiencia y las pociones arrojadizas;
+- **tratar con los bichos** con el botón de interactuar de la 1.2 y el texto de cada cosa: ordeñar,
+  esquilar, el guiso de la vaca hongo, teñir ovejas y collares, curar, hacer crecer a las crías,
+  **criar** (enamorados con corazones, la cría y la experiencia), **domesticar** lobos, gatos y
+  loros (el lobo se sienta, sigue al dueño y lo defiende), **montar** (el cerdo con montura y la
+  zanahoria con palo, el caballo que hay que amansar, con el salto que se carga), la **correa**
+  (sigue, se ata a un poste, se corta de lejos) y **comerciar** con los aldeanos en la pantalla de
+  la 1.2 (las ofertas de cada oficio de `trading/*.json`, que se abren por niveles y se agotan);
 - el mundo infinito con biomas, cuevas, minerales y árboles, día y noche, agua y lava que corren,
   los controles táctiles de MCPE, partículas, los sonidos del juego.
 
-Siempre acostado: con el teléfono parado se gira 90° solo (también adentro de Rezona). Falta para
-la supervivencia completa: los efectos (pociones, la manzana dorada), usar objetos (arco, baldes,
-encendedor, azada, cama...) y tratar con los bichos (criar, domar, montar, esquilar, comerciar).
+Siempre acostado: con el teléfono parado se gira 90° solo (también adentro de Rezona). Falta: el
+Nether y el End, las pantallas de encantar, el yunque y el soporte para pociones, y las estructuras
+del mundo (aldeas, templos, fortalezas).
 
 ## Cómo es
 
@@ -131,6 +154,15 @@ del APK se usa todo lo demás, sin tocar ([`empaquetar.py`](empaquetar.py)):
   los tamaños que sus renderers cambian (el ghast ×4,5, el murciélago ×0,35...). Lo que el juego
   hace en C++ y no está en el behavior pack (el tamaño al azar del slime, las variantes del
   caballo, la tabla de aparición por bioma) está escrito en esos archivos.
+  [`juego/trato.js`](juego/trato.js) es el botón de interactuar: lee los componentes de cada bicho
+  (`interact`, `breedable`, `tameable`, `tamemount`, `rideable`, `leashable`, `trade_table`...) y
+  con lo que se tiene en la mano decide qué se puede hacer; [`juego/comercio.js`](juego/comercio.js)
+  arma las ofertas de los aldeanos con las tablas de `trading/` y maneja su pantalla
+  (`trade_screen_pocket.json`).
+- **Lo que pasa solo**: [`juego/efectos.js`](juego/efectos.js) son los efectos (las cuentas de
+  `MobEffect`, la tabla de pociones de la 1.2) y [`juego/crecer.js`](juego/crecer.js), en el
+  trabajador, los pasos al azar del mundo (3 bloques por sección de 16³ en cada paso, como el
+  juego): cultivos, retoños, fuego, hojas, nieve y hielo.
 - **Los sonidos**: los `.fsb` sueltos de la 1.2 (`sounds/sound_definitions.json`), decodificados con
   el decodificador del port de Craftsman, a Opus ([`sonidos12.py`](sonidos12.py)): uno de 400 KB
   con los de siempre (bloques, pasos, el jugador) y uno por bicho, que se trae y decodifica recién

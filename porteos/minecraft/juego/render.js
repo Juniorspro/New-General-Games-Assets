@@ -156,6 +156,7 @@ var Render = (function () {
     R.texLuna = GL.textura(imagenes.luna, 'cerca', 0);
     R.grietas = imagenes.grietas.map(function (im) { return GL.textura(im, 'cerca', 0, true); });
     if (imagenes.orbe) R.texOrbe = GL.textura(imagenes.orbe, 'cerca', 0);
+    if (imagenes.nudo) texNudo = GL.textura(imagenes.nudo, 'cerca', 0);
     R.texNubes = imagenes.nubes ? GL.textura(imagenes.nubes, 'cerca', 0, true) : null;
     if (imagenes.nubes) mascaraNubes(imagenes.nubes);
     armarIndices(16384);
@@ -592,6 +593,7 @@ var Render = (function () {
     if (mundo.entidades && mundo.entidades.length) dibujarEntidades(mundo.entidades, cam);
     if (mundo.tirados && mundo.tirados.length) dibujarTirados(mundo.tirados, cam, mundo.alfa === undefined ? 1 : mundo.alfa);
     if (mundo.tnts && mundo.tnts.length) dibujarTnts(mundo.tnts, cam, mundo.alfa === undefined ? 1 : mundo.alfa);
+    if (mundo.correas && mundo.correas.length) dibujarCorreas(mundo.correas, cam);
     gl.bindTexture(gl.TEXTURE_2D, atlas);
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -1360,6 +1362,104 @@ var Render = (function () {
     gl.bufferData(gl.ARRAY_BUFFER, d.subarray(0, o), gl.STREAM_DRAW);
     gl.disable(gl.CULL_FACE);
     gl.drawArrays(gl.TRIANGLES, 0, o / 10);
+    gl.enable(gl.CULL_FACE);
+    gl.bindVertexArray(null);
+  }
+
+  // ------------------------------------------------------------------------------------------
+  // La correa (RenderLiving.renderLeash: dos tiras de 24 tramos que cuelgan, de los dos marrones de
+  // lead_rope.png alternados) y el nudo en el poste (RenderLeashKnot: una caja de 6x8x6 píxeles
+  // con lead_knot.png). l: [{ d (el bicho como se dibuja), x, y, z (la otra punta), nudo }]
+  // ------------------------------------------------------------------------------------------
+  var texNudo = null, texBlanca = null, correaBuf = null, correaDatos = new Float32Array(0);
+  var ANCHO_CORREA = 0.05;
+  function verticeC(d, o, x, y, z, c, u, v) {
+    d[o] = x; d[o + 1] = y; d[o + 2] = z; d[o + 3] = 1; d[o + 4] = c[0]; d[o + 5] = c[1]; d[o + 6] = c[2]; d[o + 7] = 1; d[o + 8] = u; d[o + 9] = v;
+    return o + 10;
+  }
+  function dibujarCorreas(l, cam) {
+    if (!simple) return;
+    if (!texBlanca) {
+      var cv = document.createElement('canvas'); cv.width = cv.height = 1;
+      var g2 = cv.getContext('2d'); g2.fillStyle = '#fff'; g2.fillRect(0, 0, 1, 1);
+      texBlanca = GL.textura(cv, 'cerca', 0);
+    }
+    var n = l.length * (2 * 24 * 6 + 36) * 10;
+    if (correaDatos.length < n) correaDatos = new Float32Array(n * 2);
+    if (!correaBuf) {
+      correaBuf = { vao: gl.createVertexArray(), vbo: gl.createBuffer() };
+      gl.bindVertexArray(correaBuf.vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, correaBuf.vbo);
+      atributosSimple();
+      gl.bindVertexArray(null);
+    }
+    var D = correaDatos, o = 0, w = ANCHO_CORREA, nudos = {}, i, k;
+    var claro = [0, 0, 0], oscuro = [0, 0, 0], A = [], B2 = [];
+    for (i = 0; i < l.length; i++) {
+      var c = l[i], e = c.d, h = e.alto || 1, luz = colorLuz(e.luz === undefined ? 0xF0 : e.luz);
+      if (c.nudo) nudos[c.nudo.join(',')] = { p: c.nudo, luz: luz };
+      claro[0] = 0.5 * luz[0]; claro[1] = 0.4 * luz[1]; claro[2] = 0.3 * luz[2];
+      oscuro[0] = 0.35 * luz[0]; oscuro[1] = 0.28 * luz[1]; oscuro[2] = 0.21 * luz[2];
+      // la punta del bicho: adelante (0,4 de su ancho) y a la altura de su cabeza más o menos
+      var fx = Math.sin(e.yaw) * (e.radio || 0.6) * 0.4, fz = -Math.cos(e.yaw) * (e.radio || 0.6) * 0.4;
+      var x0 = e.x + fx - cam.x, y0 = e.y - (1.6 - h) * 0.5 - cam.y, z0 = e.z + fz - cam.z;
+      var dx = c.x - (e.x + fx), dy = c.y - e.y, dz = c.z - (e.z + fz);
+      for (k = 0; k <= 24; k++) {
+        var f = k / 24, px = x0 + dx * f, py = y0 + dy * (f * f + f) * 0.5 + (24 - k) / 18 + 0.125, pz = z0 + dz * f;
+        A[k] = [px, py, pz];
+      }
+      // dos tiras cruzadas (como el juego), cada tramo de un color
+      for (var t = 0; t < 2; t++) {
+        for (k = 0; k <= 24; k++) {
+          var q = A[k];
+          B2[k] = t === 0 ? [q[0] + w, q[1] + w, q[2], q[0], q[1], q[2]] : [q[0], q[1] + w, q[2], q[0] + w, q[1], q[2] + w];
+        }
+        for (k = 0; k < 24; k++) {
+          var a0 = B2[k], a1 = B2[k + 1], col = k % 2 === 0 ? oscuro : claro, col1 = (k + 1) % 2 === 0 ? oscuro : claro;
+          o = verticeC(D, o, a0[0], a0[1], a0[2], col, 0.5, 0.5);
+          o = verticeC(D, o, a0[3], a0[4], a0[5], col, 0.5, 0.5);
+          o = verticeC(D, o, a1[0], a1[1], a1[2], col1, 0.5, 0.5);
+          o = verticeC(D, o, a0[3], a0[4], a0[5], col, 0.5, 0.5);
+          o = verticeC(D, o, a1[3], a1[4], a1[5], col1, 0.5, 0.5);
+          o = verticeC(D, o, a1[0], a1[1], a1[2], col1, 0.5, 0.5);
+        }
+      }
+    }
+    var finCorreas = o;
+    // los nudos: de y+0,375 a y+0,875 en el medio del poste, 6 píxeles de ancho (u, v en 32x32: los
+    // costados en la franja de 6 a 14, arriba de 6 a 12 y abajo de 12 a 18)
+    if (texNudo) for (var kn in nudos) {
+      var nd = nudos[kn], bx = nd.p[0] + 0.5 - cam.x, by = nd.p[1] + 0.5 - cam.y, bz = nd.p[2] + 0.5 - cam.z, r = 3 / 16, lz = nd.luz;
+      var x1 = bx - r, x2 = bx + r, y1 = by - 2 / 16, y2 = by + 6 / 16, z1 = bz - r, z2 = bz + r;
+      var caras = [
+        // [4 esquinas (abajo-izq, abajo-der, arriba-der, arriba-izq)], u0, v0, u1, v1
+        [[x1, y1, z1], [x2, y1, z1], [x2, y2, z1], [x1, y2, z1], 6, 6, 12, 14],
+        [[x2, y1, z1], [x2, y1, z2], [x2, y2, z2], [x2, y2, z1], 12, 6, 18, 14],
+        [[x2, y1, z2], [x1, y1, z2], [x1, y2, z2], [x2, y2, z2], 18, 6, 24, 14],
+        [[x1, y1, z2], [x1, y1, z1], [x1, y2, z1], [x1, y2, z2], 0, 6, 6, 14],
+        [[x1, y2, z1], [x2, y2, z1], [x2, y2, z2], [x1, y2, z2], 6, 0, 12, 6],
+        [[x1, y1, z2], [x2, y1, z2], [x2, y1, z1], [x1, y1, z1], 12, 0, 18, 6]
+      ];
+      for (var cc = 0; cc < 6; cc++) {
+        var cr = caras[cc], u0 = cr[4] / 32, v0 = cr[5] / 32, u1 = cr[6] / 32, v1 = cr[7] / 32, p0 = cr[0], p1 = cr[1], p2 = cr[2], p3 = cr[3];
+        o = verticeC(D, o, p0[0], p0[1], p0[2], lz, u0, v1);
+        o = verticeC(D, o, p1[0], p1[1], p1[2], lz, u1, v1);
+        o = verticeC(D, o, p2[0], p2[1], p2[2], lz, u1, v0);
+        o = verticeC(D, o, p0[0], p0[1], p0[2], lz, u0, v1);
+        o = verticeC(D, o, p2[0], p2[1], p2[2], lz, u1, v0);
+        o = verticeC(D, o, p3[0], p3[1], p3[2], lz, u0, v0);
+      }
+    }
+    if (!o) return;
+    usar(simple);
+    gl.uniformMatrix4fv(simple.u.WORLDVIEWPROJ, false, vp);
+    gl.uniform4f(simple.u.CURRENT_COLOR, 1, 1, 1, 1);
+    gl.bindVertexArray(correaBuf.vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, correaBuf.vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, D.subarray(0, o), gl.STREAM_DRAW);
+    gl.disable(gl.CULL_FACE);
+    if (finCorreas) { gl.bindTexture(gl.TEXTURE_2D, texBlanca); gl.drawArrays(gl.TRIANGLES, 0, finCorreas / 10); }
+    if (o > finCorreas) { gl.bindTexture(gl.TEXTURE_2D, texNudo); gl.drawArrays(gl.TRIANGLES, finCorreas / 10, (o - finCorreas) / 10); }
     gl.enable(gl.CULL_FACE);
     gl.bindVertexArray(null);
   }
