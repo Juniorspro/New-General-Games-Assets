@@ -141,6 +141,18 @@ def cargar_textura(apk, ref):
     return im, (ref, color, tinte)
 
 
+def estrellas_end(apk):
+    est = apk.imagen(PAQUETE + "textures/entity/end_portal.png").convert("L").crop((0, 0, 64, 64))
+    base, luz = (6, 24, 30), (130, 235, 215)
+    out = Image.new("RGBA", (64, 64))
+    po, pe = out.load(), est.load()
+    for y in range(64):
+        for x in range(64):
+            k = pe[x, y] / 255
+            po[x, y] = tuple(int(base[i] + (luz[i] - base[i]) * k) for i in range(3)) + (255,)
+    return out
+
+
 def armar_atlas(apk, salida):
     tt = apk.json(PAQUETE + "textures/terrain_texture.json")["texture_data"]
     unicas = {}        # clave única → imagen
@@ -156,6 +168,12 @@ def armar_atlas(apk, salida):
             unicas.setdefault(clave, im)
             claves.append(clave)
         texturas[nombre] = claves
+    # el portal del End y su entrada: la 1.2 no les da textura de terreno (los dibuja con un shader
+    # propio); acá, las estrellas de textures/entity/end_portal.png sobre su verde azulado oscuro
+    clave = ("end_portal", None, None)
+    unicas[clave] = estrellas_end(apk)
+    texturas["end_portal"] = [clave]
+    texturas["end_gateway"] = [clave]
     # colocar: de la más grande a la más chica, en estantes; borde = 1/4 del lado (4 px en las de
     # 16): con 3 niveles de mipmap el último todavía tiene medio píxel de borde y de lejos no se
     # mezclan las vecinas (con 2 px el agua del mar hacía anillos a lo lejos)
@@ -227,7 +245,7 @@ IDS = {
     "iron_bars": 101, "glass_pane": 102, "melon_block": 103, "pumpkin_stem": 104, "melon_stem": 105,
     "vine": 106, "fence_gate": 107, "brick_stairs": 108, "stone_brick_stairs": 109, "mycelium": 110,
     "waterlily": 111, "nether_brick": 112, "nether_brick_fence": 113, "nether_brick_stairs": 114,
-    "nether_wart": 115, "enchanting_table": 116, "brewing_stand": 117, "cauldron": 118,
+    "nether_wart": 115, "enchanting_table": 116, "brewing_stand": 117, "cauldron": 118, "end_portal": 119,
     "end_portal_frame": 120, "end_stone": 121, "dragon_egg": 122, "redstone_lamp": 123, "lit_redstone_lamp": 124,
     "dropper": 125, "activator_rail": 126, "cocoa": 127, "sandstone_stairs": 128, "emerald_ore": 129,
     "ender_chest": 130, "tripwire_hook": 131, "tripWire": 132, "emerald_block": 133, "spruce_stairs": 134,
@@ -246,7 +264,7 @@ IDS = {
     "repeating_command_block": 188, "chain_command_block": 189, "spruce_door": 193, "birch_door": 194,
     "jungle_door": 195, "acacia_door": 196, "dark_oak_door": 197, "grass_path": 198, "frame": 199,
     "chorus_flower": 200, "purpur_block": 201, "purpur_stairs": 203, "undyed_shulker_box": 205,
-    "end_bricks": 206, "frosted_ice": 207, "end_rod": 208, "magma": 213, "nether_wart_block": 214,
+    "end_bricks": 206, "frosted_ice": 207, "end_rod": 208, "end_gateway": 209, "magma": 213, "nether_wart_block": 214,
     "red_nether_brick": 215, "bone_block": 216, "structure_void": 217, "shulker_box": 218,
     "purple_glazed_terracotta": 219, "white_glazed_terracotta": 220, "orange_glazed_terracotta": 221,
     "magenta_glazed_terracotta": 222, "light_blue_glazed_terracotta": 223, "yellow_glazed_terracotta": 224,
@@ -277,6 +295,9 @@ def bloques(apk):
         if "sound" in v:
             b["s"] = v["sound"]
         salida[IDS[nombre]] = b
+    # los que la 1.2 dibuja aparte (no están en blocks.json)
+    salida.setdefault(IDS["end_portal"], {"n": "end_portal", "f": "cubo", "t": "end_portal", "s": "stone"})
+    salida.setdefault(IDS["end_gateway"], {"n": "end_gateway", "f": "cubo", "t": "end_gateway", "s": "stone"})
     return salida
 
 
@@ -374,6 +395,8 @@ def cielo(apk, salida):
         guardar_png(apk.imagen(env + f"destroy_stage_{i}.png"), salida / f"grieta{i}.png")
     # los orbes de experiencia (16 tamaños en una grilla de 4x4)
     guardar_png(apk.imagen(PAQUETE + "textures/entity/experience_orb.png"), salida / "orbe.png")
+    # el cielo del End (renderSkyEnd: este ruido en las 6 caras de una caja, oscuro)
+    guardar_png(apk.imagen(PAQUETE + "textures/environment/end_sky.png"), salida / "cielo_end.png")
     # el nudo de la correa en el poste (una caja de 6x8x6 píxeles)
     guardar_png(apk.imagen(PAQUETE + "textures/entity/lead_knot.png"), salida / "nudo.png")
 

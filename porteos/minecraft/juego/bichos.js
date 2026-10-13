@@ -1073,6 +1073,18 @@ var Bichos = (function () {
       }
     }
   }
+  // el End (BiomeEnd): endermans de a 4 sobre la piedra
+  function candidatoFin(yo) {
+    var a = Math.random() * PI * 2, r = 20 + Math.random() * 28;
+    var x = Math.floor(yo.x + Math.cos(a) * r), z = Math.floor(yo.z + Math.sin(a) * r);
+    if (!Mundo.cargado(x, z)) return;
+    for (var y = C.ALTO - 4; y > 2; y--) {
+      var b = Mundo.bloque(x, y, z);
+      if (b === 0) continue;
+      if (b === 121 && Mundo.bloque(x, y + 1, z) === 0 && Mundo.bloque(x, y + 2, z) === 0 && Mundo.bloque(x, y + 3, z) === 0) candidatos.push({ x: x, y: y + 1, z: z, clase: 'fin' });
+      return;
+    }
+  }
   function libre(x0, y0, z0, w, h, d) {
     for (var x = x0; x < x0 + w; x++) for (var y = y0; y < y0 + h; y++) for (var z = z0; z < z0 + d; z++) if (Mundo.bloque(x, y, z) !== 0) return false;
     return true;
@@ -1086,6 +1098,10 @@ var Bichos = (function () {
     var tope = Math.max(2, Math.round(10 / Math.max(1, cuantosJug)));
     if (B.dimension === 1) {
       for (var nn = 0; nn < 4 && hos < tope; nn++) candidatoInfierno(yo);
+      return candidatos;
+    }
+    if (B.dimension === 2) {
+      for (var nf = 0; nf < 4 && hos < tope; nf++) candidatoFin(yo);
       return candidatos;
     }
     if (B.dimension) return candidatos;
@@ -1129,7 +1145,10 @@ var Bichos = (function () {
       var c = candidatos[i], l = luces[i];
       if (l < 0 || !c.clase) continue;
       var cielo = l >> 4, bloque = l & 15, efectiva = Math.max(bloque, Math.round(cielo * dia));
-      if (c.clase === 'fortaleza') {
+      if (c.clase === 'fin') {
+        if (B.dificultad === 'peaceful' || bloque > 7) continue;
+        grupo('enderman', c);
+      } else if (c.clase === 'fortaleza') {
         if (B.dificultad === 'peaceful') continue;
         var tf = elegir(FORTALEZA);
         if (tf !== 'blaze' && tf !== 'zombie_pigman' && tf !== 'magma_cube' && bloque > 7) continue;

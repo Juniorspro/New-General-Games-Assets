@@ -277,6 +277,7 @@
     for (i = 0; i < 10; i++) imgs.grietas.push(await cargarImagen('datos/grieta' + i + '.png'));
     imgs.orbe = await cargarImagen('datos/orbe.png').catch(function () { return null; });
     imgs.nudo = await cargarImagen('datos/nudo.png').catch(function () { return null; });
+    imgs.cieloEnd = await cargarImagen('datos/cielo_end.png').catch(function () { return null; });
     var pano = [];
     for (i = 0; i < 6; i++) pano.push(await cargarImagen('datos/panorama' + i + '.webp'));
     // las texturas de los bichos y los jugadores
@@ -2346,10 +2347,10 @@
   // (GuiIngame.renderPortal, EntityRenderer.setupCameraTransform)
   // ------------------------------------------------------------------------------------------
   var enPortal = 0, tiempoPortal = 0, tiempoPortalAntes = 0, esperaPortal = 0;
-  function tocaPortal() {
+  function tocaPortal(id) {
     var w = 0.3, x0 = Math.floor(J.x - w), x1 = Math.floor(J.x + w), y0 = Math.floor(J.y), y1 = Math.floor(J.y + 1.79);
     var z0 = Math.floor(J.z - w), z1 = Math.floor(J.z + w);
-    for (var x = x0; x <= x1; x++) for (var y = y0; y <= y1; y++) for (var z = z0; z <= z1; z++) if (Mundo.bloque(x, y, z) === Portal.ID) return true;
+    for (var x = x0; x <= x1; x++) for (var y = y0; y <= y1; y++) for (var z = z0; z <= z1; z++) if (Mundo.bloque(x, y, z) === (id || Portal.ID)) return true;
     return false;
   }
   function pasoPortal() {
@@ -2367,6 +2368,12 @@
       enPortal = Math.max(0, enPortal - 4);
     }
     if (esperaPortal > 0 && !dentro) esperaPortal--;
+    // el portal del End lleva enseguida: desde arriba al End, desde el End (el de salida) a casa
+    if (!muerto && !montado && !cambiandoDim && partida && partida.local && esperaPortal === 0 && tocaPortal(119)) {
+      esperaPortal = 10;
+      if (dimension() === 0) cambiarDimension(2, 100.5, 49, 0.5, { fin: true });
+      else if (dimension() === 2) cambiarDimension(0, aparicion[0], aparicion[1], aparicion[2], { reaparecer: true });
+    }
     // los portales de cerca zumban y largan chispas violetas (BlockPortal.randomDisplayTick)
     var l = partida && partida[campo('portales')];
     if (l) for (var i = 0; i < l.length; i++) {
@@ -2397,6 +2404,14 @@
     partida.llegada = null;
     if (!ll) return;
     J.vx = J.vy = J.vz = 0; caida = 0;
+    // al End se llega a la plataforma de obsidiana de 5x5 en (100, 48, 0), que se rehace cada vez
+    // (Teleporter.placeInPortal), mirando a la isla
+    if (ll.fin) {
+      for (var fx = -2; fx <= 2; fx++) for (var fz = -2; fz <= 2; fz++) for (var fy = -1; fy <= 2; fy++) ponerBloque(100 + fx, 49 + fy, fz, fy < 0 ? 49 : 0, 0);
+      J.ubicar(100.5, 49, 0.5); J.yaw = -Math.PI / 2; J.pitch = 0;
+      esperaPortal = 10;
+      return;
+    }
     if (ll.reaparecer) {
       var cama = partida.cama, lugar = null;
       if (cama && Mundo.bloque(cama[0], cama[1], cama[2]) === 26) lugar = salidaCama(cama[0], cama[1], cama[2]);

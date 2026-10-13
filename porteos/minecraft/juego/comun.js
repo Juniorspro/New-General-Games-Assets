@@ -51,6 +51,8 @@ var C = {};
     115: [F.surcos, 0, 1, 0, 0], 104: [F.tallo, 0, 1, 0, 0, 2], 105: [F.tallo, 0, 1, 0, 0, 2],
     50: [F.antorcha, 0, 1, 14, 0], 76: [F.antorcha, 0, 1, 7, 0], 75: [F.antorcha, 0, 1, 0, 0],
     51: [F.fuego, 0, 1, 15, 0], 90: [F.portal, 0, 3, 11, 0], 52: [F.cubo, 0, 1, 0, 0],
+    // el portal del End (BlockEndPortal: 12/16 de alto, el valor 5 de la capa) y su entrada, con luz
+    119: [F.capa, 0, 0, 15, 0], 209: [F.cubo, 0, 0, 15, 0],
     89: [F.cubo, 1, 0, 15, 15], 91: [F.cubo, 1, 0, 15, 15], 124: [F.cubo, 1, 0, 15, 15],
     246: [F.cubo, 1, 0, 12, 15], 74: [F.cubo, 1, 0, 9, 15], 62: [F.cubo, 1, 0, 13, 15],
     138: [F.cubo, 1, 0, 15, 15],
@@ -103,7 +105,7 @@ var C = {};
       // con qué se choca el jugador
       C.SOLIDO[i] = (q.forma === F.nada || q.forma === F.cruz || q.forma === F.liquido || q.forma === F.antorcha ||
         q.forma === F.surcos || q.forma === F.riel || q.forma === F.pared || q.forma === F.fuego ||
-        q.forma === F.planta2 || q.forma === F.tallo || i === 90 || i === 30) ? 0 : 1;
+        q.forma === F.planta2 || q.forma === F.tallo || i === 90 || i === 30 || i === 119 || i === 209) ? 0 : 1;
     }
   };
 

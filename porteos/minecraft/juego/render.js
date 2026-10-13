@@ -157,6 +157,7 @@ var Render = (function () {
     R.grietas = imagenes.grietas.map(function (im) { return GL.textura(im, 'cerca', 0, true); });
     if (imagenes.orbe) R.texOrbe = GL.textura(imagenes.orbe, 'cerca', 0);
     if (imagenes.nudo) texNudo = GL.textura(imagenes.nudo, 'cerca', 0);
+    if (imagenes.cieloEnd) texCieloEnd = GL.textura(imagenes.cieloEnd, 'cerca', 0, true);
     R.texNubes = imagenes.nubes ? GL.textura(imagenes.nubes, 'cerca', 0, true) : null;
     if (imagenes.nubes) mascaraNubes(imagenes.nubes);
     armarIndices(16384);
@@ -507,6 +508,8 @@ var Render = (function () {
     // rojo más que azul, rojo bajo y azul muy bajo)
     var dimN = mundo.dimension | 0;
     if (dimN === 1) { niebla = [0.2, 0.03, 0.03]; cielo = niebla.slice(); lluvia = 0; }
+    // el End: la niebla violácea oscura de siempre (WorldProviderEnd.getFogColor)
+    if (dimN === 2) { niebla = [0.094, 0.075, 0.094]; cielo = niebla.slice(); lluvia = 0; }
     if (mundo.bajoAgua) { niebla = [0.02 * luzCielo + 0.02, 0.02 * luzCielo + 0.04, 0.2 * luzCielo + 0.08]; }
     // la visión nocturna aclara la niebla; la ceguera la vuelve negra (updateFogColor)
     var vn = mundo.visionNocturna || 0, ceg = mundo.ceguera || 0;
@@ -521,7 +524,7 @@ var Render = (function () {
 
     var tiempoS = mundo.reloj;
     // controles de la niebla: claro, lluvia (el shader de Tito los reconoce por FOG_CONTROL.x) o bajo el agua
-    var fog = mundo.bajoAgua ? [0.0, 0.25] : dimN === 1 ? [0.2, 0.6] : lluvia > 0.2 ? [0.3, 0.9] : [0.75, 1.0];
+    var fog = mundo.bajoAgua ? [0.0, 0.25] : dimN === 1 ? [0.2, 0.6] : dimN === 2 ? [0.6, 1.0] : lluvia > 0.2 ? [0.3, 0.9] : [0.75, 1.0];
     // con ceguera no se ve más allá de 5 bloques (setupFog: de 1,25 a 5)
     if (ceg > 0) { var fc = Math.max(0.02, 5 / dist); fog = [fog[0] + (fc * 0.25 - fog[0]) * ceg, fog[1] + (fc - fog[1]) * ceg]; }
     uFrame = { niebla: niebla, fog: fog, dist: dist, t: tiempoS, cam: cam, cielo: cielo };
@@ -572,7 +575,7 @@ var Render = (function () {
     gl.uniformMatrix4fv(M.solLuna.u.WORLDVIEWPROJ, false, ml);
     gl.bindTexture(gl.TEXTURE_2D, R.texLuna);
     gl.bindVertexArray(solQuad.vao); gl.drawArrays(gl.TRIANGLES, 0, 6);
-    }
+    } else if (dimN === 2) dibujarCieloEnd(ceg);
     gl.disable(gl.BLEND);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
@@ -1473,6 +1476,41 @@ var Render = (function () {
     if (finCorreas) { gl.bindTexture(gl.TEXTURE_2D, texBlanca); gl.drawArrays(gl.TRIANGLES, 0, finCorreas / 10); }
     if (o > finCorreas) { gl.bindTexture(gl.TEXTURE_2D, texNudo); gl.drawArrays(gl.TRIANGLES, finCorreas / 10, (o - finCorreas) / 10); }
     gl.enable(gl.CULL_FACE);
+    gl.bindVertexArray(null);
+  }
+
+  // el cielo del End (RenderGlobal.renderSkyEnd): una caja alrededor de la cámara con el ruido de
+  // end_sky.png repetido 16 veces por cara, muy oscuro
+  var texCieloEnd = null, cajaEnd = null;
+  function dibujarCieloEnd(ceg) {
+    if (!texCieloEnd || !simple) return;
+    if (!cajaEnd) {
+      var base = [[-100, -100, -100, 0, 0], [-100, -100, 100, 0, 16], [100, -100, 100, 16, 16], [100, -100, -100, 16, 0]];
+      // las 6 caras: la de abajo girada (como el juego: 90 y -90 en x, 180 en x, 90 y -90 en z)
+      var giros = [function (p) { return p; }, function (p) { return [p[0], -p[2], p[1]]; }, function (p) { return [p[0], p[2], -p[1]]; },
+        function (p) { return [p[0], -p[1], -p[2]]; }, function (p) { return [-p[1], p[0], p[2]]; }, function (p) { return [p[1], -p[0], p[2]]; }];
+      var d = new Float32Array(6 * 6 * 10), o = 0, c = 40 / 255;
+      giros.forEach(function (g) {
+        [0, 1, 2, 0, 2, 3].forEach(function (i) {
+          var q = base[i], p = g([q[0], q[1], q[2]]);
+          d[o++] = p[0]; d[o++] = p[1]; d[o++] = p[2]; d[o++] = 1; d[o++] = c; d[o++] = c; d[o++] = c; d[o++] = 1; d[o++] = q[3]; d[o++] = q[4];
+        });
+      });
+      cajaEnd = { vao: gl.createVertexArray(), vbo: gl.createBuffer() };
+      gl.bindVertexArray(cajaEnd.vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, cajaEnd.vbo);
+      atributosSimple();
+      gl.bufferData(gl.ARRAY_BUFFER, d, gl.STATIC_DRAW);
+      gl.bindVertexArray(null);
+    }
+    usar(simple);
+    gl.uniformMatrix4fv(simple.u.WORLDVIEWPROJ, false, vp);
+    var k = 1 - (ceg || 0);
+    gl.uniform4f(simple.u.CURRENT_COLOR, k, k, k, 1);
+    gl.bindTexture(gl.TEXTURE_2D, texCieloEnd);
+    gl.disable(gl.CULL_FACE);
+    gl.bindVertexArray(cajaEnd.vao);
+    gl.drawArrays(gl.TRIANGLES, 0, 36);
     gl.bindVertexArray(null);
   }
 

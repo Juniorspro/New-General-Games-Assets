@@ -511,7 +511,7 @@
             caja(s, li, x, y, z, bx0, invertida ? 0 : 0.5, bz0, bx1, invertida ? 0.5 : 1, bz1, tx, 1, 1, 1);
           } else if (forma === F.bajo || forma === F.capa || forma === F.alfombra) {
             luzPlana(li);
-            var altoB = forma === F.bajo ? 15 / 16 : forma === F.alfombra ? 1 / 16 : ((m & 7) + 1) / 8;
+            var altoB = forma === F.bajo ? 15 / 16 : forma === F.alfombra ? 1 / 16 : id === 119 ? 0.75 : ((m & 7) + 1) / 8;
             tx = texsDe(id, forma === F.alfombra ? m : 0);
             caja(s, li, x, y, z, 0, 0, 0, 1, altoB, 1, tx, 1, 1, 1);
           } else if (forma === F.cactus) {
@@ -976,7 +976,7 @@
       C.armarBloques(d.bloques);
       OPACO = C.OPACO; FRENA = C.FRENA; LUZ = C.LUZ; FORMA = C.FORMA; CAPA = C.CAPA;
       dimension = d.dim | 0; sinCielo = dimension !== 0; infierno = dimension === 1;
-      uv = d.uv; gen = infierno ? new GenNether(d.semilla) : new Gen(d.semilla, d.tipo); dist = d.dist || 6;
+      uv = d.uv; gen = infierno ? new GenNether(d.semilla) : dimension === 2 ? new GenFin(d.semilla) : new Gen(d.semilla, d.tipo); dist = d.dist || 6;
       if (d.suave !== undefined) suave = !!d.suave;
       if (d.hojas !== undefined) hojasLlamativas = !!d.hojas;
       prepararTexturas();

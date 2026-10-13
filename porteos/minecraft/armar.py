@@ -14,9 +14,9 @@ from pathlib import Path
 AQUI = Path(__file__).resolve().parent
 J = AQUI / "juego"
 
-TRABAJADOR = ["comun.js", "generador.js", "nether.js", "crecer.js", "trabajador.js"]
+TRABAJADOR = ["comun.js", "generador.js", "nether.js", "fin.js", "crecer.js", "trabajador.js"]
 PAGINA = ["comun.js", "generador.js", "gl.js", "textos.js", "items.js", "modelos.js", "render.js", "mundo.js", "jugador.js", "sonido.js",
-          "interfaz.js", "jui.js", "muneco.js", "pantallas.js", "objetos.js", "inventario.js", "efectos.js", "supervivencia.js", "minar.js", "botin.js", "tirados.js", "recetas.js", "contenedores.js", "conducta.js", "bichos.js", "trato.js", "comercio.js", "portal.js", "red.js", "principal.js"]
+          "interfaz.js", "jui.js", "muneco.js", "pantallas.js", "objetos.js", "inventario.js", "efectos.js", "supervivencia.js", "minar.js", "botin.js", "tirados.js", "recetas.js", "contenedores.js", "conducta.js", "bichos.js", "trato.js", "comercio.js", "portal.js", "fin.js", "red.js", "principal.js"]
 RAIZ = AQUI.parent.parent
 
 
