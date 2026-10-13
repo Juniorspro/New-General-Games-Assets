@@ -116,7 +116,7 @@ var Bichos = (function () {
     return e;
   };
   B.cuantos = function () { return lista.length; };
-  B.limpiar = function () { lista.length = 0; remotos.clear(); proyectiles.length = 0; colmillosEn.length = 0; agenda.length = 0; };
+  B.limpiar = function () { lista.length = 0; remotos.clear(); proyectiles.length = 0; colmillosEn.length = 0; agenda.length = 0; generadores.clear(); };
 
   // ------------------------------------------------------------------------------------------
   // Física (como la del jugador: gravedad, roce, choques eje por eje, subir escalones saltando)
@@ -674,6 +674,45 @@ var Bichos = (function () {
   };
 
   // ------------------------------------------------------------------------------------------
+  // Los generadores de bichos (MobSpawnerBaseLogic): con el jugador a menos de 16, cada 10 a 40 s
+  // larga hasta 4 de su bicho a menos de 4 bloques (si no hay ya 6 cerca); el bicho va en el valor
+  // del bloque (como lo pone el generador del mundo)
+  // ------------------------------------------------------------------------------------------
+  var GENERA = { 0: 'pig', 1: 'blaze', 2: 'zombie', 3: 'skeleton', 4: 'spider', 5: 'cave_spider', 6: 'silverfish', 7: 'magma_cube' };
+  var generadores = new Map();
+  B.generadoresDe = function (cx, cz, l) {
+    generadores.forEach(function (g, k) { if (g.cx === cx && g.cz === cz) generadores.delete(k); });
+    for (var i = 0; l && i + 3 < l.length; i += 4) generadores.set(l[i] + ',' + l[i + 1] + ',' + l[i + 2], { x: l[i], y: l[i + 1], z: l[i + 2], tipo: GENERA[l[i + 3]] || 'pig', cx: cx, cz: cz, espera: -1 });
+  };
+  B.sinGeneradores = function () { generadores.clear(); };
+  B.generadores = function () { return Array.from(generadores.values()); };
+  B.pasoGeneradores = function (yo) {
+    if (!B.activo || !yo) return;
+    generadores.forEach(function (g, k) {
+      if (Mundo.bloque(g.x, g.y, g.z) !== 52) { generadores.delete(k); return; }
+      var dx = g.x + 0.5 - yo.x, dy = g.y + 0.5 - yo.y, dz = g.z + 0.5 - yo.z;
+      if (dx * dx + dy * dy + dz * dz > 16 * 16) return;
+      if (B.chispasGenerador && Math.random() < 0.3) B.chispasGenerador(g);
+      if (g.espera < 0) g.espera = 200 + Math.floor(Math.random() * 600);
+      if (g.espera > 0) { g.espera--; return; }
+      if (!B.TIPOS[g.tipo] || (B.dificultad === 'peaceful' && B.TIPOS[g.tipo].hostil)) { g.espera = -1; return; }
+      var cerca = 0;
+      lista.forEach(function (e) { if (e.tipo === g.tipo && Math.abs(e.x - g.x - 0.5) <= 4.5 && Math.abs(e.y - g.y) <= 4.5 && Math.abs(e.z - g.z - 0.5) <= 4.5) cerca++; });
+      var hizo = false;
+      for (var n = 0; n < 4 && cerca < 6; n++) {
+        var x = g.x + (Math.random() - Math.random()) * 4 + 0.5, y = g.y + Math.floor(Math.random() * 3) - 1, z = g.z + (Math.random() - Math.random()) * 4 + 0.5;
+        var bx = Math.floor(x), bz = Math.floor(z);
+        if (Mundo.bloque(bx, y, bz) !== 0 || Mundo.bloque(bx, y + 1, bz) !== 0) continue;
+        var ab = Mundo.bloque(bx, y - 1, bz);
+        if (g.tipo !== 'blaze' && !(ab > 0 && C.SOLIDO[ab])) continue;
+        var e = B.crear(g.tipo, x, y, z);
+        if (e) { cerca++; hizo = true; if (B.chispasGenerador) B.chispasGenerador(g, true); }
+      }
+      if (hizo) g.espera = -1;
+    });
+  };
+
+  // ------------------------------------------------------------------------------------------
   // La correa (minecraft:leashable): atado al jugador ('j') o a un poste ({ x, y, z } del cerco).
   // Más lejos que soft_distance camina hacia la otra punta, más que hard_distance además lo
   // arrastra y más que max_distance se corta y la correa queda en el piso
@@ -1015,10 +1054,12 @@ var Bichos = (function () {
   }
   var GRUPO = { sheep: [2, 4], pig: [2, 4], cow: [2, 4], chicken: [2, 4], horse: [2, 6], donkey: [1, 3], llama: [4, 6], wolf: [4, 4],
     rabbit: [2, 3], ocelot: [1, 3], parrot: [1, 2], polar_bear: [1, 2], squid: [2, 4], bat: [1, 2],
-    zombie_pigman: [2, 4], magma_cube: [1, 4], enderman: [1, 4] };
+    zombie_pigman: [2, 4], magma_cube: [1, 4], enderman: [1, 4], blaze: [2, 3], wither_skeleton: [2, 4], skeleton: [2, 4] };
   // el Nether (Biome.Hell): de a 4, a cualquier altura y sin mirar el sol (el ghast una vez cada 20 y
   // con lugar para él; el enderman, en lo oscuro)
   var INFIERNO = { ghast: 50, zombie_pigman: 100, magma_cube: 2, enderman: 1 };
+  // adentro de una fortaleza (MapGenNetherBridge.getSpawnList): el blaze no mira la luz
+  var FORTALEZA = { blaze: 10, zombie_pigman: 5, wither_skeleton: 8, skeleton: 2, magma_cube: 3 };
   B.dimension = 0;
   function candidatoInfierno(yo) {
     var a = Math.random() * PI * 2, r = 16 + Math.random() * 28;
@@ -1026,7 +1067,10 @@ var Bichos = (function () {
     if (!Mundo.cargado(x, z)) return;
     for (var k = 0; k < 24 && y > 4; k++, y--) {
       var b = Mundo.bloque(x, y, z), ab = Mundo.bloque(x, y - 1, z);
-      if (b === 0 && Mundo.bloque(x, y + 1, z) === 0 && ab > 0 && C.SOLIDO[ab] && !esLava(ab)) { candidatos.push({ x: x, y: y, z: z, clase: 'infierno' }); return; }
+      if (b === 0 && Mundo.bloque(x, y + 1, z) === 0 && ab > 0 && C.SOLIDO[ab] && !esLava(ab)) {
+        candidatos.push({ x: x, y: y, z: z, clase: Mundo.enFortaleza && Mundo.enFortaleza(x, y, z) ? 'fortaleza' : 'infierno' });
+        return;
+      }
     }
   }
   function libre(x0, y0, z0, w, h, d) {
@@ -1085,7 +1129,12 @@ var Bichos = (function () {
       var c = candidatos[i], l = luces[i];
       if (l < 0 || !c.clase) continue;
       var cielo = l >> 4, bloque = l & 15, efectiva = Math.max(bloque, Math.round(cielo * dia));
-      if (c.clase === 'infierno') {
+      if (c.clase === 'fortaleza') {
+        if (B.dificultad === 'peaceful') continue;
+        var tf = elegir(FORTALEZA);
+        if (tf !== 'blaze' && tf !== 'zombie_pigman' && tf !== 'magma_cube' && bloque > 7) continue;
+        grupo(tf, c);
+      } else if (c.clase === 'infierno') {
         if (B.dificultad === 'peaceful') continue;
         var tn = elegir(INFIERNO);
         if (tn === 'ghast') {

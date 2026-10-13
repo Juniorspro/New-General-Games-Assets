@@ -96,12 +96,22 @@ APK de Craftsman PTGI) como opción al empezar, **servidores** para jugar con ot
   zanahoria con palo, el caballo que hay que amansar, con el salto que se carga), la **correa**
   (sigue, se ata a un poste, se corta de lejos) y **comerciar** con los aldeanos en la pantalla de
   la 1.2 (las ofertas de cada oficio de `trading/*.json`, que se abren por niveles y se agotan);
+- **el Nether**: el **portal** de obsidiana (de 2x3 a 21x21 por dentro) se prende con el
+  encendedor o con fuego, se apaga si se le rompe el marco; parado adentro 4 segundos (con el velo
+  violeta y la vista que se retuerce) se pasa al otro lado, a un portal cerca (las distancias se
+  dividen por 8) o a uno que se hace; al volver se llega al mismo. El Nether del juego: cavernas de
+  infiedra con mar de lava, cascadas de lava que corren, racimos de piedra luminosa, arena de almas,
+  grava, cuarzo, magma, hongos y fuego que no se apaga; sin cielo, con su niebla roja y su luz; ahí el
+  agua se evapora, la cama explota y la lava corre más lejos. Aparecen porqueros zombis, ghasts,
+  cubos de magma y endermans. Las **fortalezas** del juego (puentes, cruces, pasillos del castillo,
+  escaleras, la entrada con el pozo de lava, la sala de verrugas, cofres con su botín) con el
+  **generador de blazes** del trono y sus bichos (blazes, esqueletos wither);
 - el mundo infinito con biomas, cuevas, minerales y árboles, día y noche, agua y lava que corren,
   los controles táctiles de MCPE, partículas, los sonidos del juego.
 
 Siempre acostado: con el teléfono parado se gira 90° solo (también adentro de Rezona). Falta: el
-Nether y el End, las pantallas de encantar, el yunque y el soporte para pociones, y las estructuras
-del mundo (aldeas, templos, fortalezas).
+End, las pantallas de encantar, el yunque y el soporte para pociones, y las estructuras del mundo de
+arriba (aldeas, templos, fortalezas del End).
 
 ## Cómo es
 
@@ -159,6 +169,12 @@ del APK se usa todo lo demás, sin tocar ([`empaquetar.py`](empaquetar.py)):
   con lo que se tiene en la mano decide qué se puede hacer; [`juego/comercio.js`](juego/comercio.js)
   arma las ofertas de los aldeanos con las tablas de `trading/` y maneja su pantalla
   (`trade_screen_pocket.json`).
+- **Las dimensiones**: cada una guarda aparte lo suyo (sus trozos, bichos, cosas tiradas,
+  contenedores y portales); [`juego/nether.js`](juego/nether.js) es el generador del Nether del
+  juego (la densidad de ruido 3D en una grilla de 4x8x4 con el perfil que cierra piso y techo, la
+  superficie, lo que se agrega y las fortalezas de `StructureNetherBridgePieces`, pieza por pieza),
+  como funciones puras de la semilla y la posición; [`juego/portal.js`](juego/portal.js), el marco del
+  portal y el que se hace del otro lado (`BlockPortal`, `Teleporter`).
 - **Lo que pasa solo**: [`juego/efectos.js`](juego/efectos.js) son los efectos (las cuentas de
   `MobEffect`, la tabla de pociones de la 1.2) y [`juego/crecer.js`](juego/crecer.js), en el
   trabajador, los pasos al azar del mundo (3 bloques por sección de 16³ en cada paso, como el

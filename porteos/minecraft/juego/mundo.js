@@ -13,7 +13,7 @@ var Mundo = (function () {
 
   M.iniciar = function (trabajador) { trab = trabajador; trozos.clear(); M.modificados.clear(); M.sucios.clear(); };
   M.recibir = function (d) {
-    var k = d.cx + ',' + d.cz, t = { cx: d.cx, cz: d.cz, ids: d.ids, meta: d.meta, biomas: d.biomas };
+    var k = d.cx + ',' + d.cz, t = { cx: d.cx, cz: d.cz, ids: d.ids, meta: d.meta, biomas: d.biomas, extra: d.extra || null };
     trozos.set(k, t);
     // volvió uno tocado (el trabajador le aplicó los cambios): el de acá pasa a ser éste
     if (M.modificados.has(k)) M.modificados.set(k, t);
@@ -34,6 +34,13 @@ var Mundo = (function () {
     if (y < 0 || y >= C.ALTO) return 0;
     var t = trozos.get((x >> 4) + ',' + (z >> 4));
     return t ? t.meta[(y << 8) | ((z & 15) << 4) | (x & 15)] : 0;
+  };
+  // ¿(x, y, z) está adentro de una pieza de fortaleza del Nether?
+  M.enFortaleza = function (x, y, z) {
+    var t = trozos.get((x >> 4) + ',' + (z >> 4)), c = t && t.extra && t.extra.cajas;
+    if (!c) return false;
+    for (var i = 0; i < c.length; i++) { var b = c[i]; if (x >= b[0] && x <= b[3] && y >= b[1] && y <= b[4] && z >= b[2] && z <= b[5]) return true; }
+    return false;
   };
   M.bioma = function (x, z) {
     var t = trozos.get((x >> 4) + ',' + (z >> 4));

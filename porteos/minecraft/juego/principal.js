@@ -579,15 +579,39 @@
     if (d.t === 'luces') { lucesRecibidas(d); return; }
     if (d.t === 'diag') { window.prueba.diag = d; return; }
     if (d.t === 'malla') { Render.malla(d); columnas.add(d.cx + ',' + d.cz); }
-    else if (d.t === 'trozo') Mundo.recibir(d);
+    else if (d.t === 'trozo') { Mundo.recibir(d); if (d.extra) extraDeTrozo(d); }
     else if (d.t === 'bloques') {
       Mundo.aplicar(d.lista);
       for (var q = 0; q + 4 < d.lista.length; q += 5) if (d.lista[q + 3] === 51 && partida && partida.local) prenderPortal(d.lista[q], d.lista[q + 1], d.lista[q + 2]);
     }
-    else if (d.t === 'fuera') { Render.quitar(d.cx, d.cz); Mundo.quitar(d.cx, d.cz); }
+    else if (d.t === 'fuera') { Render.quitar(d.cx, d.cz); Mundo.quitar(d.cx, d.cz); B.generadoresDe(d.cx, d.cz, null); }
     else if (d.t === 'soltar') { for (var i = 0; i + 4 < d.lista.length; i += 5) soltarMundo(d.lista[i + 3], d.lista[i + 4], d.lista[i], d.lista[i + 1], d.lista[i + 2]); }
     else if (d.t === 'tnt') { for (var k = 0; k + 2 < d.lista.length; k += 3) prenderTnt(d.lista[k], d.lista[k + 1], d.lista[k + 2], 80); }
   }
+
+  // lo que avisa el generador de un trozo: los generadores de bichos y, en un trozo recién hecho, los
+  // cofres con botín (se llenan una sola vez: si ya hay un cofre guardado ahí, queda como está)
+  var BOTIN_COFRE = { cofre: 'loot_tables/chests/nether_bridge.json' };
+  function extraDeTrozo(d) {
+    B.generadoresDe(d.cx, d.cz, d.extra.generadores || null);
+    if (!partida || !partida.local) return;
+    (d.extra.cosas || []).forEach(function (e) {
+      var tabla = BOTIN_COFRE[e[3]];
+      if (!tabla || Contenedores.de(e[0], e[1], e[2])) return;
+      var c = Contenedores.cofre(e[0], e[1], e[2]), libres = [];
+      for (var i = 0; i < c.cosas.length; i++) libres.push(i);
+      Botin.tirar(tabla, { dificultad: B.dificultad }).forEach(function (cosa) {
+        if (!libres.length) return;
+        var k = libres.splice(Math.floor(Math.random() * libres.length), 1)[0];
+        c.cosas[k] = cosa;
+      });
+    });
+  }
+  // las llamitas del generador (y el humo cuando larga uno)
+  B.chispasGenerador = function (g, larga) {
+    if (!opciones.particulas) return;
+    Render.chispas(g.x + 0.5, g.y + 0.5, g.z + 0.5, larga ? [0.45, 0.45, 0.45] : [1, 0.55, 0.15], larga ? 6 : 1, 0.04);
+  };
 
   // la carga del mundo termina cuando están las mallas de los trozos de alrededor del jugador
   function listoParaEntrar() {
@@ -2102,6 +2126,7 @@
     // lo tirado en el piso y los orbes (se levantan al pasar)
     Tirados.paso({ x: J.x, y: J.y, z: J.z, vivo: !muerto }, ganchosTirados);
     if (tnts.length) pasoTnt();
+    if (partida.local) B.pasoGeneradores({ x: J.x, y: J.y, z: J.z });
     pasoDormir();
     // al trabajador: cuánto le resta la noche a la luz del cielo (World.calculateSkylightSubtracted),
     // la lluvia y la dificultad (para crecer y para el fuego), una vez por segundo

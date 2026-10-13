@@ -69,16 +69,26 @@
 
   function generar(t) {
     var g = guardados.get(clave(t.cx, t.cz));
-    var r = gen.trozo(t.cx, t.cz, t.ids, t.meta, t.biomas);
+    var r = gen.trozo(t.cx, t.cz, t.ids, t.meta, t.biomas), extra = null;
     if (g) { t.ids.set(g.ids); t.meta.set(g.meta); }
     // las cascadas de lava del Nether recién generadas empiezan a correr
-    else if (infierno && r && r.length) t.lavas = r;
+    else if (infierno && r && r.lavas.length) t.lavas = r.lavas;
+    // lo que la página tiene que saber de las fortalezas: dónde están (para los bichos de ahí) y, si
+    // el trozo es nuevo, los cofres con botín y los generadores
+    if (infierno && r) {
+      extra = { cajas: r.cajas, cosas: g ? [] : r.extra };
+      if (!g) r.extra.forEach(function (e) { if (e[3] === 'lava') (t.lavas || (t.lavas = [])).push(e[0], e[1], e[2]); });
+    }
+    // los generadores de bichos que tiene el trozo (el bicho va en su valor)
+    var gens = null;
+    for (var q = 0; q < t.ids.length; q++) if (t.ids[q] === 52) (gens || (gens = [])).push(t.cx * 16 + (q & 15), q >> 8, t.cz * 16 + ((q >> 4) & 15), t.meta[q]);
+    if (gens) (extra || (extra = {})).generadores = gens;
     var pa = parches.get(clave(t.cx, t.cz));
     if (pa) pa.forEach(function (v, i) { t.ids[i] = v[0]; t.meta[i] = v[1]; });
     t.gen = true;
     if (t.lavas) { for (var k = 0; k + 2 < t.lavas.length; k += 3) agendar(t.lavas[k], t.lavas[k + 1], t.lavas[k + 2]); t.lavas = null; }
     // la copia para la página (física, guardar)
-    postMessage({ t: 'trozo', cx: t.cx, cz: t.cz, ids: t.ids.slice(), meta: t.meta.slice(), biomas: t.biomas.slice() });
+    postMessage({ t: 'trozo', cx: t.cx, cz: t.cz, ids: t.ids.slice(), meta: t.meta.slice(), biomas: t.biomas.slice(), extra: extra });
   }
 
   // ------------------------------------------------------------------------------------------
