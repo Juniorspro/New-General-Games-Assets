@@ -20,7 +20,9 @@
 import * as THREE from './vendor/three.module.min.js';
 import { Unity } from './unity3.js';
 import { Cuarto, INICIAL, CUARTO_DE } from './casa.js';
-import { Animaciones, Reproductor } from './anim.js';
+import { Animaciones, Reproductor, AnimacionUnity } from './anim.js';
+import { ControladorTom, ToquesTom, Necesidades } from './vivo.js';
+import { Escucha } from './escucha.js';
 import { cargarTom, vestir, Retarget, Zonas } from './tom.js';
 import { Sonido } from './sonido.js';
 import { UI, cargarFuentes } from './ui.js';
@@ -57,26 +59,45 @@ tom.raiz.position.copy(cuarto.corrimientoTom);
 tom.raiz.traverse((o) => { if (o.isMesh) o.renderOrder = 2500; });   // después del cuarto, como CAM_Tom
 escena.add(tom.raiz);
 const anims = new Animaciones(indice, bin);
-const rep = new Reproductor(anims, tom.raiz);
 const rt = new Retarget(tom.raiz, retarget[tam]);
-rep.despues = (c, tn, dt) => rt.aplicar(c, tn, dt);
 const zonas = new Zonas(tom.raiz, retarget[tam].zonas);
 const sonido = new Sonido(DATOS + 'sonido/', await fetch(DATOS + 'sonido/eventos.json').then((r) => r.json()));
-// prueba de toques: la zona tocada y un sonido de esa zona (la lógica del juego va en juego.js)
-const PRUEBA = { c_head_00_skn: 'PokeHeadFall', c_root_01_skn: 'PokeBelly', c_tail_05_skn: tam === 's' ? 'PokeTailS' : 'PokeTailL',
-  l_foot_00_skn: 'PokeLeg', r_foot_00_skn: 'PokeLeg', l_lowLeg_00_skn: 'PokeLegStandLeftML', r_lowLeg_00_skn: 'PokeLegStandRightML' };
-const rayc = new THREE.Raycaster();
+// los medidores (living = diversión, cocina = comida, baño = inodoro, cuarto = sueño)
+const med = (q.get('medidores') || '90,80,70,85').split(',').map(Number);
+const necesidades = new Necesidades({ fun: med[0], food: med[1], toilet: med[2], sleepy: med[3] });
+// ?clip=nombre: un clip suelto (para mirar animaciones); si no, Tom vivo
+const fijo = q.has('t') ? parseFloat(q.get('t')) : null;
+let rep = null, anim = null, ctl = null, toques = null, escucha = null;
+if (q.has('clip')) {
+  rep = new Reproductor(anims, tom.raiz);
+  rep.despues = (c, tn, dt) => rt.aplicar(c, tn, dt);
+  rep.play(q.get('clip'), { bucle: true });
+  if (fijo !== null) rep.update(fijo);
+} else {
+  anim = new AnimacionUnity(anims, tom.raiz);
+  ctl = new ControladorTom({ anim, raiz: tom.raiz, tam, sonido, necesidades, zonas, THREE, cuarto: cuartoCat });
+  const rayc = new THREE.Raycaster(), v2 = new THREE.Vector2();
+  const rayo = (x, y) => {
+    const r = lienzo.getBoundingClientRect();
+    v2.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+    rayc.setFromCamera(v2, cam);
+    return rayc.ray;
+  };
+  toques = new ToquesTom(ctl, zonas, rayo, () => innerWidth, () => innerHeight);
+  if (q.get('mic') !== '0') {
+    escucha = new Escucha(sonido, { cansado: () => necesidades.mustSleep });
+    ctl.conectarEscucha(escucha);
+  }
+}
 lienzo.addEventListener('pointerdown', (e) => {
   sonido.desbloquear();
-  const r = lienzo.getBoundingClientRect();
-  rayc.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cam);
-  const t = zonas.tocar(rayc.ray);
-  window.ultimoToque = t && t.zona;
-  if (t) sonido.tocar(sonido.deAnimacion(PRUEBA[t.zona]));
+  if (escucha && !escucha.disponible) escucha.pedirMicrofono();
+  if (toques) { lienzo.setPointerCapture(e.pointerId); toques.bajar(e.pointerId, e.clientX, e.clientY); }
+  window.ultimoToque = toques && toques.dedos.get(e.pointerId) ? toques.dedos.get(e.pointerId).nombre : null;
 });
-rep.play(q.get('clip') || (tam === 's' ? 'breathingS' : 'breathingL'), { bucle: true });
-const fijo = q.has('t') ? parseFloat(q.get('t')) : null;
-if (fijo !== null) rep.update(fijo);
+lienzo.addEventListener('pointermove', (e) => { if (toques) toques.mover(e.pointerId, e.clientX, e.clientY); });
+lienzo.addEventListener('pointerup', (e) => { if (toques) toques.soltar(e.pointerId); });
+lienzo.addEventListener('pointercancel', (e) => { if (toques) toques.dedos.delete(e.pointerId); });
 
 function medir() {
   const w = innerWidth, h = innerHeight;
@@ -91,7 +112,13 @@ let t = 0;
 function cuadro() {
   const dt = Math.min(reloj.getDelta(), 0.1);
   t += dt;
-  if (fijo === null) rep.update(dt);
+  if (ctl) {
+    ctl.update(dt);                      // Update del juego (decide qué animación suena)
+    anim.update(dt);                     // el componente Animation: avanza, mezcla y mueve los huesos
+    const p = ctl.current && ctl.current.principal;
+    rt.aplicar(p ? p.name : null, p && p.length ? p.time / p.length : 0, dt, (n, b) => anim.escribio(n, b));
+    ctl.lateUpdate();                    // LateUpdate (el respingo de la cabeza)
+  } else if (fijo === null) rep.update(dt);
   if (window.estado && window.estado.hud) window.estado.hud.cuadro(dt);
   if (window.estado && window.estado.ui) window.estado.ui.cuadro(dt);
   u.actualizar(t, dt, lienzo.width, lienzo.height, cam);
@@ -117,11 +144,10 @@ if (q.get('ui') !== '0') {
   pant = ui.armar(principal);
   hud = new Hud(ui, pant);
   hud.cuarto(cuartoCat);
-  const med = (q.get('medidores') || '80,25,60,10').split(',').map(Number);
   ['living', 'kitchen', 'bathroom', 'bedroom'].forEach((k, i) => hud.medidores[k] && hud.medidores[k].ponerProgreso(med[i], false));
 }
 addEventListener('resize', () => ui.layout());
-window.estado = { escena, cam, cuarto, tom, u, ui, pant, hud, zonas, sonido };
+window.estado = { escena, cam, cuarto, tom, u, ui, pant, hud, zonas, sonido, ctl, anim, toques, escucha, necesidades };
 window.listo = true;
 </script>
 </body>

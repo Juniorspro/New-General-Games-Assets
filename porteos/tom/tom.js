@@ -259,12 +259,14 @@ export class Retarget {
         o, f: j.JointDataFlags, esc: j.PositionScale, ofs: uPos(j.PositionOffset),
         pre: uRot(j.PreRotationOffset), post: uRot(j.PostRotationOffset),
         sc: new THREE.Vector3(j.ScaleOffset.x, j.ScaleOffset.y, j.ScaleOffset.z),
+        p0: o.position.clone(), q0: o.quaternion.clone(), s0: o.scale.clone(),
       });
     }
     const ao = datos && datos.TomCharacterAnimationOffset;
     this.porClip = {};
     if (ao) {
       this.nodo = raiz.getObjectByName(ao.AnimationOffsetTransform);
+      if (this.nodo) this.nodoP0 = this.nodo.position.clone();
       this.fundido = ao.BlendTime || 0.5;
       for (const a of ao.Animations) {
         const n = a.AnimationName || ((a.Animation && a.Animation.PrefabPath) || '').split('/').pop();
@@ -275,13 +277,22 @@ export class Retarget {
     this.obj = new THREE.Vector3();
   }
 
-  // clip: nombre del clip que suena; tn: su tiempo normalizado; dt: segundos del cuadro
-  aplicar(clip, tn, dt) {
+  // clip: nombre del clip que suena; tn: su tiempo normalizado; dt: segundos del cuadro;
+  // escribio(nombre, bit): si la animación escribió ese hueso en este cuadro (1 rotación, 2 posición,
+  // 4 escala). Lo que no escribió vuelve a su reposo antes de corregirse: si no, se acumula cada
+  // cuadro (las anclas SLOT_TOM_* del adolescente no las mueve ningún clip).
+  aplicar(clip, tn, dt, escribio = null) {
     for (const j of this.juntas) {
+      if (escribio) {
+        if (!escribio(j.o.name, 2)) j.o.position.copy(j.p0);
+        if (!escribio(j.o.name, 1)) j.o.quaternion.copy(j.q0);
+        if (!escribio(j.o.name, 4)) j.o.scale.copy(j.s0);
+      }
       if (j.f & 1) j.o.position.multiplyScalar(j.esc).add(j.ofs);
       if (j.f & 2) j.o.quaternion.premultiply(j.pre).multiply(j.post);
       if (j.f & 4) j.o.scale.add(j.sc);
     }
+    if (this.nodo && escribio && !escribio(this.nodo.name, 2)) this.nodo.position.copy(this.nodoP0);
     const kfs = this.nodo && this.porClip[clip];
     if (!kfs) return;
     let k = null;
