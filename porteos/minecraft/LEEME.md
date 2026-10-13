@@ -1,19 +1,26 @@
 # Minecraft PE 1.2 (Android) → navegador
 
 Minecraft PE 1.2 (el APK "Minecraft-v1.2" que mandó el dueño, la beta 1.2.0.2) jugable en el
-navegador del teléfono, en un solo `.html` de 2,4 MB, con **los shaders de Tito Crack 6000** (los del
+navegador del teléfono, en un solo `.html` de 3,2 MB, con **los shaders de Tito Crack 6000** (los del
 APK de Craftsman PTGI) como opción al empezar, **servidores** para jugar con otros y **bichos**.
 
-**Estado:** creativo completo para construir, con la interfaz de la 1.2:
+**Estado:** creativo completo para construir, con **las pantallas de la 1.2 de verdad** (las de sus
+`ui/*.json`, interpretadas; ver más abajo):
 
 - la primera vez se elige el idioma (English, Español o Português: los textos del juego, en_US,
-  es_MX y pt_BR) y después con o sin los shaders de Tito; las dos cosas se cambian en Ajustes;
-- el título con el logo, la frase amarilla y el panorama del río; Jugar con las pestañas Mundos,
-  Amigos y Servidores; crear un mundo (nombre, tipo infinito o plano, semilla, siempre de día,
-  bichos), editarlo o borrarlo; los ajustes de la 1.2 (Juego, Perfil, Táctil, Video, Sonido,
-  Idioma) con sus interruptores y deslizadores; la pausa; el inventario creativo con las pestañas
-  de la 1.2 (incluye los bloques nuevos: concreto, terracota esmaltada, vidrio teñido, prismarina,
-  purpur...) y los huevos de los bichos;
+  es_MX y pt_BR) y después con o sin los shaders de Tito, en carteles de la 1.2; las dos cosas se
+  cambian en Ajustes;
+- el título con el logo, la frase amarilla, el panorama del río y **el jugador con su skin** (el
+  "muñeco de papel", que se gira con el dedo); Jugar con las pestañas Mundos, Amigos y Servidores;
+  crear un mundo (nombre, modo, dificultad, semilla, tipo, las reglas del mundo), editarlo o
+  borrarlo; los ajustes completos de la 1.2 (Controles, Perfil, Recursos globales, Video, Sonido,
+  Idioma; dentro de un mundo también Juego y Multijugador); elegir skin (Steve o Alex, con
+  "Reciente"); Cómo se juega con todas sus secciones y los íconos táctiles; la carga y el guardado;
+  la pausa con la lista de jugadores; el chat con las **opciones de anfitrión** (hora, clima,
+  teletransportarse) y comandos (`/time`, `/weather`, `/gamemode`, `/tp`, `/summon`, `/kill`,
+  `/seed`); la muerte; desconectado;
+- el inventario creativo con las pestañas de la 1.2 (incluye los bloques nuevos: concreto,
+  terracota esmaltada, vidrio teñido, prismarina, purpur...) y los huevos de los bichos;
 - **tres mundos públicos fijados** arriba de todo en Jugar (y en Servidores): el mismo mundo para
   todos los que entran; además se pueden agregar servidores con nombre y dirección (la misma
   dirección = el mismo mundo);
@@ -51,11 +58,20 @@ del APK se usa todo lo demás, sin tocar ([`empaquetar.py`](empaquetar.py)):
 - **Los bloques** de `blocks.json` (forma, texturas por cara y el sonido de cada uno) con su número
   de la 1.2; lo que el juego tiene en código (qué es opaco, cuánta luz da) está en
   [`juego/comun.js`](juego/comun.js).
-- **La interfaz** ([`juego/interfaz.js`](juego/interfaz.js)): los dibujos de `textures/ui` en un
-  atlas con sus "nineslice", armados como los `ui/*.json` del juego (los botones claros con su
-  borde, las pestañas, el panel hueco con su relleno al 80 %, el negro al 75 % sobre el panorama);
-  `gui.png` para la barra y los controles; la fuente `default8.png`; el logo (a su tamaño, 1936 px,
-  sin pérdida) y el panorama del río (las 6 caras de 1080 px en WebP); las frases amarillas.
+- **Las pantallas** ([`juego/jui.js`](juego/jui.js), [`juego/pantallas.js`](juego/pantallas.js)):
+  la 1.2 arma sus menús con `ui/*.json` (108 espacios: herencia `nombre@espacio.base`, variables con
+  condiciones, expresiones, tamaños `100% - 4px`/`100%c`/`fill`, anclas, pilas, grillas,
+  desplazables, nineslice, animaciones, bindings y fábricas de carteles) y su código en C++ les
+  contesta los datos y los botones. `jui.js` es un intérprete de ese formato que dibuja en el
+  canvas 2D con la fuente `default8.png` (y los íconos de `glyph_E0/E1`), y `pantallas.js` hace lo
+  que hacía el código del juego: los "controladores" de cada pantalla (qué mundos hay, qué dice
+  cada interruptor, qué hace cada botón). [`empaquetar_ui.py`](empaquetar_ui.py) junta los JSON,
+  los textos de los tres idiomas y las texturas de `textures/ui` en un atlas. El muñeco del jugador
+  ([`juego/muneco.js`](juego/muneco.js)) es el modelo `geometry.humanoid.custom` con la skin,
+  cara por cara con transformaciones afines en el mismo canvas.
+- **El juego** ([`juego/interfaz.js`](juego/interfaz.js)): la barra, la cruceta y el inventario con
+  `gui.png` y los dibujos de `textures/ui`; el logo (a su tamaño, 1936 px, sin pérdida) y el
+  panorama del río (las 6 caras de 1080 px en WebP); las frases amarillas.
 - **Los modelos de los bichos y de los jugadores**: `models/mobs.json` (con la herencia
   "hijo:padre" resuelta) y sus texturas; [`juego/modelos.js`](juego/modelos.js) arma las cajas con el
   reparto de textura de Minecraft y las poses que el juego les da en código (el cuerpo acostado de

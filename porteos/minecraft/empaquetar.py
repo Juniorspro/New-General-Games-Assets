@@ -581,6 +581,9 @@ def main():
     ui = interfaz(apk, salida)
     uv, tam = armar_atlas(apk, salida)
     import sonidos12
+    import empaquetar_ui
+    # la interfaz de la 1.2 completa (ui/*.json y sus texturas) para el intérprete juego/jui.js
+    empaquetar_ui.armar(apk, PAQUETE, salida, jsonc, IDIOMAS)
     datos = {
         "atlas": {"tam": tam, "uv": uv},
         "bloques": bloques(apk),

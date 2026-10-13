@@ -375,6 +375,9 @@ var Interfaz = (function () {
     ctx.imageSmoothingEnabled = false;
     // como la escala del juego en un teléfono acostado: la barra rápida ocupa ~40 % del ancho
     E = Math.max(2, Math.min(Math.floor(W / 320), Math.floor(H / 180)));
+    // las pantallas de la 1.2 (Jui): la escala más grande que deja al menos 320×240 unidades, como el
+    // juego (su pausa, por ejemplo, está pensada para ~240 de alto)
+    if (window.Jui) Jui.tamano(W, H, Math.max(1, Math.min(Math.floor(W / 320), Math.floor(H / 240))));
     sucio = true;
   }
 
@@ -976,6 +979,15 @@ var Interfaz = (function () {
   }
   I.dibujar = function (forzar) {
     var p = I.pantalla;
+    // una pantalla de la 1.2 (Jui): se dibuja cada cuadro (sus animaciones y lo que cambia)
+    if (p === 'jui') {
+      ctx.clearRect(0, 0, W, H);
+      ctx.imageSmoothingEnabled = false;
+      I.botones = [];
+      Jui.dibujar(ctx);
+      sucio = false;
+      return;
+    }
     if (!sucio && !forzar && !((p === 'juego') && hayQueDibujarJuego()) && p !== 'titulo') return;
     sucio = false;
     ultimoFps = I.juego.fps; ultimoMouse = I.conMouse;
@@ -999,7 +1011,7 @@ var Interfaz = (function () {
     }
   };
   I.ir = function (p) { if (p !== I.pantalla) listaScroll = 0; I.pantalla = p; apretado = null; sucio = true; };
-  I.menu = function () { var p = I.pantalla; return p !== 'juego' && p !== 'pausa' && p !== 'inventario' && p !== 'muerte' && p !== 'chat'; };
+  I.menu = function () { var p = I.pantalla; return p !== 'juego' && p !== 'pausa' && p !== 'inventario' && p !== 'muerte' && p !== 'chat' && !(p === 'jui' && I.juiEnJuego); };
 
   // ------------------------------------------------------------------------------------------
   // Entrada
@@ -1009,6 +1021,7 @@ var Interfaz = (function () {
   I.control = { adelante: 0, costado: 0, saltar: false, subir: false, bajar: false, agachar: false, correr: false,
     agacharTactil: false, mirarX: 0, mirarY: 0, toque: null, rompiendo: null, rueda: 0 };
   var dedos = new Map();      // pointerId → estado del dedo
+  var dedosJui = new Set();   // los dedos que empezaron sobre una pantalla de la 1.2
   function dentro(b, x, y) { return x >= b.x && y >= b.y && x < b.x + b.w && y < b.y + b.h; }
   function botonEn(x, y) {
     for (var i = I.botones.length - 1; i >= 0; i--) if (dentro(I.botones[i], x, y) && !I.botones[i].debajo) return i;
@@ -1069,6 +1082,7 @@ var Interfaz = (function () {
   function entrada() {
     var objetivo = document.getElementById('lienzo').parentNode;
     objetivo.addEventListener('pointerdown', function (e) {
+      if (I.pantalla === 'jui') { var pj = punto(e); dedosJui.add(e.pointerId); Jui.bajar(pj[0] / Jui.escala, pj[1] / Jui.escala, e.pointerType === 'mouse'); return; }
       if (e.pointerType === 'mouse' && I.pantalla === 'juego' && document.pointerLockElement) return mouseAbajo(e);
       var p = punto(e), x = p[0], y = p[1];
       if (I.pantalla === 'juego') {
@@ -1131,6 +1145,7 @@ var Interfaz = (function () {
       }
     });
     objetivo.addEventListener('pointermove', function (e) {
+      if (I.pantalla === 'jui') { var pj = punto(e); Jui.mover(pj[0] / Jui.escala, pj[1] / Jui.escala, e.pointerType === 'mouse'); return; }
       var d = dedos.get(e.pointerId);
       if (!d) { if (e.pointerType === 'mouse' && document.pointerLockElement && I.pantalla === 'juego') { I.control.mirarX += e.movementX; I.control.mirarY += e.movementY; } return; }
       var p = punto(e), x = p[0], y = p[1];
@@ -1157,6 +1172,12 @@ var Interfaz = (function () {
       }
     });
     function soltar(e) {
+      if (dedosJui.has(e.pointerId)) {
+        dedosJui.delete(e.pointerId);
+        var pj = punto(e);
+        if (I.pantalla === 'jui') Jui.subir(pj[0] / Jui.escala, pj[1] / Jui.escala, e.pointerType === 'mouse');
+        return;
+      }
       var d = dedos.get(e.pointerId);
       if (!d) return;
       dedos.delete(e.pointerId);
@@ -1189,6 +1210,7 @@ var Interfaz = (function () {
     objetivo.addEventListener('pointerup', function (e) { if (e.pointerType === 'mouse' && e.button === 0 && document.pointerLockElement) I.control.rompiendo = null; });
     objetivo.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     objetivo.addEventListener('wheel', function (e) {
+      if (I.pantalla === 'jui') { var pj = punto(e); Jui.rueda(pj[0] / Jui.escala, pj[1] / Jui.escala, Math.sign(e.deltaY) * 24); return; }
       if (I.pantalla === 'juego') I.control.rueda += Math.sign(e.deltaY);
       else if (I.pantalla === 'inventario') { invScroll += Math.sign(e.deltaY); sucio = true; }
       else if (conLista()) { listaScroll = Math.max(0, Math.min(listaMax, listaScroll + Math.sign(e.deltaY) * 24 * E)); sucio = true; }

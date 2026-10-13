@@ -14,6 +14,7 @@
   var cam = { x: 0.5, y: 80, z: 0.5, yaw: 0, pitch: 0, fov: 70 * Math.PI / 180 };
   var mundo = { dist: 6, tiempo: 1000, reloj: 0, lluvia: 0, temperatura: 0.8, apuntado: null, rompiendo: 0, bajoAgua: false, nubes: true, entidades: [] };
   var partida = null;           // el mundo abierto
+  var cargando = false;         // se está armando el mundo (la pantalla de progreso de la 1.2)
   var jugando = false;          // hay un mundo andando (si no, el menú con el panorama)
   var telefono = matchMedia('(pointer: coarse)').matches;
   var TEMPERATURA = [0.5, 0.8, 2, 0.2, 0.7, 0.25, 0.8, 0.5, 0.8, 0.95, 0.6, 0.7, -0.5, 1.2, 2, 0, 0.5, 0.3];
@@ -67,6 +68,7 @@
     I.idioma = l;
     I.textos = datos.textos[l] || datos.textos.es || {};
     document.documentElement.lang = l;
+    if (window.Jui) Jui.idioma(l);
   }
   function avisar(texto) { I.juego.mensaje = texto; I.juego.mensajeHasta = performance.now() + 2500; I.sucio(); }
   function chat(s, color) {
@@ -220,15 +222,13 @@
   // jugando, el mundo se dibuja con menos píxeles que la pantalla cuando el teléfono no da (ver
   // resolucionAuto) y el navegador lo estira: con píxeles cuadrados ('pixelated'), como se ven las
   // texturas del juego. Estirado suavizado (lo que hacía el navegador solo) todo se veía borroso, como
-  // comprimido. En los menús sí suavizado: el panorama de atrás es una foto
+  // comprimido. En los menús sí suavizado: el panorama de atrás es una foto. Los menús de la 1.2 lo
+  // muestran nítido (no lo tapan ni lo difuminan), así que va con todos los píxeles
   var lienzoNitido = null;
   function ajustarTamano() {
-    // en los menús el panorama: en el título nítido como la 1.2 (un cubo con 6 fotos no le cuesta
-    // nada a ninguna GPU); atrás de los otros menús, que lo tapan al 75 %, con muy pocos píxeles y el
-    // navegador lo estira suavizado (queda difuminado)
-    var menu = !jugando || I.pantalla === 'cargando';
+    var menu = !jugando || cargando;
     var dp = Math.min(window.devicePixelRatio || 1, debil ? 1.5 : 2);
-    var base = menu ? (I.pantalla === 'titulo' ? dp : 0.25) : dp * (opciones.resolucion || escalaAuto);
+    var base = menu ? dp : dp * (opciones.resolucion || escalaAuto);
     var w = Math.max(1, Math.round(lienzo.clientWidth * base)), h = Math.max(1, Math.round(lienzo.clientHeight * base));
     if (lienzo.width !== w || lienzo.height !== h) { lienzo.width = w; lienzo.height = h; }
     if (lienzoNitido !== !menu) { lienzoNitido = !menu; lienzo.style.imageRendering = menu ? '' : 'pixelated'; }
@@ -246,6 +246,20 @@
 
     datos = await (await fetch('datos/datos.json')).json();
     I.ponerUI({}, datos.ui);
+    var datosUi = await (await fetch('datos/interfaz.json')).json();
+    var imgsUi = { 'logo.webp': null };
+    for (var tx in datosUi.texturas) imgsUi[datosUi.texturas[tx][0]] = null;
+    for (var ar in imgsUi) imgsUi[ar] = await cargarImagen('datos/' + ar);
+    Jui.iniciar(datosUi, imgsUi, {
+      '$pocket_edition': true, '$pocket_screen': true, '$desktop_screen': false, '$touch': true, '$touch_supported': true,
+      '$is_publish': true, '$pre_release': false, '$keyboard_and_mouse_supported': !telefono, '$gamepad_supported': false
+    });
+    Jui.textos(Pantallas.textos);
+    Jui.fuente(imgs.fuente);
+    Jui.glifos({ 224: await cargarImagen('datos/glifos_E0.png').catch(function () { return null; }),
+      225: await cargarImagen('datos/glifos_E1.png').catch(function () { return null; }) });
+    Jui.sonido = function (n) { Sonido.tocar(n, 0.5, 1); };
+    Pantallas.iniciar(G);
     ponerIdioma(opciones.idioma || 'es');
     I.cargandoTexto = I.tp('cargando'); I.cargandoParte = 0.15; I.sucio();
     var sonido = fetch('datos/sonidos.ogg').then(function (r) { return r.arrayBuffer(); });
@@ -269,6 +283,7 @@
     C.armarBloques(datos.bloques);
     O.prepararMateriales();
     Modelos.preparar(datos.bichos);
+    Muneco.preparar(datos.bichos, imgs.bichos);
     ajustarTamano();
     // los shaders de Tito se compilan recién cuando se eligen (en un teléfono flojo tardan)
     Render.iniciar(lienzo, datos, imgs, { shaders: opciones.shaders === true, sofisticados: opciones.sofisticados });
@@ -290,16 +305,17 @@
     // la primera vez: el idioma y después con o sin shaders (sobre el menú)
     irAlTitulo();
     window.prueba = { cam: cam, mundo: mundo, render: Render, jugador: J, partida: function () { return partida; }, abrir: abrirMundo, crear: crearMundo,
-      cuenta: cuenta, bichos: B, red: Red, publico: entrarPublico,
+      cuenta: cuenta, bichos: B, red: Red, publico: entrarPublico, pantallas: Pantallas, jui: Jui,
       rayo: function (fx, fy) { return tocarBloque(fx, fy, false); }, ms: function () { return msCuadro; },
       diag: null, pedirDiag: function () { if (trab) trab.postMessage({ t: 'diag' }); }, listo: true };
   }
   function irAlTitulo() {
-    if (!opciones.idioma) { I.ir('idioma'); return; }
-    if (opciones.shaders === null) { I.ir('shaders'); return; }
     var f = datos.frases || [];
     I.frase = f.length ? f[Math.floor(Math.random() * f.length)] : '';
-    I.ir('titulo');
+    Pantallas.ir('inicio');
+    I.ir('jui');
+    // la primera vez: el idioma y con o sin shaders, en carteles de la 1.2 sobre el título
+    Pantallas.primeraVez(function () { });
   }
 
   function refrescarMundos() {
@@ -336,15 +352,21 @@
     for (var i = 0; i < t.length; i++) h = (Math.imul(31, h) + t.charCodeAt(i)) | 0;
     return h;
   }
+  // n: lo de la pantalla "Crear mundo nuevo" de la 1.2 (nombre, semilla, modo, dificultad, tipo y las
+  // reglas del juego)
   function crearMundo(n) {
     n = n || I.nuevo;
     var m = {
       id: 'm' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
-      nombre: (n.nombre || I.t('createWorldScreen.defaultName', 'My World')).slice(0, 32),
-      semilla: typeof n.semilla === 'number' ? n.semilla : semillaDe(n.semilla), creativo: true, creado: Date.now(), jugado: Date.now(),
+      nombre: (String(n.nombre || '').trim() || I.t('createWorldScreen.defaultName', 'My World')).slice(0, 32),
+      semilla: typeof n.semilla === 'number' ? n.semilla : semillaDe(n.semilla), creado: Date.now(), jugado: Date.now(),
       tiempo: 1000, jugador: null, barra: O.barraInicial(), elegido: 0, tipo: n.tipo === 'plano' ? 'plano' : 'infinito',
       siempreDia: !!n.siempreDia, bichos: n.bichos !== false, local: true
     };
+    // el resto de lo elegido (modo, dificultad, reglas) queda en el mundo tal cual
+    for (var k in n) if (m[k] === undefined && k !== 'id') m[k] = n[k];
+    m.modo = n.modo || 'creativo';
+    m.creativo = m.modo === 'creativo';
     return BD.guardarMundo(m).then(function () { return abrirMundo(m); });
   }
   // un mundo público o un servidor: el mismo mundo para todos (la semilla sale de la sala), sin
@@ -368,8 +390,10 @@
   function abrirMundo(m) {
     Red.dejarDeMirar();
     I.cargandoTexto = I.t('progressScreen.generating', I.tp('cargando')); I.cargandoParte = 0;
-    I.ir('cargando');
+    cargando = true;
     I.soltarTodo();
+    Pantallas.ir('carga');
+    I.ir('jui');
     var guardadosP = m.local ? BD.trozos(m.id) : Promise.resolve([]);
     return guardadosP.then(function (regs) {
       return Promise.all(regs.map(function (r) {
@@ -507,11 +531,11 @@
       return refrescarMundos();
     });
   }
-  setInterval(function () { if (jugando && I.pantalla !== 'cargando') guardar(); }, 45000);
+  setInterval(function () { if (jugando && !cargando) guardar(); }, 45000);
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'hidden' && jugando) {
       guardar();
-      if (I.pantalla === 'juego') { I.soltarTodo(); I.ir('pausa'); }
+      if (I.pantalla === 'juego') I.acciones.pausa();
     }
   });
   addEventListener('pagehide', function () { if (jugando) guardar(); if (partida && !partida.local) Red.salir(); });
@@ -581,12 +605,14 @@
     Red.accion({ type: 'muerte', name: opciones.nombre, byName: ultimoAtacante });
     chat(I.muerte.texto, '#ff8080');
     Sonido.tocar('game.player.die', 1, 1);
-    I.ir('muerte');
+    Pantallas.ir('muerte');
+    I.ir('jui');
   }
   function reaparecer() {
     muerto = false; vida = 20; I.juego.vida = 20; ultimoAtacante = '';
     J.ubicar(aparicion[0], aparicion[1], aparicion[2]);
     esperandoSuelo = true;
+    Pantallas.vaciar();
     I.ir('juego');
   }
 
@@ -846,6 +872,9 @@
     if (partida) {
       if (!partida.local) partida.tiempo = (Date.now() / 50) % 24000;      // en los servidores, la misma hora para todos
       else if (partida.siempreDia) partida.tiempo = 6000; else partida.tiempo += 1;
+      // el clima (/weather, las opciones de anfitrión): el cielo se nubla y se aclara de a poco
+      var meta = partida.clima === 'rain' || partida.clima === 'thunder' ? 1 : 0;
+      mundo.lluvia += Math.max(-0.01, Math.min(0.01, meta - (mundo.lluvia || 0)));
     }
     if (I.juego.volando !== J.volando) { I.juego.volando = J.volando; I.sucio(); }
     // las caídas (en los servidores, donde hay vida)
@@ -938,9 +967,9 @@
       I.dibujar();
       return;
     }
-    if (I.pantalla === 'cargando') {
+    if (cargando) {
       if (esperandoSuelo) buscarSuelo();
-      if (!esperandoSuelo && listoParaEntrar()) { I.ir('juego'); acum = 0; entradaJuego = t; }
+      if (!esperandoSuelo && listoParaEntrar()) { cargando = false; Pantallas.vaciar(); I.ir('juego'); acum = 0; entradaJuego = t; }
       else { Render.dibujarPanorama(t / 1000 * 0.03, -0.04); I.dibujar(); return; }
     }
     if (esperandoSuelo) buscarSuelo();
@@ -963,7 +992,8 @@
     if (!adelante) corriendoTactil = false;
     adelanteAntes = adelante;
     // los pasos (en un servidor no se para el mundo en pausa: los demás siguen)
-    var pausado = (I.pantalla === 'pausa' || I.pantalla === 'opciones' || I.pantalla === 'pregunta') && partida && partida.local;
+    var pp = I.pantalla === 'jui' ? Pantallas.nombre() : null;
+    var pausado = (pp === 'pausa' || pp === 'ajustesJuego' || pp === 'comoJugar' || pp === 'skins') && partida && partida.local;
     if (pausado !== estabaPausado) { estabaPausado = pausado; if (trab) trab.postMessage({ t: 'pausa', v: pausado }); }
     if (!pausado) {
       acum += dt;
@@ -1174,6 +1204,153 @@
     return true;
   }
 
+  // ------------------------------------------------------------------------------------------
+  // Comandos del chat: los de la 1.2 que tienen sentido en este port (también los usan las
+  // opciones de anfitrión: hora, clima y teletransporte), con los mensajes del juego
+  // ------------------------------------------------------------------------------------------
+  var HORAS = { sunrise: 23000, day: 1000, noon: 6000, sunset: 12000, night: 13000, midnight: 18000 };
+  var CLIMAS = { clear: 'commands.weather.clear', rain: 'commands.weather.rain', thunder: 'commands.weather.thunder' };
+  function Tc(k, d) { return I.f.apply(null, [I.t(k, d)].concat([].slice.call(arguments, 2))); }
+  function coord(v, base) {
+    if (v === undefined) return NaN;
+    if (v.charAt(0) === '~') return base + (v.length > 1 ? parseFloat(v.slice(1)) : 0);
+    return parseFloat(v);
+  }
+  function comando(texto) {
+    var a = texto.replace(/^\//, '').trim().split(/\s+/), c = (a[0] || '').toLowerCase();
+    var malo = function () { chat(Tc('commands.generic.syntax', 'Syntax error', '/' + c + ' ', a.slice(1).join(' '), ''), '#ff8080'); };
+    if (!partida) return;
+    switch (c) {
+      case 'time': {
+        // en los mundos públicos la hora es la misma para todos (sale del reloj): no se toca
+        if (!partida.local) { chat(Tc('commands.generic.disabled', 'Cheats are not enabled'), '#ff8080'); return; }
+        var v = (a[2] || '').toLowerCase(), n = HORAS[v] !== undefined ? HORAS[v] : parseInt(v, 10);
+        if (a[1] === 'set' && !isNaN(n)) {
+          partida.tiempo = Math.floor(partida.tiempo / 24000) * 24000 + (((n % 24000) + 24000) % 24000);
+          chat(Tc('commands.time.set', 'Set the time to %1$d', n));
+        } else if (a[1] === 'add' && !isNaN(n)) { partida.tiempo += n; chat(Tc('commands.time.added', 'Added %1$d to the time', n)); }
+        else if (a[1] === 'query') chat(Tc('commands.time.query.daytime', 'Daytime is %d', Math.floor(partida.tiempo % 24000)));
+        else malo();
+        return;
+      }
+      case 'weather': case 'toggledownfall': {
+        var w = c === 'toggledownfall' ? (partida.clima && partida.clima !== 'clear' ? 'clear' : 'rain') : (a[1] || '').toLowerCase();
+        if (!CLIMAS[w]) { malo(); return; }
+        partida.clima = w;
+        chat(Tc(CLIMAS[w], w));
+        return;
+      }
+      case 'gamemode': case 'gm': {
+        var g = (a[1] || '').toLowerCase(), cre = { c: 1, creative: 1, '1': 1 }[g], sup = { s: 1, survival: 1, '0': 1 }[g];
+        if (!cre && !sup) { chat(Tc('commands.gamemode.fail.invalid', 'Invalid game mode %1$s', a[1] || ''), '#ff8080'); return; }
+        partida.modo = cre ? 'creativo' : 'supervivencia';
+        partida.creativo = !!cre;
+        J.creativo = !!cre; I.juego.creativo = !!cre;
+        if (!cre) { J.volando = false; I.juego.volando = false; }
+        chat(Tc('commands.gamemode.success.self', 'Set own game mode to %1$s', I.t(cre ? 'createWorldScreen.gameMode.creative' : 'createWorldScreen.gameMode.survival')));
+        I.sucio();
+        return;
+      }
+      case 'tp': case 'teleport': {
+        if (a.length >= 4) {
+          var x = coord(a[1], J.x), y = coord(a[2], J.y), z = coord(a[3], J.z);
+          if (isNaN(x) || isNaN(y) || isNaN(z)) { malo(); return; }
+          J.ubicar(x, y, z);
+          chat(Tc('commands.tp.success.coordinates', 'Teleported %1$s to %2$s, %3$s, %4$s', opciones.nombre, x.toFixed(1), y.toFixed(1), z.toFixed(1)));
+          return;
+        }
+        var quien = null;
+        Red.remotos.forEach(function (j) { if (a[1] && j.name.toLowerCase() === a[1].toLowerCase()) quien = j; });
+        if (!quien) { chat(Tc('commands.generic.player.notFound', 'That player cannot be found'), '#ff8080'); return; }
+        J.ubicar(quien.x, quien.y, quien.z);
+        chat(Tc('commands.tp.success', 'Teleported %1$s to %2$s', opciones.nombre, quien.name));
+        return;
+      }
+      case 'kill': if (!muerto) morir(); return;
+      case 'seed': chat(Tc('commands.seed.success', 'Seed: %1$s', partida.semilla)); return;
+      case 'say': G.enviarChat(a.slice(1).join(' ')); return;
+      case 'me': chat('* ' + opciones.nombre + ' ' + a.slice(1).join(' ')); return;
+      case 'summon': {
+        var tipo = (a[1] || '').replace(/^minecraft:/, '');
+        if (!B.TIPOS[tipo]) { chat(Tc('commands.generic.entity.invalidType', 'Invalid entity type %1$s', a[1] || ''), '#ff8080'); return; }
+        var sx = coord(a[2], J.x), sy = coord(a[3], J.y), sz = coord(a[4], J.z);
+        if (isNaN(sx)) { sx = J.x + Math.sin(J.yaw) * 2; sy = J.y; sz = J.z - Math.cos(J.yaw) * 2; }
+        B.crear(tipo, sx, sy, sz);
+        chat(Tc('commands.summon.success', 'Object successfully summoned'));
+        return;
+      }
+      case 'help': case '?':
+        chat('/time set <day|noon|sunset|night|midnight|sunrise|n>, /weather <clear|rain|thunder>, /gamemode <c|s>, ' +
+          '/tp <x y z|jugador>, /summon <bicho>, /kill, /seed, /say, /me');
+        return;
+    }
+    chat(Tc('commands.generic.unknown', 'Unknown command: %s', c), '#ff8080');
+  }
+
+  // ------------------------------------------------------------------------------------------
+  // Lo que las pantallas de la 1.2 (pantallas.js) le piden al juego
+  // ------------------------------------------------------------------------------------------
+  // el muñeco del título y la pausa arranca un poco girado hacia los botones (como en la 1.2)
+  var muñecoYaw = 0.45;
+  var G = {
+    opciones: function () { return opciones; },
+    guardarOpciones: guardarOpciones,
+    aplicarOpciones: aplicarOpciones,
+    ponerIdioma: function (l) { opciones.idioma = l; ponerIdioma(l); },
+    nombre: function () { return opciones.nombre; },
+    frase: function () { return I.frase || ''; },
+    jugando: function () { return jugando && !cargando; },
+    pantallaAbierta: function (n) {
+      I.juiEnJuego = jugando && !cargando;
+      // mientras se mira la lista de Jugar se cuenta quién está en los mundos públicos
+      if (n === 'jugar') { refrescarMundos(); mirarPublicos(); } else if (!jugando) Red.dejarDeMirar();
+      I.sucio();
+    },
+    publicos: function () { return PUBLICOS; },
+    mundos: function () { return I.mundos || []; },
+    servidores: servidores,
+    guardarServidores: guardarServidores,
+    jugadoresEn: function (sala) { return Red.jugadoresEn(sala) || 0; },
+    salaDe: salaDe,
+    crearMundo: function (m) { crearMundo(m); },
+    abrirMundo: abrirMundo,
+    guardarMundo: function (m) { return BD.guardarMundo(m).then(refrescarMundos); },
+    borrarMundo: function (m) { return BD.borrar(m.id).then(refrescarMundos); },
+    entrarPublico: entrarPublico,
+    entrarServidor: entrarServidor,
+    cargaTitulo: function () { return I.cargandoTexto || ''; },
+    cargaTexto: function () { return cargando ? I.t('progressScreen.message.building', '') : ''; },
+    cargaParte: function () { return typeof I.cargandoParte === 'number' ? I.cargandoParte : 0; },
+    jugadores: function () {
+      var l = [{ nombre: opciones.nombre, local: true }];
+      if (partida && !partida.local) Red.remotos.forEach(function (j) { l.push({ nombre: j.name }); });
+      return l;
+    },
+    seguir: function () { I.acciones.seguir(); },
+    salir: function () { I.acciones.salir(); },
+    reaparecer: function () { reaparecer(); },
+    partida: function () { return partida; },
+    esPublica: function () { return !!(partida && !partida.local); },
+    // una regla del mundo cambiada desde los ajustes del juego
+    cambioDePartida: function (k) {
+      if (!partida) return;
+      if (k === 'mob_spawn') B.activo = partida.bichos !== false;
+      guardar();
+    },
+    enviarChat: function (texto) {
+      if (texto.charAt(0) === '/') { chat(texto, '#c0c0c0'); comando(texto); return; }
+      chat(I.f(I.t('chat.type.text', '<%s> %s'), opciones.nombre, texto));
+      if (partida && !partida.local && !Red.decir(texto)) chat(I.t('chat.cannotSend', 'Cannot send chat message'), '#ff8080');
+    },
+    textoChat: function () { return I.juego.chat.slice(-30).map(function (l) { return l.s; }).join('\n'); },
+    mensajeMuerte: function () { return I.muerte.texto || ''; },
+    comando: function (texto) { comando(texto); },
+    trucos: function () { return !!(partida && partida.local); },
+    girarMuñeco: function (dx) { muñecoYaw += dx * 0.02; },
+    muñecoYaw: function () { return muñecoYaw; },
+    skin: function () { return opciones.skin === 'alex' ? 'alex' : 'steve'; }
+  };
+
   Object.assign(I.acciones, {
     jugar: function () { refrescarMundos().then(function () { I.ir('jugar'); mirarPublicos(); }); },
     jugarServidores: function () { I.tabJugar = 2; I.acciones.jugar(); },
@@ -1245,25 +1422,28 @@
       });
     },
     pausa: function () {
-      if (I.pantalla !== 'juego') return;
+      if (I.pantalla !== 'juego' && I.pantalla !== 'inventario') return;
       I.soltarTodo();
-      I.ir('pausa');
+      Pantallas.ir('pausa');
+      I.ir('jui');
       if (document.pointerLockElement) document.exitPointerLock();
       guardar();
     },
-    seguir: function () { I.ir('juego'); },
+    seguir: function () { Pantallas.vaciar(); I.ir('juego'); },
     opcionesJuego: function () { I.enJuego = true; armarAjustes(); I.ir('opciones'); },
     salir: function () {
       // el bucle deja el mundo ya (muestra el panorama) mientras se guarda
       jugando = false;
-      I.cargandoTexto = I.tp('guardando'); I.cargandoParte = undefined; I.ir('cargando');
+      I.cargandoTexto = I.t('progressScreen.saving', I.tp('guardando')); I.cargandoParte = 1;
+      Pantallas.ir('guardando');
+      I.ir('jui');
       cerrarMundo().then(function () { irAlTitulo(); });
     },
     reaparecer: function () { reaparecer(); },
     listoOpciones: function () { guardarOpciones(); aplicarOpciones(); if (I.enJuego) I.ir('pausa'); else irAlTitulo(); },
     inventario: function () { if (I.pantalla === 'juego') { I.soltarTodo(); I.ir('inventario'); if (document.pointerLockElement) document.exitPointerLock(); } },
     cerrarInv: function () { I.ir('juego'); },
-    abrirChat: function () { if (I.pantalla === 'juego' && I.juego.red) { I.soltarTodo(); I.ir('chat'); if (document.pointerLockElement) document.exitPointerLock(); } },
+    abrirChat: function () { if (I.pantalla === 'juego') { I.soltarTodo(); Pantallas.ir('chat'); I.ir('jui'); if (document.pointerLockElement) document.exitPointerLock(); } },
     cerrarChat: function () { I.ir('juego'); },
     escribirChat: function () {
       var tam = I.tam(), E = I.E();
@@ -1311,6 +1491,7 @@
   addEventListener('keydown', function (e) {
     if (e.code !== 'Escape' || (e.target && e.target.tagName === 'INPUT')) return;
     var p = I.pantalla;
+    if (p === 'jui') { Jui.atras(); return; }
     if (jugando) {
       if (p === 'juego') I.acciones.pausa();
       else if (p === 'pausa') I.acciones.seguir();

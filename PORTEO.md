@@ -867,12 +867,14 @@ Estado: creativo completo (mundos guardados, construir, agua y lava, inventario,
 Origen: Minecraft-v1.2 (LUISGAMERXD HD).apk (63,6 MB, sha256 e0a9278f…2421), por link de MediaFire
         (de la descripción de un video de YouTube); es la beta 1.2.0.2, x86
 Motor: libminecraftpe.so (nativo, no corre en un navegador)
-Estrategia: el motor voxel del port de Craftsman, crecido para la 1.2: interfaz de la 1.2 (ui/*.json
-        y textures/ui), sus shaders de fábrica y, como opción al empezar, los de Tito (del APK de
-        Craftsman PTGI, sin la sombra del personaje); multijugador por un broker MQTT público
-Fidelidad: recursos, interfaz, textos (en, es, pt), sonidos, modelos de bichos y shaders del juego;
-        el mundo, la física, la IA de los bichos y la red, reimplementados
-Tamaños: APK 64 MB → 2,1 MB de datos; un solo .html de 2,4 MB en texto ASCII
+Estrategia: el motor voxel del port de Craftsman, crecido para la 1.2: las pantallas de la 1.2 con un
+        intérprete de sus ui/*.json (y los controladores que en el juego son C++), sus shaders de
+        fábrica y, como opción al empezar, los de Tito (del APK de Craftsman PTGI, sin la sombra
+        del personaje); multijugador por un broker MQTT público
+Fidelidad: recursos, pantallas (los JSON de la 1.2 tal cual), textos (en, es, pt), sonidos, modelos
+        de bichos y shaders del juego; el mundo, la física, la IA de los bichos y la red,
+        reimplementados
+Tamaños: APK 64 MB → 4,4 MB de datos; un solo .html de 3,2 MB en texto ASCII
 Estado: creativo; idioma y shaders al empezar; 3 mundos públicos fijados + servidores agregados
         (jugadores, chat, bloques, golpes, bichos compartidos, lo construido retenido en el broker);
         bichos de día y de noche; probado en Chromium (también tipo Rezona, acostado y parado, y dos
@@ -893,6 +895,11 @@ Estado: creativo; idioma y shaders al empezar; 3 mundos públicos fijados + serv
     de cerca) fuera, el atlas como la versión de PC (píxeles tal cual, promedio de mipmaps de
     lejos), el mundo estirado en píxeles cuando se dibuja con menos, una resolución automática que
     vuelve a subir y el panorama y el logo a tamaño completo.
+  - de "quiero los menús completos de la 1.2": un intérprete de la interfaz JSON de Bedrock
+    (herencia, variables con condiciones, expresiones, tamaños relativos a padre/hijos, pilas,
+    grillas, desplazables, bindings, fábricas, animaciones) y un controlador por pantalla (título,
+    Jugar, crear/editar, ajustes, skins, cómo jugar, carga, pausa, chat con opciones de anfitrión y
+    comandos, muerte, desconectado); el muñeco del jugador dibujado en 2D cara por cara.
 - **Rearmarlo:** `porteos/minecraft/portear.sh Minecraft-1.2.apk Craftsman_PTGI.apk SALIDA` (deja
   `SALIDA/Minecraft-1.2.html`).
 
