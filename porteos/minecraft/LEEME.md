@@ -59,6 +59,15 @@ APK de Craftsman PTGI) como opción al empezar, **servidores** para jugar con ot
   buscan al jugador. Los bichos sueltan su botín de las `loot_tables` de la 1.2 (cocido si se
   quemaban) y experiencia si los mató el jugador; las espadas y herramientas pegan lo suyo, con
   golpes críticos al caer;
+- **fabricar** con las recetas de la 1.2 (unas 420: madera, piedra, minerales, colores, herramientas,
+  armaduras, redstone, vías, comida...): la grilla de 2x2 del inventario y la de 3x3 de la mesa, con
+  forma o sin forma, corridas y en espejo; el **libro de recetas** de la 1.2 en las pestañas de la
+  izquierda (lo que se puede hacer con cuántas veces, apagado lo que no alcanza; tocar una receta la
+  pone en la grilla, mantener pone todas las que se puedan); tocar la salida la agarra, mantenerla
+  fabrica todas. El **horno** (su pantalla de bolsillo, con el fuego y la flecha) cocina solo aunque
+  nadie lo mire, se prende y se apaga, y lo cocinado da su experiencia al sacarlo; los **cofres**
+  (dos juntos son uno grande) y el cofre del End guardan con el mundo y sueltan lo suyo al romperlos;
+  **comer** manteniendo el dedo con comida en la mano (con el sonido y la mano a la boca);
 - **el HUD de la 1.2** (su `hud_screen.json`, el estilo de bolsillo): los corazones arriba a la
   izquierda (tiemblan con poca vida, titilan al lastimarse) con la armadura debajo, la comida
   arriba a la derecha con las burbujas debajo, la barra de experiencia con el nivel sobre la barra
@@ -68,7 +77,8 @@ APK de Craftsman PTGI) como opción al empezar, **servidores** para jugar con ot
   los controles táctiles de MCPE, partículas, los sonidos del juego.
 
 Siempre acostado: con el teléfono parado se gira 90° solo (también adentro de Rezona). Falta para
-la supervivencia completa: fabricar, el horno y el cofre, comer y usar objetos.
+la supervivencia completa: los efectos (pociones, la manzana dorada), usar objetos (arco, baldes,
+encendedor, azada, cama...) y tratar con los bichos (criar, domar, montar, esquilar, comerciar).
 
 ## Cómo es
 

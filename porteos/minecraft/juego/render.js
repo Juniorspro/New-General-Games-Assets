@@ -1134,7 +1134,17 @@ var Render = (function () {
     GL.perspectiva(proyMano, 70 * Math.PI / 180, w / h, 0.05, 10);
     var m = mMano;
     m.set(GL.mat4());
-    var g = estado.golpe, rg = Math.sqrt(g);
+    // comiendo (ItemRenderer.performDrinking): sube a la boca, gira y se sacude
+    if (estado.comer) {
+      var q = estado.comer.quedan, f1 = q / (estado.comer.total || 32), f2 = f1 >= 0.8 ? 0 : Math.abs(Math.cos(q / 4 * Math.PI) * 0.1);
+      var f3 = 1 - Math.pow(f1, 27);
+      GL.trasladar(m, 0, f2, 0);
+      GL.trasladar(m, f3 * 0.6, f3 * -0.5, 0);
+      multRot(m, f3 * 90 * Math.PI / 180, 0, 1, 0);
+      multRot(m, f3 * 10 * Math.PI / 180, 1, 0, 0);
+      multRot(m, f3 * 30 * Math.PI / 180, 0, 0, 1);
+    }
+    var g = estado.comer ? 0 : estado.golpe, rg = Math.sqrt(g);
     GL.trasladar(m, 0.56 + estado.bamboleo[0] - 0.4 * Math.sin(rg * Math.PI), -0.52 + estado.bamboleo[1] - (1 - estado.equipo) * 0.6 + 0.2 * Math.sin(rg * Math.PI * 2),
       -0.72 - 0.2 * Math.sin(g * Math.PI));
     multRot(m, Math.PI / 4, 0, 1, 0);

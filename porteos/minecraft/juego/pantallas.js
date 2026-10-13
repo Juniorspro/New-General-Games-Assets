@@ -265,7 +265,9 @@ var Pantallas = (function () {
     guardando: 'progress.world_saving_progress_screen', pausa: 'pause.pause_screen', chat: 'chat.chat_screen',
     muerte: 'death.death_screen', skins: 'skin_picker.skin_picker_screen', comoJugar: 'how_to_play.how_to_play_screen',
     desconectado: 'disconnect.disconnect_screen', inventario: 'crafting_pocket.survival_inventory_screen_pocket',
-    inventarioCreativo: 'crafting_pocket.creative_inventory_screen_pocket', mesa: 'crafting_pocket.crafting_screen_pocket'
+    inventarioCreativo: 'crafting_pocket.creative_inventory_screen_pocket', mesa: 'crafting_pocket.crafting_screen_pocket',
+    horno: 'furnace.furnace_screen', cofre: 'chest.small_chest_screen', cofreGrande: 'chest.large_chest_screen',
+    cofreEnder: 'chest.ender_chest_screen'
   };
   // variables de plataforma de cada pantalla ($is_pregame: fuera del mundo; sin elegir una imagen
   // propia para la skin: el botón "Aspecto nuevo" no aparece)
@@ -1015,19 +1017,34 @@ var Pantallas = (function () {
       }
       return null;
     }
-    function creativaDe(col) {
-      if (col === 'recipe_search') return creativo ? buscados() : [];
-      var tab = LISTA_CREATIVA[col];
-      return tab === undefined ? null : (creativo ? lista(tab) : []);
-    }
     var tamFabricar = creativo || mesa ? 9 : 4;
+    // en supervivencia las pestañas de la izquierda son el libro de recetas: lo que se puede hacer en
+    // esta grilla (2x2 o la mesa), apagado lo que todavía no alcanza
+    var libro = !creativo && G.recetas ? G.recetas(tamFabricar === 9 ? 3 : 2) : [], librosPor = {};
+    function delLibro(col) {
+      if (col === 'recipe_search') {
+        var q = busqueda.trim().toLowerCase();
+        return q ? libro.filter(function (e) { return Objetos.nombre(e.id, e.m).toLowerCase().indexOf(q) >= 0; }) : libro;
+      }
+      var tab = LISTA_CREATIVA[col];
+      if (tab === undefined) return null;
+      if (!librosPor[tab]) librosPor[tab] = libro.filter(function (e) { return e.tab === tab; });
+      return librosPor[tab];
+    }
+    function creativaDe(col) {
+      if (!creativo) return delLibro(col);
+      if (col === 'recipe_search') return buscados();
+      var tab = LISTA_CREATIVA[col];
+      return tab === undefined ? null : lista(tab);
+    }
     function cosaEn(col, i) {
       var l = casilleros(col);
       if (l) return col === 'crafting_input_items' && i >= tamFabricar ? null : l[i];
       if (col === 'crafting_output_items') return G.resultadoFabricar ? G.resultadoFabricar(inv, tamFabricar) : null;
       var cr = creativaDe(col);
-      return cr && cr[i] ? Inventario.cosa(cr[i].id, cr[i].m, 1) : null;
+      return cr && cr[i] ? Inventario.cosa(cr[i].id, cr[i].m, cr[i].n || 1) : null;
     }
+    function entradaLibro(col, i) { var l = !creativo && delLibro(col); return l ? l[i] : null; }
     function idAux(c) { return c ? c.id * 65536 + c.m : 0; }
     function cerrar() {
       Inventario.devolver(inv, G.tirarObjeto);
@@ -1066,15 +1083,17 @@ var Pantallas = (function () {
       },
       coleccion: function (col, i, n) {
         var c = cosaEn(col, i), d = c && Items.def[c.id], cr = !casilleros(col) && col !== 'crafting_output_items';
+        var el = cr ? entradaLibro(col, i) : null;
         switch (n) {
           case '#item_id_aux': return idAux(c);
           case '#show_item': return !!c;
-          case '#inventory_stack_count': case '#recipe_craftable_count': return c && c.n > 1 && !creativo && !cr ? String(c.n) : '';
+          case '#recipe_craftable_count': if (el) { var tv = G.vecesReceta(el) * el.n; return tv > 1 ? String(tv) : ''; } return '';
+          case '#inventory_stack_count': return c && c.n > 1 && !creativo && !cr ? String(c.n) : '';
           case '#item_durability_visible': return !!(d && d.dur && c.d);
           case '#item_durability_total_amount': return d && d.dur ? d.dur : 1;
           case '#item_durability_current_amount': return d && d.dur ? d.dur - (c.d || 0) : 0;
           case '#hover_text': return c ? Objetos.nombre(c.id, c.m) : '';
-          case '#inactive_item': return false;
+          case '#inactive_item': return !!el && G.vecesReceta(el) === 0;
           case '#container_item_background': return 0;
           case '#container_item_modifier': return 0;
           case '#empty_armor_image_visible': return !c;
@@ -1099,6 +1118,12 @@ var Pantallas = (function () {
         var l = casilleros(q.col);
         if (id === 'button.coalesce_stack') { if (l) Inventario.juntar(inv); return; }
         if (q.col === 'crafting_output_items') { if (G.fabricar) G.fabricar(inv, tamFabricar, id !== 'button.crafting_output_primary'); return; }
+        if (!l && !creativo) {
+          // del libro de recetas: tocar pone una en la grilla, mantener todas las que se puedan
+          var e = entradaLibro(q.col, q.i);
+          if (e) G.ponerReceta(e, tamFabricar, id === 'button.recipe_secondary');
+          return;
+        }
         if (!l) {
           // de la lista creativa: una (tocar) o una pila entera (mantener); si ya se tenía algo
           // distinto, se cambia
@@ -1120,6 +1145,114 @@ var Pantallas = (function () {
   CTRL.inventario = ctrlInventario;
   CTRL.inventarioCreativo = ctrlInventario;
   CTRL.mesa = function (d) { d.mesa = true; return ctrlInventario(d); };
+
+  // ------------------------------------------------------------------------------------------
+  // Los cofres (pocket_containers) y el horno (furnace_pocket): a un lado el inventario (la barra y
+  // la mochila en "combined_hotbar_and_inventory_items"), al otro lo del bloque. El horno muestra el
+  // fuego y la flecha con lo que le queda de combustible y lo que lleva cocinado
+  // ------------------------------------------------------------------------------------------
+  function ctrlContenedor(datos) {
+    var inv = G.inventario(), c = datos.cont, otro = datos.otro || null, horno = !!c && c.tipo === 'horno';
+    function lugar(col, i) {
+      switch (col) {
+        case 'combined_hotbar_and_inventory_items': return i < 9 ? [inv.barra, i] : i < 36 ? [inv.mochila, i - 9] : null;
+        case 'container_items':
+          if (datos.ender) return i < 27 ? [inv.ender, i] : null;
+          return i < 27 ? [c.cosas, i] : otro && i < 54 ? [otro.cosas, i - 27] : null;
+        case 'furnace_ingredient_items': return horno && i === 0 ? [c.entrada, 0] : null;
+        case 'furnace_fuel_items': return horno && i === 0 ? [c.combustible, 0] : null;
+        case 'furnace_output_items': return horno && i === 0 ? [c.salida, 0] : null;
+      }
+      return null;
+    }
+    function largo(col) {
+      switch (col) {
+        case 'combined_hotbar_and_inventory_items': return 36;
+        case 'container_items': return otro ? 54 : 27;
+        case 'furnace_ingredient_items': case 'furnace_fuel_items': case 'furnace_output_items': return 1;
+      }
+    }
+    function cosaEn(col, i) { var l = lugar(col, i); return l ? l[0][l[1]] : null; }
+    function idAux(x) { return x ? x.id * 65536 + x.m : 0; }
+    function cerrar() {
+      Inventario.devolver(inv, G.tirarObjeto);
+      P.cerrar();
+      G.cerrarInventario(datos);
+    }
+    // el título del bloque (lo pone el código del juego en "$container_title")
+    var titulo = datos.ender ? 'container.enderchest' : horno ? 'container.furnace' : otro ? 'container.chestDouble' : 'container.chest';
+    return {
+      vars: { '$container_title': t(titulo) },
+      binding: function (n) {
+        var h = inv.mano;
+        switch (n) {
+          case '#inventory_selected_item': return idAux(h);
+          case '#inventory_selected_item_stack_count': return h && h.n > 1 ? String(h.n) : '';
+          case '#hover_text': case '#selected_item_name': return h ? Objetos.nombre(h.id, h.m) : '';
+          case '#progress_bar_visible': return Jui.progresoMantener() >= 0;
+          case '#progress_bar_total_amount': return 1;
+          case '#progress_bar_current_amount': return Math.max(0, Jui.progresoMantener());
+          case '#selected_item_durability_visible': { var dh = h && Items.def[h.id]; return !!(dh && dh.dur && h.d); }
+          case '#selected_item_durability_total_amount': { var dt = h && Items.def[h.id]; return dt && dt.dur ? dt.dur : 1; }
+          case '#selected_item_durability_current_amount': { var dc = h && Items.def[h.id]; return dc && dc.dur ? dc.dur - (h.d || 0) : 0; }
+          case '#furnace_arrow_ratio': return horno ? 1 - c.coccion / 200 : 1;
+          case '#furnace_flame_ratio': return horno && c.quema > 0 ? 1 - c.quema / (c.quemaTotal || 1) : 1;
+          case '#output_name': { var o = horno && c.salida[0]; return o ? Objetos.nombre(o.id, o.m) : ''; }
+          case '#is_creative_mode': return G.creativo();
+          case '#is_survival_mode': return !G.creativo();
+        }
+      },
+      longitud: largo,
+      coleccion: function (col, i, n) {
+        var x = cosaEn(col, i), d = x && Items.def[x.id];
+        switch (n) {
+          case '#item_id_aux': return idAux(x);
+          case '#show_item': return !!x;
+          case '#inventory_stack_count': case '#stack_count': return x && x.n > 1 ? String(x.n) : '';
+          case '#item_durability_visible': return !!(d && d.dur && x.d);
+          case '#item_durability_total_amount': return d && d.dur ? d.dur : 1;
+          case '#item_durability_current_amount': return d && d.dur ? d.dur - (x.d || 0) : 0;
+          case '#hover_text': return x ? Objetos.nombre(x.id, x.m) : '';
+          case '#inactive_item': return false;
+          case '#container_item_background': case '#container_item_modifier': case '#item_custom_color': return 0;
+        }
+      },
+      arrastrable: function (b) { var q = Jui.coleccionDe(b); return !!(q && cosaEn(q.col, q.i)); },
+      boton: function (id, b) {
+        if (id === 'button.menu_exit' || id === 'button.menu_cancel' || id === 'button.try_menu_exit' || id === 'button.menu_inventory_cancel') { cerrar(); return; }
+        var q = b ? Jui.coleccionDe(b) : null;
+        if (!q) {
+          if ((id === 'button.cursor_drop_all' || id === 'button.cursor_drop_one') && inv.mano && G.tirarObjeto) {
+            if (id === 'button.cursor_drop_one' && inv.mano.n > 1) { G.tirarObjeto(Inventario.copia(inv.mano, 1)); inv.mano.n--; }
+            else { G.tirarObjeto(inv.mano); inv.mano = null; }
+          }
+          return;
+        }
+        var l = lugar(q.col, q.i);
+        if (!l) return;
+        if (id === 'button.coalesce_stack') { Inventario.juntar(inv); return; }
+        if (q.col === 'furnace_output_items') {
+          // de la salida sólo se saca (y da la experiencia de lo cocinado)
+          var s = l[0][0], h = inv.mano;
+          if (!s) return;
+          if (!h) { inv.mano = s; l[0][0] = null; }
+          else if (Inventario.iguales(h, s) && h.n + s.n <= Inventario.pila(s)) { h.n += s.n; l[0][0] = null; }
+          else return;
+          if (G.experienciaHorno) G.experienciaHorno(c);
+          return;
+        }
+        // en el lugar del combustible sólo va lo que arde (y el balde vacío, para la esponja)
+        if (q.col === 'furnace_fuel_items' && inv.mano && !Recetas.combustible(inv.mano) && !(inv.mano.id === 325 && inv.mano.m === 0)) return;
+        if (id === 'button.container_take_half_place_one') Inventario.mitad(inv, l[0], l[1]);
+        else Inventario.tocar(inv, l[0], l[1]);
+        if (q.col === 'combined_hotbar_and_inventory_items') G.inventarioCambio();
+      }
+    };
+  }
+  CTRL.horno = ctrlContenedor;
+  CTRL.cofre = ctrlContenedor;
+  CTRL.cofreGrande = ctrlContenedor;
+  CTRL.cofreEnder = ctrlContenedor;
 
   // ------------------------------------------------------------------------------------------
   // El HUD (hud.hud_screen): la barra rápida y la de experiencia abajo, los corazones y la armadura

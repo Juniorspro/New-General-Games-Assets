@@ -1011,7 +1011,9 @@ var Jui = (function () {
     if (ey[6]) h += c.llenoH !== undefined ? c.llenoH : 0;
     var conTexto = c.t === 'label';
     if (ex[5] || ey[5] || conTexto) {
-      var disp = ex[5] ? Math.min(mx, pw) : w;
+      // una etiqueta de ancho "default" mide su texto en una línea (sólo parte con "max_size": las de
+      // "Entrada" y "Combustible" del horno sobresalen de su casillero, como en el juego)
+      var disp = ex[5] ? (conTexto ? mx : Math.min(mx, pw)) : w;
       var pr = propio(c, conTexto ? disp : 0);
       if (pr) {
         if (ex[5]) w += pr[0];

@@ -11,7 +11,8 @@ var Inventario = (function () {
   V.nuevo = function (barra) {
     var b = vacios(9);
     if (barra) for (var i = 0; i < 9; i++) b[i] = barra[i] ? V.cosa(barra[i].id, barra[i].m, barra[i].n, barra[i].d) : null;
-    return { barra: b, mochila: vacios(27), armadura: vacios(4), mano2: vacios(1), fabricar: vacios(9), mano: null };
+    // (y el cofre del End: lo mismo en todos los cofres del End del mundo)
+    return { barra: b, mochila: vacios(27), armadura: vacios(4), mano2: vacios(1), fabricar: vacios(9), mano: null, ender: vacios(27) };
   };
   V.cosa = function (id, m, n, d) { return { id: id, m: m || 0, n: n || 1, d: d || 0 }; };
   V.copia = function (c, n) { return c ? { id: c.id, m: c.m, n: n === undefined ? c.n : n, d: c.d || 0 } : null; };
@@ -151,12 +152,12 @@ var Inventario = (function () {
   function comp(c) { return c ? [c.id, c.m, c.n, c.d || 0] : 0; }
   function descomp(a) { return Array.isArray(a) ? V.cosa(a[0] | 0, a[1] | 0, a[2] | 0 || 1, a[3] | 0) : null; }
   V.guardar = function (inv) {
-    return { b: inv.barra.map(comp), mo: inv.mochila.map(comp), ar: inv.armadura.map(comp), m2: inv.mano2.map(comp) };
+    return { b: inv.barra.map(comp), mo: inv.mochila.map(comp), ar: inv.armadura.map(comp), m2: inv.mano2.map(comp), en: inv.ender.map(comp) };
   };
   V.cargar = function (inv, g) {
     if (!g) return;
     function poner(l, a) { if (Array.isArray(a)) for (var i = 0; i < l.length && i < a.length; i++) l[i] = descomp(a[i]); }
-    poner(inv.barra, g.b); poner(inv.mochila, g.mo); poner(inv.armadura, g.ar); poner(inv.mano2, g.m2);
+    poner(inv.barra, g.b); poner(inv.mochila, g.mo); poner(inv.armadura, g.ar); poner(inv.mano2, g.m2); poner(inv.ender, g.en);
   };
   // los puntos de armadura que se llevan puestos (para la barra de armadura y el daño)
   V.puntosArmadura = function (inv) {

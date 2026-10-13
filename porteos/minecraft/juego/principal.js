@@ -492,6 +492,7 @@
         B.cargar(m.bichos_lista);
       }
       Tirados.cargar(m.local ? m.tirados : null);
+      Contenedores.cargar(m.local ? m.contenedores : null);
       minando = null;
       ultimoCentro = [Math.floor(J.x / 16), Math.floor(J.z / 16), Math.floor((J.y + 1.62) / 16)];
       trab.postMessage({ t: 'ini', bloques: datos.bloques, uv: datos.atlas.uv, semilla: m.semilla, dist: opciones.dist, tipo: m.tipo,
@@ -552,6 +553,7 @@
     m.supervivencia = Supervivencia.guardar(sup);
     m.bichos_lista = B.paraGuardar();
     m.tirados = Tirados.guardar();
+    m.contenedores = Contenedores.guardar();
     var claves = Array.from(Mundo.sucios);
     Mundo.sucios.clear();
     var regs = claves.map(function (k) {
@@ -575,6 +577,7 @@
       I.juego.red = null;
       B.limpiar();
       Tirados.limpiar();
+      Contenedores.limpiar();
       if (trab) { trab.terminate(); trab = null; }
       Render.reiniciar();
       Mundo.iniciar(null);
@@ -797,8 +800,36 @@
     return true;
   }
 
+  // abrir una pantalla de la 1.2 desde el mundo (la mesa, el horno, un cofre)
+  function abrirPantalla(nombre, datos) {
+    I.soltarTodo();
+    Pantallas.ir(nombre, datos);
+    I.ir('jui');
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+  // el cofre de al lado (dos juntos son uno grande: arriba el de menor x o z, como el juego)
+  function cofreVecino(x, y, z, id) {
+    var v = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+    for (var k = 0; k < 4; k++) if (Mundo.bloque(x + v[k][0], y, z + v[k][1]) === id) return [x + v[k][0], z + v[k][1], k < 2];
+    return null;
+  }
   function usar(h) {
     var id = h.id, f = C.FORMA[id];
+    if (id === 58) { abrirPantalla('mesa'); return true; }
+    if (id === 61 || id === 62) { abrirPantalla('horno', { cont: Contenedores.horno(h.x, h.y, h.z) }); return true; }
+    if (id === 54 || id === 146 || id === 130) {
+      // no se abre con un bloque macizo encima (BlockChest.isBlocked)
+      var arriba = Mundo.bloque(h.x, h.y + 1, h.z);
+      if (arriba > 0 && C.OPACO[arriba] && C.SOLIDO[arriba]) return true;
+      Sonido.tocar(id === 130 ? 'random.chestopen' : 'random.chestopen', 0.5, Math.random() * 0.1 + 0.9, h.x + 0.5, h.y + 0.5, h.z + 0.5);
+      if (id === 130) { abrirPantalla('cofreEnder', { ender: true, pos: [h.x, h.y, h.z] }); return true; }
+      var este = Contenedores.cofre(h.x, h.y, h.z), vec = cofreVecino(h.x, h.y, h.z, id);
+      if (vec) {
+        var otro = Contenedores.cofre(vec[0], h.y, vec[1]);
+        abrirPantalla('cofreGrande', vec[2] ? { cont: otro, otro: este, pos: [h.x, h.y, h.z] } : { cont: este, otro: otro, pos: [h.x, h.y, h.z] });
+      } else abrirPantalla('cofre', { cont: este, pos: [h.x, h.y, h.z] });
+      return true;
+    }
     if (f === C.F.puerta && id !== 71) {
       var abajo = Mundo.meta(h.x, h.y, h.z) & 8 ? h.y - 1 : h.y, m = Mundo.meta(h.x, abajo, h.z);
       ponerBloque(h.x, abajo, h.z, id, m ^ 4);
@@ -872,6 +903,11 @@
     gastarElegido();
     cuenta.puestos++;
   }
+  function cambiarHorno(h, prendido) {
+    var b = Mundo.bloque(h.x, h.y, h.z);
+    if (b !== 61 && b !== 62) return;
+    ponerBloque(h.x, h.y, h.z, prendido ? 62 : 61, Mundo.meta(h.x, h.y, h.z));
+  }
   // en supervivencia lo que se pone (o el huevo que se usa) se gasta
   function gastarElegido() {
     if (!supervivencia()) return;
@@ -907,6 +943,8 @@
     var id = h.id, m = Mundo.meta(h.x, h.y, h.z);
     ponerBloque(h.x, h.y, h.z, 0, 0);
     soltarBloque(id, m, h.x, h.y, h.z, item);
+    // lo que tenía adentro (un cofre, un horno) se cae
+    if (partida && partida.local) Contenedores.quitar(h.x, h.y, h.z).forEach(function (c) { Tirados.deBloque(c, h.x, h.y, h.z); });
     if (supervivencia()) {
       // el hielo deja agua si abajo hay algo (BlockIce); la piedra con un pez plateado lo suelta
       if (Minar.dejaAgua(id) && Mundo.bloque(h.x, h.y - 1, h.z) !== 0) ponerBloque(h.x, h.y, h.z, 8, 0);
@@ -970,6 +1008,38 @@
     mundo.apuntado = null; mundo.rompiendo = 0;
     I.sucio();
   }
+  // comer: manteniendo el dedo con comida en la mano (si hay hambre, o siempre con lo que se puede
+  // comer siempre), los pasos de items.json ("use_duration"); suena cada 4 pasos y al terminar suma la
+  // comida y la saturación (y deja el tazón del guiso)
+  var comiendo = null;
+  function comidaEnMano() {
+    var it = I.juego.barra[I.juego.elegido], cm = it && Items.comida(it.id);
+    if (!cm || !supervivencia() || muerto) return null;
+    if (sup.comida >= 20 && !cm.f.can_always_eat) return null;
+    return cm;
+  }
+  function comerPaso(cm, ahora) {
+    var it = I.juego.barra[I.juego.elegido], clave = it.id + ':' + it.m;
+    if (!comiendo || comiendo.clave !== clave) comiendo = { clave: clave, t0: ahora, total: cm.t * 50, sonido: 0 };
+    var t = ahora - comiendo.t0;
+    estadoMano.comer = { quedan: Math.max(0, (comiendo.total - t) / 50), total: cm.t };
+    if (t > 350 && ahora - comiendo.sonido >= 200) {
+      comiendo.sonido = ahora;
+      Sonido.tocar('random.eat', 0.5 + 0.5 * Math.round(Math.random()), (Math.random() - Math.random()) * 0.2 + 1);
+    }
+    if (t < comiendo.total) return;
+    Supervivencia.comer(sup, cm.f);
+    Sonido.tocar('random.burp', 0.5, Math.random() * 0.1 + 0.9);
+    var queda = cm.f.using_converts_to ? Botin.numero(cm.f.using_converts_to) : undefined;
+    Inventario.gastar(inv, I.juego.elegido, 1);
+    if (queda !== undefined) {
+      var cosa = Inventario.cosa(queda, 0, 1);
+      if (!inv.barra[I.juego.elegido]) inv.barra[I.juego.elegido] = cosa;
+      else if (Inventario.agregar(inv, cosa) > 0) tirarObjeto(cosa);
+    }
+    comiendo = null; estadoMano.comer = null;
+    I.sucio();
+  }
   // en creativo con una espada en la mano no se rompe (como el juego)
   function espadaEnMano() { var it = I.juego.barra[I.juego.elegido], d = it && Items.def[it.id]; return !!(d && d.herr === 'espada'); }
 
@@ -995,6 +1065,10 @@
     }
     mundo.apuntado = null; mundo.rompiendo = 0; hayObjetivo = false;
     if (c.rompiendo && I.pantalla === 'juego') {
+      // con comida en la mano (y hambre) se come en vez de romper
+      var cm = comidaEnMano();
+      if (cm) { minando = null; comerPaso(cm, ahora); return; }
+      comiendo = null; estadoMano.comer = null;
       // manteniendo sobre un bicho o un jugador: le pega cada medio segundo
       if (ahora >= proximoPegar && pegar(c.rompiendo[0], c.rompiendo[1])) { proximoPegar = ahora + 500; return; }
       var h = tocarBloque(c.rompiendo[0], c.rompiendo[1], false);
@@ -1006,7 +1080,7 @@
         else if (ahora >= proximoRomper && !espadaEnMano()) { romper(h); proximoRomper = ahora + 250; mundo.apuntado = null; }
       } else minando = null;
     } else {
-      proximoRomper = 0; minando = null;
+      proximoRomper = 0; minando = null; comiendo = null; estadoMano.comer = null;
       // con mouse: el contorno del bloque de la mira
       if (I.conMouse && I.pantalla === 'juego') mundo.apuntado = tocarBloque(0.5, 0.5, false);
     }
@@ -1184,6 +1258,8 @@
     B.paso(jugs, luzDelDia());
     // lo tirado en el piso y los orbes (se levantan al pasar)
     Tirados.paso({ x: J.x, y: J.y, z: J.z, vivo: !muerto }, ganchosTirados);
+    // los hornos cocinan solos (y se prenden y se apagan)
+    Contenedores.paso(cambiarHorno);
     if (pasosLuz % 5 === 2) pedirLuces();
     // el trabajador sigue al jugador
     var cx = Math.floor(J.x / 16), cz = Math.floor(J.z / 16), sy = Math.max(0, Math.min(7, Math.floor((J.y + 1.62) / 16)));
@@ -1576,6 +1652,137 @@
   }
 
   // ------------------------------------------------------------------------------------------
+  // Fabricar: la grilla de 2x2 del inventario o la de 3x3 de la mesa (inv.fabricar), las recetas de
+  // recetas.js y el libro de recetas de la 1.2 (tocar una receta pone sus cosas en la grilla)
+  // ------------------------------------------------------------------------------------------
+  function grillaDe(v, lado) {
+    var g = [];
+    for (var i = 0; i < lado * lado; i++) g.push(v.fabricar[i] || null);
+    return g;
+  }
+  function resultadoFabricar(v, tam) {
+    var lado = tam === 9 ? 3 : 2, r = Recetas.buscar(grillaDe(v, lado), lado);
+    return r ? Inventario.cosa(r.o[0], r.o[1], r.o[2]) : null;
+  }
+  // lo que queda en la grilla al usar algo que viene en un recipiente (la leche deja el balde)
+  var RECIPIENTE = { '325:1': [325, 0], '325:8': [325, 0], '325:10': [325, 0], '373:0': [374, 0] };
+  function gastarGrilla(v, lado) {
+    for (var i = 0; i < lado * lado; i++) {
+      var c = v.fabricar[i];
+      if (!c) continue;
+      var queda = RECIPIENTE[c.id + ':' + c.m];
+      if (queda) { v.fabricar[i] = Inventario.cosa(queda[0], queda[1], 1); continue; }
+      c.n--;
+      if (c.n <= 0) v.fabricar[i] = null;
+    }
+  }
+  // tocar la salida: una vez a la mano; mantener: todas las que se puedan, al inventario
+  function fabricar(v, tam, todas) {
+    var lado = tam === 9 ? 3 : 2, hechas = 0;
+    for (var vez = 0; vez < 64; vez++) {
+      var r = Recetas.buscar(grillaDe(v, lado), lado);
+      if (!r) break;
+      var sale = Inventario.cosa(r.o[0], r.o[1], r.o[2]);
+      if (!todas) {
+        if (v.mano && !(Inventario.iguales(v.mano, sale) && v.mano.n + sale.n <= Inventario.pila(sale))) break;
+        if (v.mano) v.mano.n += sale.n; else v.mano = sale;
+      } else {
+        if (!Inventario.cabe(v, sale)) break;
+        var sobra = Inventario.agregar(v, sale);
+        if (sobra > 0) tirarObjeto(Inventario.copia(sale, sobra));
+      }
+      gastarGrilla(v, lado);
+      hechas++;
+      if (!todas) break;
+    }
+    if (hechas) I.sucio();
+    return hechas;
+  }
+  // el libro: una entrada por cosa que sale (con sus recetas), en la pestaña de esa cosa en el
+  // inventario creativo y en ese orden
+  var libros = {};
+  function recetasPara(lado) {
+    if (libros[lado]) return libros[lado];
+    var orden = {}, lc = G.listaCreativa();
+    lc.forEach(function (it, i) { var k = it.id + ':' + it.m; if (orden[k] === undefined) orden[k] = { i: i, tab: it.tab }; });
+    var por = {}, l = [];
+    Recetas.lista.forEach(function (r) {
+      if (!Recetas.entra(r, lado)) return;
+      var k = r.o[0] + ':' + r.o[1];
+      if (por[k]) { por[k].rs.push(r); return; }
+      var o = orden[k];
+      var e = { id: r.o[0], m: r.o[1], n: r.o[2], rs: [r], tab: o ? o.tab : (Items.es(r.o[0]) ? 3 : 0), i: o ? o.i : 1e6 + l.length };
+      por[k] = e; l.push(e);
+    });
+    l.sort(function (a, b) { return a.i - b.i; });
+    libros[lado] = l;
+    return l;
+  }
+  // cuántas tiene el jugador de algo (en la barra y la mochila; -1: cualquier variante)
+  function contar(v, id, m) {
+    var n = 0;
+    [v.barra, v.mochila].forEach(function (l) { l.forEach(function (c) { if (c && c.id === id && (m < 0 || c.m === m) && !c.d) n += c.n; }); });
+    return n;
+  }
+  // cuántas veces se puede hacer una receta con lo que se tiene (lo de la grilla también cuenta)
+  function vecesReceta(v, r) {
+    var ing = Recetas.ingredientes(r), veces = 64;
+    ing.forEach(function (k) {
+      var hay = contar(v, k.id, k.m);
+      v.fabricar.forEach(function (c) { if (c && c.id === k.id && (k.m < 0 || c.m === k.m)) hay += c.n; });
+      veces = Math.min(veces, Math.floor(hay / k.n));
+    });
+    return veces;
+  }
+  function vecesEntrada(v, e) { var mx = 0; e.rs.forEach(function (r) { mx = Math.max(mx, vecesReceta(v, r)); }); return mx; }
+  // sacar n de algo del inventario (para poner en la grilla): devuelve la variante que se sacó o null
+  function sacar(v, id, m, n) {
+    var listas = [v.mochila, v.barra], elegida = -1;
+    if (m < 0) {
+      // la variante de la que más hay
+      var cuenta = {};
+      listas.forEach(function (l) { l.forEach(function (c) { if (c && c.id === id && !c.d) cuenta[c.m] = (cuenta[c.m] || 0) + c.n; }); });
+      for (var k in cuenta) if (cuenta[k] >= n && (elegida < 0 || cuenta[k] > cuenta[elegida])) elegida = +k;
+      if (elegida < 0) return null;
+    } else {
+      if (contar(v, id, m) < n) return null;
+      elegida = m;
+    }
+    var falta = n;
+    listas.forEach(function (l) {
+      for (var i = 0; i < l.length && falta > 0; i++) {
+        var c = l[i];
+        if (!c || c.id !== id || c.m !== elegida || c.d) continue;
+        var t = Math.min(falta, c.n);
+        c.n -= t; falta -= t;
+        if (c.n <= 0) l[i] = null;
+      }
+    });
+    return elegida;
+  }
+  // tocar una receta del libro: devuelve lo de la grilla y la llena con una (o con todas las que se
+  // puedan) de esa receta
+  function ponerReceta(v, e, tam, muchas) {
+    var lado = tam === 9 ? 3 : 2;
+    for (var i = 0; i < 9; i++) if (v.fabricar[i]) { var sobra = Inventario.agregar(v, v.fabricar[i]); if (sobra > 0) tirarObjeto(Inventario.copia(v.fabricar[i], sobra)); v.fabricar[i] = null; }
+    var r = null, veces = 0;
+    e.rs.forEach(function (x) { var q = vecesReceta(v, x); if (q > veces) { veces = q; r = x; } });
+    if (!r || !veces) return false;
+    var n = muchas ? Math.min(veces, 64) : 1;
+    // que no pase de lo que se apila en cada lugar
+    (r.s || r.g).forEach(function (k) { if (k) n = Math.min(n, Inventario.pila({ id: k[0], m: Math.max(0, k[1]) })); });
+    var celdas = [];
+    if (r.s) r.s.forEach(function (k, j) { celdas.push([j, k]); });
+    else for (var y = 0; y < r.h; y++) for (var x = 0; x < r.w; x++) { var k = r.g[y * r.w + x]; if (k) celdas.push([y * lado + x, k]); }
+    celdas.forEach(function (ce) {
+      var m = sacar(v, ce[1][0], ce[1][1], n);
+      if (m !== null) v.fabricar[ce[0]] = Inventario.cosa(ce[1][0], m, n);
+    });
+    I.sucio();
+    return true;
+  }
+
+  // ------------------------------------------------------------------------------------------
   // Lo que las pantallas de la 1.2 (pantallas.js) le piden al juego
   // ------------------------------------------------------------------------------------------
   // el muñeco del título y la pausa arranca un poco girado hacia los botones (como en la 1.2)
@@ -1642,9 +1849,19 @@
     inventario: function () { return inv; },
     creativo: function () { return !!(partida && partida.creativo); },
     listaCreativa: function () { if (!listaCreativa) listaCreativa = O.creativo(); return listaCreativa; },
-    cerrarInventario: function () { Pantallas.vaciar(); I.ir('juego'); mostrarNombre(); I.sucio(); },
+    cerrarInventario: function (d) {
+      if (d && d.pos) Sonido.tocar('random.chestclosed', 0.5, Math.random() * 0.1 + 0.9, d.pos[0] + 0.5, d.pos[1] + 0.5, d.pos[2] + 0.5);
+      Pantallas.vaciar(); I.ir('juego'); mostrarNombre(); I.sucio();
+    },
+    // sacar lo cocinado del horno: su experiencia, en orbes al lado del jugador
+    experienciaHorno: function (h) { var n = Contenedores.experiencia(h); if (n > 0) Tirados.orbes(J.x, J.y + 0.5, J.z, n); },
     inventarioCambio: function () { I.sucio(); },
     puntosArmadura: function () { return Inventario.puntosArmadura(inv); },
+    resultadoFabricar: resultadoFabricar,
+    fabricar: function (v, tam, todas) { return fabricar(v, tam, todas); },
+    recetas: function (lado) { return recetasPara(lado); },
+    vecesReceta: function (e) { return vecesEntrada(inv, e); },
+    ponerReceta: function (e, tam, muchas) { return ponerReceta(inv, e, tam, muchas); },
     tirarObjeto: function (c) { tirarObjeto(c); },
     // el HUD: la vida, la comida, el aire y la experiencia (en creativo no se muestran)
     estadoJugador: function () {
