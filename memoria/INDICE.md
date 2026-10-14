@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 7/10/2026.
+Última puesta al día: 14/10/2026.
 
 Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raíz).
 
@@ -64,7 +64,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | [imagenes](imagenes.md) | haya que generar una imagen, o convertir un render en sprite |
 | [maquina](maquina.md) | algo falle por red, disco, Docker o permisos de la sesión |
 | [neko](neko.md) | haga falta un escritorio gráfico o manejar un navegador |
-| [video](video.md) | haya que tocar un video, hacer un zócalo o quemar un gráfico |
+| [video](video.md) | haya que tocar un video, hacer un zócalo o quemar un gráfico, o tocar el editor Estudio Papuchón (voz de locutor hombre en el navegador, exportar MP4 con WebCodecs) |
 | [juegos](juegos.md) | haya que animar modelos de Rezona en three.js, probar un juego cuadro a cuadro, hacer un Dead Eye, voces con acento, un shooter 3D con bots, un simulador de inspección (Ruta 11), girar un juego 90° en el celular, traducirlo, ponerle sonidos grabados, o un survival horror con niebla, montañas y bosque (Los Montes) |
 | [diario](diario.md) | quieras saber qué pasó en la sesión anterior y qué quedó |
 
@@ -89,6 +89,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | `herramientas/descargable/` | arma el HTML descargable de un artifact | su docstring |
 | `herramientas/iblo/`, `mint/`, `audio/` | utilidades sueltas | — |
 | `tiktok/` | versión 9:16: intro con logo, titular, subtítulos; `armar.mjs` arma el video | [video](video.md) |
+| `estudio-papuchon/` | editor de video del canal (React + htm, canvas, WebCodecs): gráficos, voz de hombre, subtítulos, música, MP4 | `estudio-papuchon/LEEME.md`, `ARQUITECTURA.md`, [video](video.md) § Estudio Papuchón |
 | `zocalo/` | zócalo de stream: editor, fuente de OBS, y `quemar.mjs` para videos | [video](video.md) |
 | `estancia/` | juego "Estancia — La Ley del Monte" (three.js, modelos de Rezona) | `estancia/LEEME.md` |
 | `control-ruta11/` | simulador de puesto policial 3D (three.js + React) en módulos `js/`, assets de Rezona en `js/datos.js`; `prueba.mjs pc|tel`; `GDD.md`; `referencia-unity/` solo de referencia | [juegos](juegos.md) § Puesto policial (Ruta 11) |

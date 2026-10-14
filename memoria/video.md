@@ -80,3 +80,33 @@ Juntos por Entre Ríos, sobre la reforma jubilatoria), no de la Cámara nacional
   HTTPS_PROXY}`) y se le hace confiar en `/root/.ccr/ca-bundle.crt` con
   `--ignore-certificate-errors-spki-list` (las claves del bundle, sacadas con
   openssl). El almacén NSS que menciona la guía del proxy **estaba vacío**.
+
+## Estudio Papuchón (14/10/2026)
+
+Editor completo en `estudio-papuchon/` (lo pidió como "app entera" a partir de
+una maqueta falsa "ZÓCALO PRO" con nombres de canales reales: **no** se usaron
+nombres ni logos de canales de verdad). Contrato en `ARQUITECTURA.md`.
+Artifact: https://claude.ai/artifact/Q4mtQUHLUMgfv4CsqeAiZ6 (capacidad `downloads`).
+
+- **La voz tiene que ser de hombre** (lo dijo: "Hombre tiene que ser"). Daniela
+  (es_AR) es mujer: descartada. Va Piper `es_MX-claude-high` (63 MB, Apache-2.0).
+  Receta probada en `ARQUITECTURA.md § Voces`. Medido: 5,7 s de audio en 2,3 s;
+  faster-whisper la transcribe bien. En el artifact no anda (CSP no deja bajar
+  el modelo): solo githack o el descargable.
+- **Exportar cuadro por cuadro**: buscar (`currentTime =`) cada cuadro cuesta
+  ~150 ms; dejar el `<video>` reproducir hasta que `requestVideoFrameCallback`
+  muestra el cuadro pedido y pausar baja a 17-50 ms. 12 s de video 1080×1920:
+  70 s → 46 s en el Chromium sin GPU de acá (que además codifica VP9 por
+  software: no tiene H.264 ni AAC; un Chrome normal usa H.264/AAC).
+- **Pico de audio**: con el compresor solo llegaba a 0,0 dB; con ganancia 0,85
+  después queda en −0,8 dB.
+- **Celular**: sin `<meta name="viewport">` propio, abierto con file:// o
+  githack se arma a 980 px (la vista de escritorio). El artifact lo agrega solo,
+  el resto no.
+- **Celular**: el inspector como hoja de abajo tapaba la línea de tiempo apenas
+  se elegía un clip; ahora se abre con "Editar" (los gráficos nuevos sí lo abren).
+- Subtítulos: los tiempos de las palabras se guardan **relativos al bloque**
+  (si se mueve el bloque, el karaoke sigue).
+- Prueba sin cabeza: `scratchpad/ep/p2.mjs` (importa un WebM, viste, voz,
+  música, exporta y baja el MP4); `galeria.mjs` dibuja las 20 plantillas en 9:16
+  y 16:9. Los videos de prueba de terceros quedan fuera del repo.
