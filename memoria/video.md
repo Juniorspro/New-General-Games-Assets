@@ -120,3 +120,13 @@ Artifact: https://claude.ai/artifact/Q4mtQUHLUMgfv4CsqeAiZ6 (capacidad `download
   MediaStore. No hay emulador acá (sin /dev/kvm): la parte web se probó con
   Playwright en ese mismo origen y un puente falso; en un celular real, sin
   probar.
+- **Estilo CapCut** (14/10, "está medio cargado… desplazarte con el dedo"): raya
+  blanca fija al medio y la línea de tiempo se desliza (scroll nativo ↔
+  `Motor.ir`, con una marca para no realimentarse); toque elige, mantener
+  apretado 380 ms mueve (touchmove no pasivo con preventDefault), dos dedos
+  zoom; sin carriles vacíos ni cabeceras; en el celular la barra de abajo pasa
+  a las herramientas del clip y cada una abre solo su parte del inspector.
+- **Trampa medida**: mientras un `<video>` busca, `readyState` baja a 1 y
+  `loadeddata` no vuelve a llegar: esperarlo colgaba la vista 8 s en negro al
+  deslizar. Para buscar alcanza con `readyState >= 1`; y mientras busca se
+  sigue dibujando el último cuadro.

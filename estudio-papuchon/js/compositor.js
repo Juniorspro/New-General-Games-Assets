@@ -40,7 +40,10 @@ const Compositor = (() => {
     const d = Medios.datos(c.medio); if (!d) return null;
     if (d.tipo === "imagen") return Medios.imagenYa(c.medio);
     if (d.tipo !== "video") return null;
-    const v = Medios.video(c.medio, k); return v && v.readyState >= 2 ? v : null;
+    // Mientras busca (readyState 1) se sigue mostrando el último cuadro, así no parpadea en negro.
+    const v = Medios.video(c.medio, k); if (!v) return null;
+    if (v.readyState >= 2) { v._tuvo = true; return v; }
+    return v._tuvo ? v : null;
   }
   // Lo visible de la pista principal en t: el clip y, si hay transición, el vecino.
   function capasPrincipal(pista, t) {
@@ -186,9 +189,11 @@ const Compositor = (() => {
       const tm = setTimeout(fin, ms); v.addEventListener("seeked", fin);
     });
   }
+  // Para buscar alcanza con los metadatos. Ojo: mientras busca, readyState baja a 1 y
+  // "loadeddata" no vuelve a llegar nunca; esperarlo colgaba la vista 8 s al deslizar.
   async function esperarListo(v, ms = 8000) {
-    if (v.readyState >= 2) return;
-    await new Promise((ok) => { const fin = () => { clearTimeout(tm); ok(); }; const tm = setTimeout(fin, ms); v.addEventListener("loadeddata", fin, { once: true }); });
+    if (v.readyState >= 1) return;
+    await new Promise((ok) => { const fin = () => { clearTimeout(tm); ok(); }; const tm = setTimeout(fin, ms); v.addEventListener("loadedmetadata", fin, { once: true }); });
   }
   // Exportando, buscar (seek) cada cuadro es lento: si el video tiene que avanzar poquito,
   // se lo deja reproducir hasta que muestra el cuadro pedido y se lo vuelve a pausar.

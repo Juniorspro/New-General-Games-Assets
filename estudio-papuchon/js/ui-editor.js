@@ -18,7 +18,7 @@ const Acciones = {
   agregarGrafico(plantillaId, params = {}, en = null, duracion = null) {
     let nuevo = null; const t = en != null ? en : Motor.tiempo();
     Tienda.cambiar((p) => { const r = Proyecto.agregarGrafico(p, plantillaId, t, params); nuevo = r.clip; let q = r.p; if (duracion) q = Proyecto.cambiarClip(q, nuevo.id, { duracion }); return q; }, "agregar gráfico");
-    if (nuevo) Acciones.elegir(nuevo.id, true);   // a un gráfico casi siempre se le cambia el texto
+    if (nuevo) Acciones.elegir(nuevo.id, "editar");   // a un gráfico casi siempre se le cambia el texto
     return nuevo;
   },
   // Divide el clip elegido en el cabezal; si no hay elegido, el del video principal.
@@ -26,7 +26,7 @@ const Acciones = {
     const s = Tienda.get(), p = s.proyecto, t = Motor.tiempo(); if (!p) return;
     let cid = s.seleccion; const b = cid && Proyecto.buscarClip(p, cid);
     if (!b || t <= b.clip.inicio || t >= Proyecto.fin(b.clip)) { const v = Proyecto.pista(p, "video").clips.find((c) => t > c.inicio && t < Proyecto.fin(c)); cid = v && v.id; }
-    if (!cid) { Tienda.aviso("Poné el cabezal sobre un clip para cortarlo", "info"); return; }
+    if (!cid) { Tienda.aviso("Poné la raya sobre un clip para cortarlo", "info"); return; }
     Tienda.cambiar((q) => Proyecto.dividir(q, cid, t), "cortar");
   },
   borrar() { const cid = Tienda.get().seleccion; if (cid) { Tienda.cambiar((p) => Proyecto.borrar(p, cid), "borrar"); Tienda.set({ seleccion: null }); } },
@@ -76,14 +76,38 @@ const PESTANAS = [
   ["voz", "micro", "Voz"], ["audio", "musica", "Audio"], ["proyecto", "ajustes", "Ajustes"],
 ];
 function Riel() {
-  const panel = useTienda((e) => e.panel);
+  const panel = useTienda((e) => e.panel), p = useTienda((e) => e.proyecto), sel = useTienda((e) => e.seleccion), insp = useTienda((e) => e.inspector), chico = useAncho() < 900;
+  const b = chico && sel && Proyecto.buscarClip(p, sel);
+  // En el celular, con un clip elegido, la barra de abajo muestra sus herramientas (como CapCut).
+  if (b) return html`<nav class="riel herramientas" aria-label="Herramientas del clip">
+    <button type="button" class="volver" onClick=${() => Tienda.set({ seleccion: null, inspector: false })}><${Icono} n="atras" />Listo</button>
+    ${herramientasClip(p, b).map((h) => html`<button key=${h.et} type="button" class=${insp === h.sec ? "si" : ""} onClick=${h.accion || (() => Tienda.set({ inspector: insp === h.sec ? false : h.sec }))}><${Icono} n=${h.icono} />${h.et}</button>`)}
+  </nav>`;
   return html`<nav class="riel" aria-label="Herramientas">${PESTANAS.map(([k, ic, et]) => html`<button key=${k} type="button" class=${panel === k ? "si" : ""} aria-pressed=${panel === k}
     onClick=${() => Tienda.set({ panel: panel === k ? null : k, ...(esCel() ? { seleccion: null } : {}) })}><${Icono} n=${ic} />${et}</button>`)}</nav>`;
 }
+// Herramientas de cada tipo de clip. `sec` abre esa parte del inspector; `accion` hace algo directo.
+function herramientasClip(p, b) {
+  const { pista, clip: c } = b, m = c.medio && Medios.datos(c.medio), r = [{ icono: "tijera", et: "Dividir", accion: Acciones.dividir }];
+  if (c.plantilla) r.push({ icono: "texto", et: "Editar", sec: "editar" }, { icono: "ajustes", et: "Tamaño", sec: "ajustes" });
+  else if (pista.tipo === "subtitulos") r.push({ icono: "texto", et: "Editar", sec: "editar" }, { icono: "subs", et: "Estilo", accion: () => Tienda.set({ seleccion: null, panel: "subtitulos" }) });
+  else {
+    if (m && m.tipo !== "imagen") r.push({ icono: "reloj", et: "Velocidad", sec: "velocidad" });
+    if (m && m.tipo === "imagen") r.push({ icono: "reloj", et: "Duración", sec: "velocidad" });
+    if (m && m.tipo !== "imagen" && m.tieneAudio !== false) r.push({ icono: "parlante", et: "Volumen", sec: "volumen" });
+    if (pista.tipo === "video") {
+      if (pista.clips.indexOf(c) > 0) r.push({ icono: "varita", et: "Transición", sec: "transicion" });
+      r.push({ icono: "centro", et: "Encuadre", sec: "encuadre" }, { icono: "sol", et: "Filtro", sec: "filtro" });
+    } else if (pista.tipo === "superpuesta") r.push({ icono: "imagen", et: "Lugar", sec: "lugar" }, { icono: "sol", et: "Filtro", sec: "filtro" });
+    if (m && m.palabras) r.push({ icono: "subs", et: "Subtítulos", accion: () => { Tienda.cambiar((q) => Proyecto.agregarSubtitulos(q, Subtitulos.desdeVoz(c, m)), "subtítulos"); Tienda.aviso("Subtítulos creados", "ok"); } });
+  }
+  r.push({ icono: "copiar", et: "Duplicar", accion: Acciones.duplicar }, { icono: "basura", et: "Borrar", accion: Acciones.borrar });
+  return r;
+}
 
 // ── Vista previa ──
-function Vista({ zonaSegura }) {
-  const p = useTienda((e) => e.proyecto), sel = useTienda((e) => e.seleccion), marca = useTienda((e) => e.marca);
+function Vista() {
+  const zonaSegura = useTienda((e) => e.zonaSegura), p = useTienda((e) => e.proyecto), sel = useTienda((e) => e.seleccion), marca = useTienda((e) => e.marca);
   const t = useTiempo(), cont = useRef(null), cv = useRef(null), [tam, setTam] = useState({ w: 0, h: 0 }), arr = useRef(null);
   const W = p.formato.ancho, H = p.formato.alto;
   useLayoutEffect(() => {
@@ -115,7 +139,7 @@ function Vista({ zonaSegura }) {
       if (!obj) { const v = Proyecto.pista(p, "video").clips.find((c) => t >= c.inicio && t < Proyecto.fin(c)); Acciones.elegir(v ? v.id : null); return; }
     } else { const b = Proyecto.buscarClip(p, sel); if (!b) return; obj = { pista: b.pista, c: b.clip }; }
     e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId);
-    if (obj.c.id !== sel) Acciones.elegir(obj.c.id); else if (esCel()) Tienda.set({ inspector: true });
+    if (obj.c.id !== sel) Acciones.elegir(obj.c.id); else if (esCel()) Tienda.set({ inspector: obj.pista.tipo === "grafico" ? "editar" : "lugar" });
     const b = cajaDe(obj.pista, obj.c);
     arr.current = { modo, cid: obj.c.id, tipo: obj.pista.tipo, q0: q, caja: { ...obj.c.caja }, centro: { x: b.x + b.ancho / 2, y: b.y + b.alto / 2 }, base: { ...b } };
   }
@@ -156,16 +180,20 @@ function Vista({ zonaSegura }) {
 }
 
 // ── Reproducción ──
-function Transporte({ zonaSegura, setZonaSegura }) {
-  const t = useTiempo(), rep = useTienda((e) => e.reproduciendo), p = useTienda((e) => e.proyecto);
+function Transporte() {
+  const t = useTiempo(), rep = useTienda((e) => e.reproduciendo), p = useTienda((e) => e.proyecto), zona = useTienda((e) => e.zonaSegura);
   const D = Proyecto.duracion(p), fps = p.formato.fps || 30;
+  useTienda((e) => e.proyecto && Tienda.puedeDeshacer);
   return html`<div class="transporte">
-    <${Boton} icono="inicio" tipo="fantasma" titulo="Al principio" onClick=${() => Motor.ir(0)} />
-    <${Boton} icono="atras" tipo="fantasma" titulo="Un cuadro atrás" onClick=${() => Motor.ir(Math.round(t * fps - 1) / fps)} />
-    <button type="button" class="play" aria-label=${rep ? "Pausa" : "Reproducir"} onClick=${() => Motor.alternar()}><${Icono} n=${rep ? "pausa" : "play"} /></button>
-    <${Boton} icono="adelante" tipo="fantasma" titulo="Un cuadro adelante" onClick=${() => Motor.ir(Math.round(t * fps + 1) / fps)} />
     <div class="tiempo">${fmtTiempo(t, true)} <span>/ ${fmtTiempo(D, true)}</span></div>
-    ${p.formato.id === "9:16" && html`<${Boton} chico tipo=${zonaSegura ? "activo" : "fantasma"} titulo="Ver lo que tapa TikTok" onClick=${() => setZonaSegura(!zonaSegura)}>Zona TikTok<//>`}
+    <span class="solo-pc"><${Boton} icono="atras" tipo="fantasma" titulo="Un cuadro atrás" onClick=${() => Motor.ir(Math.round(t * fps - 1) / fps)} /></span>
+    <button type="button" class="play" aria-label=${rep ? "Pausa" : "Reproducir"} onClick=${() => Motor.alternar()}><${Icono} n=${rep ? "pausa" : "play"} /></button>
+    <span class="solo-pc"><${Boton} icono="adelante" tipo="fantasma" titulo="Un cuadro adelante" onClick=${() => Motor.ir(Math.round(t * fps + 1) / fps)} /></span>
+    <div class="lado">
+      <span class="solo-cel"><${Boton} icono="deshacer" tipo="fantasma" titulo="Deshacer" desactivado=${!Tienda.puedeDeshacer} onClick=${Tienda.deshacer} /></span>
+      <span class="solo-cel"><${Boton} icono="rehacer" tipo="fantasma" titulo="Rehacer" desactivado=${!Tienda.puedeRehacer} onClick=${Tienda.rehacer} /></span>
+      ${p.formato.id === "9:16" && html`<span class="solo-pc"><${Boton} chico tipo=${zona ? "activo" : "fantasma"} titulo="Ver lo que tapa TikTok" onClick=${() => Tienda.set({ zonaSegura: !zona })}>Zona TikTok<//></span>`}
+    </div>
   </div>`;
 }
 
@@ -193,131 +221,139 @@ function Tira({ medio, c, ancho, alto, zoom }) {
     return html`<img key=${i} src=${mins[idx]} style=${{ width: tw + "px" }} alt="" />`;
   })}</div>`;
 }
+// Como en CapCut: la raya blanca queda fija en el medio y lo que se mueve es la
+// línea de tiempo. Deslizar el dedo a la derecha va para atrás; tocar no salta.
+// Un clip se elige con un toque; para moverlo, se mantiene apretado (o con el
+// mouse, se arrastra). Dos dedos: zoom.
 function LineaDeTiempo() {
   const p = useTienda((e) => e.proyecto), sel = useTienda((e) => e.seleccion), zoom = useTienda((e) => e.zoom), rep = useTienda((e) => e.reproduciendo);
   useMedios();
-  const t = useTiempo(), caja = useRef(null), [arr, setArr] = useState(null), arrRef = useRef(null);
-  const chico = useAncho() < 900, f = chico ? 0.8 : 1, D = Proyecto.duracion(p);
-  const ancho = Math.max((D + 6) * zoom, (caja.current ? caja.current.clientWidth : 800) - (chico ? 40 : 118));
-  const pistas = p.pistas;
+  const t = useTiempo(), caja = useRef(null), [vw, setVw] = useState(800), [arr, setArr] = useState(null), arrRef = useRef(null);
+  const programado = useRef(0), chico = useAncho() < 900, f = chico ? 0.85 : 1, D = Proyecto.duracion(p), mitad = vw / 2;
+  const pistas = p.pistas.filter((k) => k.tipo === "video" || k.clips.length);   // sin carriles vacíos
   const altos = pistas.map((k) => Math.round(ALTOS[k.tipo] * f));
-  const setZoom = (z) => Tienda.set({ zoom: clamp(z, 6, 400) });
-  const ajustar = () => { const w = (caja.current ? caja.current.clientWidth : 800) - (chico ? 40 : 118) - 30; setZoom(w / Math.max(1, D)); };
-  // Zoom con Ctrl + rueda (y pellizco en el touchpad).
+  const finVideo = Proyecto.pista(p, "video").clips.reduce((a, c) => Math.max(a, Proyecto.fin(c)), 0);
+  const setZoom = (z) => Tienda.set({ zoom: clamp(z, 8, 400) });
+  useLayoutEffect(() => {
+    const el = caja.current; if (!el) return;
+    const medir = () => setVw(el.clientWidth); medir(); const ro = new ResizeObserver(medir); ro.observe(el); return () => ro.disconnect();
+  }, []);
+  // El tiempo manda sobre el desplazamiento (reproducir, deshacer, la vista) …
+  useLayoutEffect(() => {
+    const el = caja.current; if (!el) return; const x = Math.round(t * zoom);
+    if (Math.abs(el.scrollLeft - x) > 1) { programado.current = x; el.scrollLeft = x; }
+  }, [t, zoom, vw, D]);
+  // … y el desplazamiento del dedo manda sobre el tiempo.
+  const alDesplazar = (e) => {
+    const el = e.currentTarget;
+    if (programado.current !== 0 && Math.abs(el.scrollLeft - programado.current) <= 2) { programado.current = 0; return; }
+    programado.current = 0;
+    if (Motor.reproduciendo) return;
+    Motor.ir(el.scrollLeft / zoom);
+  };
+  // Al ver un proyecto por primera vez, que entre entero en la pantalla.
+  useEffect(() => { if (vw > 100) setZoom((vw * 0.8) / Math.max(1, D)); }, [p.id, vw > 100, D > 1.5]);
+  // Rueda: Ctrl = zoom; sin Ctrl y sin nada para bajar, mueve en el tiempo. Dos dedos: zoom.
   useEffect(() => {
     const el = caja.current; if (!el) return;
-    const rueda = (e) => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); setZoom(Tienda.get().zoom * Math.exp(-e.deltaY * 0.004)); };
-    el.addEventListener("wheel", rueda, { passive: false }); return () => el.removeEventListener("wheel", rueda);
+    const rueda = (e) => {
+      if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(Tienda.get().zoom * Math.exp(-e.deltaY * 0.004)); }
+      else if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && el.scrollHeight <= el.clientHeight + 1) { e.preventDefault(); el.scrollLeft += e.deltaY; }
+    };
+    let pin = null;
+    const dist = (ts) => Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY);
+    const ini = (e) => { if (Motor.reproduciendo) Motor.parar(); if (e.touches.length === 2) pin = { d: dist(e.touches), z: Tienda.get().zoom }; };
+    const mov = (e) => {
+      if (arrRef.current && arrRef.current.activo) { e.preventDefault(); return; }   // moviendo un clip: que no se desplace
+      if (pin && e.touches.length === 2) { e.preventDefault(); setZoom(pin.z * dist(e.touches) / pin.d); }
+    };
+    const fin = (e) => { if (e.touches.length < 2) pin = null; };
+    const abajo = () => { if (Motor.reproduciendo) Motor.parar(); };
+    el.addEventListener("wheel", rueda, { passive: false }); el.addEventListener("touchstart", ini, { passive: true });
+    el.addEventListener("touchmove", mov, { passive: false }); el.addEventListener("touchend", fin); el.addEventListener("mousedown", abajo);
+    return () => { el.removeEventListener("wheel", rueda); el.removeEventListener("touchstart", ini); el.removeEventListener("touchmove", mov); el.removeEventListener("touchend", fin); el.removeEventListener("mousedown", abajo); };
   }, []);
-  // Que el cabezal no se escape de la pantalla mientras reproduce.
-  useEffect(() => {
-    const el = caja.current; if (!el || !rep) return;
-    const x = t * zoom, cab = chico ? 40 : 96;
-    if (x < el.scrollLeft || x > el.scrollLeft + el.clientWidth - cab - 60) el.scrollLeft = Math.max(0, x - 80);
-  }, [Math.floor(t * 4), rep]);
-  // Al abrir (o cuando llega el primer video) se ve todo el proyecto.
-  useEffect(() => { if (caja.current) ajustar(); }, [p.id, D > 1.5]);
-  const xATiempo = (e) => { const r = e.currentTarget.getBoundingClientRect(); return clamp((e.clientX - r.left) / zoom, 0, D); };
-  // Puntos donde se pega lo que se arrastra (cabezal, bordes de otros clips).
-  function imanes(cid) {
-    const r = [0, Motor.tiempo()];
-    for (const k of pistas) for (const c of k.clips) if (c.id !== cid) r.push(c.inicio, Proyecto.fin(c));
-    return r;
-  }
+  function imanes(cid) { const r = [0, Motor.tiempo()]; for (const k of p.pistas) for (const c of k.clips) if (c.id !== cid) r.push(c.inicio, Proyecto.fin(c)); return r; }
   const pegar = (v, lista) => { let mejor = v, d = 10 / zoom; for (const x of lista) if (Math.abs(x - v) < d) { d = Math.abs(x - v); mejor = x; } return mejor; };
   function bajarClip(e, pista, c, modo) {
     e.stopPropagation(); if (pista.bloqueada) return;
-    if (Motor.reproduciendo) Motor.parar();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    Acciones.elegir(c.id);
-    arrRef.current = { cid: c.id, pista, c, modo, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0, movido: false };
+    const tactil = e.pointerType === "touch", el = e.currentTarget, id0 = e.pointerId;
+    const a = { cid: c.id, pista, c, modo, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0, movido: false, activo: !tactil || modo !== "mover", tactil };
+    arrRef.current = a;
+    if (a.activo) { el.setPointerCapture(id0); if (Motor.reproduciendo) Motor.parar(); if (modo !== "mover") Acciones.elegir(c.id); }
+    else a.timer = setTimeout(() => {   // mantener apretado para mover
+      if (arrRef.current !== a || a.cancelado) return;
+      a.activo = true; try { el.setPointerCapture(id0); } catch (er) { /* */ }
+      if (navigator.vibrate) navigator.vibrate(12);
+      Acciones.elegir(c.id); setArr({ ...a });
+    }, 380);
   }
   function moverClip(e) {
     const a = arrRef.current; if (!a) return;
-    a.dx = e.clientX - a.x0; a.dy = e.clientY - a.y0;
-    if (!a.movido && Math.abs(a.dx) + Math.abs(a.dy) < 5) return;
+    const dx = e.clientX - a.x0, dy = e.clientY - a.y0;
+    if (!a.activo) { if (Math.abs(dx) + Math.abs(dy) > 8) { a.cancelado = true; clearTimeout(a.timer); arrRef.current = null; } return; }
+    a.dx = dx; a.dy = dy; if (!a.movido && Math.abs(dx) + Math.abs(dy) < 4) return;
     a.movido = true; setArr({ ...a });
   }
-  function subirClip(e) {
-    const a = arrRef.current; arrRef.current = null; setArr(null);
-    if (!a || !a.movido) return;
+  function cancelar() { const a = arrRef.current; if (a) clearTimeout(a.timer); arrRef.current = null; setArr(null); }
+  function subirClip() {
+    const a = arrRef.current; if (!a) return; clearTimeout(a.timer); arrRef.current = null; setArr(null);
+    if (!a.movido) { if (!a.cancelado) Acciones.elegir(a.c.id); return; }   // un toque: elegir
     const c = a.c, dt = a.dx / zoom, im = imanes(c.id);
     if (a.modo === "mover") {
       if (a.pista.tipo === "video") {
         const centro = c.inicio + dt + Proyecto.dur(c) / 2, otros = a.pista.clips.filter((x) => x.id !== c.id);
-        const indice = otros.filter((x) => x.inicio + Proyecto.dur(x) / 2 < centro).length;
-        Tienda.cambiar((q) => Proyecto.mover(q, c.id, { indice }), "mover");
+        Tienda.cambiar((q) => Proyecto.mover(q, c.id, { indice: otros.filter((x) => x.inicio + Proyecto.dur(x) / 2 < centro).length }), "mover");
       } else {
         let ini = Math.max(0, c.inicio + dt); const d = Proyecto.dur(c);
         const a1 = pegar(ini, im), a2 = pegar(ini + d, im) - d; ini = Math.abs(a1 - ini) <= Math.abs(a2 - ini) ? a1 : a2;
-        // ¿A qué carril lo soltó? (solo entre pistas del mismo tipo)
-        let y = 0, destino = null; const fila = pistas.indexOf(a.pista); let yOrig = 0;
+        const fila = pistas.indexOf(a.pista); let y = 0, yOrig = 0, destino = null;
         for (let i = 0; i < fila; i++) yOrig += altos[i];
         const yN = yOrig + altos[fila] / 2 + a.dy;
         for (let i = 0; i < pistas.length; i++) { if (yN >= y && yN < y + altos[i]) { destino = pistas[i]; break; } y += altos[i]; }
         const pistaId = destino && destino.tipo === a.pista.tipo && (destino.sub || null) === (a.pista.sub || null) ? destino.id : undefined;
         Tienda.cambiar((q) => Proyecto.mover(q, c.id, { inicio: Math.max(0, ini), pistaId }), "mover");
       }
-    } else if (a.modo === "fin") {
-      const tf = pegar(Proyecto.fin(c) + dt, im); Tienda.cambiar((q) => Proyecto.recortar(q, c.id, "fin", tf), "recortar");
-    } else {
-      const ti = pegar(c.inicio + dt, im); Tienda.cambiar((q) => Proyecto.recortar(q, c.id, "inicio", ti), "recortar");
-    }
+    } else if (a.modo === "fin") { const tf = pegar(Proyecto.fin(c) + dt, im); Tienda.cambiar((q) => Proyecto.recortar(q, c.id, "fin", tf), "recortar"); }
+    else { const ti = pegar(c.inicio + dt, im); Tienda.cambiar((q) => Proyecto.recortar(q, c.id, "inicio", ti), "recortar"); }
   }
-  function bajarRegla(e) {
-    e.currentTarget.setPointerCapture(e.pointerId); Motor.ir(xATiempo(e));
-    const el = e.currentTarget, mov = (ev) => Motor.ir(clamp((ev.clientX - el.getBoundingClientRect().left) / zoom, 0, D));
-    const fin = () => { el.removeEventListener("pointermove", mov); el.removeEventListener("pointerup", fin); };
-    el.addEventListener("pointermove", mov); el.addEventListener("pointerup", fin);
-  }
-  // Marcas de la regla según el zoom.
-  const paso = [0.5, 1, 2, 5, 10, 15, 30, 60].find((s) => s * zoom >= 64) || 120, marcas = [];
-  for (let s = 0; s <= ancho / zoom; s += paso) { marcas.push(html`<div key=${"m" + s} class="marca" style=${{ left: s * zoom + "px" }}>${paso < 1 ? fmtTiempo(s, true) : fmtTiempo(s)}</div>`); if (paso * zoom > 120) marcas.push(html`<div key=${"n" + s} class="marca menor" style=${{ left: (s + paso / 2) * zoom + "px" }}></div>`); }
-  const selB = sel && Proyecto.buscarClip(p, sel);
+  const agregarAlFinal = async () => { const r = await importarArchivos(await elegirArchivos("video/*,image/*")); for (const m of r) Acciones.agregarMedio(m, "video", Proyecto.pista(Tienda.get().proyecto, "video").clips.reduce((a, c) => Math.max(a, Proyecto.fin(c)), 0)); };
+  const paso = [0.5, 1, 2, 5, 10, 15, 30, 60].find((s) => s * zoom >= 70) || 120, marcas = [];
+  for (let s = 0; s <= D + paso; s += paso) marcas.push(html`<div key=${s} class="marca" style=${{ left: mitad + s * zoom + "px" }}>${paso < 1 ? fmtTiempo(s, true) : fmtTiempo(s)}</div>`);
   return html`<section class="linea" aria-label="Línea de tiempo">
-    <div class="herr">
-      <${Boton} chico icono="tijera" titulo="Cortar en el cabezal (S)" onClick=${Acciones.dividir}><span class="solo-pc">Cortar</span><//>
-      <${Boton} chico icono="copiar" titulo="Duplicar (Ctrl+D)" desactivado=${!sel} onClick=${Acciones.duplicar}><span class="solo-pc">Duplicar</span><//>
-      <${Boton} chico icono="basura" titulo="Borrar (Supr)" desactivado=${!sel} onClick=${Acciones.borrar}><span class="solo-pc">Borrar</span><//>
-      ${sel && chico && html`<${Boton} chico tipo="amarillo" icono="ajustes" onClick=${() => Tienda.set({ inspector: true })}>Editar<//>`}
-      <span class="sep"></span>
-      <${Boton} chico icono="varita" titulo="Vestir el video con el canal" onClick=${Acciones.vestir}>Vestir<//>
+    <div class="herr solo-pc">
+      <${Boton} chico icono="tijera" titulo="Cortar en la raya (S)" onClick=${Acciones.dividir}>Cortar<//>
+      <${Boton} chico icono="copiar" titulo="Duplicar (Ctrl+D)" desactivado=${!sel} onClick=${Acciones.duplicar}>Duplicar<//>
+      <${Boton} chico icono="basura" titulo="Borrar (Supr)" desactivado=${!sel} onClick=${Acciones.borrar}>Borrar<//>
       <span class="sep"></span>
       <${Boton} chico icono="lupaMenos" titulo="Alejar" onClick=${() => setZoom(zoom / 1.4)} />
       <${Boton} chico icono="lupaMas" titulo="Acercar" onClick=${() => setZoom(zoom * 1.4)} />
-      <${Boton} chico titulo="Ver todo el video" onClick=${ajustar}>Todo<//>
-      ${selB && html`<span class="nota solo-pc" style=${{ marginLeft: "auto", whiteSpace: "nowrap" }}>Elegido: ${rotuloClip(selB.pista, selB.clip)}</span>`}
     </div>
-    <div class="pistas" ref=${caja}>
-      <div class="cabs">
-        <div class="regla-cab"></div>
-        ${pistas.map((k, i) => html`<div key=${k.id} class="cab" style=${{ height: altos[i] + "px" }} title=${k.nombre}>
-          <${Icono} n=${ICONO_PISTA[k.sub || k.tipo] || "capas"} t=${14} /><span>${k.nombre}</span>
-          <button type="button" class=${k.oculta ? "si" : ""} title=${k.oculta ? "Mostrar pista" : "Ocultar pista"} onClick=${() => Tienda.cambiar((q) => Proyecto.cambiarPista(q, k.id, { oculta: !k.oculta }), "ocultar pista")}><${Icono} n=${k.oculta ? "ojoNo" : "ojo"} /></button>
-          ${["video", "superpuesta", "audio"].includes(k.tipo) && html`<button type="button" class=${k.silenciada ? "si" : ""} title=${k.silenciada ? "Activar sonido" : "Silenciar pista"} onClick=${() => Tienda.cambiar((q) => Proyecto.cambiarPista(q, k.id, { silenciada: !k.silenciada }), "silenciar")}><${Icono} n=${k.silenciada ? "mudo" : "parlante"} /></button>`}
-        </div>`)}
+    <div class="pistas-marco">
+      <div class="pistas" ref=${caja} onScroll=${alDesplazar}>
+        <div class="carriles" style=${{ width: D * zoom + vw + "px" }}>
+          <div class="regla" onPointerDown=${(e) => { if (e.pointerType === "mouse") { const r = e.currentTarget.getBoundingClientRect(); Motor.ir((e.clientX - r.left - mitad) / zoom); } }}>${marcas}</div>
+          ${pistas.map((k, i) => html`<div key=${k.id} class=${"carril" + (k.oculta ? " oculta" : "")} style=${{ height: altos[i] + "px" }}
+              onClick=${(e) => { if (e.target === e.currentTarget) Acciones.elegir(null); }}>
+            ${k.clips.map((c, ci) => {
+              const a = arr && arr.cid === c.id ? arr : null; let x = mitad + c.inicio * zoom, w = Proyecto.dur(c) * zoom, tr = "";
+              if (a && a.movido) { if (a.modo === "mover") tr = `translate(${a.dx}px, ${a.dy}px)`; else if (a.modo === "fin") w = Math.max(8, w + a.dx); else { x += a.dx; w = Math.max(8, w - a.dx); } }
+              const medio = c.medio ? Medios.datos(c.medio) : null, col = COLORES_PISTA[k.sub || k.tipo] || "var(--panel3)";
+              return html`<div key=${c.id} class=${"clip" + (c.id === sel ? " sel" : "") + (a && a.activo ? " arrastrando" : "")} style=${{ left: x + "px", width: Math.max(6, w) + "px", background: col, transform: tr }}
+                  onPointerDown=${(e) => bajarClip(e, k, c, "mover")} onPointerMove=${moverClip} onPointerUp=${subirClip} onPointerCancel=${cancelar} title=${rotuloClip(k, c)}>
+                ${(k.tipo === "video" || k.tipo === "superpuesta") && html`<${Tira} medio=${medio} c=${c} ancho=${w} alto=${altos[i] - 6} zoom=${zoom} />`}
+                ${k.tipo === "audio" && html`<${Onda} medio=${medio} c=${c} ancho=${w} alto=${altos[i] - 6} />`}
+                <span class="rot"><${Icono} n=${ICONO_PISTA[k.sub || k.tipo] || "capas"} t=${12} /> ${rotuloClip(k, c)}</span>
+                ${k.tipo === "video" && ci > 0 && c.transicion && c.transicion.tipo !== "ninguna" && html`<i class="trans" title=${"Transición: " + Compositor.TRANSICIONES[c.transicion.tipo]}></i>`}
+                ${c.id === sel && w > 30 && html`<div class="borde ini" onPointerDown=${(e) => bajarClip(e, k, c, "inicio")} onPointerMove=${moverClip} onPointerUp=${subirClip} onPointerCancel=${cancelar}></div>
+                  <div class="borde fin" onPointerDown=${(e) => bajarClip(e, k, c, "fin")} onPointerMove=${moverClip} onPointerUp=${subirClip} onPointerCancel=${cancelar}></div>`}
+              </div>`;
+            })}
+            ${k.tipo === "video" && html`<button type="button" class="mas-final" style=${{ left: mitad + finVideo * zoom + 10 + "px" }} title="Agregar video o foto al final" onClick=${agregarAlFinal}><${Icono} n="mas" /></button>`}
+          </div>`)}
+        </div>
       </div>
-      <div class="carriles" style=${{ width: ancho + "px" }}>
-        <div class="regla" onPointerDown=${bajarRegla}>${marcas}</div>
-        ${pistas.map((k, i) => html`<div key=${k.id} class=${"carril" + (k.oculta ? " oculta" : "")} style=${{ height: altos[i] + "px" }}
-            onPointerDown=${(e) => { if (e.target === e.currentTarget) { Acciones.elegir(null); Motor.ir(xATiempo(e)); } }}>
-          ${k.clips.map((c, ci) => {
-            const a = arr && arr.cid === c.id ? arr : null; let x = c.inicio * zoom, w = Proyecto.dur(c) * zoom, tr = "";
-            if (a) { if (a.modo === "mover") tr = `translate(${a.dx}px, ${a.dy}px)`; else if (a.modo === "fin") w = Math.max(8, w + a.dx); else { x += a.dx; w = Math.max(8, w - a.dx); } }
-            const medio = c.medio ? Medios.datos(c.medio) : null, col = COLORES_PISTA[k.sub || k.tipo] || "var(--panel3)";
-            return html`<div key=${c.id} class=${"clip" + (c.id === sel ? " sel" : "") + (a ? " arrastrando" : "")} style=${{ left: x + "px", width: Math.max(6, w) + "px", background: col, transform: tr }}
-                onPointerDown=${(e) => bajarClip(e, k, c, "mover")} onPointerMove=${moverClip} onPointerUp=${subirClip} onPointerCancel=${subirClip} title=${rotuloClip(k, c)}>
-              ${(k.tipo === "video" || k.tipo === "superpuesta") && html`<${Tira} medio=${medio} c=${c} ancho=${w} alto=${altos[i] - 6} zoom=${zoom} />`}
-              ${k.tipo === "audio" && html`<${Onda} medio=${medio} c=${c} ancho=${w} alto=${altos[i] - 6} />`}
-              <span class="rot">${rotuloClip(k, c)}</span>
-              ${k.tipo === "video" && ci > 0 && c.transicion && c.transicion.tipo !== "ninguna" && html`<i class="trans" title=${"Transición: " + Compositor.TRANSICIONES[c.transicion.tipo]}></i>`}
-              ${c.id === sel && w > 30 && html`<div class="borde ini" onPointerDown=${(e) => bajarClip(e, k, c, "inicio")} onPointerMove=${moverClip} onPointerUp=${subirClip}></div>
-                <div class="borde fin" onPointerDown=${(e) => bajarClip(e, k, c, "fin")} onPointerMove=${moverClip} onPointerUp=${subirClip}></div>`}
-            </div>`;
-          })}
-        </div>`)}
-        <div class="cabezal" style=${{ left: t * zoom + "px" }}></div>
-      </div>
+      <div class="cabezal" aria-hidden="true"></div>
     </div>
   </section>`;
 }
@@ -325,7 +361,7 @@ function LineaDeTiempo() {
 // ── El editor completo ──
 function Editor() {
   const panel = useTienda((e) => e.panel), sel = useTienda((e) => e.seleccion), exportando = useTienda((e) => e.exportando), inspector = useTienda((e) => e.inspector), chico = useAncho() < 900;
-  const [zonaSegura, setZonaSegura] = useState(false), [soltando, setSoltando] = useState(false);
+  const [soltando, setSoltando] = useState(false);
   // Atajos de teclado (no cuando se está escribiendo).
   useEffect(() => {
     const k = (e) => {
@@ -357,7 +393,7 @@ function Editor() {
     <${Barra} />
     <${Riel} />
     ${conPanel && html`<${Panel} />`}
-    <div class="centro"><${Vista} zonaSegura=${zonaSegura} /><${Transporte} zonaSegura=${zonaSegura} setZonaSegura=${setZonaSegura} /></div>
+    <div class="centro"><${Vista} /><${Transporte} /></div>
     ${conInsp && html`<${Inspector} />`}
     <${LineaDeTiempo} />
     ${exportando && html`<${DialogoExportar} />`}
