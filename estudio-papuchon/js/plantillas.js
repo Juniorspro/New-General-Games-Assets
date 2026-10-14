@@ -80,7 +80,7 @@ const Plantillas = (() => {
   // "*palabra*" resaltada: devuelve [{t, hl}] por renglón.
   function partes(s) { const out = []; String(s || "").split(/(\*[^*]+\*)/).forEach((x) => { if (!x) return; const hl = /^\*.*\*$/.test(x); out.push({ t: hl ? x.slice(1, -1) : x, hl }); }); return out; }
   const limpio = (s) => String(s || "").replace(/\*/g, "");
-  function horaTexto(p) { if (p.hora) return p.hora; const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+  function horaTexto(p) { if (typeof p.hora === "string" && p.hora) return p.hora; const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
   const DIAS = ["DOMINGO", "LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"], MESES = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
   function fechaTexto(p) { if (p.fecha) return p.fecha; const d = new Date(); return `${DIAS[d.getDay()]} ${d.getDate()} DE ${MESES[d.getMonth()]}`; }
   const mayus = (s) => String(s || "").toUpperCase();

@@ -84,7 +84,7 @@ const Exportador = (() => {
       if (error) throw error;
       if (op.cancelado && op.cancelado()) { try { venc.close(); } catch (e) { /* */ } throw new Error("cancelado"); }
       const t = i / fps;
-      await Compositor.ubicar(p, t, 0.25 / fps);
+      await Compositor.ubicar(p, t, 0.25 / fps, true);
       Compositor.dibujar(ctx, p, t, rec);
       const fr = new VideoFrame(cv, { timestamp: Math.round(t * 1e6), duration: Math.round(1e6 / fps) });
       venc.encode(fr, { keyFrame: i % (fps * 2) === 0 }); fr.close();

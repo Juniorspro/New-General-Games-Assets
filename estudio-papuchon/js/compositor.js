@@ -190,7 +190,20 @@ const Compositor = (() => {
     if (v.readyState >= 2) return;
     await new Promise((ok) => { const fin = () => { clearTimeout(tm); ok(); }; const tm = setTimeout(fin, ms); v.addEventListener("loadeddata", fin, { once: true }); });
   }
-  async function ubicar(p, t, tolerancia = 0.5 / 30) {
+  // Exportando, buscar (seek) cada cuadro es lento: si el video tiene que avanzar poquito,
+  // se lo deja reproducir hasta que muestra el cuadro pedido y se lo vuelve a pausar.
+  function avanzarJugando(v, ts, fps, vel) {
+    return new Promise((ok) => {
+      let listo = false;
+      const fin = (r) => { if (listo) return; listo = true; clearTimeout(tm); v.pause(); ok(r); };
+      const tm = setTimeout(() => fin(false), 2500);
+      const cb = (ahora, md) => { if (listo) return; v._mt = md.mediaTime; if (md.mediaTime >= ts - 0.5 / fps) fin(true); else v.requestVideoFrameCallback(cb); };
+      v.requestVideoFrameCallback(cb);
+      if (v.playbackRate !== vel) v.playbackRate = vel;
+      v.play().catch(() => fin(false));
+    });
+  }
+  async function ubicar(p, t, tolerancia = 0.5 / 30, jugar = false) {
     const espera = [];
     for (const f of fuentesEn(p, t)) {
       const d = Medios.datos(f.c.medio); if (!d) continue;
@@ -200,8 +213,14 @@ const Compositor = (() => {
       if (!v) { await Medios.preparar(f.c.medio); v = Medios.video(f.c.medio, f.k); if (!v) continue; }
       espera.push((async () => {
         await esperarListo(v);
+        const fps = p.formato.fps || 30;
+        if (jugar && "requestVideoFrameCallback" in v && v.paused && !v.seeking && v._mt != null && Math.abs(v.currentTime - v._mt) < 0.12 && v._mt <= f.ts + 0.5 / fps && f.ts - v._mt < 1.5) {
+          if (v._mt >= f.ts - 0.5 / fps) return;                                  // el cuadro que se ve ya es el pedido
+          if (await avanzarJugando(v, f.ts, fps, f.c.velocidad || 1)) return;
+        }
         if (!v.paused) v.pause();
         if (Math.abs(v.currentTime - f.ts) > tolerancia || v.seeking) { const s = esperarSeek(v); v.currentTime = f.ts; await s; }
+        v._mt = v.currentTime;
       })());
     }
     await Promise.all(espera);

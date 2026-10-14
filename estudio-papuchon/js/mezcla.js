@@ -42,7 +42,8 @@ const Mezcla = (() => {
     const ducking = p.audio && p.audio.ducking !== false, nivel = (p.audio && p.audio.nivelDucking) || 0.3, tramos = tramosVoz(p);
     const salida = ctx.createDynamicsCompressor(); // un limitador suave para que nada sature
     salida.threshold.value = -3; salida.knee.value = 4; salida.ratio.value = 12; salida.attack.value = 0.003; salida.release.value = 0.15;
-    salida.connect(destino || ctx.destination);
+    const final = ctx.createGain(); final.gain.value = 0.85;   // margen para que los picos no lleguen a 0 dB
+    salida.connect(final); final.connect(destino || ctx.destination);
     const buses = {};
     for (const b of ["video", "voz", "musica", "efectos"]) {
       const g = ctx.createGain(); g.connect(salida); buses[b] = g;
@@ -66,7 +67,7 @@ const Mezcla = (() => {
       s.connect(g); g.connect(buses[x.bus] || buses.efectos);
       s.start(ini, off, largo); fuentes.push(s);
     });
-    return { fuentes, salida, parar() { for (const s of fuentes) try { s.stop(); } catch (e) { /* ya paró */ } try { salida.disconnect(); } catch (e) { /* */ } } };
+    return { fuentes, salida, parar() { for (const s of fuentes) try { s.stop(); } catch (e) { /* ya paró */ } try { salida.disconnect(); final.disconnect(); } catch (e) { /* */ } } };
   }
   const precargar = (p) => Promise.all(clipsConAudio(p).map((x) => Medios.audioBuffer(x.c.medio)));
   // Render completo para exportar.

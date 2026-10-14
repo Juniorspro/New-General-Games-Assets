@@ -33,24 +33,25 @@ que no está, lo agrega acá y avisa en su respuesta.
 | `js/proyecto.js` | `Proyecto` | modelo de datos y operaciones puras (crear, agregar, dividir, recortar, mover…) | núcleo |
 | `js/tienda.js` | `Tienda` | estado de la app, deshacer/rehacer, autoguardado | núcleo |
 | `js/medios.js` | `Medios` | importar archivos, analizar (duración, tamaño, miniaturas, picos), URLs, `<video>` y `AudioBuffer` | núcleo |
-| `js/fuentes.js` | `FUENTES_B64` | Anton y Barlow Condensed en base64 (woff2, latin) | plantillas |
 | `js/logo.js` | `LOGO_B64` | logo de Noticias El Papuchón (PNG/WebP con alfa) | plantillas |
 | `js/plantillas.js` | `Plantillas` | registro de plantillas, dibujo en canvas, animaciones | plantillas |
 | `js/compositor.js` | `Compositor` | dibuja un cuadro del proyecto en un instante (video, encuadres, transiciones, superpuestos, gráficos, subtítulos) | render |
 | `js/mezcla.js` | `Mezcla` | arma el audio del proyecto en un AudioContext (tiempo real u offline): volúmenes, fundidos, ducking | exportar |
 | `js/motor.js` | `Motor` | reproducción en el editor: reloj, `<video>` sincronizados, audio por `Mezcla`, dibuja con `Compositor` | render |
-| `js/exportar.js` | `Exportador` | MP4 (WebCodecs + mp4-muxer) o WebM; progreso; cancelar | exportar |
-| `js/audios.js` | `AUDIOS`, `AUDIOS_CREDITOS` | frases de locutor, efectos y músicas en base64 | voces |
-| `js/voces.js` | `Voces` | voz neural en el navegador (Piper, Daniela es_AR), pack de frases, micrófono, tiempos de palabras | voces |
-| `js/subtitulos.js` | `Subtitulos` | cortar palabras en bloques; SRT ida y vuelta; subtítulos automáticos (Whisper en el navegador, si se puede) | voces |
+| `js/exportar.js` | `Exportador` | MP4 (WebCodecs + mp4-muxer) o grabación en tiempo real; progreso; cancelar; foto de portada | exportar |
+| `js/voces.js` | `Voces` | locutor **hombre** en el navegador (Piper `es_MX-claude-high`), micrófono, tiempos de palabras | voces |
+| `js/subtitulos.js` | `Subtitulos` | cortar palabras en bloques; repartir un texto; SRT ida y vuelta | voces |
+| `js/musica.js` | `Musica` | cortinas y efectos sintetizados acá (sin derechos de nadie) | voces |
 | `js/camara.js` | `Camara` | modo filmable: cámara + micrófono, grabar a un medio | cámara |
-| `js/ui/*.js` | componentes | React 18 + htm (sin JSX) | ui |
+| `js/ui-comun.js` | `html`, `Icono`, `Boton`… | piezas de interfaz | ui |
+| `js/ui-editor.js` | `Editor`, `Acciones` | barra, vista con manijas, transporte, línea de tiempo | ui |
+| `js/ui-paneles.js` | `Panel`, `Inspector` | paneles e inspector del clip elegido | ui |
+| `js/ui-app.js` | `App` | inicio, mi marca, exportar, modo filmable, arranque | ui |
 
 Librerías (UMD, versión fija, antes de los scripts propios):
-`react 18.3.1`, `react-dom 18.3.1` (cdnjs), `htm 3.1.1` (unpkg `dist/htm.umd.js`),
-`mp4-muxer 5.1.3` (jsDelivr `build/mp4-muxer.js`, global `Mp4Muxer`),
-`webm-muxer` (jsDelivr, global `WebMMuxer`) si hace falta para el respaldo.
-Lo pesado (onnxruntime, piper, whisper) se carga **cuando se pide**, con
+`react 18.3.1`, `react-dom 18.3.1` (cdnjs), `htm 3.1.1` (jsDelivr `dist/htm.umd.js`),
+`mp4-muxer 5.1.3` (jsDelivr `build/mp4-muxer.min.js`, global `Mp4Muxer`).
+Lo pesado (onnxruntime 1.18.0 de cdnjs, fonemas de piper) se carga **cuando se pide**, con
 `import()` dinámico o `<script>` agregado a mano, nunca al abrir.
 
 En la UI: `const html = htm.bind(React.createElement);` y componentes como
@@ -315,16 +316,24 @@ real con `MediaRecorder` (canvas.captureStream + destino de audio).
 ## Voces y subtítulos
 
 ```js
-Voces.lista() → [{ id: "daniela", nombre: "Daniela (Argentina)", tipo: "neural", tam: "114 MB", lista: bool }, { id: "locutor", tipo: "pack" }, …]
-Voces.preparar(id, alProgreso) → Promise     // baja y guarda en Almacen.cache (una sola vez)
-Voces.sintetizar(texto, { voz: "daniela", velocidad: 1 }) → Promise<{ blob, duracion, palabras: [{ p, t0, t1 }] }>
-Voces.pack → [{ id, texto, grupo, b64, mime, duracion }]   // frases ya grabadas (AUDIOS)
-Voces.grabar() → Promise<{ detener() → Promise<{ blob, duracion }> }>
-Subtitulos.estimar(texto, duracion) → palabras   // reparte el tiempo por sílabas y pausas
-Subtitulos.bloques(palabras, { maxPalabras: 4, maxCaracteres: 24 }) → [ClipSubtitulo sin id]  // corta en puntuación y pausas > 0,4 s, sin palabra sola al final
-Subtitulos.aSRT(clips) ; Subtitulos.deSRT(texto) → clips
-Subtitulos.automaticos(medioId, alProgreso) → Promise<palabras>   // Whisper en el navegador (si Plataforma.puede("subsAuto"))
+Voces.cargar() → Promise          // la primera vez baja el modelo (63 MB) y lo guarda en Almacen.cache
+Voces.sintetizar(texto, { estilo: "locutor"|"serio"|"urgente", velocidad: 1, grave: true })
+  → Promise<{ muestras: Float32Array, sr: 22050, palabras: [{ p, t0, t1 }], duracion }>
+Voces.generarMedio(texto, opciones) → Promise<medio>   // WAV importado con { texto, palabras, origen: "voz" }
+Voces.grabar() ; Voces.cortar() → Promise<medio>       // micrófono
+Subtitulos.desdeVoz(clip, medio) → [ClipSubtitulo sin id]   // palabras de la voz pasadas al tiempo del proyecto
+Subtitulos.estimar(texto, inicio, duracion) ; Subtitulos.bloques(palabras)
+Subtitulos.leerSRT(texto) ; Subtitulos.escribirSRT(pista)
 ```
+
+Receta de la voz (probada): fonemas con `createPiperPhonemize` de
+`@mintplex-labs/piper-tts-web@1.0.5/dist/piper-o91UDS6e.js` (WASM y datos de
+`@diffusionstudio/piper-wasm@1.0.0/build/`), modelo de
+`huggingface.co/rhasspy/piper-voices/.../es_MX/claude/high/`, onnxruntime-web
+1.18.0 (UMD de cdnjs, `numThreads = 1`). Se sintetiza oración por oración; los
+tiempos de cada palabra salen de contar fonemas. "Más grave": se genera 9 % más
+rápido y se estira (baja el tono sin cambiar el ritmo). En los subtítulos, los
+tiempos de las palabras son **relativos al bloque**.
 
 Las voces generadas se importan como medios de audio (`Medios.importar`) y van a la
 pista `voz`; con "subtítulos" tildado, van también a la pista `subtitulos`.
