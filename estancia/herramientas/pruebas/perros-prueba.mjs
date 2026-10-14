@@ -1,0 +1,30 @@
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.PW);
+const b = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const p = await b.newPage({ viewport: { width: 640, height: 360 } });
+const errores = []; p.on("pageerror", (e) => errores.push(e.message));
+await p.route("**/*", (r) => r.request().url().startsWith("file://") ? r.continue() : r.abort());
+await p.goto("file://" + process.cwd() + "/estancia.html#fijo");
+await p.waitForSelector("#menu:not([hidden])", { timeout: 180000 });
+await p.evaluate(() => { __juego.empezar(); __juego.congelar(true); __juego.hora(10); const J = __juego.J(); J.camara = "tercera"; J.prueba = { az: 0 }; __juego.ir(-20, 60, Math.PI, 0); for (const d of E.perros.lista) { d.x = -20 + d.i; d.z = 62; } });
+let k = 0;
+const foto = async (prep, pasos, off) => {
+  const r = await p.evaluate(([prep, pasos, off]) => {
+    eval(prep); __juego.paso(1 / 30, pasos);
+    const d = E.perros.lista[0], T = E.terreno, y = T.altura(d.x, d.z);
+    __juego.fotoDesde([d.x + off[0], y + off[1], d.z + off[2]], [d.x, y + 0.4, d.z]);
+    return E.perros.lista.map((d) => `${d.nombre} v${d.v.toFixed(1)} e${d.echar.toFixed(1)}`).join(" | ") + " orden " + E.perros.orden;
+  }, [prep, pasos, off]);
+  await p.screenshot({ path: `tiras/pe-${String(k++).padStart(2, "0")}.png` }); console.log(r);
+};
+await foto("0", 5, [2.5, 0.8, 0]);
+await foto("__juego.J().prueba = { az: 0.5 }", 40, [2.5, 0.8, 0]);
+await foto("0", 7, [2.5, 0.8, 0]);
+await foto("0", 7, [2.5, 0.8, 0]);
+await foto("__juego.J().prueba = { az: 1, corre: true }", 40, [3, 1, 0]);
+await foto("0", 5, [3, 1, 0]);
+await foto("__juego.J().prueba = { az: 0 }; E.perros.ordenar('quieto')", 90, [2.5, 0.9, 1]);
+await foto("0", 60, [0, 1.5, 3]);
+console.log(errores.join("\n") || "sin errores");
+await b.close();
