@@ -45,6 +45,20 @@ const Plataforma = (() => {
   // modelos ni usar cámara o micrófono, y descargar pasa por la capacidad "downloads".
   const artifact = !!(window.claude && typeof window.claude.use === "function");
   const tactil = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  // Dentro de la app de Android (android/): guardar y compartir pasan por Java.
+  const android = typeof window.AndroidPapuchon === "object" && window.AndroidPapuchon !== null;
+  async function aAndroid(blob, nombre, compartir) {
+    const A = window.AndroidPapuchon, h = A.abrir(nombre, blob.type || "application/octet-stream");
+    if (!h || h.startsWith("error")) throw new Error("No se pudo guardar (" + h + ")");
+    const T = 786432;   // múltiplo de 3: cada pedazo se pasa a base64 sin relleno en el medio
+    for (let o = 0; o < blob.size; o += T) {
+      const u8 = new Uint8Array(await blob.slice(o, o + T).arrayBuffer()); let s = "";
+      for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+      if (!A.escribir(h, btoa(s))) throw new Error("No se pudo escribir el archivo");
+    }
+    const r = A.cerrar(h, !!compartir); if (r.startsWith("error")) throw new Error("No se pudo guardar (" + r + ")");
+    return "guardado";
+  }
   const caps = {};
   function capacidad(n) {
     if (!artifact) return Promise.resolve(null);
@@ -57,13 +71,14 @@ const Plataforma = (() => {
     switch (cosa) {
       case "camara": case "microfono": return !artifact && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
       case "vozNeural": return !artifact && typeof WebAssembly === "object";
-      case "compartir": try { return !artifact && !!navigator.canShare && navigator.canShare({ files: [new File(["x"], "x.mp4", { type: "video/mp4" })] }); } catch (e) { return false; }
+      case "compartir": if (android) return !!window.AndroidPapuchon.puedeCompartir(); try { return !artifact && !!navigator.canShare && navigator.canShare({ files: [new File(["x"], "x.mp4", { type: "video/mp4" })] }); } catch (e) { return false; }
       case "ia": return ia;
       case "webcodecs": return typeof VideoEncoder !== "undefined" && typeof AudioEncoder !== "undefined";
       default: return true;
     }
   }
   async function guardarArchivo(blob, nombre) {
+    if (android) return aAndroid(blob, nombre, false);
     if (artifact) {
       const d = await capacidad("downloads");
       if (!d) throw new Error("Desde acá no se puede descargar. Abrí el editor desde el link de githack.");
@@ -74,8 +89,9 @@ const Plataforma = (() => {
     setTimeout(() => URL.revokeObjectURL(url), 60000); return "descargado";
   }
   async function compartir(blob, nombre, texto) {
+    if (android) return aAndroid(blob, nombre, true);
     const f = new File([blob], nombre, { type: blob.type });
     await navigator.share({ files: [f], title: nombre, text: texto || "" });
   }
-  return { artifact, tactil, capacidad, puede, guardarArchivo, compartir };
+  return { artifact, android, tactil, capacidad, puede, guardarArchivo, compartir };
 })();

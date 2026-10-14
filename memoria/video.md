@@ -110,3 +110,13 @@ Artifact: https://claude.ai/artifact/Q4mtQUHLUMgfv4CsqeAiZ6 (capacidad `download
 - Prueba sin cabeza: `scratchpad/ep/p2.mjs` (importa un WebM, viste, voz,
   música, exporta y baja el MP4); `galeria.mjs` dibuja las 20 plantillas en 9:16
   y 16:9. Los videos de prueba de terceros quedan fuera del repo.
+- **APK** (14/10, lo pidió: "Y si me das el APK mejor"): `estudio-papuchon/android/`,
+  sin Gradle: aapt2 + javac `--release 8` + d8 + zipalign + apksigner
+  (`armar.sh`). El d8 de build-tools **34** se cae con un NullPointerException
+  interno en una clase anónima; el de la **35** anda. El editor se sirve desde
+  los assets con `https://appassets.androidplatform.net/` interceptado en
+  `shouldInterceptRequest` (contexto seguro → WebCodecs e IndexedDB). Guardar y
+  compartir van por `window.AndroidPapuchon` en pedazos base64 de 768 KB a
+  MediaStore. No hay emulador acá (sin /dev/kvm): la parte web se probó con
+  Playwright en ese mismo origen y un puente falso; en un celular real, sin
+  probar.

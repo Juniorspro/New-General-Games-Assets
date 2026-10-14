@@ -220,4 +220,18 @@ function App() {
   if (!listo) return html`<div style=${{ display: "grid", placeItems: "center", height: "100%" }}><img src=${LOGO_B64} alt="Cargando" style=${{ width: "160px", opacity: 0.8 }} /></div>`;
   return html`${pantalla === "editor" && Tienda.get().proyecto ? html`<${Editor} />` : pantalla === "marca" ? html`<${MiMarca} />` : pantalla === "filmable" ? html`<${Filmable} />` : html`<${Inicio} />`}<${Avisos} />`;
 }
+// El botón de atrás del celular (app de Android): cierra lo abierto, después vuelve al inicio.
+window.epAtras = () => {
+  const e = Tienda.get();
+  if (e.exportando) return true;   // mientras exporta no se sale
+  if (e.pantalla === "editor") {
+    if (e.inspector && e.seleccion) { Tienda.set({ inspector: false }); return true; }
+    if (e.panel) { Tienda.set({ panel: null }); return true; }
+    if (e.seleccion) { Tienda.set({ seleccion: null }); return true; }
+    Motor.parar(); Tienda.cerrar(); return true;
+  }
+  if (e.pantalla === "filmable") { Camara.cerrar(); Tienda.set({ pantalla: e.volverA || "inicio" }); return true; }
+  if (e.pantalla !== "inicio") { Tienda.set({ pantalla: e.volverA || "inicio" }); return true; }
+  return false;
+};
 ReactDOM.createRoot(document.getElementById("app")).render(html`<${App} />`);

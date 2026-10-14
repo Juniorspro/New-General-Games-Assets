@@ -40,6 +40,16 @@ Abrilo acá: https://raw.githack.com/juniorspro/new-general-games-assets/claude/
 | Voz generada | sí | no (no deja bajar el modelo) |
 | Cámara y micrófono | sí (githack) | no |
 
+## App de Android (APK)
+
+`android/` tiene la app: un WebView con el editor adentro (letras incluidas, anda
+sin internet salvo la voz la primera vez). Guarda los videos en
+Películas/Papuchon y los comparte con el menú de Android. Se arma con
+`bash estudio-papuchon/android/armar.sh salida.apk` (baja solo las herramientas de
+Android; no hace falta Android Studio). La llave de firma queda en `~/.papuchon/`,
+fuera del repo: si se pierde, para instalar una versión nueva hay que
+desinstalar la anterior.
+
 ## Por dentro
 
 Ver `ARQUITECTURA.md`. Scripts clásicos en `js/`, React 18 + htm sin compilar.
