@@ -59,3 +59,36 @@ Ver también: [rezona](rezona.md).
   su generador de juegos): para eso no hay Higgsfield.
 - Ojo con `jobs_wait`: los ids son los que devuelve `generate_audio_batch`, no
   otros (si no, "Generation not found").
+
+## Miniaturas: motores de imagen desde una página (20/10/2026)
+
+App en `miniaturas/`. Lo medido ese día, desde el navegador (todos con CORS):
+
+- **Rezona por API**: imagen 16:9 (`size: "1280x720"`, sale 1376×768) en **46 s**,
+  costó ~81 (había otros gastando). Muy buena. **Su CORS solo acepta `*.rezona.ai`**
+  (comodín: cualquier subdominio): desde githack o la app no se puede llamar
+  desde la página. En el APK lo hace Java. La URL pública `/pv/…` tampoco manda
+  CORS: el APK la sirve desde su propio origen (`/rz-pv/…`). Proyecto de la app:
+  `McbMhHEtLH` (id 10253704), queda creado.
+- **Login por dispositivo** de Rezona: el link vence a los **600 s**. Se pierde si
+  la persona no lo ve a tiempo: mejor que la app tenga su propio botón de conectar.
+- **AI Horde** anónimo (`apikey: 0000000000`): gratis y sin límite, pero el tope
+  de tamaño **cambia con la demanda** (vi 1024×1024, 760×760 y 642×642 el mismo
+  día; el mensaje dice "requests over WxH"). Deliberate 768×448 tardó 29 s;
+  con SDXL o modelos con cola, más de 6–18 minutos. `dry_run: true` cotiza sin
+  encolar. Desde Python, Cloudflare corta con **error 1010** si no se manda un
+  User-Agent de navegador.
+- **Pollinations** sin llave: **1 imagen cada 45 s por IP** (402 `FREE_LIMIT` con
+  los segundos que faltan); modelo `sana`, 1024×576 máx., **pone su marca** abajo
+  a la derecha aunque se pida `nologo`. Texto (`text.pollinations.ai`): 1 cada
+  30 s, ~20 s de demora; con curl anda, pero al Chromium sin cabeza lo frena con
+  403 (Cloudflare): en el teléfono, sin comprobar.
+- **Hugging Face Spaces** (Gradio, `/gradio_api/call/infer`): cuota ZeroGPU por IP;
+  desde esta máquina, 0 s ("exceeded your ZeroGPU quota"). En un teléfono, sin
+  comprobar.
+- Recorte de persona: MediaPipe `selfie_multiclass_256x256` (16 MB de
+  storage.googleapis.com, que el artifact de claude.ai bloquea). Sumar solo las
+  máscaras 1–4 y quedarse con las manchas con cara: la 5 ("otros") se llevaba el
+  auto en llamas del fondo.
+- Las páginas abiertas con file:// sin `<meta charset="utf-8">` rompen los .js con
+  acentos ("Invalid or unexpected token"): ponerlo siempre.

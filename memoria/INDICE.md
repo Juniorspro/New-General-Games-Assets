@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 14/10/2026.
+Última puesta al día: 20/10/2026.
 
 Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raíz).
 
@@ -61,7 +61,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | nota | abrila cuando… |
 |---|---|
 | [rezona](rezona.md) | haya que generar assets, tocar créditos o la API de Rezona |
-| [imagenes](imagenes.md) | haya que generar una imagen, o convertir un render en sprite |
+| [imagenes](imagenes.md) | haya que generar una imagen, o convertir un render en sprite, o usar motores gratis desde una página (Horde, Pollinations, Hugging Face) |
 | [maquina](maquina.md) | algo falle por red, disco, Docker o permisos de la sesión |
 | [neko](neko.md) | haga falta un escritorio gráfico o manejar un navegador |
 | [video](video.md) | haya que tocar un video, hacer un zócalo o quemar un gráfico, o tocar el editor Estudio Papuchón (voz de locutor hombre en el navegador, exportar MP4 con WebCodecs) |
@@ -89,6 +89,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | `herramientas/descargable/` | arma el HTML descargable de un artifact | su docstring |
 | `herramientas/iblo/`, `mint/`, `audio/` | utilidades sueltas | — |
 | `tiktok/` | versión 9:16: intro con logo, titular, subtítulos; `armar.mjs` arma el video | [video](video.md) |
+| `miniaturas/` | generador de miniaturas con IA (Rezona en el APK + Horde/HF/Pollinations gratis con relevo solo), recorte de persona, títulos; APK en `android/` | `miniaturas/LEEME.md`, [imagenes](imagenes.md) § Miniaturas |
 | `estudio-papuchon/` | editor de video del canal (React + htm, canvas, WebCodecs): gráficos, voz de hombre, subtítulos, música, MP4 | `estudio-papuchon/LEEME.md`, `ARQUITECTURA.md`, [video](video.md) § Estudio Papuchón |
 | `zocalo/` | zócalo de stream: editor, fuente de OBS, y `quemar.mjs` para videos | [video](video.md) |
 | `estancia/` | juego "Estancia — La Ley del Monte" (three.js, modelos de Rezona) | `estancia/LEEME.md` |
