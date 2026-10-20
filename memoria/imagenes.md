@@ -92,3 +92,8 @@ App en `miniaturas/`. Lo medido ese día, desde el navegador (todos con CORS):
   auto en llamas del fondo.
 - Las páginas abiertas con file:// sin `<meta charset="utf-8">` rompen los .js con
   acentos ("Invalid or unexpected token"): ponerlo siempre.
+- **Rezona para el papá (20/10)**: el usuario aprobó una llave aparte para la app
+  (`~/.papuchon/rezona-miniaturas.json`, fuera del repo) y pidió **uso ilimitado**
+  ("nono uso ilimitado nomás"): `TOPE_REZONA` vale 0 por defecto. La llave va en el
+  APK con XOR (no aparece con `grep rz_live`); el APK no se publica. Se revoca en
+  rezona.ai/api-keys sin tocar la llave principal.

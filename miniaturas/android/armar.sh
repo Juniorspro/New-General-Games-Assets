@@ -9,7 +9,8 @@
 # usa Rezona sin que nadie haga nada. Si no existe, la app sale igual y se
 # conecta desde Motores → "Conectar con Rezona". La llave NUNCA entra al repo:
 # la clase LlaveRezona se genera acá, en una carpeta temporal.
-# TOPE_REZONA (por defecto 40) es el máximo de imágenes de Rezona por día y teléfono.
+# TOPE_REZONA: máximo de imágenes de Rezona por día y teléfono; 0 (por defecto) = sin límite
+# (lo pidió así: "uso ilimitado nomás").
 set -euo pipefail
 AQUI="$(cd "$(dirname "$0")" && pwd)"; RAIZ="$(cd "$AQUI/../.." && pwd)"
 SALIDA="${1:-$AQUI/miniaturas-papuchon.apk}"
@@ -52,7 +53,7 @@ EOF
 # ── La llave de Rezona (si hay): a una clase generada, ofuscada con XOR (no es
 # un candado, solo para que no aparezca a simple vista en el APK).
 mkdir -p "$OBRA/gen/ar/papuchon/miniaturas"
-python3 - "$LLAVE" "${TOPE_REZONA:-40}" "$OBRA/gen/ar/papuchon/miniaturas/LlaveRezona.java" <<'EOF'
+python3 - "$LLAVE" "${TOPE_REZONA:-0}" "$OBRA/gen/ar/papuchon/miniaturas/LlaveRezona.java" <<'EOF'
 import json, os, sys
 ruta, tope, destino = sys.argv[1], int(sys.argv[2]), sys.argv[3]
 tok = ""
@@ -72,7 +73,7 @@ final class LlaveRezona {{
     }}
 }}
 """)
-print("Rezona:", "llave adentro" if tok else "sin llave (se conecta desde la app)", "· tope", tope, "por día")
+print("Rezona:", "llave adentro" if tok else "sin llave (se conecta desde la app)", "· " + (f"tope {tope} por día" if tope else "sin tope"))
 EOF
 
 # ── Recursos, manifiesto y código

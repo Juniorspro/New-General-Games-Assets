@@ -12,7 +12,7 @@
 // ════════════════════════════════════════════════════════════════════════
 const Motores = (() => {
   const INFO = {
-    rezona: { nombre: "Rezona", detalle: "La mejor calidad. Gasta créditos de Rezona, con tope por día.", calidad: 5, max: 3 },
+    rezona: { nombre: "Rezona", detalle: "La mejor calidad. Gasta créditos de Rezona; si se acaban, siguen los gratis.", calidad: 5, max: 3 },
     horde: { nombre: "AI Horde", detalle: "Gratis y sin límite (computadoras de voluntarios). A veces hay cola.", calidad: 4, max: 2 },
     hf: { nombre: "Hugging Face", detalle: "Gratis con una cuota diaria por conexión. Rápido cuando hay cuota.", calidad: 4, max: 1 },
     pollinations: { nombre: "Pollinations", detalle: "Gratis, una imagen cada 45 s por conexión. Rápido, menos detalle.", calidad: 2, max: 1 },

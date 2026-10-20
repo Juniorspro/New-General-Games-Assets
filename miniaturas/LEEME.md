@@ -11,7 +11,7 @@ recortada encima, el título grande y el logo del canal.
 
 | motor | cuándo | costo |
 |---|---|---|
-| **Rezona** | primero, si la app está conectada y no pasó el tope del día | créditos de Rezona (~54–81 por imagen) |
+| **Rezona** | primero, si la app está conectada (y no pasó el tope, si se puso uno) | créditos de Rezona (~54–81 por imagen) |
 | **AI Horde** | gratis, sin cuenta; si la cola pasa de 5 minutos, se suelta | gratis, sin límite |
 | **Hugging Face** | gratis con una cuota diaria por conexión | gratis |
 | **Pollinations** | gratis, 1 imagen cada 45 s por conexión; deja su marquita abajo a la derecha | gratis |
@@ -45,8 +45,8 @@ las herramientas). La llave de Rezona:
 
 La llave nunca pasa por la página: Java hace los pedidos (la API de Rezona solo
 acepta páginas de rezona.ai) y trae las imágenes por `/rz-pv/…` desde el mismo
-origen, así se pueden exportar. Tope: `TOPE_REZONA` (40 imágenes por día por
-teléfono, por defecto). Si se pierde el teléfono, se borra esa llave en
+origen, así se pueden exportar. Sin tope por defecto; `TOPE_REZONA=N` al armar
+pone un máximo de N imágenes por día por teléfono. Si se pierde el teléfono, se borra esa llave en
 rezona.ai/api-keys y listo.
 
 ## Por dentro
