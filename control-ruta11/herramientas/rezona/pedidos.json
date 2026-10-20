@@ -1,0 +1,406 @@
+[
+ {
+  "clave": "fuente-pickup",
+  "type": "image",
+  "output_path": "assets/fuente-pickup.png",
+  "params": {
+   "prompt": "A single modern double-cab pickup truck, white paint, three-quarter front view, generic design, black plastic bumpers. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-pickup",
+  "type": "model3d",
+  "output_path": "assets/modelo-pickup.glb",
+  "params": {
+   "prompt": "white double cab pickup truck",
+   "source_url": "@fuente-pickup",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "standard",
+   "face_limit": 20000
+  }
+ },
+ {
+  "clave": "fuente-sedan",
+  "type": "image",
+  "output_path": "assets/fuente-sedan.png",
+  "params": {
+   "prompt": "A single old 1980s boxy four-door sedan car, white paint, chrome bumpers, three-quarter front view, generic design. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-sedan",
+  "type": "model3d",
+  "output_path": "assets/modelo-sedan.glb",
+  "params": {
+   "prompt": "old boxy white 1980s sedan car",
+   "source_url": "@fuente-sedan",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "standard",
+   "face_limit": 16000
+  }
+ },
+ {
+  "clave": "fuente-compacto",
+  "type": "image",
+  "output_path": "assets/fuente-compacto.png",
+  "params": {
+   "prompt": "A single modern small four-door sedan car, white paint, three-quarter front view, generic design. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-compacto",
+  "type": "model3d",
+  "output_path": "assets/modelo-compacto.glb",
+  "params": {
+   "prompt": "modern small white sedan car",
+   "source_url": "@fuente-compacto",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "standard",
+   "face_limit": 16000
+  }
+ },
+ {
+  "clave": "fuente-hatch",
+  "type": "image",
+  "output_path": "assets/fuente-hatch.png",
+  "params": {
+   "prompt": "A single small three-door hatchback car, white paint, three-quarter front view, generic design. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-hatch",
+  "type": "model3d",
+  "output_path": "assets/modelo-hatch.glb",
+  "params": {
+   "prompt": "small white hatchback car",
+   "source_url": "@fuente-hatch",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "standard",
+   "face_limit": 16000
+  }
+ },
+ {
+  "clave": "fuente-camion",
+  "type": "image",
+  "output_path": "assets/fuente-camion.png",
+  "params": {
+   "prompt": "A single medium cargo truck with a white cab and a grey closed cargo box, three-quarter front view, generic design. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-camion",
+  "type": "model3d",
+  "output_path": "assets/modelo-camion.glb",
+  "params": {
+   "prompt": "medium cargo truck white cab grey box",
+   "source_url": "@fuente-camion",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "standard",
+   "face_limit": 20000
+  }
+ },
+ {
+  "clave": "fuente-moto",
+  "type": "image",
+  "output_path": "assets/fuente-moto.png",
+  "params": {
+   "prompt": "A single small 110cc street motorcycle, underbone style, red and black, side three-quarter view, kickstand down. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-moto",
+  "type": "model3d",
+  "output_path": "assets/modelo-moto.glb",
+  "params": {
+   "prompt": "small red 110cc street motorcycle",
+   "source_url": "@fuente-moto",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "standard",
+   "face_limit": 10000
+  }
+ },
+ {
+  "clave": "fuente-patrullero",
+  "type": "image",
+  "output_path": "assets/fuente-patrullero.png",
+  "params": {
+   "prompt": "A single police pickup truck, white body with bold blue stripes along the sides, a blue and red light bar on the roof, three-quarter front view, generic design, no words. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-patrullero",
+  "type": "model3d",
+  "output_path": "assets/modelo-patrullero.glb",
+  "params": {
+   "prompt": "white police pickup truck with blue stripes and light bar",
+   "source_url": "@fuente-patrullero",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 20000
+  }
+ },
+ {
+  "clave": "fuente-motopol",
+  "type": "image",
+  "output_path": "assets/fuente-motopol.png",
+  "params": {
+   "prompt": "A single blue adventure touring motorcycle used by highway police, glossy royal blue fairing and fuel tank, tall clear windscreen, black top case on the back, side three-quarter view, kickstand down. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-motopol",
+  "type": "model3d",
+  "output_path": "assets/modelo-motopol.glb",
+  "params": {
+   "prompt": "blue police adventure touring motorcycle with top case",
+   "source_url": "@fuente-motopol",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "standard",
+   "face_limit": 14000
+  }
+ },
+ {
+  "clave": "fuente-garita",
+  "type": "image",
+  "output_path": "assets/fuente-garita.png",
+  "params": {
+   "prompt": "A small white corrugated metal guard booth made from a shipping container, with an open wooden door and a thin blue stripe along the top edge, three-quarter view. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-garita",
+  "type": "model3d",
+  "output_path": "assets/modelo-garita.glb",
+  "params": {
+   "prompt": "white corrugated metal container guard booth",
+   "source_url": "@fuente-garita",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "standard",
+   "face_limit": 6000
+  }
+ },
+ {
+  "clave": "fuente-algarrobo",
+  "type": "image",
+  "output_path": "assets/fuente-algarrobo.png",
+  "params": {
+   "prompt": "A single gnarled algarrobo tree from the dry Chaco forest of Argentina, wide umbrella shaped crown of feathery olive green leaves, twisted dark brown trunk, full tree visible. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-algarrobo",
+  "type": "model3d",
+  "output_path": "assets/modelo-algarrobo.glb",
+  "params": {
+   "prompt": "gnarled algarrobo tree umbrella crown",
+   "source_url": "@fuente-algarrobo",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "standard",
+   "face_limit": 9000
+  }
+ },
+ {
+  "clave": "fuente-quebracho",
+  "type": "image",
+  "output_path": "assets/fuente-quebracho.png",
+  "params": {
+   "prompt": "A single tall quebracho colorado tree from the Chaco forest, dense dark green rounded crown, straight reddish brown trunk, full tree visible. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-quebracho",
+  "type": "model3d",
+  "output_path": "assets/modelo-quebracho.glb",
+  "params": {
+   "prompt": "tall quebracho tree dense dark green crown",
+   "source_url": "@fuente-quebracho",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "standard",
+   "face_limit": 9000
+  }
+ },
+ {
+  "clave": "fuente-conductor",
+  "type": "image",
+  "output_path": "assets/fuente-conductor.png",
+  "params": {
+   "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 40-year-old Argentine man, short dark hair, plain grey polo shirt, blue jeans, brown shoes. Clean semi-realistic low-poly game character with simple shapes, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-conductor",
+  "type": "model3d",
+  "output_path": "assets/modelo-conductor.glb",
+  "params": {
+   "prompt": "man in A-pose, grey polo shirt, jeans",
+   "source_url": "@fuente-conductor",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 20000
+  }
+ },
+ {
+  "clave": "fuente-conductora",
+  "type": "image",
+  "output_path": "assets/fuente-conductora.png",
+  "params": {
+   "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 35-year-old Argentine woman, dark hair tied in a ponytail, plain white blouse, dark blue jeans, white sneakers. Clean semi-realistic low-poly game character with simple shapes, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-conductora",
+  "type": "model3d",
+  "output_path": "assets/modelo-conductora.glb",
+  "params": {
+   "prompt": "woman in A-pose, white blouse, jeans",
+   "source_url": "@fuente-conductora",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 20000
+  }
+ },
+ {
+  "clave": "fuente-policia",
+  "type": "image",
+  "output_path": "assets/fuente-policia.png",
+  "params": {
+   "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: an Argentine highway police officer, light blue short-sleeve uniform shirt with dark navy epaulettes, navy blue trousers, black duty belt, black boots, navy blue peaked cap, no badges, no words. Clean semi-realistic low-poly game character with simple shapes, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "modelo-policia",
+  "type": "model3d",
+  "output_path": "assets/modelo-policia.glb",
+  "params": {
+   "prompt": "police officer in A-pose, light blue shirt, navy trousers, cap",
+   "source_url": "@fuente-policia",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 20000
+  }
+ },
+ {
+  "clave": "rig-conductor-walk",
+  "type": "rig3d",
+  "output_path": "assets/rig-conductor-walk.glb",
+  "params": {
+   "source_task_id": "@modelo-conductor",
+   "rig_type": "biped",
+   "animations": [
+    "preset:walk"
+   ]
+  }
+ },
+ {
+  "clave": "rig-conductor-idle",
+  "type": "rig3d",
+  "output_path": "assets/rig-conductor-idle.glb",
+  "params": {
+   "source_task_id": "@modelo-conductor",
+   "rig_type": "biped",
+   "animations": [
+    "preset:idle"
+   ]
+  }
+ },
+ {
+  "clave": "rig-conductora-walk",
+  "type": "rig3d",
+  "output_path": "assets/rig-conductora-walk.glb",
+  "params": {
+   "source_task_id": "@modelo-conductora",
+   "rig_type": "biped",
+   "animations": [
+    "preset:walk"
+   ]
+  }
+ },
+ {
+  "clave": "rig-conductora-idle",
+  "type": "rig3d",
+  "output_path": "assets/rig-conductora-idle.glb",
+  "params": {
+   "source_task_id": "@modelo-conductora",
+   "rig_type": "biped",
+   "animations": [
+    "preset:idle"
+   ]
+  }
+ },
+ {
+  "clave": "rig-policia-walk",
+  "type": "rig3d",
+  "output_path": "assets/rig-policia-walk.glb",
+  "params": {
+   "source_task_id": "@modelo-policia",
+   "rig_type": "biped",
+   "animations": [
+    "preset:walk"
+   ]
+  }
+ },
+ {
+  "clave": "rig-policia-idle",
+  "type": "rig3d",
+  "output_path": "assets/rig-policia-idle.glb",
+  "params": {
+   "source_task_id": "@modelo-policia",
+   "rig_type": "biped",
+   "animations": [
+    "preset:idle"
+   ]
+  }
+ },
+ {
+  "clave": "arte-portada",
+  "type": "image",
+  "output_path": "assets/arte-portada.png",
+  "params": {
+   "prompt": "Video game key art: a highway police checkpoint on a straight two-lane asphalt road through the green Chaco forest of northern Argentina at golden sunset, orange traffic cones across the lane, a white corrugated guard booth, blue police motorcycles parked on the grass, a car slowing down with its headlights on, power poles, warm dramatic sky, semi-realistic stylized low-poly 3D render, cinematic wide shot, no text, no logos, no people's faces.",
+   "size": "1536x1024",
+   "n": 1
+  }
+ }
+]
