@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 20/10/2026.
+Última puesta al día: 30/10/2026.
 
 Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raíz).
 
@@ -89,8 +89,8 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | `herramientas/descargable/` | arma el HTML descargable de un artifact | su docstring |
 | `herramientas/iblo/`, `mint/`, `audio/` | utilidades sueltas | — |
 | `tiktok/` | versión 9:16: intro con logo, titular, subtítulos; `armar.mjs` arma el video | [video](video.md) |
-| `miniaturas/` | generador de miniaturas con IA (Rezona en el APK + Horde/HF/Pollinations gratis con relevo solo), recorte de persona, títulos; APK en `android/` | `miniaturas/LEEME.md`, [imagenes](imagenes.md) § Miniaturas |
-| `estudio-papuchon/` | editor de video del canal (React + htm, canvas, WebCodecs): gráficos, voz de hombre, subtítulos, música, MP4 | `estudio-papuchon/LEEME.md`, `ARQUITECTURA.md`, [video](video.md) § Estudio Papuchón |
+| `miniaturas/` | generador de miniaturas con IA (Rezona en el APK + Horde/HF/Pollinations gratis con relevo solo), recorte de persona, recortar foto/video, títulos; APK en `android/` (código Android común en `herramientas/android-papuchon/`) | `miniaturas/LEEME.md`, [imagenes](imagenes.md) § Miniaturas |
+| `estudio-papuchon/` | editor de video del canal (React + htm, canvas, WebCodecs): gráficos, voz de hombre, subtítulos, música, recortar/acortar, MP4 en segundo plano | `estudio-papuchon/LEEME.md`, `ARQUITECTURA.md`, [video](video.md) § Estudio Papuchón |
 | `zocalo/` | zócalo de stream: editor, fuente de OBS, y `quemar.mjs` para videos | [video](video.md) |
 | `estancia/` | juego "Estancia — La Ley del Monte" (three.js, modelos de Rezona) | `estancia/LEEME.md` |
 | `control-ruta11/` | simulador de puesto policial 3D (three.js + React) en módulos `js/`, assets de Rezona en `js/datos.js`; `prueba.mjs pc|tel`; `GDD.md`; `referencia-unity/` solo de referencia | [juegos](juegos.md) § Puesto policial (Ruta 11) |

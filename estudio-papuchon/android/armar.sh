@@ -59,7 +59,7 @@ VERSION_CODIGO=$(git -C "$RAIZ" rev-list --count HEAD)
 
 # ── Código
 mkdir -p "$OBRA/clases" "$OBRA/dex"
-javac -nowarn --release 8 -cp "$PLAT" -d "$OBRA/clases" $(find "$AQUI/src" -name '*.java') 2>&1 | grep -v "^Picked up" || true
+javac -nowarn --release 8 -cp "$PLAT" -d "$OBRA/clases" $(find "$AQUI/src" "$RAIZ/herramientas/android-papuchon/src" -name '*.java') 2>&1 | grep -v "^Picked up" || true
 "$BT/d8" --lib "$PLAT" --min-api 26 --release --output "$OBRA/dex" $(find "$OBRA/clases" -name '*.class')
 (cd "$OBRA/dex" && zip -qj "$OBRA/base.apk" classes.dex)
 

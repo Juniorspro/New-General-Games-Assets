@@ -36,15 +36,39 @@ const Exportador = (() => {
     return `papuchon-${base}.${ext}`;
   }
 
-  // opciones: { calidad, alAvance(f, cuadro), cancelado() }
+  // opciones: { calidad, alAvance(f, cuadro), cancelado(), despues }. Con `despues` (texto), el
+  // aviso de trabajo no termina acá: sigue con ese texto y lo cierra quien llamó (al guardar).
+  // Mientras exporta, la app sigue aunque se salga o se apague la pantalla (en Android, con
+  // un aviso de progreso; en el navegador, al menos la pantalla no se apaga sola).
   async function exportar(p, opciones = {}) {
     const cal = CALIDADES[opciones.calidad] || CALIDADES.alta;
-    if (Plataforma.puede("webcodecs") && typeof Mp4Muxer !== "undefined") {
-      try { return await conWebCodecs(p, cal, opciones); }
-      catch (e) { if (e.message === "cancelado") throw e; console.warn("WebCodecs falló, pruebo en tiempo real", e); }
+    let ultimo = -1;
+    const avance = opciones.alAvance, op = { ...opciones, alAvance: (f, cv, txt) => {
+      const pct = Math.floor(f * 100); if (pct !== ultimo) { ultimo = pct; Plataforma.trabajo("avance", "Exportando el video", pct + " %", pct); }
+      avance && avance(f, cv, txt);
+    } };
+    Plataforma.trabajo("inicio", "Exportando el video", "Preparando…", 0);
+    try {
+      let r = null;
+      if (Plataforma.puede("webcodecs") && typeof Mp4Muxer !== "undefined") {
+        try { r = await conWebCodecs(p, cal, op); }
+        catch (e) { if (e.message === "cancelado") throw e; console.warn("WebCodecs falló, pruebo en tiempo real", e); }
+      }
+      if (!r) r = await enTiempoReal(p, cal, op);
+      if (opciones.despues) Plataforma.trabajo("avance", "Exportando el video", opciones.despues, 100);
+      else Plataforma.trabajo("fin", "Video listo", r.nombre, 100);
+      return r;
+    } catch (e) {
+      Plataforma.trabajo(e.message === "cancelado" ? "fin" : "error", e.message === "cancelado" ? "Exportación cancelada" : "No se pudo exportar", e.message === "cancelado" ? "" : e.message, -1);
+      throw e;
     }
-    return enTiempoReal(p, cal, opciones);
   }
+  // Espera a que el codificador se descongestione. Con la app atrás los setTimeout se frenan
+  // (hasta 1 por minuto): por eso se espera el evento "dequeue" del codificador.
+  const descongestion = (venc) => new Promise((ok) => {
+    if ("ondequeue" in venc) { const f = () => { venc.removeEventListener("dequeue", f); ok(); }; venc.addEventListener("dequeue", f); }
+    else setTimeout(ok, 4);
+  });
 
   async function conWebCodecs(p, cal, op) {
     const fps = p.formato.fps || 30, W = par(p.formato.ancho * cal.escala), H = par(p.formato.alto * cal.escala), sr = 48000;
@@ -78,17 +102,17 @@ const Exportador = (() => {
     // Video: cuadro por cuadro, cada video ubicado exacto antes de dibujar.
     const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
     const ctx = cv.getContext("2d", { alpha: false });
-    const rec = { ...(await Compositor.recursos(Tienda.get().marca)), esc: W / p.formato.ancho };
+    const rec = { ...(await Compositor.recursos(Tienda.get().marca)), esc: W / p.formato.ancho, prefijo: "x" };   // sus propios <video>
     const t0 = performance.now();
     for (let i = 0; i < total; i++) {
       if (error) throw error;
       if (op.cancelado && op.cancelado()) { try { venc.close(); } catch (e) { /* */ } throw new Error("cancelado"); }
       const t = i / fps;
-      await Compositor.ubicar(p, t, 0.25 / fps, true);
+      await Compositor.ubicar(p, t, 0.25 / fps, true, "x");
       Compositor.dibujar(ctx, p, t, rec);
       const fr = new VideoFrame(cv, { timestamp: Math.round(t * 1e6), duration: Math.round(1e6 / fps) });
       venc.encode(fr, { keyFrame: i % (fps * 2) === 0 }); fr.close();
-      while (venc.encodeQueueSize > 6) await esperar(4);
+      while (venc.encodeQueueSize > 6) await descongestion(venc);
       if (op.alAvance && (i % 3 === 0 || i === total - 1)) {
         const pasado = (performance.now() - t0) / 1000, resta = (pasado / (i + 1)) * (total - i - 1);
         op.alAvance((i + 1) / total, cv, `Cuadro ${i + 1} de ${total} · faltan ${Math.ceil(resta)} s`);

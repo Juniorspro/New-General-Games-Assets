@@ -54,7 +54,7 @@ const ICONOS = {
   atras: "M15 18l-6-6 6-6", cerrar: "M18 6L6 18|M6 6l12 12", check: "M20 6L9 17l-5-5", otra: "M23 4v6h-6|M1 20v-6h6|M3.51 9a9 9 0 0 1 14.85-3.36L23 10|M1 14l4.64 4.36A9 9 0 0 0 20.49 15",
   texto: "M4 7V4h16v3|M9 20h6|M12 4v16", persona: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2|c:12,7,4", capas: "M12 2L2 7l10 5 10-5-10-5z|M2 17l10 5 10-5|M2 12l10 5 10-5",
   rayo: "M13 2L3 14h9l-1 8 10-12h-9l1-8z", grilla: "r:3,3,7,7,1|r:14,3,7,7,1|r:14,14,7,7,1|r:3,14,7,7,1", estrella: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z",
-  ajustes: "M4 21v-7|M4 10V3|M12 21v-9|M12 8V3|M20 21v-5|M20 12V3|M1 14h6|M9 8h6|M17 16h6", espejo: "M12 3v18|M16 7l4 5-4 5z|M8 7l-4 5 4 5z", info: "c:12,12,10|M12 16v-4|M12 8h.01",
+  ajustes: "M4 21v-7|M4 10V3|M12 21v-9|M12 8V3|M20 21v-5|M20 12V3|M1 14h6|M9 8h6|M17 16h6", espejo: "M12 3v18|M16 7l4 5-4 5z|M8 7l-4 5 4 5z", recortar: "M6.13 1L6 16a2 2 0 0 0 2 2h15|M1 6.13L16 6a2 2 0 0 1 2 2v15", info: "c:12,12,10|M12 16v-4|M12 8h.01",
 };
 function Icono({ n, t }) {
   const partes = (ICONOS[n] || "").split("|").map((d, i) => {
@@ -118,9 +118,12 @@ async function exportar(c) {
   do { blob = await new Promise((ok) => cv.toBlob(ok, "image/jpeg", q)); q -= 0.06; } while (blob.size > 1.95e6 && q > 0.5);
   return blob;
 }
-async function guardarComo(c) {
-  try { const b = await exportar(c), como = await Plataforma.guardarArchivo(b, nombreArchivo(c, "jpg")); aviso(como === "guardado" ? "Miniatura guardada" : "Descargando la miniatura", "ok"); }
-  catch (e) { aviso(e.message, "error", 6000); }
+async function guardarComo(c, callado) {
+  try {
+    const b = await exportar(c), como = await Plataforma.guardarArchivo(b, nombreArchivo(c, "jpg"));
+    if (!callado) aviso(Plataforma.android ? "Descargada en Descargas/Papuchon" : como === "guardado" ? "Miniatura guardada" : "Descargando la miniatura", "ok");
+    return true;
+  } catch (e) { aviso(e.message, "error", 6000); return false; }
 }
 async function compartirComo(c) {
   try { await Plataforma.compartir(await exportar(c), nombreArchivo(c, "jpg")); } catch (e) { if (e.name !== "AbortError") aviso("No se pudo compartir: " + e.message, "error"); }

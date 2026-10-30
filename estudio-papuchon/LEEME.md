@@ -12,6 +12,11 @@ Abrilo acá: https://raw.githack.com/juniorspro/new-general-games-assets/claude/
 - **Línea de tiempo**: cortar (S), recortar desde los bordes, mover, duplicar,
   deshacer. Pistas de video, encima (recuadros), gráficos, subtítulos, voz,
   música y efectos.
+- **Recortar** un video o una foto, como en CapCut: recuadro con esquinas,
+  proporción libre, como el video, como el recuadro, 9:16, 16:9, 1:1 o 4:5;
+  girar de a 90° y espejo. Se ve en la vista previa y sale igual al exportar.
+- **Acortar**: dónde empieza y termina el clip (deslizadores) o "cortar el
+  principio/final acá", en la raya.
 - **Gráficos del canal** (20, dibujados por código, se animan solos): mosca con
   el logo y EN VIVO, marca de agua, intro, cierre "seguinos", zócalos (último
   momento, noche, persona), ticker, placa de último momento, sellos (EXCLUSIVO,
@@ -44,11 +49,18 @@ Abrilo acá: https://raw.githack.com/juniorspro/new-general-games-assets/claude/
 
 `android/` tiene la app: un WebView con el editor adentro (letras incluidas, anda
 sin internet salvo la voz la primera vez). Guarda los videos en
-Películas/Papuchon y los comparte con el menú de Android. Se arma con
+Descargas/Papuchon y los comparte con el menú de Android. Se arma con
 `bash estudio-papuchon/android/armar.sh salida.apk` (baja solo las herramientas de
 Android; no hace falta Android Studio). La llave de firma queda en `~/.papuchon/`,
 fuera del repo: si se pierde, para instalar una versión nueva hay que
 desinstalar la anterior.
+
+**Segundo plano** (desde la 1.1.0): mientras exporta, la app queda en primer
+plano para Android (servicio con aviso de progreso y la CPU despierta), así
+sigue con la pantalla apagada o en otra app. Al terminar, el video **se
+descarga solo** en Descargas/Papuchon con el aviso de "Descarga completa"
+(tocándolo se abre). El código de Android que comparten Estudio y Miniaturas
+está en `herramientas/android-papuchon/`.
 
 ## Por dentro
 

@@ -1,6 +1,7 @@
 package ar.papuchon.estudio;
 
 import android.Manifest;
+import ar.papuchon.comun.PuenteBase;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Intent;
@@ -134,8 +135,11 @@ public class Principal extends Activity {
             }
         });
 
+        // Que Android no apague la página cuando la app queda atrás (exportando con la pantalla apagada).
+        if (Build.VERSION.SDK_INT >= 26) web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
         web.addJavascriptInterface(new Puente(), "AndroidPapuchon");
         setContentView(web);
+        PuenteBase.pedirPermisos(this);
         if (guardado != null) web.restoreState(guardado); else web.loadUrl(ORIGEN + "index.html");
     }
 
@@ -184,64 +188,7 @@ public class Principal extends Activity {
     @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); web.saveState(b); }
     @Override protected void onPause() { super.onPause(); web.evaluateJavascript("window.Motor && Motor.parar()", null); }
 
-    /** Lo que el editor le pide a Android. El archivo llega en pedazos en base64 (un video pesa decenas de MB). */
-    class Puente {
-        final Map<String, Object[]> abiertos = new HashMap<>();   // id → {OutputStream, Uri o File, nombre, mime}
-        int siguiente = 0;
-
-        @JavascriptInterface
-        public String abrir(String nombre, String mime) {
-            try {
-                String id = "a" + (++siguiente);
-                if (Build.VERSION.SDK_INT >= 29) {
-                    ContentValues cv = new ContentValues();
-                    cv.put(MediaStore.MediaColumns.DISPLAY_NAME, nombre);
-                    cv.put(MediaStore.MediaColumns.MIME_TYPE, mime);
-                    boolean video = mime.startsWith("video/"), imagen = mime.startsWith("image/");
-                    cv.put(MediaStore.MediaColumns.RELATIVE_PATH, (video ? Environment.DIRECTORY_MOVIES : imagen ? Environment.DIRECTORY_PICTURES : Environment.DIRECTORY_DOWNLOADS) + "/Papuchon");
-                    cv.put(MediaStore.MediaColumns.IS_PENDING, 1);
-                    Uri col = video ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI : imagen ? MediaStore.Images.Media.EXTERNAL_CONTENT_URI : MediaStore.Downloads.EXTERNAL_CONTENT_URI;
-                    Uri u = getContentResolver().insert(col, cv);
-                    abiertos.put(id, new Object[]{getContentResolver().openOutputStream(u), u, nombre, mime});
-                } else {
-                    File dir = new File(getExternalFilesDir(null), "Papuchon"); dir.mkdirs();
-                    File f = new File(dir, nombre);
-                    abiertos.put(id, new Object[]{new FileOutputStream(f), f, nombre, mime});
-                }
-                return id;
-            } catch (Exception e) { return "error:" + e.getMessage(); }
-        }
-
-        @JavascriptInterface
-        public boolean escribir(String id, String b64) {
-            Object[] a = abiertos.get(id); if (a == null) return false;
-            try { ((OutputStream) a[0]).write(Base64.decode(b64, Base64.DEFAULT)); return true; } catch (IOException e) { return false; }
-        }
-
-        @JavascriptInterface
-        public String cerrar(String id, boolean compartir) {
-            Object[] a = abiertos.remove(id); if (a == null) return "error";
-            try {
-                ((OutputStream) a[0]).close();
-                Uri u;
-                if (a[1] instanceof Uri) {
-                    u = (Uri) a[1];
-                    ContentValues cv = new ContentValues(); cv.put(MediaStore.MediaColumns.IS_PENDING, 0);
-                    getContentResolver().update(u, cv, null, null);
-                } else u = null;
-                final Uri fu = u; final String nombre = (String) a[2], mime = (String) a[3];
-                runOnUiThread(() -> {
-                    if (compartir && fu != null) {
-                        Intent i = new Intent(Intent.ACTION_SEND); i.setType(mime);
-                        i.putExtra(Intent.EXTRA_STREAM, fu); i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        startActivity(Intent.createChooser(i, "Compartir " + nombre));
-                    } else Toast.makeText(Principal.this, "Guardado en " + (fu != null ? (mime.startsWith("video/") ? "Películas" : mime.startsWith("image/") ? "Imágenes" : "Descargas") + "/Papuchon" : ((File) a[1]).getPath()), Toast.LENGTH_LONG).show();
-                });
-                return fu != null ? fu.toString() : ((File) a[1]).getPath();
-            } catch (IOException e) { return "error:" + e.getMessage(); }
-        }
-
-        @JavascriptInterface
-        public boolean puedeCompartir() { return Build.VERSION.SDK_INT >= 29; }
-    }
+    /** Lo que el editor le pide a Android: descargar a Descargas/Papuchon, compartir y
+     *  seguir exportando en segundo plano (todo eso vive en ar.papuchon.comun.PuenteBase). */
+    class Puente extends PuenteBase { Puente() { super(Principal.this); } }
 }

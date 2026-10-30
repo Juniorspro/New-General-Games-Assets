@@ -92,6 +92,8 @@ function herramientasClip(p, b) {
   if (c.plantilla) r.push({ icono: "texto", et: "Editar", sec: "editar" }, { icono: "ajustes", et: "Tamaño", sec: "ajustes" });
   else if (pista.tipo === "subtitulos") r.push({ icono: "texto", et: "Editar", sec: "editar" }, { icono: "subs", et: "Estilo", accion: () => Tienda.set({ seleccion: null, panel: "subtitulos" }) });
   else {
+    if (m && (m.tipo === "video" || m.tipo === "imagen") && pista.tipo !== "audio") r.push({ icono: "recortar", et: "Recortar", accion: () => Tienda.set({ recortando: c.id }) });
+    if (m && m.tipo !== "imagen") r.push({ icono: "acortar", et: "Acortar", sec: "acortar" });
     if (m && m.tipo !== "imagen") r.push({ icono: "reloj", et: "Velocidad", sec: "velocidad" });
     if (m && m.tipo === "imagen") r.push({ icono: "reloj", et: "Duración", sec: "velocidad" });
     if (m && m.tipo !== "imagen" && m.tieneAudio !== false) r.push({ icono: "parlante", et: "Volumen", sec: "volumen" });
@@ -365,7 +367,7 @@ function Editor() {
   // Atajos de teclado (no cuando se está escribiendo).
   useEffect(() => {
     const k = (e) => {
-      if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName) || Tienda.get().exportando) return;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName) || Tienda.get().exportando || Tienda.get().recortando) return;
       const fps = (Tienda.get().proyecto || {}).formato?.fps || 30, ctrl = e.ctrlKey || e.metaKey;
       if (e.key === " ") { e.preventDefault(); Motor.alternar(); }
       else if (ctrl && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? Tienda.rehacer() : Tienda.deshacer(); }
@@ -397,6 +399,7 @@ function Editor() {
     ${conInsp && html`<${Inspector} />`}
     <${LineaDeTiempo} />
     ${exportando && html`<${DialogoExportar} />`}
+    <${DialogoRecorte} />
     ${soltando && html`<div class="velo" style=${{ pointerEvents: "none" }}><div class="soltar encima" style=${{ background: "var(--panel)", padding: "40px" }}><${Icono} n="subir" t=${40} /><b>Soltá para agregar al video</b></div></div>`}
   </div>`;
 }

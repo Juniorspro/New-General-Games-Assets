@@ -4,7 +4,7 @@
 // de Android o claude.ai) y el guardado en IndexedDB.
 // ════════════════════════════════════════════════════════════════════════
 const MP = {
-  VERSION: "1.0.0",
+  VERSION: "1.1.0",
   // Tamaños finales de cada red (lo que se exporta).
   FORMATOS: {
     youtube: { id: "youtube", nombre: "YouTube", detalle: "1280×720", ancho: 1280, alto: 720 },
@@ -77,8 +77,16 @@ const Plataforma = (() => {
   // Rezona solo anda desde la app: su API no acepta pedidos de páginas que no sean de rezona.ai,
   // y la llave vive en Java (nunca pasa por la página).
   const conRezona = android && typeof window.AndroidPapuchon.rezonaDisponible === "function";
+  // Trabajo largo (crear): en Android, servicio con aviso de progreso que sigue aunque se salga
+  // de la app o se apague la pantalla; en el navegador, se pide que la pantalla no se apague.
+  let pantalla = null;
+  function trabajo(estado, titulo, texto = "", avance = -1) {
+    if (android && typeof window.AndroidPapuchon.trabajo === "function") { try { window.AndroidPapuchon.trabajo(estado, titulo, texto, Math.round(avance)); } catch (e) { /* app vieja */ } return; }
+    if (estado === "inicio" && navigator.wakeLock && !pantalla) navigator.wakeLock.request("screen").then((w) => { pantalla = w; }).catch(() => {});
+    if ((estado === "fin" || estado === "error") && pantalla) { pantalla.release().catch(() => {}); pantalla = null; }
+  }
   return {
-    artifact, android, conRezona, capacidad, guardarArchivo, puedeCompartir, compartir,
+    artifact, android, conRezona, capacidad, guardarArchivo, puedeCompartir, compartir, trabajo,
     get rezona() { return conRezona && !!window.AndroidPapuchon.rezonaDisponible(); },
   };
 })();

@@ -8,17 +8,30 @@ const cambiarPedido = (p) => Estado.set((e) => { const pedido = { ...e.pedido, .
 
 // ── Lo que hacen los botones ──
 const Acciones = {
+  // Foto (o un cuadro de un video) → recorte → se separa a la persona. Devuelve si quedó una nueva.
   async subirFoto() {
-    const f = await elegirArchivo("image/*"); if (!f) return;
-    Estado.set({ persona: { procesando: true, url: URL.createObjectURL(f) } });
+    const r = await elegirYRecortar({ titulo: "¿Qué parte de la foto?" }); if (!r) return false;
+    return Acciones.ponerPersona(r.blob, r.original, r.corte);
+  },
+  // Volver a recortar la última foto subida, desde la original.
+  async recortarFoto() {
+    const ps = Estado.get().persona; if (!ps || !ps.original) return false;
+    const r = await pedirModal("recortar", { blob: ps.original, titulo: "¿Qué parte de la foto?", entera: true, corte: ps.corte }); if (!r) return false;
+    return r === "entera" ? Acciones.ponerPersona(ps.original, ps.original, null) : Acciones.ponerPersona(r.blob, ps.original, r.corte);
+  },
+  async ponerPersona(blob, original, corte) {
+    const vista = URL.createObjectURL(blob);
+    Estado.set({ persona: { procesando: true, url: vista, original, corte } });
     try {
       let r = null, recuadro = false;
-      if (Recorte.puede()) r = await Recorte.recortar(f).catch((e) => { console.warn("recorte", e); return null; });
-      if (!r) { r = await Recorte.enRecuadro(f); recuadro = true; aviso(Recorte.puede() ? "No encontré una persona: la pongo entera en un recuadro" : "Acá no se puede recortar: va entera en un recuadro", "info", 4500); }
+      if (Recorte.puede()) r = await Recorte.recortar(blob).catch((e) => { console.warn("recorte", e); return null; });
+      if (!r) { r = await Recorte.enRecuadro(blob); recuadro = true; aviso(Recorte.puede() ? "No encontré una persona: la pongo entera en un recuadro" : "Acá no se puede recortar: va entera en un recuadro", "info", 4500); }
       const k = await Imagenes.poner(r.blob);
-      Estado.set({ persona: { id: k, url: Imagenes.mapa.get(k).src, recuadro, procesando: false } });
+      Estado.set({ persona: { id: k, url: Imagenes.mapa.get(k).src, recuadro, procesando: false, original, corte } });
       if (!recuadro) aviso("Listo: persona recortada", "ok");
-    } catch (e) { Estado.set({ persona: null }); aviso("No pude abrir esa foto: " + e.message, "error", 5000); }
+      return true;
+    } catch (e) { Estado.set({ persona: null }); aviso("No pude abrir esa foto: " + e.message, "error", 5000); return false; }
+    finally { URL.revokeObjectURL(vista); }
   },
   quitarFoto() { Estado.set({ persona: null }); },
   guardar(c) {
@@ -43,6 +56,8 @@ const Acciones = {
     }
     Estado.set({ creaciones, lote, pantalla: "resultados", tareas: Object.fromEntries(lote.map((k) => [k, { estado: "pensando", texto: "Preparando…" }])) });
     window.scrollTo(0, 0);
+    const n = lote.length, titulo = n === 1 ? "Creando tu miniatura" : `Creando ${n} miniaturas`;
+    Plataforma.trabajo("inicio", titulo, "Podés salir de la app: te aviso cuando estén", -1);
     const vistos = {};
     const fab = Motores.crear(pedido, p.cantidad, (tareas) => {
       const nuevas = { ...Estado.get().tareas };
@@ -51,14 +66,22 @@ const Acciones = {
         if (t.blob && vistos[cid] !== t.blob) { vistos[cid] = t.blob; ponerFondo(cid, t.blob, t.motor); }
       }
       Estado.set({ tareas: nuevas });
+      const hechas = tareas.filter((t) => t.estado === "listo" || t.estado === "error").length;
+      Plataforma.trabajo("avance", titulo, `${hechas} de ${n} listas · ${tareas.find((t) => t.estado !== "listo")?.texto || ""}`, (hechas / n) * 100);
     });
     fab.titulo.then((titulo) => {
       if (!titulo) return;
       for (const cid of lote) { const c = Estado.get().creaciones[cid]; if (c && c.tituloAuto && !c.tocada && c.textos[0]) { const n = copia(c); n.textos[0].texto = titulo; Acciones.guardar(n); } }
     });
     await fab.promesa;
-    const ok = lote.filter((k) => Estado.get().tareas[k] && Estado.get().tareas[k].estado === "listo").length;
-    aviso(ok === lote.length ? (ok === 1 ? "¡Tu miniatura está lista!" : `¡Listas las ${ok}!`) : `Salieron ${ok} de ${lote.length}`, ok ? "ok" : "error");
+    await esperar(700);   // que termine de guardarse el último fondo
+    const listas = lote.filter((k) => Estado.get().tareas[k] && Estado.get().tareas[k].estado === "listo"), ok = listas.length;
+    // Se descargan solas (en la app, a Descargas/Papuchon), aunque se haya salido de la app.
+    let bajadas = 0;
+    if (ok && leerLS("descargar-solas", Plataforma.android)) for (const k of listas) if (await guardarComo(Estado.get().creaciones[k], true)) bajadas++;
+    const fin = ok === n ? (ok === 1 ? "¡Tu miniatura está lista!" : `¡Listas las ${ok}!`) : `Salieron ${ok} de ${n}`;
+    aviso(fin + (bajadas ? (Plataforma.android ? " Ya están en Descargas/Papuchon." : " Descargadas.") : ""), ok ? "ok" : "error", 5000);
+    Plataforma.trabajo(ok ? "fin" : "error", fin, bajadas ? `En Descargas/Papuchon (${bajadas})` : "Abrí la app para verlas", 100);
   },
   // Otro fondo para una miniatura ya hecha (mismo pedido, otra semilla).
   async otraVez(cid) {
@@ -74,8 +97,8 @@ const Acciones = {
 };
 async function ponerFondo(cid, blob, motor) {
   const k = await Imagenes.poner(blob), c = Estado.get().creaciones[cid]; if (!c) return;
-  const viejo = c.fondo.img, n = copia(c); n.fondo.img = k; n.fondo.motor = motor; Acciones.guardar(n);
-  if (viejo && viejo !== k) Imagenes.borrar(viejo);
+  const viejas = new Set([c.fondo.img, c.fondo.base]), n = copia(c); Object.assign(n.fondo, { img: k, motor, base: null, corte: null }); Acciones.guardar(n);
+  for (const v of viejas) if (v && v !== k) Imagenes.borrar(v);
 }
 // Guardado con un poco de demora (y una miniaturita para la galería).
 const porGuardar = new Map();
@@ -130,8 +153,8 @@ function PantallaCrear() {
       <div class="titulo-campo">Foto de la persona <small>(opcional)</small></div>
       ${persona ? html`<div class="foto-persona"><div class="ajedrez"><img src=${persona.url} alt="Persona" /></div>
           <div class="pila">${persona.procesando ? html`<span class="nota"><span class="girando"></span> Recortando a la persona…</span>` : html`<span class="nota">${persona.recuadro ? "Va entera en un recuadro." : "Recortada: va encima, con borde blanco."}</span>`}
-          <div class="fila"><${Boton} chico icono="foto" onClick=${Acciones.subirFoto}>Cambiar<//><${Boton} chico tipo="fantasma" icono="cerrar" onClick=${Acciones.quitarFoto}>Quitar<//></div></div></div>`
-        : html`<button type="button" class="subir" onClick=${Acciones.subirFoto}><${Icono} n="persona" t=${28} /><span><b>Subir una foto</b><small>Tu cara o la del invitado: la recorto y la pongo grande, como los youtubers.</small></span></button>`}
+          <div class="fila">${persona.original && !persona.procesando && html`<${Boton} chico icono="recortar" onClick=${Acciones.recortarFoto}>Recortar<//>`}<${Boton} chico icono="foto" onClick=${Acciones.subirFoto}>Cambiar<//><${Boton} chico tipo="fantasma" icono="cerrar" onClick=${Acciones.quitarFoto}>Quitar<//></div></div></div>`
+        : html`<button type="button" class="subir" onClick=${Acciones.subirFoto}><${Icono} n="persona" t=${28} /><span><b>Subir una foto o un video</b><small>Tu cara o la del invitado (de un video elegís el cuadro): la recorto y la pongo grande, como los youtubers.</small></span></button>`}
     </section>
     <section class="tarjeta">
       <div class="titulo-campo">¿Para dónde?</div>
@@ -185,7 +208,7 @@ function PantallaEditor() {
   const [tab, setTab] = useState("texto"), cajas = useRef(null), arr = useRef(null);
   useEffect(() => { if (!c && cid) Almacen.creacion(cid).then((x) => x && Estado.set((e) => ({ creaciones: { ...e.creaciones, [x.id]: x } }))); }, [cid]);
   if (!c) return html`<main class="pagina"><p class="nota">Cargando…</p></main>`;
-  const cambiar = (fn) => { const n = copia(c); n.tocada = true; fn(n); Acciones.guardar(n); };
+  const cambiar = (fn) => { const n = copia(Estado.get().creaciones[c.id] || c); n.tocada = true; fn(n); Acciones.guardar(n); };
   const tx = sel && sel.tipo === "texto" ? c.textos.find((x) => x.id === sel.id) : c.textos[0];
   const el = sel && sel.tipo === "elemento" ? c.elementos.find((x) => x.id === sel.id) : null;
   function alTocar(ev, fase) {
@@ -243,26 +266,49 @@ function PanelTexto({ c, tx, cambiar }) {
 function PanelPersona({ c, cambiar }) {
   const p = c.persona, persona = useEstado((e) => e.persona);
   const usarFoto = async () => {
-    await Acciones.subirFoto(); const ps = Estado.get().persona; if (!ps || !ps.id) return;
+    if (!(await Acciones.subirFoto())) return; const ps = Estado.get().persona; if (!ps || !ps.id) return;
     cambiar((n) => { n.persona = { ...(n.persona || { x: 0.77, y: 1, alto: 0.97, borde: 0.012, colorBorde: "#FFFFFF" }), img: ps.id, recuadro: ps.recuadro }; });
   };
-  if (!p) return html`<div class="pila"><p class="nota">Subí una foto y la recorto para ponerla encima, grande y con borde.</p><${Boton} icono="foto" onClick=${usarFoto}>Subir foto<//>
+  if (!p) return html`<div class="pila"><p class="nota">Subí una foto y la recorto para ponerla encima, grande y con borde.</p><${Boton} icono="foto" onClick=${usarFoto}>Subir foto o video<//>
     ${persona && persona.id && html`<${Boton} icono="persona" onClick=${() => cambiar((n) => { n.persona = { img: persona.id, recuadro: persona.recuadro, x: 0.77, y: 1, alto: 0.97, borde: 0.012, colorBorde: "#FFFFFF" }; })}>Usar la última foto<//>`}</div>`;
   const setP = (o) => cambiar((n) => Object.assign(n.persona, o));
+  // Se recorta desde la foto sin recortar (base), así se puede volver a agrandar.
+  const recortar = async () => {
+    const base = p.base || p.img, im = await Imagenes.traer(base); if (!im) { aviso("No encontré la foto", "error"); return; }
+    const r = await pedirModal("recortar", { imagen: im, titulo: "Recortar la persona", png: !p.recuadro, corte: p.corte }); if (!r || r === "entera") return;
+    const k = await Imagenes.poner(r.blob), vieja = p.img;
+    cambiar((n) => Object.assign(n.persona, { img: k, base, corte: r.corte }));
+    if (vieja !== base) Imagenes.borrar(vieja);
+  };
   return html`<div class="pila">
     <${Deslizador} id="p-alto" etiqueta="Tamaño" valor=${p.alto} min=${0.25} max=${1.5} paso=${0.01} formato=${(v) => Math.round(v * 100) + " %"} alCambiar=${(v) => setP({ alto: v })} />
     ${!p.recuadro && html`<${Deslizador} id="p-borde" etiqueta="Borde" valor=${p.borde ?? 0.012} min=${0} max=${0.03} paso=${0.001} formato=${(v) => Math.round(v * 1000)} alCambiar=${(v) => setP({ borde: v })} />`}
     <div class="titulo-campo">Color del borde</div><${Colores} valor=${p.colorBorde} alCambiar=${(v) => setP({ colorBorde: v })} />
-    <div class="fila"><${Boton} chico icono="espejo" onClick=${() => setP({ espejo: !p.espejo })}>Dar vuelta<//><${Boton} chico icono="foto" onClick=${usarFoto}>Otra foto<//>
+    <div class="fila"><${Boton} chico icono="recortar" onClick=${recortar}>Recortar<//><${Boton} chico icono="espejo" onClick=${() => setP({ espejo: !p.espejo })}>Dar vuelta<//><${Boton} chico icono="foto" onClick=${usarFoto}>Otra foto<//>
       <${BorrarSeguro} titulo="Sacar la persona" onClick=${() => cambiar((n) => { n.persona = null; })} /></div>
   </div>`;
 }
 function PanelFondo({ c, cambiar }) {
   const t = useEstado((e) => e.tareas[c.id]) || {}, f = c.fondo, setF = (o) => cambiar((n) => Object.assign(n.fondo, o));
-  const subir = async () => { const a = await elegirArchivo("image/*"); if (!a) return; const k = await Imagenes.poner(a); setF({ img: k, motor: "propia", zoom: 1, x: 0.5, y: 0.5 }); };
+  const fmt = MP.FORMATOS[c.formato] || MP.FORMATOS.youtube, prop = fmt.ancho / fmt.alto;
+  // Foto propia o un cuadro de un video, recortada con la forma de la miniatura. Se guarda la original para volver a recortar.
+  const subir = async () => {
+    const r = await elegirYRecortar({ proporcion: prop, titulo: "¿Qué parte va de fondo?" }); if (!r) return;
+    const base = await Imagenes.poner(r.original), k = r.corte ? await Imagenes.poner(r.blob) : base, viejas = new Set([f.img, f.base]);
+    cambiar((n) => Object.assign(n.fondo, { img: k, base, corte: r.corte, motor: "propia", zoom: 1, x: 0.5, y: 0.5 }));
+    for (const v of viejas) if (v && v !== k && v !== base) Imagenes.borrar(v);
+  };
+  const recortar = async () => {
+    const base = f.base || f.img, im = await Imagenes.traer(base); if (!im) { aviso("No encontré la imagen del fondo", "error"); return; }
+    const r = await pedirModal("recortar", { imagen: im, proporcion: prop, titulo: "Recortar el fondo", corte: f.corte }); if (!r || r === "entera") return;
+    const k = await Imagenes.poner(r.blob), vieja = f.img;
+    cambiar((n) => Object.assign(n.fondo, { img: k, base, corte: r.corte, zoom: 1, x: 0.5, y: 0.5 }));
+    if (vieja !== base) Imagenes.borrar(vieja);
+  };
   const ocupado = t.estado === "generando" || t.estado === "pensando";
   return html`<div class="pila">
-    <div class="fila"><${Boton} icono="otra" desactivado=${ocupado} onClick=${() => Acciones.otraVez(c.id)}>${ocupado ? t.texto : "Otro fondo con IA"}<//><${Boton} icono="imagen" onClick=${subir}>Usar una foto mía<//></div>
+    <div class="fila"><${Boton} icono="otra" desactivado=${ocupado} onClick=${() => Acciones.otraVez(c.id)}>${ocupado ? t.texto : "Otro fondo con IA"}<//><${Boton} icono="imagen" onClick=${subir}>Foto o video mío<//>
+      ${f.img && html`<${Boton} icono="recortar" desactivado=${ocupado} onClick=${recortar}>Recortar<//>`}</div>
     <${Deslizador} id="f-zoom" etiqueta="Acercar" valor=${f.zoom || 1} min=${1} max=${2.5} paso=${0.01} formato=${(v) => v.toFixed(2) + "×"} alCambiar=${(v) => setF({ zoom: v })} />
     <${Deslizador} id="f-x" etiqueta="Mover a los lados" valor=${f.x ?? 0.5} min=${0} max=${1} paso=${0.01} formato=${(v) => Math.round(v * 100)} alCambiar=${(v) => setF({ x: v })} />
     <${Deslizador} id="f-y" etiqueta="Mover arriba/abajo" valor=${f.y ?? 0.5} min=${0} max=${1} paso=${0.01} formato=${(v) => Math.round(v * 100)} alCambiar=${(v) => setF({ y: v })} />
@@ -313,7 +359,7 @@ function PantallaGaleria() {
       : html`<div class="galeria">${lista.map((c) => html`<article key=${c.id} class="pieza">
           <button type="button" class="pieza-img" style=${{ aspectRatio: `${MP.FORMATOS[c.formato].ancho} / ${MP.FORMATOS[c.formato].alto}` }} onClick=${() => { Estado.set((e) => ({ creaciones: { ...e.creaciones, [c.id]: c }, editando: c.id, seleccion: null, pantalla: "editor" })); window.scrollTo(0, 0); }} aria-label="Abrir">${c.mini ? html`<img src=${c.mini} alt="" />` : html`<${Icono} n="imagen" />`}</button>
           <div class="fila pieza-pie"><${Boton} chico icono="bajar" titulo="Guardar" onClick=${() => guardarComo(c)} /><span class="nota">${MP.FORMATOS[c.formato].nombre}</span>
-            <${BorrarSeguro} onClick=${async () => { await Almacen.borrarCreacion(c.id); if (c.fondo.img) Imagenes.borrar(c.fondo.img); setLista(lista.filter((x) => x.id !== c.id)); }} /></div></article>`)}</div>`}
+            <${BorrarSeguro} onClick=${async () => { await Almacen.borrarCreacion(c.id); for (const k of new Set([c.fondo.img, c.fondo.base, c.persona && c.persona.base && c.persona.img])) if (k) Imagenes.borrar(k); setLista(lista.filter((x) => x.id !== c.id)); }} /></div></article>`)}</div>`}
   </main>`;
 }
 
@@ -350,6 +396,7 @@ function PantallaMotores() {
         </div>`}
       </article>`;
     })}</div>
+    <label class="chequeo tarjeta" for="bajar-solas"><input id="bajar-solas" type="checkbox" checked=${leerLS("descargar-solas", Plataforma.android)} onChange=${(e) => { guardarLS("descargar-solas", e.target.checked); f((n) => n + 1); }} />Descargar solas las miniaturas cuando terminan${Plataforma.android ? " (a Descargas/Papuchon)" : ""}</label>
     <p class="nota pie">Versión ${MP.VERSION}. Todo lo que hacés queda guardado en este teléfono.</p>
   </main>`;
 }
@@ -359,11 +406,12 @@ function App() {
   const pantalla = useEstado((e) => e.pantalla);
   useEffect(() => { Diseno.listo().then(() => Estado.set((e) => ({ version: e.version + 1 }))); }, []);
   const P = { crear: PantallaCrear, resultados: PantallaResultados, editor: PantallaEditor, galeria: PantallaGaleria, motores: PantallaMotores }[pantalla] || PantallaCrear;
-  return html`<${Encabezado} /><${P} /><${Navegacion} /><${Avisos} />`;
+  return html`<${Encabezado} /><${P} /><${Navegacion} /><${ModalActual} /><${Avisos} />`;
 }
 // Botón de atrás del celular (app de Android).
 window.epAtras = () => {
   const e = Estado.get();
+  if (e.modal) { e.modal.ok(null); return true; }
   if (e.pantalla === "editor") { Estado.set({ pantalla: e.lote.includes(e.editando) ? "resultados" : "galeria", seleccion: null }); return true; }
   if (e.pantalla !== "crear") { Estado.set({ pantalla: "crear" }); return true; }
   return false;

@@ -4,7 +4,7 @@
 // qué puede hacer el navegador en el que corre (githack, artifact o archivo).
 // ════════════════════════════════════════════════════════════════════════
 const EP = {
-  VERSION: "1.0.0",
+  VERSION: "1.1.0",
   FORMATOS: {
     "9:16": { id: "9:16", nombre: "Vertical", detalle: "TikTok, Reels, Shorts", ancho: 1080, alto: 1920 },
     "16:9": { id: "16:9", nombre: "Horizontal", detalle: "YouTube", ancho: 1920, alto: 1080 },
@@ -93,5 +93,13 @@ const Plataforma = (() => {
     const f = new File([blob], nombre, { type: blob.type });
     await navigator.share({ files: [f], title: nombre, text: texto || "" });
   }
-  return { artifact, android, tactil, capacidad, puede, guardarArchivo, compartir };
+  // Trabajo largo (exportar): en Android, servicio con aviso de progreso que sigue con la app
+  // atrás o la pantalla apagada; en el navegador, se pide que la pantalla no se apague.
+  let pantalla = null;
+  function trabajo(estado, titulo, texto = "", avance = -1) {
+    if (android && typeof window.AndroidPapuchon.trabajo === "function") { try { window.AndroidPapuchon.trabajo(estado, titulo, texto, Math.round(avance)); } catch (e) { /* app vieja */ } return; }
+    if (estado === "inicio" && navigator.wakeLock && !pantalla) navigator.wakeLock.request("screen").then((w) => { pantalla = w; }).catch(() => {});
+    if ((estado === "fin" || estado === "error") && pantalla) { pantalla.release().catch(() => {}); pantalla = null; }
+  }
+  return { artifact, android, tactil, capacidad, puede, guardarArchivo, compartir, trabajo };
 })();

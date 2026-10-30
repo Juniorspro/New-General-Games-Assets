@@ -28,6 +28,16 @@ contesta, uno de una lista por tema. La palabra entre `*asteriscos*` sale resalt
 
 ## La foto de la persona
 
+Se sube una foto **o un video** (del video se elige el cuadro, con un
+deslizador y de a un cuadro). Antes de separar a la persona se abre el
+**recorte** (esquinas, proporciones, girar, espejo, o "Usar entera"); sirve, por
+ejemplo, para quedarse con una sola persona de una foto grupal. La original
+queda en memoria: "Recortar" en la tarjeta vuelve a abrirla como quedó.
+
+En el editor: **Persona → Recortar** (con transparencia) y **Fondo → Foto o
+video mío** o **Recortar**, con la forma de la miniatura ya fija. Se guarda la
+original, así se puede volver a recortar sin perder lo que quedó afuera.
+
 Se recorta en el teléfono con MediaPipe (modelo de 16 MB que se baja una vez). Se
 queda solo con las manchas que tienen cara: si el modelo confunde un auto o fuego
 con "ropa", no se cuela. Si no puede recortar, la foto va entera en un recuadro.
@@ -48,6 +58,11 @@ acepta páginas de rezona.ai) y trae las imágenes por `/rz-pv/…` desde el mis
 origen, así se pueden exportar. Sin tope por defecto; `TOPE_REZONA=N` al armar
 pone un máximo de N imágenes por día por teléfono. Si se pierde el teléfono, se borra esa llave en
 rezona.ai/api-keys y listo.
+
+**Segundo plano** (desde la 1.1.0): al crear, la app sigue aunque salgas o
+apagues la pantalla (aviso de progreso en la barra), y las miniaturas que
+salen **se descargan solas** en Descargas/Papuchon (se puede apagar en
+Motores).
 
 ## Por dentro
 

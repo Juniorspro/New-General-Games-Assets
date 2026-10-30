@@ -97,3 +97,17 @@ App en `miniaturas/`. Lo medido ese día, desde el navegador (todos con CORS):
   ("nono uso ilimitado nomás"): `TOPE_REZONA` vale 0 por defecto. La llave va en el
   APK con XOR (no aparece con `grep rz_live`); el APK no se publica. Se revoca en
   rezona.ai/api-keys sin tocar la llave principal.
+- **Recortar en Miniaturas (30/10, "no tiene para recortar imagen o vídeo")**:
+  `js/recortador.js` (ventanas por `pedirModal(tipo)` → promesa). Foto **o
+  video** → cuadro → recorte (con "Usar entera") → persona. El giro y el espejo
+  se aplican a la vista y el recuadro se marca sobre ella: así se ve lo que sale.
+  Fondo y persona guardan la original (`base`) y el `corte`, para volver a
+  recortar. **Trampa**: el APK abría el selector solo con `image/*` fijo en
+  Java: los videos no aparecían. Ahora lee `getAcceptTypes()`.
+- **Trampa del recuadro**: el canvas medía `clientWidth` del marco (que tiene
+  6 px de relleno) y `max-width: 100%` lo achataba (326×190 en vez de 16:9).
+  Restar el relleno. Lo agarró la prueba de proporciones, no la vista.
+- **Rezona (30/10)**: el contenedor nuevo perdió la llave; dos links de
+  dispositivo vencieron sin aprobar (duran 600 s). El APK 1.1.0 sale sin llave:
+  se conecta desde Motores. Para meterla adentro hace falta que el usuario
+  apruebe en el momento.

@@ -130,3 +130,23 @@ Artifact: https://claude.ai/artifact/Q4mtQUHLUMgfv4CsqeAiZ6 (capacidad `download
   `loadeddata` no vuelve a llegar: esperarlo colgaba la vista 8 s en negro al
   deslizar. Para buscar alcanza con `readyState >= 1`; y mientras busca se
   sigue dibujando el último cuadro.
+- **Recortar y Acortar (30/10, "no tiene para recortar imagen o vídeo")**:
+  `js/ui-recorte.js`. El clip guarda `recorte` {x,y,w,h} de 0 a 1 **sobre el
+  archivo**, más `giro` y `espejo`; el compositor recorta, gira y espeja en ese
+  orden (`geometria`/`pintarGeo`). La ventana muestra la vista ya girada y
+  convierte con `aVista`/`aArchivo` (ida y vuelta probada en las 8
+  combinaciones). Usa su propio `<video>` y lo suelta al cerrar (decodificador).
+  Prueba: video WebM de 4 cuadrantes de color; recortado al rojo da 81/81
+  puntos rojos en la vista y 16/16 amarillos al exportar el cuadrante amarillo.
+- **Segundo plano (30/10, "no descarga en segundo plano")**: servicio
+  `dataSync` + WakeLock + prioridad del renderer (código común en
+  `herramientas/android-papuchon/`); el exportador espera el evento `dequeue`
+  del codificador en vez de `setTimeout` (con la app atrás se frenan) y usa sus
+  propios `<video>` (prefijo "x") para no pelearse con la vista previa. Probado
+  con `document.hidden` forzado; en un teléfono, sin comprobar.
+- **Trampa**: `index.html` de Estudio no tenía `<meta charset="utf-8">`; servido
+  sin charset (python http.server, file://) los .js se leían como Latin-1 y no
+  arrancaba nada. El APK y githack mandan utf-8, por eso no se veía.
+- **La llave de firma se pierde con el contenedor** (`~/.papuchon/estudio.jks`,
+  fuera del repo a propósito): con la nueva, Android no deja actualizar y hay
+  que desinstalar (se borra lo guardado en la app). Avisarlo siempre.

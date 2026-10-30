@@ -31,7 +31,9 @@ const Compositor = (() => {
 
   const ancho = (fu) => fu.videoWidth || fu.width || 16, alto = (fu) => fu.videoHeight || fu.height || 9;
   // Qué fuente (video o imagen) corresponde a un clip y en qué segundo del archivo.
-  function clave(pista, indice) { return pista.tipo === "video" ? "v" + (indice % 2) : pista.id; }
+  // `pre` separa los <video> de la exportación de los del editor: si compartían, el editor
+  // (al volver a la app, al tocar algo) los movía de lugar en medio de la exportación.
+  function clave(pista, indice, pre = "") { return pre + (pista.tipo === "video" ? "v" + (indice % 2) : pista.id); }
   function tiempoFuente(c, t) {
     const v = c.velocidad || 1;
     return clamp(c.desde + (t - c.inicio) * v, 0, Math.max(0, (c.largo || c.hasta) - 0.04));
@@ -46,35 +48,47 @@ const Compositor = (() => {
     return v._tuvo ? v : null;
   }
   // Lo visible de la pista principal en t: el clip y, si hay transición, el vecino.
-  function capasPrincipal(pista, t) {
+  function capasPrincipal(pista, t, pre = "") {
     const cs = pista.clips, out = [];
     for (let i = 0; i < cs.length; i++) {
       const c = cs[i], a = c.inicio, b = Proyecto.fin(c);
       if (t >= a && t < b) {
-        out.push({ c, i, k: clave(pista, i), mezcla: 1, rol: "actual" });
+        out.push({ c, i, k: clave(pista, i, pre), mezcla: 1, rol: "actual" });
         // Transición de entrada de este clip: la mitad cae antes del corte, la mitad después.
         const tr = c.transicion, prev = cs[i - 1];
-        if (prev && tr && tr.tipo !== "ninguna" && t < a + tr.dur / 2) out.unshift({ c: prev, i: i - 1, k: clave(pista, i - 1), rol: "previo", tr, x: (t - (a - tr.dur / 2)) / tr.dur });
+        if (prev && tr && tr.tipo !== "ninguna" && t < a + tr.dur / 2) out.unshift({ c: prev, i: i - 1, k: clave(pista, i - 1, pre), rol: "previo", tr, x: (t - (a - tr.dur / 2)) / tr.dur });
         const sig = cs[i + 1], ts = sig && sig.transicion;
-        if (ts && ts.tipo !== "ninguna" && t >= b - ts.dur / 2) out.push({ c: sig, i: i + 1, k: clave(pista, i + 1), rol: "siguiente", tr: ts, x: (t - (b - ts.dur / 2)) / ts.dur });
+        if (ts && ts.tipo !== "ninguna" && t >= b - ts.dur / 2) out.push({ c: sig, i: i + 1, k: clave(pista, i + 1, pre), rol: "siguiente", tr: ts, x: (t - (b - ts.dur / 2)) / ts.dur });
         break;
       }
     }
     return out;
   }
   // Todo lo que tiene que estar cargado y en su lugar para dibujar t (lo usa el motor y la exportación).
-  function fuentesEn(p, t) {
+  function fuentesEn(p, t, pre = "") {
     const r = [];
     for (const k of p.pistas) {
       if (k.oculta) continue;
-      if (k.tipo === "video") for (const x of capasPrincipal(k, t)) r.push({ c: x.c, k: x.k, ts: tiempoFuente(x.c, t), pista: k });
-      else if (k.tipo === "superpuesta") for (const c of k.clips) if (t >= c.inicio && t < Proyecto.fin(c)) r.push({ c, k: k.id, ts: tiempoFuente(c, t), pista: k });
+      if (k.tipo === "video") for (const x of capasPrincipal(k, t, pre)) r.push({ c: x.c, k: x.k, ts: tiempoFuente(x.c, t), pista: k });
+      else if (k.tipo === "superpuesta") for (const c of k.clips) if (t >= c.inicio && t < Proyecto.fin(c)) r.push({ c, k: pre + k.id, ts: tiempoFuente(c, t), pista: k });
     }
     return r;
   }
 
+  // Recorte (pedazo del cuadro), giro de a 90° y espejo de cada clip: se aplican antes de encuadrar.
+  function geometria(fu, c) {
+    const FW = ancho(fu), FH = alto(fu), rc = c.recorte, giro = (((c.giro || 0) % 360) + 360) % 360, rot = giro === 90 || giro === 270;
+    const sx = rc ? rc.x * FW : 0, sy = rc ? rc.y * FH : 0, sw = Math.max(1, rc ? rc.w * FW : FW), sh = Math.max(1, rc ? rc.h * FH : FH);
+    return { sx, sy, sw, sh, giro, rot, espejo: !!c.espejo, fw: rot ? sh : sw, fh: rot ? sw : sh };
+  }
+  // Dibuja el pedazo recortado, girado y espejado ocupando el rectángulo (X, Y, A, B) de la pantalla.
+  function pintarGeo(g, fu, geo, X, Y, A, B) {
+    if (!geo.giro && !geo.espejo) { g.drawImage(fu, geo.sx, geo.sy, geo.sw, geo.sh, X, Y, A, B); return; }
+    g.save(); g.translate(X + A / 2, Y + B / 2); if (geo.espejo) g.scale(-1, 1); if (geo.giro) g.rotate((geo.giro * Math.PI) / 180);
+    const dw = geo.rot ? B : A, dh = geo.rot ? A : B; g.drawImage(fu, geo.sx, geo.sy, geo.sw, geo.sh, -dw / 2, -dh / 2, dw, dh); g.restore();
+  }
   function dibujarFuente(ctx, fu, W, H, enc, c, t, conFondo) {
-    const fw = ancho(fu), fh = alto(fu), modo = (enc && enc.modo) || "relleno";
+    const geo = geometria(fu, c), fw = geo.fw, fh = geo.fh, modo = (enc && enc.modo) || "relleno";
     let z = (enc && enc.zoom) || 1;
     const mov = enc && enc.movimiento, d = Proyecto.dur(c), q = clamp((t - c.inicio) / d, 0, 1);
     if (mov === "acercar") z *= 1 + 0.12 * q; else if (mov === "alejar") z *= 1.12 - 0.12 * q;
@@ -85,12 +99,12 @@ const Compositor = (() => {
       // Fondo: el mismo cuadro, borroso y oscurecido, llenando la pantalla.
       const ec = Math.max(chico.width / fw, chico.height / fh);
       gChico.clearRect(0, 0, chico.width, chico.height);
-      gChico.drawImage(fu, (chico.width - fw * ec) / 2, (chico.height - fh * ec) / 2, fw * ec, fh * ec);
+      pintarGeo(gChico, fu, geo, (chico.width - fw * ec) / 2, (chico.height - fh * ec) / 2, fw * ec, fh * ec);
       ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
       ctx.drawImage(chico, -W * 0.05, -H * 0.05, W * 1.1, H * 1.1);
       ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(0, 0, W, H); ctx.restore();
     }
-    ctx.drawImage(fu, x, y, w, h);
+    pintarGeo(ctx, fu, geo, x, y, w, h);
   }
   function conFiltro(ctx, c, fn) {
     const fl = c.filtro && FILTROS[c.filtro.tipo];
@@ -104,7 +118,7 @@ const Compositor = (() => {
   }
 
   function principal(ctx, p, k, t, W, H, rec) {
-    const capas = capasPrincipal(k, t); if (!capas.length) return;
+    const capas = capasPrincipal(k, t, rec.prefijo || ""); if (!capas.length) return;
     const pinta = (x, extra) => {
       const fu = fuente(x.c, x.k); if (!fu) return false;
       ctx.save(); if (extra) extra();
@@ -175,7 +189,7 @@ const Compositor = (() => {
     for (const k of p.pistas) {
       if (k.oculta) continue;
       if (k.tipo === "video") principal(ctx, p, k, t, W, H, rec);
-      else if (k.tipo === "superpuesta") { for (const c of k.clips) if (t >= c.inicio && t < Proyecto.fin(c)) superpuesta(ctx, c, t, W, H, k.id); }
+      else if (k.tipo === "superpuesta") { for (const c of k.clips) if (t >= c.inicio && t < Proyecto.fin(c)) superpuesta(ctx, c, t, W, H, (rec.prefijo || "") + k.id); }
       else if (k.tipo === "grafico") { for (const c of k.clips) if (t >= c.inicio && t < Proyecto.fin(c)) Plantillas.dibujarClip(ctx, c, t, W, H, rec); }
       else if (k.tipo === "subtitulos" && !rec.sinSubs) Plantillas.dibujarSubtitulos(ctx, k, t, W, H, rec.marca);
     }
@@ -208,9 +222,9 @@ const Compositor = (() => {
       v.play().catch(() => fin(false));
     });
   }
-  async function ubicar(p, t, tolerancia = 0.5 / 30, jugar = false) {
+  async function ubicar(p, t, tolerancia = 0.5 / 30, jugar = false, pre = "") {
     const espera = [];
-    for (const f of fuentesEn(p, t)) {
+    for (const f of fuentesEn(p, t, pre)) {
       const d = Medios.datos(f.c.medio); if (!d) continue;
       if (d.tipo === "imagen") { if (!Medios.imagenYa(f.c.medio)) espera.push(Medios.imagen(f.c.medio)); continue; }
       if (d.tipo !== "video") continue;
@@ -219,7 +233,7 @@ const Compositor = (() => {
       espera.push((async () => {
         await esperarListo(v);
         const fps = p.formato.fps || 30;
-        if (jugar && "requestVideoFrameCallback" in v && v.paused && !v.seeking && v._mt != null && Math.abs(v.currentTime - v._mt) < 0.12 && v._mt <= f.ts + 0.5 / fps && f.ts - v._mt < 1.5) {
+        if (jugar && !document.hidden && "requestVideoFrameCallback" in v && v.paused && !v.seeking && v._mt != null && Math.abs(v.currentTime - v._mt) < 0.12 && v._mt <= f.ts + 0.5 / fps && f.ts - v._mt < 1.5) {
           if (v._mt >= f.ts - 0.5 / fps) return;                                  // el cuadro que se ve ya es el pedido
           if (await avanzarJugando(v, f.ts, fps, f.c.velocidad || 1)) return;
         }

@@ -271,6 +271,9 @@ function InspMedio({ p, pista, c, ver, todo }) {
   };
   return html`
     ${todo && html`<div class="nota">${m.nombre || "Medio"} · ${durTxt(Proyecto.dur(c))}${m.ancho ? ` · ${m.ancho}×${m.alto}` : ""}</div>`}
+    ${todo && (m.tipo === "video" || m.tipo === "imagen") && html`<div class="fila"><${Boton} chico icono="recortar" onClick=${() => Tienda.set({ recortando: c.id })}>${c.recorte || c.giro || c.espejo ? "Cambiar el recorte" : "Recortar"}<//>
+      ${(c.recorte || c.giro || c.espejo) && html`<${Boton} chico tipo="fantasma" onClick=${() => Tienda.cambiar((q) => Proyecto.cambiarClip(q, c.id, { recorte: null, giro: 0, espejo: false }), "sin recorte")}>Sin recorte<//>`}</div>`}
+    ${ver("acortar") && m.tipo === "video" && html`<${Acortar} c=${c} />${sep}`}
     ${ver("velocidad") && m.tipo !== "imagen" && html`<${Deslizador} id="velocidad" etiqueta="Velocidad" valor=${c.velocidad || 1} min=${0.25} max=${4} paso=${0.05} formato=${(v) => v.toFixed(2) + "×"} alCambiar=${(v) => Acciones.cambiar(c.id, { velocidad: v }, "velocidad")} />
       <div class="segmentos">${[0.5, 1, 1.5, 2, 3].map((v) => html`<button key=${v} type="button" class=${(c.velocidad || 1) === v ? "si" : ""} onClick=${() => Acciones.cambiar(c.id, { velocidad: v }, "velocidad")}>${v}×</button>`)}</div>`}
     ${ver("velocidad") && m.tipo === "imagen" && html`<${Deslizador} id="dur-foto" etiqueta="Duración" valor=${Proyecto.dur(c)} min=${0.5} max=${30} paso=${0.1} formato=${seg} alCambiar=${(v) => Acciones.cambiar(c.id, { hasta: c.desde + v }, "duración")} />`}
@@ -332,6 +335,7 @@ function InspAudio({ c, ver, todo }) {
   return html`${todo && html`<div class="nota">${m.nombre || "Audio"} · ${durTxt(Proyecto.dur(c))}</div>`}
     ${ver("volumen") && html`<${Deslizador} id="aud-vol" etiqueta="Volumen" valor=${c.volumen ?? 1} min=${0} max=${2} paso=${0.05} formato=${(v) => Math.round(v * 100) + " %"} alCambiar=${(v) => Acciones.cambiar(c.id, { volumen: v }, "volumen")} />
     <${Fundidos} c=${c} />`}
+    ${ver("acortar") && html`<${Acortar} c=${c} />`}
     ${ver("velocidad") && html`<${Deslizador} id="aud-vel" etiqueta="Velocidad" valor=${c.velocidad || 1} min=${0.5} max=${2} paso=${0.05} formato=${(v) => v.toFixed(2) + "×"} alCambiar=${(v) => Acciones.cambiar(c.id, { velocidad: v }, "velocidad")} />`}
     ${todo && m.palabras && html`<${Boton} icono="subs" onClick=${() => { Tienda.cambiar((q) => Proyecto.agregarSubtitulos(q, Subtitulos.desdeVoz(c, m)), "subtítulos"); Tienda.aviso("Subtítulos creados", "ok"); }}>Crear subtítulos de esta voz<//>`}
     ${todo && m.texto && html`<div class="nota">“${m.texto}”</div>`}`;

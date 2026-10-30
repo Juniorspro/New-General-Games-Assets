@@ -120,30 +120,41 @@ function MiMarca() {
 function DialogoExportar() {
   const p = useTienda((e) => e.proyecto), [cal, setCal] = useState(leerLS("calidad", "alta")), [estado, setEstado] = useState("listo");
   const [av, setAv] = useState({ f: 0, txt: "" }), [res, setRes] = useState(null), [error, setError] = useState(""), ref = useRef(null), cancelar = useRef(false), url = useRef(null);
+  const [guardado, setGuardado] = useState(false);
   const D = Proyecto.duracion(p), cerrar = () => { if (estado === "exportando") { cancelar.current = true; return; } Tienda.set({ exportando: false }); };
   useEffect(() => () => { if (url.current) URL.revokeObjectURL(url.current); }, []);
   const empezar = async () => {
-    guardarLS("calidad", cal); cancelar.current = false; setEstado("exportando"); setError("");
+    guardarLS("calidad", cal); cancelar.current = false; setEstado("exportando"); setError(""); setGuardado(false);
     try {
+      // En Android el aviso de trabajo sigue hasta que el video queda en Descargas: si se cortara
+      // al terminar de exportar, con la app atrás Android la congela en medio de la escritura.
       const r = await Exportador.exportar(p, {
-        calidad: cal, cancelado: () => cancelar.current,
+        calidad: cal, cancelado: () => cancelar.current, despues: Plataforma.android ? "Guardando en Descargas…" : null,
         alAvance: (f, cv, txt) => { setAv({ f, txt: txt || "" }); const c = ref.current; if (cv && c) { const g = c.getContext("2d"); g.drawImage(cv, 0, 0, c.width, c.height); } },
       });
       url.current = URL.createObjectURL(r.blob); setRes(r); setEstado("hecho");
+      // En la app de Android se descarga sola (aunque se haya salido de la app mientras exportaba).
+      if (Plataforma.android) {
+        const bien = await guardar(r);
+        Plataforma.trabajo(bien ? "fin" : "error", bien ? "Video listo" : "No se pudo guardar el video", bien ? "En Descargas/Papuchon: " + r.nombre : "Abrí la app y tocá Guardar", 100);
+      }
     } catch (e) {
       if (e.message === "cancelado") { setEstado("listo"); Tienda.aviso("Exportación cancelada", "info"); }
       else { console.error(e); setError(e.message || String(e)); setEstado("error"); }
     }
     Motor.pedirCuadro();
   };
-  const guardar = async () => { try { const como = await Plataforma.guardarArchivo(res.blob, res.nombre); Tienda.aviso(como === "guardado" ? "Video guardado" : "Descargando " + res.nombre, "ok"); } catch (e) { Tienda.aviso(e.message, "error", 6000); } };
+  const guardar = async (r = res) => {
+    try { const como = await Plataforma.guardarArchivo(r.blob, r.nombre); setGuardado(true); Tienda.aviso(Plataforma.android ? "Descargado en Descargas/Papuchon" : como === "guardado" ? "Video guardado" : "Descargando " + r.nombre, "ok", 4500); return true; }
+    catch (e) { Tienda.aviso(e.message, "error", 6000); return false; }
+  };
   const compartir = async () => { try { await Plataforma.compartir(res.blob, res.nombre, Tienda.get().marca.nombre); } catch (e) { if (e.name !== "AbortError") Tienda.aviso("No se pudo compartir: " + e.message, "error"); } };
   const ar = `${p.formato.ancho} / ${p.formato.alto}`, pw = 240, ph = Math.round((pw * p.formato.alto) / p.formato.ancho);
   return html`<${Dialogo} titulo=${estado === "hecho" ? "¡Video listo!" : "Exportar video"} alCerrar=${cerrar}>
     ${estado === "listo" && html`
       <div class="fila-datos"><span>Duración <b>${fmtTiempo(D, true)}</b></span><span>Formato <b>${p.formato.id}</b></span><span>Cuadros <b>${Math.ceil(D * (p.formato.fps || 30))}</b> a ${p.formato.fps || 30} por segundo</span></div>
       <${Campo} etiqueta="Calidad"><${Opciones} valor=${cal} opciones=${deObjeto(Exportador.CALIDADES)} alCambiar=${setCal} /><//>
-      <div class="nota">Se arma cuadro por cuadro: en una compu tarda más o menos lo que dura el video; en el celular puede tardar el doble. No cierres esta pestaña mientras tanto.</div>
+      <div class="nota">Se arma cuadro por cuadro: en una compu tarda más o menos lo que dura el video; en el celular puede tardar el doble. ${Plataforma.android ? "Podés salir de la app o apagar la pantalla: sigue exportando, te avisa en la barra de notificaciones y se descarga sola en Descargas/Papuchon." : "No cierres esta pestaña mientras tanto (la pantalla no se apaga sola)."}</div>
       <${Boton} tipo="primario" grande icono="exportar" onClick=${empezar}>Exportar MP4<//>`}
     ${estado === "exportando" && html`
       <canvas ref=${ref} width=${pw} height=${ph} class="prev-export" style=${{ "--ar": ar, width: "auto", height: Math.min(ph, 320) + "px", margin: "0 auto" }}></canvas>
@@ -152,7 +163,8 @@ function DialogoExportar() {
     ${estado === "hecho" && res && html`
       <video class="prev-export" style=${{ "--ar": ar }} src=${url.current} controls playsInline></video>
       <div class="fila-datos"><span><b>${res.nombre}</b></span><span>${pesoTxt(res.blob.size)}</span><span>${res.ancho}×${res.alto}</span>${res.segundos && html`<span>hecho en ${Math.round(res.segundos)} s</span>`}</div>
-      <div class="fila"><${Boton} tipo="primario" grande icono="exportar" onClick=${guardar}>Guardar el video<//>
+      ${guardado && Plataforma.android && html`<div class="nota">✓ Ya está en <b>Descargas/Papuchon</b> (también lo ves en la galería).</div>`}
+      <div class="fila"><${Boton} tipo=${guardado ? "" : "primario"} grande icono="exportar" onClick=${() => guardar()}>${guardado ? "Descargar otra vez" : "Guardar el video"}<//>
         ${Plataforma.puede("compartir") && html`<${Boton} grande icono="compartir" onClick=${compartir}>Compartir<//>`}</div>
       <div class="nota">Para TikTok: subilo como está, ya viene en vertical y con los gráficos fuera de la zona que tapan los botones.</div>
       <${Boton} tipo="fantasma" onClick=${() => setEstado("listo")}>Exportar de nuevo<//>`}
@@ -224,6 +236,7 @@ function App() {
 window.epAtras = () => {
   const e = Tienda.get();
   if (e.exportando) return true;   // mientras exporta no se sale
+  if (e.recortando) { Tienda.set({ recortando: null }); return true; }
   if (e.pantalla === "editor") {
     if (e.inspector && e.seleccion) { Tienda.set({ inspector: false }); return true; }
     if (e.panel) { Tienda.set({ panel: null }); return true; }
