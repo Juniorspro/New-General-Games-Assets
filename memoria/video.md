@@ -150,3 +150,12 @@ Artifact: https://claude.ai/artifact/Q4mtQUHLUMgfv4CsqeAiZ6 (capacidad `download
 - **La llave de firma se pierde con el contenedor** (`~/.papuchon/estudio.jks`,
   fuera del repo a propósito): con la nueva, Android no deja actualizar y hay
   que desinstalar (se borra lo guardado en la app). Avisarlo siempre.
+- **Pendiente (30/10)**: `onPause` de `estudio-papuchon/android/.../Principal.java`
+  evalúa `window.Motor && Motor.parar()`, pero `Motor` es `const` global y no
+  cuelga de `window`: no hace nada y la vista previa puede seguir sonando con
+  la app atrás. Va `typeof Motor !== "undefined" && Motor.parar()` en el
+  próximo APK. No toca la exportación (usa sus propios `<video>`).
+- **Exportar con la app atrás, en un teléfono real: sin comprobar.** Dudas que
+  solo se ven ahí: si el WebView frena el GPU del canvas o el `<video>` cuando
+  la ventana no se ve (en la prueba sin cabeza, `document.hidden` forzado,
+  anda). Si el porcentaje del aviso se queda quieto, mirar eso primero.
