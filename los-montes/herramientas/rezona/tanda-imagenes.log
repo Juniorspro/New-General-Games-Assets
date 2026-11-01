@@ -1,0 +1,59 @@
+  → img-cabana_ruina: gtask-2389466d030b448b9050
+  → img-pino1: gtask-4c89eca2ee8e4c4db3b8
+  → img-pino2: gtask-141d36c76b0a477b9971
+  → img-roca1: gtask-c4f6757d07bd4997978c
+  → img-roca2: gtask-8a308126f4884ac28bda
+  → img-mina_entrada: gtask-ca27fc32df4a40fc9025
+  → img-jaula: gtask-0f2dc60718804c2ba0aa
+  → img-tronco: gtask-583157fb050e423799e4
+  → img-aserradero: gtask-63507619f04f4cf1abec
+  → img-tienda: gtask-af8f1d0f11444ca29bf3
+  → img-cruces: gtask-a9eed5b0aac24607b56f
+  → img-farol: gtask-e352699e77f94089b594
+  → img-trampa_oso: gtask-9a78282e68b8484e8665
+  → img-vagoneta: gtask-25861f452ae9422bb59c
+  … img-pistola: GENERATION_TOO_MANY_IN_FLIGHT, reintento
+  → img-pistola: gtask-aa60d5ce729e48e5b886
+  → img-escopeta: gtask-d8de926bae6845f29f0d
+  → img-rifle: gtask-4a0fac2edec843aab102
+  → img-hacha: gtask-31b9ecc4a9ac43f5bae5
+  → img-linterna: gtask-f525c8b02118494b81bf
+  → img-botiquin: gtask-79314970019a40b490f7
+  → img-bateria: gtask-8a7b7297e6ea459ab530
+  → img-bidon: gtask-c3de834cc88d4829bde7
+  … img-municion: GENERATION_TOO_MANY_IN_FLIGHT, reintento
+  → img-municion: gtask-495307a6ca1f471691f8
+  → img-lata: gtask-326bdb2e0c3e4a87acf9
+  → img-herramientas: gtask-1c6a48f955694c86a2ec
+  → img-repuesto: gtask-2bc392a4ad924168ac10
+  → img-torre_agua: gtask-67a2507a87f9438c9091
+  → img-portada: gtask-91cb834c59c846048fff
+  ✗ img-cabana_ruina: failed 生成服务暂时不可用，请稍后重试。
+  ✗ img-pino1: failed 生成服务暂时不可用，请稍后重试。
+  ✓ img-pino2: 1308 KB (43s)
+  ✓ img-roca1: 1518 KB (44s)
+  ✓ img-roca2: 1096 KB (45s)
+  ✓ img-mina_entrada: 1305 KB (45s)
+  ✓ img-jaula: 1619 KB (46s)
+  ✓ img-tronco: 931 KB (46s)
+  ✓ img-aserradero: 1438 KB (47s)
+  ✓ img-tienda: 1346 KB (47s)
+  ✓ img-cruces: 1422 KB (48s)
+  ✓ img-farol: 1186 KB (48s)
+  ✓ img-trampa_oso: 1242 KB (49s)
+  ✓ img-vagoneta: 1384 KB (49s)
+  ✓ img-pistola: 1169 KB (50s)
+  ✓ img-escopeta: 955 KB (50s)
+  ✓ img-rifle: 964 KB (51s)
+  ✓ img-hacha: 1062 KB (51s)
+  ✗ img-linterna: failed 生成服务暂时不可用，请稍后重试。
+  ✓ img-botiquin: 1411 KB (52s)
+  ✗ img-bateria: failed 生成服务暂时不可用，请稍后重试。
+  ✓ img-bidon: 1040 KB (52s)
+  ✗ img-municion: failed 生成服务暂时不可用，请稍后重试。
+  ✗ img-portada: failed 生成服务暂时不可用，请稍后重试。
+  ✓ img-lata: 1355 KB (63s)
+  ✓ img-herramientas: 1475 KB (64s)
+  ✓ img-repuesto: 1455 KB (64s)
+  ✓ img-torre_agua: 1214 KB (65s)
+gastado en esta tanda: 1188 créditos (saldo 392541)

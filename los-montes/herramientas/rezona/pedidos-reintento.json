@@ -1,0 +1,72 @@
+[
+ {
+  "clave": "img-cabana_ruina",
+  "type": "image",
+  "output_path": "assets/img-cabana_ruina.png",
+  "params": {
+   "prompt": "The same kind of old mountain log cabin but abandoned and half collapsed: dark weathered logs, the shingle roof sagging and partly caved in on one side, broken windows with no glass, missing planks, moss and dead vines, the front door hanging from one hinge, a rough stone chimney cracked. Rectangular footprint, front door on the long side. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+   ]
+  }
+ },
+ {
+  "clave": "img-pino1",
+  "type": "image",
+  "output_path": "assets/img-pino1.png",
+  "params": {
+   "prompt": "A single tall dark mountain fir tree as a 3D game asset: conical silhouette made of five or six large chunky faceted clusters of dark blue-green needles, straight dark brown trunk visible at the bottom, a little snow dust on the upper branches. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+   ]
+  }
+ },
+ {
+  "clave": "img-linterna",
+  "type": "image",
+  "output_path": "assets/img-linterna.png",
+  "params": {
+   "prompt": "A sturdy black tactical flashlight, scratched metal body, the lens glowing slightly. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-bateria",
+  "type": "image",
+  "output_path": "assets/img-bateria.png",
+  "params": {
+   "prompt": "Two worn D-size flashlight batteries lying side by side, plain dull labels with no text. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-municion",
+  "type": "image",
+  "output_path": "assets/img-municion.png",
+  "params": {
+   "prompt": "A small open worn cardboard box of ammunition with brass cartridges inside, no printed text. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "img-portada",
+  "type": "image",
+  "output_path": "assets/img-portada.png",
+  "params": {
+   "prompt": "Cinematic night key art for a survival horror video game, no text: a remote mountain valley with huge jagged snowy peaks under a full moon and heavy clouds, dark dense pine forest, tall waterfalls, thick mist on a river, two isolated log cabins with warm orange light in the windows, a wooden bridge, an abandoned rusty old pickup truck with a hydraulic crane, and in the foreground a lone mountain rescuer in a worn olive jacket with a flashlight seen from behind. Between the dark pines, several pale deformed figures stand still, watching. Cold blue moonlight, volumetric fog, ominous atmosphere, realistic, highly detailed.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg",
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/protagonista.jpg"
+   ]
+  }
+ }
+]

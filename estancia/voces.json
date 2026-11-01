@@ -1,0 +1,258 @@
+{
+ "modelo": "qwen_audio_tts (Higgsfield)",
+ "voz": "Julian (preset 95429266-c0ac-4137-a209-63b8812b0f23), pitch_rate 0.9",
+ "instruccion": "Gaucho argentino, 50 años. Acento rioplatense marcado (ll e y como sh), voseo. Voz grave y natural, nada extranjera.",
+ "nota": "Sin malas palabras. 'tts' es el texto que se le mandó: la ll y la y escritas 'sh' para forzar el rioplatense; 't' es el subtítulo. Mezcla: 24 kHz mono 64 kbps, normalizadas a -18 LUFS (antes 44 kHz a 56 kbps: se escuchaban aguadas).",
+ "costo": "0,02 créditos por frase",
+ "frases": [
+  {
+   "n": "errar-0",
+   "t": "¡Uh, la pucha!"
+  },
+  {
+   "n": "errar-1",
+   "t": "¡Pucha, digo!"
+  },
+  {
+   "n": "errar-2",
+   "t": "Se me fue por un pelo."
+  },
+  {
+   "n": "errar-3",
+   "t": "¡Ay, mamita, qué tiro!"
+  },
+  {
+   "n": "enlazada-0",
+   "t": "¡Ahí está, ya te tengo!",
+   "tts": "¡Ahí está, sha te tengo!"
+  },
+  {
+   "n": "enlazada-1",
+   "t": "¡Tomá, mañera!"
+  },
+  {
+   "n": "enlazada-2",
+   "t": "¡Quieta, quieta!"
+  },
+  {
+   "n": "enlazada-3",
+   "t": "Tranquila, negra."
+  },
+  {
+   "n": "cortado-0",
+   "t": "¡Se cortó el lazo, pucha digo!"
+  },
+  {
+   "n": "cortado-1",
+   "t": "Este tiento estaba podrido."
+  },
+  {
+   "n": "seFue-0",
+   "t": "¡Se me fue con lazo y todo!"
+  },
+  {
+   "n": "seFue-1",
+   "t": "¡Ahí va mi lazo, qué macana!"
+  },
+  {
+   "n": "pialada-0",
+   "t": "¡Abajo!"
+  },
+  {
+   "n": "pialada-1",
+   "t": "¡Echate, vamos!"
+  },
+  {
+   "n": "pialada-2",
+   "t": "Ahí está. Quieta."
+  },
+  {
+   "n": "errarPial-0",
+   "t": "¡Pará, pará…!"
+  },
+  {
+   "n": "errarPial-1",
+   "t": "Casi, casi. Otra vez."
+  },
+  {
+   "n": "todaviaNo-0",
+   "t": "Está entera todavía. Hay que cansarla."
+  },
+  {
+   "n": "todaviaNo-1",
+   "t": "Que se canse primero."
+  },
+  {
+   "n": "patada-0",
+   "t": "¡Ay! ¡La costilla…!",
+   "tts": "¡Ay! ¡La costisha…!"
+  },
+  {
+   "n": "patada-1",
+   "t": "¡Uh, qué patada me pegó!"
+  },
+  {
+   "n": "cornada-0",
+   "t": "¡Me ensartó, la mañera!"
+  },
+  {
+   "n": "cornada-1",
+   "t": "¡Ay, ay, ay!"
+  },
+  {
+   "n": "embiste-0",
+   "t": "¡Uy, viene!"
+  },
+  {
+   "n": "embiste-1",
+   "t": "¡Cuidado que carga!"
+  },
+  {
+   "n": "sed-0",
+   "t": "Me muero de sed."
+  },
+  {
+   "n": "sed-1",
+   "t": "Tengo la garganta hecha polvo."
+  },
+  {
+   "n": "calor-0",
+   "t": "Qué calor bárbaro."
+  },
+  {
+   "n": "calor-1",
+   "t": "Cuarenta a la sombra, y sin sombra."
+  },
+  {
+   "n": "curada-0",
+   "t": "Listo, negra. Ya está.",
+   "tts": "Listo, negra. Sha está."
+  },
+  {
+   "n": "curada-1",
+   "t": "Así, curadita."
+  },
+  {
+   "n": "lesion-0",
+   "t": "Se me mancó el zaino. Lo reventé."
+  },
+  {
+   "n": "lesion-1",
+   "t": "Uh, el caballo viene rengo.",
+   "tts": "Uh, el cabasho viene rengo."
+  },
+  {
+   "n": "sinLazo-0",
+   "t": "No tengo lazo. Hay uno colgado en la galería."
+  },
+  {
+   "n": "fumar-0",
+   "t": "Un armado y seguimos."
+  },
+  {
+   "n": "manga-0",
+   "t": "Vamos, adentro."
+  },
+  {
+   "n": "manga-1",
+   "t": "A la manga, vamos."
+  },
+  {
+   "n": "silbar-0",
+   "t": "¡Vení, zaino!"
+  },
+  {
+   "n": "apuntar-0",
+   "t": "Ahí la tengo…"
+  },
+  {
+   "n": "apuntar-1",
+   "t": "Quieta… quieta…"
+  },
+  {
+   "n": "apuntar-2",
+   "t": "Ya sos mía.",
+   "tts": "Sha sos mía."
+  },
+  {
+   "n": "perros-0",
+   "t": "¡Vengan, perros!"
+  },
+  {
+   "n": "perros-1",
+   "t": "¡Vamos, Tigre! ¡Negra, vení!"
+  },
+  {
+   "n": "quietos-0",
+   "t": "¡Quietos ahí!"
+  },
+  {
+   "n": "quietos-1",
+   "t": "¡Echate, Chispa!"
+  },
+  {
+   "n": "junten-0",
+   "t": "¡Junten, junten la hacienda!"
+  },
+  {
+   "n": "junten-1",
+   "t": "¡Vaya, vaya! ¡Juntela!"
+  },
+  {
+   "n": "busquen-0",
+   "t": "¡Busque, busque!"
+  },
+  {
+   "n": "busquen-1",
+   "t": "¡Traela, Tigre!"
+  },
+  {
+   "n": "mate-0",
+   "t": "Un matecito y seguimos."
+  },
+  {
+   "n": "mate-1",
+   "t": "Qué rico este mate amargo."
+  },
+  {
+   "n": "comida-0",
+   "t": "A ver qué hay pa' comer."
+  },
+  {
+   "n": "comida-1",
+   "t": "Un guiso de arroz, como Dios manda."
+  },
+  {
+   "n": "heladera-0",
+   "t": "Agüita fresca, qué lindo."
+  },
+  {
+   "n": "banar-0",
+   "t": "Vení, zaino, que te baño."
+  },
+  {
+   "n": "banar-1",
+   "t": "Ahí está, limpito."
+  },
+  {
+   "n": "forraje-0",
+   "t": "Tomá, comé tranquilo."
+  },
+  {
+   "n": "saludar-0",
+   "t": "¡Buenas! ¿Cómo andan?"
+  },
+  {
+   "n": "saludar-1",
+   "t": "¡Buen día, paisano!"
+  },
+  {
+   "n": "puesto-0",
+   "t": "Por fin en el puesto."
+  },
+  {
+   "n": "caballoSucio-0",
+   "t": "Este zaino está hecho un barro."
+  }
+ ]
+}

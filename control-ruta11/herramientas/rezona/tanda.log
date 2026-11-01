@@ -1,0 +1,51 @@
+  → modelo-pickup: gtask-477ce2d5e7504fee86b7
+  → modelo-sedan: gtask-57d195b3815f4dc9a827
+  → modelo-compacto: gtask-161c0e2bcd94492b844f
+  → modelo-hatch: gtask-c9cd8e5f9d5343d48ec3
+  → modelo-patrullero: gtask-137f3f98d6e34163b3a0
+  → modelo-motopol: gtask-acca8bfa7f984e6ab615
+  → modelo-conductor: gtask-b48d9bd1b5324edd81cb
+  → modelo-policia: gtask-1916af1e66fa4d30beda
+  ✓ fuente-camion: 430 KB (16s)
+  ✓ fuente-moto: 860 KB (16s)
+  ✓ fuente-garita: 573 KB (17s)
+  ✓ fuente-algarrobo: 930 KB (17s)
+  ✓ fuente-quebracho: 470 KB (18s)
+  ✓ fuente-conductora: 587 KB (18s)
+  ✓ arte-portada: 1587 KB (19s)
+  → modelo-camion: gtask-50b6c3e40e324af6ab2b
+  → modelo-moto: gtask-b92dc23ae31b46c8bbd0
+  → modelo-garita: gtask-5d218e09281949ba885f
+  → modelo-algarrobo: gtask-551fd09ed3fd46c2ace5
+  … modelo-quebracho: GENERATION_TOO_MANY_IN_FLIGHT, reintento
+  … modelo-quebracho: GENERATION_TOO_MANY_IN_FLIGHT, reintento
+  … modelo-quebracho: GENERATION_TOO_MANY_IN_FLIGHT, reintento
+  → modelo-quebracho: gtask-645601bbb6c14412af46
+  → modelo-conductora: gtask-076c3edafa4d4f219fa0
+  ✓ modelo-sedan: 2990 KB (108s)
+  ✓ modelo-compacto: 2362 KB (108s)
+  ✓ modelo-hatch: 2645 KB (109s)
+  ✓ modelo-motopol: 2594 KB (109s)
+  ✓ modelo-pickup: 2654 KB (120s)
+  ✓ modelo-patrullero: 6349 KB (121s)
+  ✓ modelo-conductor: 7595 KB (132s)
+  ✓ modelo-policia: 5671 KB (133s)
+  ✓ modelo-camion: 2473 KB (134s)
+  ✓ modelo-moto: 2268 KB (134s)
+  → rig-conductor-walk: gtask-65cdfcfdd67c4c458a9c
+  → rig-conductor-idle: gtask-89f17d7a2ef64da3893e
+  → rig-policia-walk: gtask-f5234c0c929542a9b26c
+  → rig-policia-idle: gtask-377e9e3cc99e41fdbe54
+  ✓ modelo-algarrobo: 2996 KB (147s)
+  ✓ modelo-garita: 2021 KB (158s)
+  ✓ rig-conductor-walk: 7776 KB (159s)
+  ✓ rig-policia-walk: 5851 KB (159s)
+  ✓ rig-conductor-idle: 7915 KB (171s)
+  ✓ rig-policia-idle: 5990 KB (171s)
+  ✓ modelo-quebracho: 2043 KB (265s)
+  ✓ modelo-conductora: 5120 KB (307s)
+  → rig-conductora-walk: gtask-305c971cf497492c95ef
+  → rig-conductora-idle: gtask-68842a4416ab4733a531
+  ✓ rig-conductora-walk: 5294 KB (329s)
+  ✓ rig-conductora-idle: 5433 KB (340s)
+gastado en esta tanda: 6030 créditos (saldo 321760)

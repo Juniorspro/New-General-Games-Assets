@@ -1,0 +1,6 @@
+# Descargas crudas de Rezona y pasos intermedios: pesan decenas de MB y lo que
+# usa el juego ya está adentro de js/datos.js (herramientas/armar_datos.py).
+crudos/
+procesados/
+finales/
+herramientas/gltf/node_modules/
