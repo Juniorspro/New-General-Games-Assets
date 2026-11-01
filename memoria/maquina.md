@@ -70,3 +70,16 @@ Cuando algo no sale, primero hay que saber **quién** lo frenó:
   ```
 
 - Sin `--disable-quic` sale `ERR_TOO_MANY_RETRIES`.
+
+## Leer otro repo público del usuario (1/11/2026)
+- Pidió "el HTML" de `raw.githack.com/Juniorspro/Ports/a649588/hypper/Hypper.html`
+  (Definitive RezoBox, 28,3 MB, todo adentro). `add_repo` con `access: "read"`
+  contesta que el proxy ya sirve lecturas anónimas de repos públicos: se clona
+  sin adjuntar nada.
+- El commit corto no estaba en `main` (solo "Initial commit"): `git ls-remote`
+  → `fetch --depth=300` de cada rama → `rev-parse a649588`. Estaba en
+  `claude/ports-continuation-dm754a`. Se saca con `git show <commit>:<ruta>` a
+  una carpeta vacía del scratchpad.
+- Ese HTML ya es completo (doctype, charset, sin pedidos locales): se manda tal
+  cual, sin `empaquetar.py`. Lo único que falla acá es su MQTT
+  (`wss://broker.emqx.io:8084`): la red de la sesión lo corta.
