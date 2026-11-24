@@ -1,0 +1,1771 @@
+{
+ "pid": 10252801,
+ "pedidos": {
+  "img-prota": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: the same man as in the reference photo, a rugged 40-year-old former marine turned mountain rescuer, short stubble beard, tired serious face, wearing a worn faded olive green hooded winter parka with orange reflective stripes on the shoulders and sleeves, hood down on his back, black tactical chest harness with a small flashlight clipped on the chest, coiled climbing rope and carabiners on the shoulder strap, a big backpack on his back with an axe strapped to it, dark cargo trousers, heavy worn hiking boots, utility belt with pouches. Plain fabric with no patches, no badges, no words. Realistic proportions, realistic dirty weathered clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/protagonista.jpg"
+    ]
+   },
+   "task_id": "gtask-4fd1e663ac8842b8b28a",
+   "output_path": "assets/img-prota-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-prota-g1.png"
+  },
+  "mod-prota": {
+   "type": "model3d",
+   "params": {
+    "prompt": "mountain rescuer man in A-pose, olive green parka with orange stripes, backpack, cargo trousers, boots",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-prota-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-c7eab2ab189f479b9d9d",
+   "output_path": "assets/mod-prota-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-prota-g1.glb"
+  },
+  "rig-prota-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-c7eab2ab189f479b9d9d",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-df66f1a97c624b9fb050",
+   "output_path": "assets/rig-prota-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-prota-walk-g1.glb"
+  },
+  "rig-prota-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-c7eab2ab189f479b9d9d",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-489a1d1a8fdd4150b198",
+   "output_path": "assets/rig-prota-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-prota-idle-g1.glb"
+  },
+  "rig-prota-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-c7eab2ab189f479b9d9d",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-6c50990660214089b09d",
+   "output_path": "assets/rig-prota-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-prota-run-g1.glb"
+  },
+  "img-medica": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: a woman in her mid thirties, field medic, tired determined face, dark hair tied back in a ponytail, wearing a worn faded red winter jacket with mud stains, dark grey trousers, muddy hiking boots, a large worn canvas medical bag with a red cross hanging at her hip on a shoulder strap, fingerless gloves. Realistic proportions, realistic dirty weathered worn clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no patches, no badges, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-a73e536abda54309bd10",
+   "output_path": "assets/img-medica-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-medica-g1.png"
+  },
+  "mod-medica": {
+   "type": "model3d",
+   "params": {
+    "prompt": "woman medic in A-pose, worn red jacket, dark trousers, canvas medical bag, boots",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-medica-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-92acb51f616148848abd",
+   "output_path": "assets/mod-medica-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-medica-g1.glb"
+  },
+  "rig-medica-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-92acb51f616148848abd",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-7a02e978406c41e7a452",
+   "output_path": "assets/rig-medica-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-medica-walk-g1.glb"
+  },
+  "img-explorador": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: a very thin lanky man in his late twenties, gaunt face, messy hair, short scruffy beard, wearing a long worn dark green waterproof rain poncho over a grey wool sweater, faded brown trousers, muddy hiking boots, a pair of old binoculars hanging from a strap around his neck, a small canvas satchel. Realistic proportions, realistic dirty weathered worn clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no patches, no badges, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-0fd9597d68bb4e648435",
+   "output_path": "assets/img-explorador-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-explorador-g1.png"
+  },
+  "rig-medica-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-92acb51f616148848abd",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-b0fe262ae3bf4028a6d5",
+   "output_path": "assets/rig-medica-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-medica-idle-g1.glb"
+  },
+  "rig-medica-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-92acb51f616148848abd",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-912169c7e69b429e9a77",
+   "output_path": "assets/rig-medica-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-medica-run-g1.glb"
+  },
+  "mod-explorador": {
+   "type": "model3d",
+   "params": {
+    "prompt": "thin man in A-pose, long green raincoat, grey sweater, binoculars, satchel, boots",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-explorador-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-10525df3d8954c7dbb7f",
+   "output_path": "assets/mod-explorador-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-explorador-g1.glb"
+  },
+  "rig-explorador-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-10525df3d8954c7dbb7f",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-0c4922d5240e4d91b937",
+   "output_path": "assets/rig-explorador-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-explorador-walk-g1.glb"
+  },
+  "rig-explorador-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-10525df3d8954c7dbb7f",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-907290a8fe6a4457b739",
+   "output_path": "assets/rig-explorador-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-explorador-idle-g1.glb"
+  },
+  "rig-explorador-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-10525df3d8954c7dbb7f",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-3ec80b6e759042eb86fe",
+   "output_path": "assets/rig-explorador-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-explorador-run-g1.glb"
+  },
+  "img-mecanico": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: a stocky middle-aged mechanic, balding with short grey hair, thick moustache, wearing a faded dark blue one-piece work coverall heavily stained with black grease and oil, sleeves rolled up to the forearms, a worn brown leather tool belt with wrenches and a hammer hanging at the hips, dirty work boots, oily rag in the back pocket. Realistic proportions, realistic dirty weathered worn clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no patches, no badges, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-15821a782a4a4a3b8f3d",
+   "output_path": "assets/img-mecanico-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-mecanico-g1.png"
+  },
+  "mod-mecanico": {
+   "type": "model3d",
+   "params": {
+    "prompt": "stocky mechanic in A-pose, greasy blue coverall, leather tool belt, boots",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-mecanico-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-eb426aaab354480d8f2c",
+   "output_path": "assets/mod-mecanico-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-mecanico-g1.glb"
+  },
+  "rig-mecanico-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-eb426aaab354480d8f2c",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-bbdda60233964da5aeee",
+   "output_path": "assets/rig-mecanico-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mecanico-walk-g1.glb"
+  },
+  "rig-mecanico-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-eb426aaab354480d8f2c",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-86a27347908641f4ad27",
+   "output_path": "assets/rig-mecanico-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mecanico-idle-g1.glb"
+  },
+  "img-sobreviviente1": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: a frightened young man about twenty years old, pale scared face with wide eyes, dirt and scratches on his cheeks, messy hair, wearing a torn and filthy light blue hiking softshell jacket ripped at one sleeve, a dirty grey t-shirt, torn beige hiking trousers with mud stains, muddy trail running shoes, a broken backpack strap hanging. Realistic proportions, realistic dirty weathered worn clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no patches, no badges, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-807b9ab9cc1548d8a5ec",
+   "output_path": "assets/img-sobreviviente1-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-sobreviviente1-g1.png"
+  },
+  "rig-mecanico-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-eb426aaab354480d8f2c",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-daec7e7264064239baa6",
+   "output_path": "assets/rig-mecanico-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mecanico-run-g1.glb"
+  },
+  "mod-sobreviviente1": {
+   "type": "model3d",
+   "params": {
+    "prompt": "scared young hiker in A-pose, torn blue jacket, grey t-shirt, beige trousers",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-sobreviviente1-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-080b70f6b3934e6fbe27",
+   "output_path": "assets/mod-sobreviviente1-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-sobreviviente1-g1.glb"
+  },
+  "rig-sobreviviente1-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-080b70f6b3934e6fbe27",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-7df6323a1b5649298cb2",
+   "output_path": "assets/rig-sobreviviente1-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-sobreviviente1-walk-g1.glb"
+  },
+  "rig-sobreviviente1-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-080b70f6b3934e6fbe27",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-a2eee903942a42a88962",
+   "output_path": "assets/rig-sobreviviente1-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-sobreviviente1-idle-g1.glb"
+  },
+  "img-sobreviviente2": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: an injured older man about sixty-five, grey beard, weary pained face with a bandage wrapped around his forehead, wearing an old worn brown corduroy jacket with sheepskin collar, dirty checkered flannel shirt, dark brown trousers with a bandage tied around one thigh, old leather boots, slightly hunched. Realistic proportions, realistic dirty weathered worn clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no patches, no badges, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-8f3996d648bc486aab4b",
+   "output_path": "assets/img-sobreviviente2-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-sobreviviente2-g1.png"
+  },
+  "rig-sobreviviente1-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-080b70f6b3934e6fbe27",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-efaeba9f3e004b539eab",
+   "output_path": "assets/rig-sobreviviente1-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-sobreviviente1-run-g1.glb"
+  },
+  "mod-sobreviviente2": {
+   "type": "model3d",
+   "params": {
+    "prompt": "injured old man in A-pose, brown corduroy jacket, flannel shirt, head bandage",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-sobreviviente2-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-26913eafc49d4766b96d",
+   "output_path": "assets/mod-sobreviviente2-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-sobreviviente2-g1.glb"
+  },
+  "rig-sobreviviente2-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-26913eafc49d4766b96d",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-0f5aeb4820874dfb95b7",
+   "output_path": "assets/rig-sobreviviente2-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-sobreviviente2-walk-g1.glb"
+  },
+  "img-mont_cazador": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: a disturbing inbred backwoods mountain man, horror game enemy, big hunched shoulders, misshapen asymmetrical face with a heavy brow, one eye lower than the other, crooked teeth, matted greasy long hair and patchy beard, grimy pale skin, wearing crudely stitched patched leather clothing and ragged animal furs tied with rope, fur wrapped boots, a long rusty machete hanging from a rope belt at his hip. Unsettling but not gory, no blood. Realistic proportions, realistic dirty weathered worn clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no patches, no badges, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-e3733f7f4cf746cb8f76",
+   "output_path": "assets/img-mont_cazador-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-mont_cazador-g1.png"
+  },
+  "rig-sobreviviente2-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-26913eafc49d4766b96d",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-1201940aae0047ea8ae6",
+   "output_path": "assets/rig-sobreviviente2-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-sobreviviente2-idle-g1.glb"
+  },
+  "rig-sobreviviente2-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-26913eafc49d4766b96d",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-0834be70e7bb490aa8ac",
+   "output_path": "assets/rig-sobreviviente2-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-sobreviviente2-run-g1.glb"
+  },
+  "mod-mont_cazador": {
+   "type": "model3d",
+   "params": {
+    "prompt": "deformed mountain man in A-pose, patched leather and fur clothes, rope belt, rusty machete at hip",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-mont_cazador-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-83bdfd418b5346d08fa9",
+   "output_path": "assets/mod-mont_cazador-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-mont_cazador-g1.glb"
+  },
+  "rig-mont_cazador-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-83bdfd418b5346d08fa9",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-ae4473b831204e77ae03",
+   "output_path": "assets/rig-mont_cazador-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_cazador-walk-g1.glb"
+  },
+  "img-mont_rapido": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: a creepy emaciated feral mountain man, horror game enemy, extremely thin and wiry with long bony limbs and visible ribs, sickly pale grey-white skin covered in dirt, bald head with a few stringy hairs, sunken hollow eyes, slightly hunched posture, wearing only a ragged dirty loincloth of torn cloth and a strip of rope around the waist, barefoot with dirty long toes. Unsettling but not gory, no blood, not nude. Realistic proportions, realistic dirty weathered worn clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no patches, no badges, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-53a70bee9c1b464a81c5",
+   "output_path": "assets/img-mont_rapido-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-mont_rapido-g1.png"
+  },
+  "rig-mont_cazador-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-83bdfd418b5346d08fa9",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-3d0796958ec9451b8d05",
+   "output_path": "assets/rig-mont_cazador-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_cazador-idle-g1.glb"
+  },
+  "rig-mont_cazador-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-83bdfd418b5346d08fa9",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-435b7bbf3dcd42e5b3aa",
+   "output_path": "assets/rig-mont_cazador-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_cazador-run-g1.glb"
+  },
+  "mod-mont_rapido": {
+   "type": "model3d",
+   "params": {
+    "prompt": "emaciated pale feral man in A-pose, ragged loincloth, barefoot",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-mont_rapido-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-bb4af68fbce74b82957e",
+   "output_path": "assets/mod-mont_rapido-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-mont_rapido-g1.glb"
+  },
+  "rig-mont_rapido-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-bb4af68fbce74b82957e",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-b3c4ab4c8ca340e5ad26",
+   "output_path": "assets/rig-mont_rapido-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_rapido-walk-g1.glb"
+  },
+  "img-mont_vigia": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: an eerie backwoods mountain lookout, horror game enemy, gaunt weathered man with a misshapen face and a thin wispy beard, wearing a tall shaggy fur trapper hat with ear flaps, a long filthy patched wool coat tied with a rope belt, dirty leather gloves, worn fur-wrapped boots, an old rusty kerosene lantern hanging from a hook on his belt. Unsettling but not gory, no blood. Realistic proportions, realistic dirty weathered worn clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no patches, no badges, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-585056572dab435dba88",
+   "output_path": "assets/img-mont_vigia-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-mont_vigia-g1.png"
+  },
+  "rig-mont_rapido-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-bb4af68fbce74b82957e",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-669118252635481fa3ac",
+   "output_path": "assets/rig-mont_rapido-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_rapido-idle-g1.glb"
+  },
+  "rig-mont_rapido-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-bb4af68fbce74b82957e",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-4269b02b9d484d2ebdb1",
+   "output_path": "assets/rig-mont_rapido-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_rapido-run-g1.glb"
+  },
+  "mod-mont_vigia": {
+   "type": "model3d",
+   "params": {
+    "prompt": "gaunt man in A-pose, fur trapper hat, long patched coat with rope belt, rusty lantern at belt",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-mont_vigia-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-e99073e3b53a4041aca1",
+   "output_path": "assets/mod-mont_vigia-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-mont_vigia-g1.glb"
+  },
+  "rig-mont_vigia-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-e99073e3b53a4041aca1",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-5b298396808746c3b531",
+   "output_path": "assets/rig-mont_vigia-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_vigia-walk-g1.glb"
+  },
+  "rig-mont_vigia-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-e99073e3b53a4041aca1",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-33cf891740ea4023b6ad",
+   "output_path": "assets/rig-mont_vigia-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_vigia-idle-g1.glb"
+  },
+  "img-mont_bruto": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: a huge hulking brute, horror game boss enemy, enormous heavy build over two meters tall, massive broad shoulders, thick arms and big hands, bare muscular dirty arms, wearing a crude mask of stitched pieces of old brown leather covering the whole head with small eye holes and heavy crude stitches, a long heavy butcher apron of thick worn leather covered in dark brown grime stains, a dirty torn undershirt, dark work trousers, huge worn leather boots. Menacing and unsettling but not gory, no blood, no weapons. Realistic proportions, realistic dirty weathered worn clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no patches, no badges, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-f68d6837ea1247709728",
+   "output_path": "assets/img-mont_bruto-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-mont_bruto-g1.png"
+  },
+  "rig-mont_vigia-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-e99073e3b53a4041aca1",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-c989a609d6874f5c8c55",
+   "output_path": "assets/rig-mont_vigia-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_vigia-run-g1.glb"
+  },
+  "mod-mont_bruto": {
+   "type": "model3d",
+   "params": {
+    "prompt": "huge brute in A-pose, stitched leather mask, long leather butcher apron, boots",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-mont_bruto-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-5128c441d52746198943",
+   "output_path": "assets/mod-mont_bruto-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-mont_bruto-g1.glb"
+  },
+  "rig-mont_bruto-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-5128c441d52746198943",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-7e2a210f997a434a89c4",
+   "output_path": "assets/rig-mont_bruto-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_bruto-walk-g1.glb"
+  },
+  "img-mont_trampero": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: a sinister backwoods trapper, horror game enemy, wiry hunched man with a crooked misshapen face, patchy stubble and greasy hair under a filthy knitted wool cap, wearing a worn stained oilskin vest over a dirty wool shirt, leather gloves, coils of rusty wire hanging from his shoulder and belt, a big heavy burlap sack of rusty metal traps and chains slung across his back with a strap, patched trousers, muddy boots. Unsettling but not gory, no blood. Realistic proportions, realistic dirty weathered worn clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no patches, no badges, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-02d0c2b9342a49408b10",
+   "output_path": "assets/img-mont_trampero-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-mont_trampero-g1.png"
+  },
+  "rig-mont_bruto-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-5128c441d52746198943",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-7568b73b0efa453db13b",
+   "output_path": "assets/rig-mont_bruto-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_bruto-idle-g1.glb"
+  },
+  "rig-mont_bruto-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-5128c441d52746198943",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-b4308ac0d918414fa258",
+   "output_path": "assets/rig-mont_bruto-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_bruto-run-g1.glb"
+  },
+  "mod-mont_trampero": {
+   "type": "model3d",
+   "params": {
+    "prompt": "sinister trapper in A-pose, wool cap, leather vest, coils of wire, burlap sack of traps",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-mont_trampero-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-ba510dd1f09741b7a3fa",
+   "output_path": "assets/mod-mont_trampero-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-mont_trampero-g1.glb"
+  },
+  "rig-mont_trampero-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-ba510dd1f09741b7a3fa",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-d455ea4a89da444ab85c",
+   "output_path": "assets/rig-mont_trampero-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_trampero-walk-g1.glb"
+  },
+  "rig-mont_trampero-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-ba510dd1f09741b7a3fa",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-e01d58db93d442a498d4",
+   "output_path": "assets/rig-mont_trampero-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_trampero-idle-g1.glb"
+  },
+  "rig-mont_trampero-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-ba510dd1f09741b7a3fa",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-89da307535da49828ba9",
+   "output_path": "assets/rig-mont_trampero-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_trampero-run-g1.glb"
+  },
+  "img-mont_lider": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open and empty, legs slightly apart), front view facing the camera, symmetrical: the frightening old leader of a backwoods mountain clan, horror game enemy, a gaunt very old man with a long matted grey beard, pale wrinkled skin, wearing a bleached deer skull with large branching antlers on top of his head as a headdress, a ragged dark fur and hide mantle over his shoulders reaching down to the waist leaving the arms free, a long filthy dark robe tied with a rope belt, small bones and feathers hanging on cords around his neck, bare dirty feet wrapped in rags. Eerie ritualistic look, not gory, no blood. Realistic proportions, realistic dirty weathered worn clothing, soft even studio lighting, isolated on a plain light grey seamless background, full body visible with margin, no ground, no shadow, no text, no patches, no badges, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-f7c4f275d6a0438f8043",
+   "output_path": "assets/img-mont_lider-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-mont_lider-g1.png"
+  },
+  "mod-mont_lider": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old clan leader in A-pose, deer skull with antlers headdress, fur mantle, long ragged robe",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-mont_lider-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-87e1fc06bd734a57b36c",
+   "output_path": "assets/mod-mont_lider-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-mont_lider-g1.glb"
+  },
+  "rig-mont_lider-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-87e1fc06bd734a57b36c",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-9ce30d99b21e468bba38",
+   "output_path": "assets/rig-mont_lider-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_lider-walk-g1.glb"
+  },
+  "img-camioneta_grua": {
+   "type": "image",
+   "params": {
+    "prompt": "A single old 1970s full-size pickup truck with a long flat steel flatbed deck instead of a cargo box, empty flat deck with low side rails, round headlights, chrome front grille and bumper, faded dark green paint with heavy rust patches, dried mud splashed along the lower body and wheels, chunky off-road tyres, dirty windows. Empty deck, no crane, no cargo. Realistic weathered game asset, dirty, worn and rusty, three-quarter view from slightly above, the whole object visible with margin, soft even studio lighting, isolated on a plain light grey seamless background, no ground, no cast shadow, no text, no logos, no letters, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-0ce260a0bbec46a8a855",
+   "output_path": "assets/img-camioneta_grua-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-camioneta_grua-g1.png"
+  },
+  "rig-mont_lider-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-87e1fc06bd734a57b36c",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-48c17da405ca4a24b610",
+   "output_path": "assets/rig-mont_lider-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_lider-idle-g1.glb"
+  },
+  "rig-mont_lider-run": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-87e1fc06bd734a57b36c",
+    "rig_type": "biped",
+    "animations": [
+     "preset:run"
+    ]
+   },
+   "task_id": "gtask-badde4df4281473facec",
+   "output_path": "assets/rig-mont_lider-run-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/rig-mont_lider-run-g1.glb"
+  },
+  "img-camioneta_grua2": {
+   "type": "image",
+   "params": {
+    "prompt": "A single generic old 1970s full-size single-cab pickup truck of no particular brand, with a long flat steel and wood flatbed deck behind the cab instead of a cargo box, the deck as long as the hood and cab together, empty flat deck with low side rails, round headlights, a plain rectangular grille with simple horizontal bars and no emblem, plain body sides with no badges and no nameplates, faded dark green paint with heavy rust patches, dried mud splashed along the lower body and wheels, chunky off-road tyres, dirty windows. Empty deck, no crane, no cargo, no emblems. Realistic weathered game asset, dirty, worn and rusty, three-quarter view from slightly above, the whole object visible with margin, soft even studio lighting, isolated on a plain light grey seamless background, no ground, no cast shadow, no text, no logos, no letters, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-697884efc92b4746b67c",
+   "output_path": "assets/img-camioneta_grua2-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-camioneta_grua2-g1.png"
+  },
+  "mod-camioneta_grua": {
+   "type": "model3d",
+   "params": {
+    "prompt": "rusty old 1970s flatbed pickup truck, clean body panels with crisp edges",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-camioneta_grua2-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-b4ec4b1065a04e4e9704",
+   "output_path": "assets/mod-camioneta_grua-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-camioneta_grua-g1.glb"
+  },
+  "img-grua": {
+   "type": "image",
+   "params": {
+    "prompt": "A single standalone truck-mounted hydraulic knuckle boom crane unit, not attached to any vehicle: a flat square steel mounting base plate at the bottom with two small outrigger legs, a rotating turret column on top of the base, and a thick two-section articulated boom arm raised at an angle with visible hydraulic cylinders and hoses and a hook hanging from a short cable at the tip, heavy industrial design, faded chipped yellow paint with heavy rust and grease stains. Realistic weathered game asset, dirty, worn and rusty, three-quarter view from slightly above, the whole object visible with margin, soft even studio lighting, isolated on a plain light grey seamless background, no ground, no cast shadow, no text, no logos, no letters, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-0ba1118b795d4a849869",
+   "output_path": "assets/img-grua-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-grua-g1.png"
+  },
+  "mod-grua": {
+   "type": "model3d",
+   "params": {
+    "prompt": "rusty yellow hydraulic knuckle boom crane on square base plate",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-grua-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-74bf92d563aa4276b97e",
+   "output_path": "assets/mod-grua-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-grua-g1.glb"
+  },
+  "img-camioneta_vieja": {
+   "type": "image",
+   "params": {
+    "prompt": "A single abandoned wrecked old 1960s pickup truck of no particular brand, sitting low on the ground on its bare rusty axles with no wheels and no tyres, completely rusted brown and orange body with holes, broken and missing windows, dented hood, missing headlights, moss and grass and small weeds growing on the roof, hood and cargo box, plain grille with no emblem, no badges. Realistic weathered game asset, dirty, worn and rusty, three-quarter view from slightly above, the whole object visible with margin, soft even studio lighting, isolated on a plain light grey seamless background, no ground, no cast shadow, no text, no logos, no letters, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-6e0c420360964adcb700",
+   "output_path": "assets/img-camioneta_vieja-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-camioneta_vieja-g1.png"
+  },
+  "mod-camioneta_vieja": {
+   "type": "model3d",
+   "params": {
+    "prompt": "abandoned rusted pickup truck without wheels, moss on roof",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-camioneta_vieja-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 14000
+   },
+   "task_id": "gtask-381fbd0eb938430d9a57",
+   "output_path": "assets/mod-camioneta_vieja-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/mod-camioneta_vieja-g1.glb"
+  },
+  "img-cabana": {
+   "type": "image",
+   "params": {
+    "prompt": "A single old mountain log cabin as a 3D game asset, in the same style as the cabins of the reference picture: dark weathered rough timber log walls, steep roof of old wooden shingles covered in moss, a rough stone chimney, a small covered front porch with a wooden railing and two wooden steps, one plank door, two small square windows with a faint warm light behind the glass, dirty, deteriorated, a few boards missing. Rectangular footprint, about twice as long as it is wide, front door on the long side. Seen from a three-quarter angle from slightly above, the whole building visible with margin, isolated on a plain light grey seamless background, no ground, no trees, no landscape, no snow, no people, no text, no logos, nothing else. Realistic, photorealistic textures.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+    ]
+   },
+   "task_id": "gtask-f75bf9e5cabd4ebdb630",
+   "output_path": "assets/img-cabana-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/los-montes/herramientas/rezona/../../crudos/img-cabana-g1.png"
+  },
+  "img-cabana_ruina": {
+   "type": "image",
+   "params": {
+    "prompt": "The same kind of old mountain log cabin but abandoned and half collapsed: dark weathered logs, the shingle roof sagging and partly caved in on one side, broken windows with no glass, missing planks, moss and dead vines, the front door hanging from one hinge, a rough stone chimney cracked. Rectangular footprint, front door on the long side. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+    ]
+   },
+   "task_id": "gtask-3acd13fe729e4b1c8f51",
+   "output_path": "assets/img-cabana_ruina-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-cabana_ruina-g1.png"
+  },
+  "img-pino1": {
+   "type": "image",
+   "params": {
+    "prompt": "A single tall dark mountain fir tree as a 3D game asset: conical silhouette made of five or six large chunky faceted clusters of dark blue-green needles, straight dark brown trunk visible at the bottom, a little snow dust on the upper branches. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+    ]
+   },
+   "task_id": "gtask-3e302116f2354cc4a118",
+   "output_path": "assets/img-pino1-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-pino1-g1.png"
+  },
+  "img-pino2": {
+   "type": "image",
+   "params": {
+    "prompt": "A single tall old pine tree, taller than wide, slightly asymmetric with a few dead bare branches low on the trunk, dark green chunky faceted foliage clusters, rough dark bark. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+    ]
+   },
+   "task_id": "gtask-141d36c76b0a477b9971",
+   "output_path": "assets/img-pino2-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-pino2-g1.png"
+  },
+  "img-roca1": {
+   "type": "image",
+   "params": {
+    "prompt": "A single large granite boulder, rounded and cracked, dark grey with patches of green moss and pale lichen. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-c4f6757d07bd4997978c",
+   "output_path": "assets/img-roca1-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-roca1-g1.png"
+  },
+  "img-roca2": {
+   "type": "image",
+   "params": {
+    "prompt": "A single flat broken slab of dark mountain rock, angular with sharp edges, moss in the cracks. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-8a308126f4884ac28bda",
+   "output_path": "assets/img-roca2-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-roca2-g1.png"
+  },
+  "img-mina_entrada": {
+   "type": "image",
+   "params": {
+    "prompt": "The entrance of an old abandoned mine dug into a rock face: a heavy rough timber frame with two thick posts and a lintel beam, extra diagonal braces, a few broken planks nailed across the upper part, a pitch-black opening, two rusty rails coming out of the dark, a rusty lantern hanging on a nail. Around the frame, a thick irregular slab of dark rock that shows it is carved into a mountain. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+    ]
+   },
+   "task_id": "gtask-ca27fc32df4a40fc9025",
+   "output_path": "assets/img-mina_entrada-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-mina_entrada-g1.png"
+  },
+  "img-jaula": {
+   "type": "image",
+   "params": {
+    "prompt": "A crude cage for holding a person, about two meters tall and square, made of thick rough wooden poles lashed with rope and rusty barbed wire, a small barred door with a heavy rusty padlock and chain, dirty straw on the floor, empty. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-0f2dc60718804c2ba0aa",
+   "output_path": "assets/img-jaula-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-jaula-g1.png"
+  },
+  "img-tronco": {
+   "type": "image",
+   "params": {
+    "prompt": "A big fallen tree trunk log lying horizontally, about seven meters long, rough dark bark, broken branch stubs, moss, one end splintered and torn from the stump. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-583157fb050e423799e4",
+   "output_path": "assets/img-tronco-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-tronco-g1.png"
+  },
+  "img-aserradero": {
+   "type": "image",
+   "params": {
+    "prompt": "An old abandoned industrial sawmill building in the mountains: a long shed of rusted corrugated iron and weathered wooden planks, a big sliding door half open, a short brick smokestack, broken windows, a wooden log ramp on one side, piles of old logs. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+    ]
+   },
+   "task_id": "gtask-63507619f04f4cf1abec",
+   "output_path": "assets/img-aserradero-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-aserradero-g1.png"
+  },
+  "img-tienda": {
+   "type": "image",
+   "params": {
+    "prompt": "A crude dirty canvas tent from a primitive camp in the woods, patched with animal hides and rags, held up by rough wooden poles and ropes, a dark opening, bones and antlers hanging at the entrance. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+    ]
+   },
+   "task_id": "gtask-af8f1d0f11444ca29bf3",
+   "output_path": "assets/img-tienda-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-tienda-g1.png"
+  },
+  "img-cruces": {
+   "type": "image",
+   "params": {
+    "prompt": "A small group of five crude wooden grave crosses of different heights made of branches tied with rope, some leaning, on small mounds of dark earth, a couple of rusty tin plates nailed to them with no writing. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+    ]
+   },
+   "task_id": "gtask-a9eed5b0aac24607b56f",
+   "output_path": "assets/img-cruces-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-cruces-g1.png"
+  },
+  "img-farol": {
+   "type": "image",
+   "params": {
+    "prompt": "An old rusty kerosene hurricane lantern with a glass chimney and a wire handle, the flame glowing faintly orange. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-e352699e77f94089b594",
+   "output_path": "assets/img-farol-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-farol-g1.png"
+  },
+  "img-trampa_oso": {
+   "type": "image",
+   "params": {
+    "prompt": "An open rusty steel bear trap with jagged teeth and a short heavy chain with a stake. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-9a78282e68b8484e8665",
+   "output_path": "assets/img-trampa_oso-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-trampa_oso-g1.png"
+  },
+  "img-vagoneta": {
+   "type": "image",
+   "params": {
+    "prompt": "A rusty old mine cart on four small iron wheels, riveted metal box with dents and dried mud. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-25861f452ae9422bb59c",
+   "output_path": "assets/img-vagoneta-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-vagoneta-g1.png"
+  },
+  "img-pistola": {
+   "type": "image",
+   "params": {
+    "prompt": "An old worn semi-automatic pistol, dark steel with scratches and worn edges, seen from the side. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-aa60d5ce729e48e5b886",
+   "output_path": "assets/img-pistola-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-pistola-g1.png"
+  },
+  "img-escopeta": {
+   "type": "image",
+   "params": {
+    "prompt": "An old pump-action shotgun with a scratched wooden stock and worn blued steel, seen from the side. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-d8de926bae6845f29f0d",
+   "output_path": "assets/img-escopeta-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-escopeta-g1.png"
+  },
+  "img-rifle": {
+   "type": "image",
+   "params": {
+    "prompt": "An old bolt-action hunting rifle with a small scope and a worn wooden stock, seen from the side. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-4a0fac2edec843aab102",
+   "output_path": "assets/img-rifle-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-rifle-g1.png"
+  },
+  "img-hacha": {
+   "type": "image",
+   "params": {
+    "prompt": "A woodsman's felling axe with a long worn wooden handle and a rusty chipped steel head. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-31b9ecc4a9ac43f5bae5",
+   "output_path": "assets/img-hacha-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-hacha-g1.png"
+  },
+  "img-linterna": {
+   "type": "image",
+   "params": {
+    "prompt": "A sturdy black tactical flashlight, scratched metal body, the lens glowing slightly. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-71c843adbce74fe59add",
+   "output_path": "assets/img-linterna-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-linterna-g1.png"
+  },
+  "img-botiquin": {
+   "type": "image",
+   "params": {
+    "prompt": "A battered red first aid kit case with a white cross, scratched and dirty plastic, with a handle. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-79314970019a40b490f7",
+   "output_path": "assets/img-botiquin-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-botiquin-g1.png"
+  },
+  "img-bateria": {
+   "type": "image",
+   "params": {
+    "prompt": "Two worn D-size flashlight batteries lying side by side, plain dull labels with no text. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-d09855f880fc49c9a7e9",
+   "output_path": "assets/img-bateria-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-bateria-g1.png"
+  },
+  "img-bidon": {
+   "type": "image",
+   "params": {
+    "prompt": "A dented red metal jerry can fuel container with chipped paint and a spout cap. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-c3de834cc88d4829bde7",
+   "output_path": "assets/img-bidon-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-bidon-g1.png"
+  },
+  "img-municion": {
+   "type": "image",
+   "params": {
+    "prompt": "A small open worn cardboard box of ammunition with brass cartridges inside, no printed text. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-ed59f2d620e64bb4a1fa",
+   "output_path": "assets/img-municion-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-municion-g1.png"
+  },
+  "img-lata": {
+   "type": "image",
+   "params": {
+    "prompt": "A single dented tin can of food with no label, rusty rim, sealed. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-326bdb2e0c3e4a87acf9",
+   "output_path": "assets/img-lata-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-lata-g1.png"
+  },
+  "img-herramientas": {
+   "type": "image",
+   "params": {
+    "prompt": "A battered red metal toolbox with a handle, the lid slightly open showing wrenches, pliers and a hammer. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-1c6a48f955694c86a2ec",
+   "output_path": "assets/img-herramientas-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-herramientas-g1.png"
+  },
+  "img-repuesto": {
+   "type": "image",
+   "params": {
+    "prompt": "An old car battery, dirty black plastic case with two lead terminals and a handle strap, no text. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-2bc392a4ad924168ac10",
+   "output_path": "assets/img-repuesto-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-repuesto-g1.png"
+  },
+  "img-torre_agua": {
+   "type": "image",
+   "params": {
+    "prompt": "An old wooden water tower on four tall wooden legs with cross braces, a round wooden tank with iron bands, a ladder, weathered and mossy. Seen from a three-quarter angle from slightly above, the whole object visible with margin, isolated on a plain light grey seamless background, no ground, no landscape, no people, no text, no logos, nothing else. Realistic, photorealistic worn and dirty textures.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+    ]
+   },
+   "task_id": "gtask-67a2507a87f9438c9091",
+   "output_path": "assets/img-torre_agua-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-torre_agua-g1.png"
+  },
+  "img-portada": {
+   "type": "image",
+   "params": {
+    "prompt": "Cinematic night key art for a survival horror video game, no text: a remote mountain valley with huge jagged snowy peaks under a full moon and heavy clouds, dark dense pine forest, tall waterfalls, thick mist on a river, two isolated log cabins with warm orange light in the windows, a wooden bridge, an abandoned rusty old pickup truck with a hydraulic crane, and in the foreground a lone mountain rescuer in a worn olive jacket with a flashlight seen from behind. Between the dark pines, several pale deformed figures stand still, watching. Cold blue moonlight, volumetric fog, ominous atmosphere, realistic, highly detailed.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg",
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/protagonista.jpg"
+    ]
+   },
+   "task_id": "gtask-149f9540f2b34b38a9f3",
+   "output_path": "assets/img-portada-g1.png",
+   "estado": "failed",
+   "error": "生成服务暂时不可用，请稍后重试。"
+  },
+  "mod-cabana": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old weathered log cabin with shingle roof, porch and stone chimney",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-cabana-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-b970474ba4bc4710958b",
+   "output_path": "assets/mod-cabana-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-cabana-g1.glb"
+  },
+  "mod-cabana_ruina": {
+   "type": "model3d",
+   "params": {
+    "prompt": "abandoned half collapsed log cabin, caved in roof",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-cabana_ruina-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-29ca5abcf0174994af4a",
+   "output_path": "assets/mod-cabana_ruina-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-cabana_ruina-g1.glb"
+  },
+  "mod-aserradero": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old abandoned wooden sawmill shed with rusty tin roof and log piles",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-aserradero-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-2cef878ab511422fa632",
+   "output_path": "assets/mod-aserradero-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-aserradero-g1.glb"
+  },
+  "mod-mina_entrada": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old mine entrance with timber frame in a rock face and rails",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-mina_entrada-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 15000
+   },
+   "task_id": "gtask-50c63bfe8ca34b3793b5",
+   "output_path": "assets/mod-mina_entrada-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-mina_entrada-g1.glb"
+  },
+  "mod-torre_agua": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old wooden water tower on timber legs with ladder",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-torre_agua-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 15000
+   },
+   "task_id": "gtask-d8f7c69879404dd3be18",
+   "output_path": "assets/mod-torre_agua-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-torre_agua-g1.glb"
+  },
+  "mod-tienda": {
+   "type": "model3d",
+   "params": {
+    "prompt": "crude hide and canvas tent on wooden poles",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-tienda-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-704f710d222143949173",
+   "output_path": "assets/mod-tienda-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-tienda-g1.glb"
+  },
+  "mod-jaula": {
+   "type": "model3d",
+   "params": {
+    "prompt": "crude wooden cage made of branches tied with wire",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-jaula-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 15000
+   },
+   "task_id": "gtask-3c5893f3a9f440b493c3",
+   "output_path": "assets/mod-jaula-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-jaula-g1.glb"
+  },
+  "mod-cruces": {
+   "type": "model3d",
+   "params": {
+    "prompt": "group of crude wooden grave crosses on dirt mounds",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-cruces-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 10000
+   },
+   "task_id": "gtask-67b8e82fea0740fe8970",
+   "output_path": "assets/mod-cruces-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-cruces-g1.glb"
+  },
+  "mod-vagoneta": {
+   "type": "model3d",
+   "params": {
+    "prompt": "rusty old mine cart on wheels",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-vagoneta-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 10000
+   },
+   "task_id": "gtask-4fbe8eea04d141d79818",
+   "output_path": "assets/mod-vagoneta-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-vagoneta-g1.glb"
+  },
+  "mod-tronco": {
+   "type": "model3d",
+   "params": {
+    "prompt": "fallen mossy tree log with broken branches",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-tronco-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 10000
+   },
+   "task_id": "gtask-35205140ab404cddaf60",
+   "output_path": "assets/mod-tronco-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-tronco-g1.glb"
+  },
+  "mod-roca1": {
+   "type": "model3d",
+   "params": {
+    "prompt": "mossy round granite boulder",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-roca1-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 8000
+   },
+   "task_id": "gtask-1e21d54d7fd24d079f08",
+   "output_path": "assets/mod-roca1-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-roca1-g1.glb"
+  },
+  "mod-roca2": {
+   "type": "model3d",
+   "params": {
+    "prompt": "flat dark rock with moss",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-roca2-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 8000
+   },
+   "task_id": "gtask-e287dc4d5969494eba46",
+   "output_path": "assets/mod-roca2-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-roca2-g1.glb"
+  },
+  "mod-municion": {
+   "type": "model3d",
+   "params": {
+    "prompt": "open cardboard box with brass cartridges",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-municion-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 6000
+   },
+   "task_id": "gtask-9003e3a95d7a4c08ba13",
+   "output_path": "assets/mod-municion-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-municion-g1.glb"
+  },
+  "mod-lata": {
+   "type": "model3d",
+   "params": {
+    "prompt": "dented tin food can",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-lata-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 4000
+   },
+   "task_id": "gtask-5035ec4205e147d9915f",
+   "output_path": "assets/mod-lata-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-lata-g1.glb"
+  },
+  "mod-herramientas": {
+   "type": "model3d",
+   "params": {
+    "prompt": "open red metal toolbox with tools",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-herramientas-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 8000
+   },
+   "task_id": "gtask-e2e57d287a584bfdb309",
+   "output_path": "assets/mod-herramientas-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-herramientas-g1.glb"
+  },
+  "mod-repuesto": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old car battery with strap",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-repuesto-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 6000
+   },
+   "task_id": "gtask-3fdd37af087943f7ba21",
+   "output_path": "assets/mod-repuesto-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-repuesto-g1.glb"
+  },
+  "img-camion_maderero": {
+   "type": "image",
+   "params": {
+    "prompt": "A single abandoned old 1970s logging truck of no particular brand: a long flatbed with rusty steel log stakes and a few old logs chained on it, a boxy cab with broken windows, flat tyres, completely rusted brown and faded red paint, moss and weeds on the cab roof and the bed, plain grille with no emblem, no badges. Realistic weathered game asset, dirty, worn and rusty, three-quarter view from slightly above, the whole object visible with margin, soft even studio lighting, isolated on a plain light grey seamless background, no ground, no cast shadow, no text, no logos, no letters, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-3c455c99369140888939",
+   "output_path": "assets/img-camion_maderero-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-camion_maderero-g1.png"
+  },
+  "mod-pino1": {
+   "type": "model3d",
+   "params": {
+    "prompt": "low poly dark fir tree with chunky needle clusters",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-pino1-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 8000
+   },
+   "task_id": "gtask-8887494e255e49fa9c62",
+   "output_path": "assets/mod-pino1-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-pino1-g1.glb"
+  },
+  "mod-farol": {
+   "type": "model3d",
+   "params": {
+    "prompt": "rusty kerosene hurricane lantern",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-farol-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 8000
+   },
+   "task_id": "gtask-a297bf6dafa74f008594",
+   "output_path": "assets/mod-farol-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-farol-g1.glb"
+  },
+  "mod-trampa_oso": {
+   "type": "model3d",
+   "params": {
+    "prompt": "rusty steel bear trap with chain and stake",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-trampa_oso-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 8000
+   },
+   "task_id": "gtask-988919fe03474deb9c96",
+   "output_path": "assets/mod-trampa_oso-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-trampa_oso-g1.glb"
+  },
+  "mod-pistola": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old steel semi automatic pistol",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-pistola-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 8000
+   },
+   "task_id": "gtask-4f7db2f30e4c4c3ea3f2",
+   "output_path": "assets/mod-pistola-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-pistola-g1.glb"
+  },
+  "mod-escopeta": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old pump action shotgun with wooden stock",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-escopeta-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 8000
+   },
+   "task_id": "gtask-e62eadea704f42158442",
+   "output_path": "assets/mod-escopeta-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-escopeta-g1.glb"
+  },
+  "mod-rifle": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old bolt action hunting rifle with scope",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-rifle-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 8000
+   },
+   "task_id": "gtask-8a1b3f805204445e982a",
+   "output_path": "assets/mod-rifle-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-rifle-g1.glb"
+  },
+  "mod-hacha": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old wood axe",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-hacha-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 6000
+   },
+   "task_id": "gtask-9a7cf8d38d8746d4b76d",
+   "output_path": "assets/mod-hacha-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-hacha-g1.glb"
+  },
+  "mod-camion_maderero": {
+   "type": "model3d",
+   "params": {
+    "prompt": "abandoned rusty logging truck with logs on flatbed",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-camion_maderero-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-abcb5cb9e0f14f62b88f",
+   "output_path": "assets/mod-camion_maderero-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-camion_maderero-g1.glb"
+  },
+  "mod-linterna": {
+   "type": "model3d",
+   "params": {
+    "prompt": "black tactical flashlight",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-linterna-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 6000
+   },
+   "task_id": "gtask-02444699c78e44ecb997",
+   "output_path": "assets/mod-linterna-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-linterna-g1.glb"
+  },
+  "mod-bateria": {
+   "type": "model3d",
+   "params": {
+    "prompt": "two worn D size batteries",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-bateria-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 5000
+   },
+   "task_id": "gtask-4e5c37b7171d431cb924",
+   "output_path": "assets/mod-bateria-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-bateria-g1.glb"
+  },
+  "mod-bidon": {
+   "type": "model3d",
+   "params": {
+    "prompt": "red metal jerry can",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-bidon-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 6000
+   },
+   "task_id": "gtask-8fdcfeb5e57244f08153",
+   "output_path": "assets/mod-bidon-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-bidon-g1.glb"
+  },
+  "img-portada2": {
+   "type": "image",
+   "params": {
+    "prompt": "Cinematic night landscape key art, no text, no letters: a remote mountain valley with huge jagged snowy peaks under a full moon and heavy clouds, a dark dense pine forest, tall waterfalls falling into a misty river and a lake, two isolated log cabins with warm orange light in the windows, a small wooden bridge over the river, an abandoned rusty pickup truck with a yellow hydraulic crane parked on a dirt road in the foreground, and a lone mountain rescuer in an olive jacket holding a flashlight, seen from behind, looking at the forest. Far away between the pines, a few pale silhouettes stand still. Cold blue moonlight, volumetric fog, ominous and silent atmosphere, realistic, highly detailed, wide composition.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+    ]
+   },
+   "task_id": "gtask-aeb15e723e1640109595",
+   "output_path": "assets/img-portada2-g1.png",
+   "estado": "ready",
+   "archivo": "../../crudos/img-portada2-g1.png"
+  },
+  "mod-pino2": {
+   "type": "model3d",
+   "params": {
+    "prompt": "tall mountain pine tree",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-pino2-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 10000
+   },
+   "task_id": "gtask-e97dee2db84d462399f0",
+   "output_path": "assets/mod-pino2-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-pino2-g1.glb"
+  },
+  "mod-botiquin": {
+   "type": "model3d",
+   "params": {
+    "prompt": "red metal first aid kit box",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/JGUJrmuPik/assets/img-botiquin-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 6000
+   },
+   "task_id": "gtask-a679725171024feeb08d",
+   "output_path": "assets/mod-botiquin-g1.glb",
+   "estado": "ready",
+   "archivo": "../../crudos/mod-botiquin-g1.glb"
+  }
+ },
+ "ref": "JGUJrmuPik"
+}

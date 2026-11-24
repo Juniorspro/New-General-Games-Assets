@@ -1,0 +1,342 @@
+{
+ "proyecto": "xVuxCcKGrk",
+ "nota": "Pedidos a Rezona para Estancia. public_url se baja sin llave. Los de audio fallaron: 'servicio no disponible' del lado de Rezona, sin cobro.",
+ "pedidos": {
+  "rama-quebracho": {
+   "type": "image",
+   "params": {
+    "prompt": "A single flat leafy branch of a quebracho colorado tree photographed from directly above on a pure white seamless background: one woody main stem running from the bottom center up to the top, many side twigs densely covered in small dark green lanceolate leathery leaves, the branch fills most of the frame. Studio product lighting, crisp focus, no shadow on the background, nothing else in the image. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": true
+   },
+   "estado": "ready",
+   "output_path": "assets/rama-quebracho-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/rama-quebracho-g1.png"
+  },
+  "rama-algarrobo": {
+   "type": "image",
+   "params": {
+    "prompt": "A single flat leafy branch of an algarrobo blanco tree (Prosopis alba) photographed from directly above on a pure white seamless background: one woody main stem running from the bottom center up to the top, side twigs covered in fine feathery bipinnate olive-green leaves with tiny leaflets and a few thin thorns, the branch fills most of the frame. Studio product lighting, crisp focus, no shadow on the background, nothing else in the image. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": true
+   },
+   "estado": "ready",
+   "output_path": "assets/rama-algarrobo-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/rama-algarrobo-g1.png"
+  },
+  "rama-vinal": {
+   "type": "image",
+   "params": {
+    "prompt": "A single flat branch of a thorny Chaco dry-forest shrub (vinal) photographed from directly above on a pure white seamless background: one woody main stem running from the bottom center up to the top, long sharp pale thorns and small grey-green leaves, the branch fills most of the frame. Studio product lighting, crisp focus, no shadow on the background, nothing else in the image. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": true
+   },
+   "estado": "ready",
+   "output_path": "assets/rama-vinal-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/rama-vinal-g1.png"
+  },
+  "mata-espartillo": {
+   "type": "image",
+   "params": {
+    "prompt": "A single clump of dry espartillo grass photographed from the side at eye level on a pure white seamless background: dense upright thin blades, straw yellow with some olive green at the base, the base of the clump sits at the bottom center edge of the frame, the clump fills most of the frame. Studio product lighting, crisp focus, no shadow on the background, nothing else in the image. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": true
+   },
+   "estado": "ready",
+   "output_path": "assets/mata-espartillo-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/mata-espartillo-g1.png"
+  },
+  "mata-pasto": {
+   "type": "image",
+   "params": {
+    "prompt": "A single tuft of short dry pasture grass with a few thin seed heads photographed from the side at eye level on a pure white seamless background: straw yellow and pale green blades, the base of the tuft sits at the bottom center edge of the frame, fills most of the frame. Studio product lighting, crisp focus, no shadow on the background, nothing else in the image. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": true
+   },
+   "estado": "ready",
+   "output_path": "assets/mata-pasto-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/mata-pasto-g1.png"
+  },
+  "revoque": {
+   "type": "image",
+   "params": {
+    "prompt": "Seamless tileable texture, flat orthographic front photograph of an old whitewashed adobe wall in rural northern Argentina: rough lime plaster, fine cracks, faded dirty white with reddish earth stains, the wall fills the entire frame edge to edge. Perfectly even diffuse overcast lighting, no cast shadows, no perspective, no vignette, uniform detail across the whole frame, edges wrap seamlessly. Photoreal PBR albedo texture, no border. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": false
+   },
+   "estado": "ready",
+   "output_path": "assets/revoque-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/revoque-g1.png"
+  },
+  "chapa": {
+   "type": "image",
+   "params": {
+    "prompt": "Seamless tileable texture, flat orthographic front photograph of a corrugated galvanized steel roofing sheet: evenly spaced vertical corrugations, weathered grey zinc with rust streaks and stains, fills the entire frame edge to edge. Perfectly even diffuse overcast lighting, no cast shadows, no perspective, no vignette, uniform detail across the whole frame, edges wrap seamlessly. Photoreal PBR albedo texture, no border. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": false
+   },
+   "estado": "ready",
+   "output_path": "assets/chapa-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/chapa-g1.png"
+  },
+  "tablas": {
+   "type": "image",
+   "params": {
+    "prompt": "Seamless tileable texture, flat orthographic front photograph of old weathered hardwood planks: dry grey-brown quebracho wood with cracks and deep grain, boards running horizontally, fills the entire frame edge to edge. Perfectly even diffuse overcast lighting, no cast shadows, no perspective, no vignette, uniform detail across the whole frame, edges wrap seamlessly. Photoreal PBR albedo texture, no border. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": false
+   },
+   "estado": "ready",
+   "output_path": "assets/tablas-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/tablas-g1.png"
+  },
+  "barro": {
+   "type": "image",
+   "params": {
+    "prompt": "Seamless tileable texture, orthographic top-down photograph of wet dark mud at the edge of a marsh in the Chaco: sticky dark reddish-brown mud, shallow cattle hoof prints, small puddles, bits of broken reeds. Perfectly even diffuse overcast lighting, no cast shadows, no perspective, no vignette, uniform detail across the whole frame, edges wrap seamlessly. Photoreal PBR albedo texture, no border. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": false
+   },
+   "estado": "ready",
+   "output_path": "assets/barro-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/barro-g1.png"
+  },
+  "fuente-vaca": {
+   "type": "image",
+   "params": {
+    "prompt": "A single Hereford beef cow standing, three-quarter side view: dark red-brown body, white face, white belly, white lower legs and white tail switch, small curved horns, realistic proportions of a 450 kg cow, all four legs straight and slightly apart and clearly separated, head up looking forward, mouth closed. Photoreal PBR game asset, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, nothing else. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": false
+   },
+   "estado": "ready",
+   "output_path": "assets/fuente-vaca-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/fuente-vaca-g1.png"
+  },
+  "fuente-caballo": {
+   "type": "image",
+   "params": {
+    "prompt": "A single Argentine criollo horse standing, three-quarter side view: dark bay coat with black mane, black tail and black lower legs, a small white star on the forehead, compact muscular body, no saddle, no bridle, all four legs straight and slightly apart and clearly separated, head up looking forward. Photoreal PBR game asset, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, nothing else. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": false
+   },
+   "estado": "ready",
+   "output_path": "assets/fuente-caballo-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/fuente-caballo-g1.png"
+  },
+  "fuente-guacho": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character of a 35-year-old Argentine gaucho standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical. Sun-weathered tanned skin, short black mustache, black basque beret, white-grey long-sleeve shirt, red neckerchief, wide grey-brown bombacha trousers gathered at the ankles, wide black sash with a silver-coin belt, a sheathed facon knife horizontal at the back of the waist, black canvas alpargatas. Realistic proportions, the entire body visible from head to feet with margin, nothing in the hands. Photoreal PBR game asset, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, nothing else. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": false
+   },
+   "estado": "ready",
+   "output_path": "assets/fuente-guacho-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/fuente-guacho-g1.png"
+  },
+  "fuente-chata": {
+   "type": "image",
+   "params": {
+    "prompt": "A single old rusty 1970s pickup truck, three-quarter front view: faded pale blue paint covered in red dust, dents, bald tires, no logos, no brand badges, no license plate. Photoreal PBR game asset, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, nothing else. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": false
+   },
+   "estado": "ready",
+   "output_path": "assets/fuente-chata-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/fuente-chata-g1.png"
+  },
+  "fuente-rollo": {
+   "type": "image",
+   "params": {
+    "prompt": "A single large round bale of dry alfalfa hay, three-quarter view, tightly wound, pale green and straw yellow, a few loose strands. Photoreal PBR game asset, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, nothing else. Photoreal, dusty warm palette of red laterite earth, straw yellow and olive green. No text, no watermark.",
+    "size": "1024x1024",
+    "n": 1,
+    "transparent": false
+   },
+   "estado": "ready",
+   "output_path": "assets/fuente-rollo-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/fuente-rollo-g1.png"
+  },
+  "modelo-vaca": {
+   "type": "model3d",
+   "params": {
+    "prompt": "Hereford beef cow standing, realistic",
+    "source_url": null,
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "estado": "ready",
+   "output_path": "assets/modelo-vaca-g1.glb",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/modelo-vaca-g1.glb"
+  },
+  "modelo-caballo": {
+   "type": "model3d",
+   "params": {
+    "prompt": "Argentine criollo horse, dark bay, standing, realistic",
+    "source_url": null,
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "estado": "ready",
+   "output_path": "assets/modelo-caballo-g1.glb",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/modelo-caballo-g1.glb"
+  },
+  "modelo-guacho": {
+   "type": "model3d",
+   "params": {
+    "prompt": "Argentine gaucho man in A-pose, beret, bombacha trousers, alpargatas",
+    "source_url": null,
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "estado": "ready",
+   "output_path": "assets/modelo-guacho-g1.glb",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/modelo-guacho-g1.glb"
+  },
+  "modelo-chata": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old rusty pale blue 1970s pickup truck",
+    "source_url": null,
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 12000
+   },
+   "estado": "ready",
+   "output_path": "assets/modelo-chata-g1.glb",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/modelo-chata-g1.glb"
+  },
+  "modelo-rollo": {
+   "type": "model3d",
+   "params": {
+    "prompt": "round bale of alfalfa hay",
+    "source_url": null,
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 3000
+   },
+   "estado": "ready",
+   "output_path": "assets/modelo-rollo-g1.glb",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/modelo-rollo-g1.glb"
+  },
+  "modelo-vaca-img": {
+   "type": "model3d",
+   "params": {
+    "prompt": "Hereford beef cow standing, realistic",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/fuente-vaca-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "estado": "ready",
+   "output_path": "assets/modelo-vaca-img-g1.glb"
+  },
+  "modelo-guacho-img": {
+   "type": "model3d",
+   "params": {
+    "prompt": "Argentine gaucho man in A-pose",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/xVuxCcKGrk/assets/fuente-guacho-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "estado": "ready",
+   "output_path": "assets/modelo-guacho-img-g1.glb"
+  },
+  "rig-vaca": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-7de9e042850a4529a391",
+    "rig_type": "quadruped",
+    "animations": [
+     "preset:quadruped:walk"
+    ]
+   },
+   "estado": "ready",
+   "output_path": "assets/rig-vaca-g1.glb"
+  },
+  "rig-caballo": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-ff62b2e989de47d2b0c0",
+    "rig_type": "quadruped",
+    "animations": [
+     "preset:quadruped:walk"
+    ]
+   },
+   "estado": "ready",
+   "output_path": "assets/rig-caballo-g1.glb"
+  },
+  "rig-guacho": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-f883f563b08e43408b4a",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle",
+     "preset:walk",
+     "preset:run"
+    ]
+   },
+   "estado": "ready",
+   "output_path": "assets/rig-guacho-g1.glb"
+  },
+  "rig-guacho-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-f883f563b08e43408b4a",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "estado": "ready",
+   "output_path": "assets/rig-guacho-walk-g1.glb"
+  },
+  "rig-guacho-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-f883f563b08e43408b4a",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "estado": "ready",
+   "output_path": "assets/rig-guacho-idle-g1.glb"
+  },
+  "musica-chamame": {
+   "type": "audio",
+   "params": {
+    "kind": "music",
+    "duration": 30,
+    "prompt": "Instrumental chamamé from northeastern Argentina: diatonic button accordion leading the melody, spanish guitar strumming the 6/8 chamamé rhythm, upright bass, warm lo-fi recording that sounds like an old AM radio in a rural kitchen. Seamless loop, consistent energy, no fade out."
+   },
+   "estado": "failed",
+   "output_path": "assets/musica-chamame-g1.mp3"
+  }
+ }
+}

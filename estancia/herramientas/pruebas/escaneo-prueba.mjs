@@ -1,0 +1,25 @@
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.PW);
+const b = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const ctx = await b.newContext({ viewport: { width: 960, height: 540 } });
+const p = await ctx.newPage();
+const errores = []; p.on("pageerror", (e) => errores.push(e.message));
+await p.route("**/*", (r) => r.request().url().startsWith("file://") ? r.continue() : r.abort());
+const t0 = Date.now();
+await p.goto("file://" + process.cwd() + "/estancia.html");
+await p.waitForSelector("#escaneo:not([hidden])", { timeout: 180000 });
+let k = 0;
+const foto = async () => p.screenshot({ path: `tiras/esc-${String(k++).padStart(2, "0")}.png` });
+await p.waitForTimeout(1200); await foto();
+await p.waitForSelector("#escaneo li.elegido", { state: "attached", timeout: 300000 }); await foto();
+const t1 = Date.now();
+await p.waitForSelector("#menu:not([hidden])", { timeout: 60000 });
+const r = await p.evaluate(() => ({ op: JSON.parse(localStorage.getItem("estancia-opciones")), nivel: E.calidad.nivel, escala: E.motor.escala, sombra: E.motor.sol.shadow.mapSize.x, pasto: E.flora.pasto.count }));
+console.log("escaneo ~", ((t1 - t0) / 1000).toFixed(1), "s desde abrir", JSON.stringify(r));
+await p.waitForTimeout(1500); await p.click("#menuOpciones"); await p.waitForTimeout(800); await foto();
+// Segunda carga: no mide, usa lo guardado.
+await p.reload(); await p.waitForSelector("#menu:not([hidden])", { timeout: 180000 });
+console.log("segunda carga midió:", await p.evaluate(() => !document.getElementById("escaneo").hidden));
+console.log(errores.length ? errores.join("\n") : "sin errores");
+await b.close();
