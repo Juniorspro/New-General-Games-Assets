@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 30/10/2026.
+Última puesta al día: 24/11/2026.
 
 Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raíz).
 
@@ -65,6 +65,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | [maquina](maquina.md) | algo falle por red, disco, Docker o permisos de la sesión |
 | [neko](neko.md) | haga falta un escritorio gráfico o manejar un navegador |
 | [video](video.md) | haya que tocar un video, hacer un zócalo o quemar un gráfico, o tocar el editor Estudio Papuchón (voz de locutor hombre en el navegador, exportar MP4 con WebCodecs) |
+| [audio-bt](audio-bt.md) | pidan exprimir auriculares Bluetooth: cambiar códec, bitrate, bits o kbps (SBC, AAC, LDAC) |
 | [juegos](juegos.md) | haya que animar modelos de Rezona en three.js, probar un juego cuadro a cuadro, hacer un Dead Eye, voces con acento, un shooter 3D con bots, un simulador de inspección (Ruta 11), girar un juego 90° en el celular, traducirlo, ponerle sonidos grabados, o un survival horror con niebla, montañas y bosque (Los Montes) |
 | [diario](diario.md) | quieras saber qué pasó en la sesión anterior y qué quedó |
 
